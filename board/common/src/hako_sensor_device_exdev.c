@@ -282,7 +282,14 @@ static void hakoniwa_supply_clock(DeviceClockType *clock)
 		}
 		actuator.time_usec = last_time_usec;
 		(void)hako_sensor_link_write_actuator(&actuator);
-		hako_sensor_link_notify_time(last_time_usec);
+		/*
+		 * hil_actuator carries the HIL time of the sample (Drone PRO's time base,
+		 * from its wall-clock start). The Hakoniwa asset time starts at zero, as
+		 * the world's: report Athrill's own time, relative to the first sample.
+		 * Reporting the HIL time put this asset far ahead of the world, out of the
+		 * conductor's wait, so the lockstep was paced by the data only.
+		 */
+		hako_sensor_link_notify_time(last_time_usec - time_offset_usec);
 	}
 }
 
