@@ -10,6 +10,7 @@
  *   HAKO_SENSOR_DEVICE_SENSOR_CHANNEL    channel of hil_sensor (HakoHilSensor)
  *   HAKO_SENSOR_DEVICE_GPS_CHANNEL       channel of hil_gps (HakoHilGps)
  *   HAKO_SENSOR_DEVICE_ACTUATOR_CHANNEL  channel of hil_actuator (HakoHilActuatorControls)
+ *   HAKO_SENSOR_DEVICE_TRACE_PATH        optional sensor, GPS and actuator trace (exact float bits)
  *   HAKO_SENSOR_DEVICE_TEST_PERIOD       without Hakoniwa: every N usec of simulated time, a
  *                                        sample of a vehicle at rest (GPS every 25th)
  *   HAKO_SENSOR_DEVICE_TEST_LAT_DEG      the test vehicle (all eight needed with TEST_PERIOD):
@@ -36,6 +37,7 @@
 #include "hako_sensor_device.h"
 #include "hako_sensor_device_link.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -75,6 +77,66 @@ static uint64 last_time_usec;
  */
 static bool has_time_offset;
 static uint64 time_offset_usec;
+static FILE *trace_file;
+
+static uint32_t float_bits(float value)
+{
+	uint32_t bits;
+
+	memcpy(&bits, &value, sizeof(bits));
+	return bits;
+}
+
+static void trace_sensor(const HakoSensorSample *sensor, uint64_t time_usec)
+{
+	if (trace_file == NULL) {
+		return;
+	}
+	fprintf(trace_file,
+		"sensor time=%" PRIu64
+		" acc=%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32
+		" gyro=%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32
+		" mag=%08" PRIx32 ",%08" PRIx32 ",%08" PRIx32
+		" abs_pressure=%08" PRIx32 " diff_pressure=%08" PRIx32
+		" pressure_alt=%08" PRIx32 " temperature=%08" PRIx32
+		" fields_updated=%08" PRIx32 " id=%02" PRIx8 "\n",
+		time_usec,
+		float_bits(sensor->acc[0]), float_bits(sensor->acc[1]), float_bits(sensor->acc[2]),
+		float_bits(sensor->gyro[0]), float_bits(sensor->gyro[1]), float_bits(sensor->gyro[2]),
+		float_bits(sensor->mag[0]), float_bits(sensor->mag[1]), float_bits(sensor->mag[2]),
+		float_bits(sensor->abs_pressure), float_bits(sensor->diff_pressure),
+		float_bits(sensor->pressure_alt), float_bits(sensor->temperature),
+		sensor->fields_updated, sensor->id);
+}
+
+static void trace_gps(const HakoGpsSample *gps, uint64_t time_usec)
+{
+	if (trace_file == NULL) {
+		return;
+	}
+	fprintf(trace_file,
+		"gps time=%" PRIu64 " lat=%" PRId32 " lon=%" PRId32 " alt=%" PRId32
+		" eph=%" PRIu16 " epv=%" PRIu16 " vel=%" PRIu16
+		" vn=%" PRId16 " ve=%" PRId16 " vd=%" PRId16 " cog=%" PRIu16
+		" satellites_visible=%" PRIu8 " id=%" PRIu8 " yaw=%" PRIu8 " fix_type=%" PRIu8 "\n",
+		time_usec, gps->lat, gps->lon, gps->alt, gps->eph, gps->epv, gps->vel,
+		gps->vn, gps->ve, gps->vd, gps->cog, gps->satellites_visible, gps->id,
+		gps->yaw, gps->fix_type);
+}
+
+static void trace_actuator(const HakoActuatorSample *actuator, uint64_t time_usec)
+{
+	uint32_t i;
+
+	if (trace_file == NULL) {
+		return;
+	}
+	fprintf(trace_file, "actuator time=%" PRIu64 " controls=", time_usec);
+	for (i = 0U; i < HAKO_ACTUATOR_CHANNELS; i++) {
+		fprintf(trace_file, "%s%08" PRIx32, (i == 0U) ? "" : ",", float_bits(actuator->controls[i]));
+	}
+	fprintf(trace_file, " mode=%02" PRIx8 " flags=%016" PRIx64 "\n", actuator->mode, actuator->flags);
+}
 
 static uint32 offset_of(const MpuAddressRegionType *region, AthrillAddrType address)
 {
@@ -179,6 +241,7 @@ static void test_feed(uint64 time_usec)
 	sensor.abs_pressure = (float)test_vehicle.pressure_hpa + d * 10.0F;
 	sensor.temperature = (float)test_vehicle.temperature_c;
 	sensor.fields_updated = HAKO_FIELDS_IMU | HAKO_FIELDS_MAG | HAKO_FIELDS_BARO;
+	trace_sensor(&sensor, sensor.time_usec);
 	raise(hako_sensor_device_latch_sensor(&device, &sensor));
 	if ((test_count % TEST_GPS_EVERY) == 0U) {
 		memset(&gps, 0, sizeof(gps));
@@ -190,6 +253,7 @@ static void test_feed(uint64 time_usec)
 		gps.epv = 150;
 		gps.satellites_visible = 12;
 		gps.fix_type = 3;
+		trace_gps(&gps, gps.time_usec);
 		raise(hako_sensor_device_latch_gps(&device, &gps));
 	}
 	test_count++;
@@ -272,8 +336,10 @@ static void hakoniwa_supply_clock(DeviceClockType *clock)
 			return;
 		}
 		raise(hako_sensor_device_latch_sensor(&device, &pending_sensor));
+		trace_sensor(&pending_sensor, pending_sensor.time_usec - time_offset_usec);
 		if (pending_has_gps) {
 			raise(hako_sensor_device_latch_gps(&device, &pending_gps));
+			trace_gps(&pending_gps, pending_gps.time_usec - time_offset_usec);
 		}
 		last_time_usec = pending_sensor.time_usec;
 		has_pending = false;
@@ -281,6 +347,7 @@ static void hakoniwa_supply_clock(DeviceClockType *clock)
 			memset(&actuator, 0, sizeof(actuator));
 		}
 		actuator.time_usec = last_time_usec;
+		trace_actuator(&actuator, actuator.time_usec - time_offset_usec);
 		(void)hako_sensor_link_write_actuator(&actuator);
 		/*
 		 * hil_actuator carries the HIL time of the sample (Drone PRO's time base,
@@ -302,6 +369,16 @@ static void devinit(MpuAddressRegionType *region, AthrillExDevOperationType *ops
 	(void)region;
 	athrill = ops;
 	hako_sensor_device_reset(&device);
+	if (ops->param.get_devcfg_string("HAKO_SENSOR_DEVICE_TRACE_PATH", &text) == STD_E_OK) {
+		trace_file = fopen(text, "w");
+		if (trace_file == NULL) {
+			printf("ERROR: hako_sensor_device: can not open trace %s\n", text);
+		}
+		else {
+			(void)setvbuf(trace_file, NULL, _IOLBF, 0U);
+			printf("hako_sensor_device: tracing to %s\n", text);
+		}
+	}
 	if (ops->param.get_devcfg_value("HAKO_SENSOR_DEVICE_IRQ", &value) == STD_E_OK) {
 		irq = value;
 	}
@@ -346,6 +423,10 @@ static void cleanup(void)
 {
 	if (hakoniwa_mode) {
 		hako_sensor_link_cleanup();
+	}
+	if (trace_file != NULL) {
+		(void)fclose(trace_file);
+		trace_file = NULL;
 	}
 }
 
