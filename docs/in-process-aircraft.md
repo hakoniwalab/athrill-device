@@ -46,8 +46,8 @@ The sensor device already reaches Hakoniwa through one small interface, `board/c
 | --- | --- | --- |
 | `hako_sensor_link_initialize` | registers a Hakoniwa polling asset | loads the airframe configuration and creates the aircraft |
 | `hako_sensor_link_poll_events` | START / STOP / RESET from Hakoniwa | always running |
-| `hako_sensor_link_read` | reads `hil_sensor` / `hil_gps` PDUs | returns the aircraft's next sample; steps the aircraft first if needed |
-| `hako_sensor_link_write_actuator` | writes the `hil_actuator` PDU | stores the actuator for the aircraft's next steps |
+| `hako_sensor_link_read` | reads `hil_sensor` / `hil_gps` PDUs | returns the aircraft's next sample; waits if the worker has not published it yet |
+| `hako_sensor_link_write_actuator` | writes the `hil_actuator` PDU | hands the actuator to the aircraft worker |
 | `hako_sensor_link_notify_time` | reports the asset time to Hakoniwa | nothing |
 | `hako_sensor_link_cleanup` | leaves Hakoniwa | destroys the aircraft |
 
@@ -75,10 +75,9 @@ The aircraft service talks to a flight controller through an `IMavLinkService`. 
 Hakoniwa shared-memory service (PIL). The in-process link adds a third one in this repository:
 
 - `sendMessage(HIL_SENSOR / HIL_GPS)` from the aircraft service stores the message for `hako_sensor_link_read`;
-- `hako_sensor_link_write_actuator` turns the actuator into `HIL_ACTUATOR_CONTROLS` and passes it to the aircraft
-  service through `readMessage` and the receiver callback, which makes the aircraft step. The v5.0.0 service's
-  unsynchronised receiver callback advances one 1 ms physics step. If that step has not reached the next sensor
-  period, `hako_sensor_link_read` redelivers the held actuator synchronously until the service sends the sample.
+- `hako_sensor_link_write_actuator` turns the actuator into `HIL_ACTUATOR_CONTROLS`. The aircraft worker passes it
+  to the service through `readMessage` and the receiver callback, repeating the held actuator until the service
+  sends the next sample. Each callback advances one 1 ms physics step.
 
 The messages are the same C structures as the PDUs (`hako_mavlink_msgs`), so both links use the same conversion
 helpers in `hako_sensor_device_link_mavlink.c`. The aircraft service's PDU syncher is a no-operation one: no Hakoniwa
@@ -90,14 +89,22 @@ licence: free for non-commercial use, see the `hakoniwa-drone-core` release.
 
 ## Threads and timing
 
-- The aircraft runs in the thread that calls the device, at the device's call. When the device asks for the next
-  sample and the aircraft has not produced it yet, the aircraft steps (1 ms per step, the airframe's physics period)
-  with the last actuator until the next sensor sample, then returns it. No other thread takes part in the control
-  path, so no hand-over or scheduling is involved.
-- If the aircraft service runs its stepping in a worker thread of its own, the in-process `IMavLinkService` waits on
-  a condition variable for the sample. That costs about 2 µs per hand-over on macOS, against about 16 µs for the
-  20 µs polling of the Hakoniwa link. The prototype checks which of the two the service needs.
-- The device asks for samples only at sensor periods; between them, the CPU runs alone, as today.
+- Hakoniwa Drone v5 does not run these steps in a service thread. Its receiver callback advances one physics step
+  synchronously in the caller, so the link adds one worker and there is no third thread on the control path.
+- At sample time `t`, the device latches `sensor(t)` and hands `actuator(t)` to the worker. The worker owns the
+  aircraft while it advances to `t + sensor_period`; the Athrill thread advances the firmware over the same virtual
+  interval. The device's clock callback schedules its next read for that boundary instead of fetching it eagerly.
+- The worker publishes the completed sensor/GPS snapshot under a mutex and signals a condition variable. At the
+  boundary, `hako_sensor_link_read` returns immediately if it is ready or waits on that condition variable. There is
+  no polling and no control delay.
+- Only the worker calls the aircraft service while a step is pending. The device reads the snapshot after the worker
+  has relinquished it and queues the next actuator only after consuming it, so one thread owns the aircraft at a
+  time.
+- `HAKO_AIRCRAFT_WORKER=0` preserves the original serial path: the actuator write advances the first physics step
+  and the following read advances the remaining steps before the firmware continues. This is the equivalence and
+  benchmark reference.
+- Cleanup requests the worker to stop, joins it, then stops the services and destroys the aircraft. The initial
+  sample is prepared by the worker before the first device read.
 - The asset-time notification has no receiver and does nothing.
 
 ### GPS visibility at the shared-memory boundary
@@ -127,6 +134,7 @@ The device configuration of the in-process library takes:
 | Key | Value |
 | --- | --- |
 | `HAKO_AIRCRAFT_CONFIG_PATH` | the airframe directory or `drone_config_0.json` of the Hakoniwa Drone, e.g. `x500-athrill-px4` |
+| `HAKO_AIRCRAFT_WORKER` | `1` (default) steps ahead on the aircraft worker; `0` uses the serial comparison path |
 
 The channel and asset lines of the Hakoniwa link are not used. The airframe configuration gives the sensor period,
 the sensor models and the random seed (`simulation.randomSeed`), as for the aircraft service.
@@ -147,6 +155,6 @@ the sensor models and the random seed (`simulation.randomSeed`), as for the airc
 | --- | --- | --- |
 | Other Hakoniwa assets (other vehicles, tools) | yes | no |
 | Hakoniwa viewers | yes | no (prototype) |
-| Speed | the two processes meet at every exchange | no meeting; the firmware and the aircraft alternate in one thread |
+| Speed | the two processes meet at every exchange | the firmware and aircraft step concurrently in two threads |
 | Same flight | reference | identical to the Hakoniwa link |
 | Typical use | a vehicle in a larger Hakoniwa world | one vehicle: firmware tests, tuning, regression runs, CI |

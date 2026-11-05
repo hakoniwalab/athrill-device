@@ -5,7 +5,7 @@ set -eu
 
 usage() {
     echo "usage: $0 EXAMPLE_DIR PX4_ELF ATHRILL3 INPROC_DEVICE HAKO_DRONE_ROOT AIRFRAME_CONFIG" >&2
-    echo "environment: ATHRILL_TICKS=-1 HAKO_SENSOR_DEVICE_TRACE_PATH=<file>" >&2
+    echo "environment: ATHRILL_TICKS=-1 HAKO_AIRCRAFT_WORKER=1 HAKO_SENSOR_DEVICE_TRACE_PATH=<file>" >&2
     exit 2
 }
 
@@ -25,7 +25,13 @@ device=$(absolute "$4")
 drone_root=$(absolute "$5")
 airframe=$(absolute "$6")
 ticks=${ATHRILL_TICKS:--1}
+worker=${HAKO_AIRCRAFT_WORKER:-1}
 trace=${HAKO_SENSOR_DEVICE_TRACE_PATH:-}
+
+case "$worker" in
+    0|1) ;;
+    *) echo "HAKO_AIRCRAFT_WORKER must be 0 or 1" >&2; exit 2 ;;
+esac
 
 [ -f "$example_dir/device_config.txt" ] || usage
 [ -f "$example_dir/memory.txt" ] || usage
@@ -55,10 +61,12 @@ awk -v fram="$example_dir/fram.bin" -v sdcard="$example_dir/sd.img" '
     $1 == "HAKO_SENSOR_DEVICE_GPS_CHANNEL" { next }
     $1 == "HAKO_SENSOR_DEVICE_ACTUATOR_CHANNEL" { next }
     $1 == "HAKO_AIRCRAFT_CONFIG_PATH" { next }
+    $1 == "HAKO_AIRCRAFT_WORKER" { next }
     $1 == "HAKO_SENSOR_DEVICE_TRACE_PATH" { next }
     { print }
 ' "$example_dir/device_config.txt" >"$config_tmp"
 printf 'HAKO_AIRCRAFT_CONFIG_PATH %s\n' "$airframe" >>"$config_tmp"
+printf 'HAKO_AIRCRAFT_WORKER %s\n' "$worker" >>"$config_tmp"
 if [ -n "$trace" ]; then
     trace=$(absolute "$trace")
     printf 'HAKO_SENSOR_DEVICE_TRACE_PATH %s\n' "$trace" >>"$config_tmp"

@@ -113,7 +113,8 @@ For a prepared disposable copy of Athrill STM32's `examples/px4-hakoniwa`, the t
 the mode-specific memory and device configuration, start the required processes, and wait. Both leave PX4's TCP
 MAVLink endpoint available for `fly.py` in another terminal. Run either script without arguments for its path list;
 set `ATHRILL_TICKS` for a finite run and `HAKO_SENSOR_DEVICE_TRACE_PATH` to enable the exact trace. The Hakoniwa
-launcher also honors `HAKO_CONFIG_PATH`.
+launcher also honors `HAKO_CONFIG_PATH`. The in-process launcher defaults to `HAKO_AIRCRAFT_WORKER=1`; set it to
+`0` to retain the serial stepping path for exact-result and performance comparisons.
 
 ## Checked
 
