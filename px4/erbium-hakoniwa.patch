@@ -1,0 +1,272 @@
+diff --git a/boards/aifoundry/erbium/hakoniwa.px4board b/boards/aifoundry/erbium/hakoniwa.px4board
+new file mode 100644
+index 0000000000..930e631b6d
+--- /dev/null
++++ b/boards/aifoundry/erbium/hakoniwa.px4board
+@@ -0,0 +1,7 @@
++# Hakoniwa Drone PRO flies PX4 on Athrill: the sensors come from Athrill's
++# Hakoniwa sensor device (driver hako_sensor_device, an external module of
++# athrill-device px4/), the motor outputs go back to it through
++# pwm_out_sim. No SIH. NuttX as in the mavlink variant (MAVLink on UART0 for a
++# ground station, log in the RAM log and on Athrill's standard output).
++CONFIG_MODULES_SIMULATION_SIMULATOR_SIH=n
++CONFIG_MODULES_SIMULATION_PWM_OUT_SIM=y
+diff --git a/boards/aifoundry/erbium/init/rc.board_defaults b/boards/aifoundry/erbium/init/rc.board_defaults
+index b54d53daad..7076fe09aa 100644
+--- a/boards/aifoundry/erbium/init/rc.board_defaults
++++ b/boards/aifoundry/erbium/init/rc.board_defaults
+@@ -6,6 +6,125 @@
+ # No power supply monitoring
+ param set-default CBRK_SUPPLY_CHK 894281
+ 
+-# The board has no sensor or actuator drivers yet: run the SIH quadcopter so
+-# that the flight stack runs end to end.
+-param set-default SYS_AUTOSTART 1100
++if [ -e /bin/hako_sensor_device ]
++then
++	# aifoundry_erbium_hakoniwa: Hakoniwa Drone PRO's x500, airframe x500 v2
++	# with the parameters of Drone PRO's x500 PX4 SITL
++	# (config/drone/x500-px4-sitl/px4-params.txt), set so that the airframe's
++	# defaults do not override them. The motor outputs are pwm_out_sim's
++	# (HIL_ACT_FUNCn here, PWM_MAIN_FUNCn in Drone PRO's SITL file).
++	param set-default SYS_AUTOSTART 4019
++	param set CA_AIRFRAME 0
++	param set CA_ROTOR0_AX 0
++	param set CA_ROTOR0_AY 0
++	param set CA_ROTOR0_AZ -1
++	param set CA_ROTOR0_CT 12.3977969542
++	param set CA_ROTOR0_KM 0.0158327245851
++	param set CA_ROTOR0_PX 0.1768
++	param set CA_ROTOR0_PY 0.1768
++	param set CA_ROTOR0_PZ -0.02
++	param set CA_ROTOR1_AX 0
++	param set CA_ROTOR1_AY 0
++	param set CA_ROTOR1_AZ -1
++	param set CA_ROTOR1_CT 12.3977969542
++	param set CA_ROTOR1_KM 0.0158327245851
++	param set CA_ROTOR1_PX -0.1768
++	param set CA_ROTOR1_PY -0.1768
++	param set CA_ROTOR1_PZ -0.02
++	param set CA_ROTOR2_AX 0
++	param set CA_ROTOR2_AY 0
++	param set CA_ROTOR2_AZ -1
++	param set CA_ROTOR2_CT 12.3977969542
++	param set CA_ROTOR2_KM -0.0158327245851
++	param set CA_ROTOR2_PX 0.1768
++	param set CA_ROTOR2_PY -0.1768
++	param set CA_ROTOR2_PZ -0.02
++	param set CA_ROTOR3_AX 0
++	param set CA_ROTOR3_AY 0
++	param set CA_ROTOR3_AZ -1
++	param set CA_ROTOR3_CT 12.3977969542
++	param set CA_ROTOR3_KM -0.0158327245851
++	param set CA_ROTOR3_PX -0.1768
++	param set CA_ROTOR3_PY 0.1768
++	param set CA_ROTOR3_PZ -0.02
++	param set CA_ROTOR_COUNT 4
++	param set EKF2_BARO_CTRL 1
++	param set EKF2_BARO_DELAY 60
++	param set EKF2_BARO_GATE 5
++	param set EKF2_BARO_NOISE 2
++	param set EKF2_DECL_TYPE 3
++	param set EKF2_GPS_CHECK 1045
++	param set EKF2_GPS_CTRL 7
++	param set EKF2_GPS_P_GATE 5
++	param set EKF2_GPS_P_NOISE 0.5
++	param set EKF2_GPS_V_GATE 5
++	param set EKF2_GPS_V_NOISE 0.5
++	param set EKF2_HDG_GATE 2.6
++	param set EKF2_HEAD_NOISE 0.3
++	param set EKF2_HGT_REF 1
++	param set EKF2_MAG_GATE 3
++	param set EKF2_MAG_NOISE 0.05
++	param set EKF2_MAG_TYPE 6
++	param set EKF2_REQ_EPH 3
++	param set EKF2_REQ_EPV 5
++	param set EKF2_REQ_FIX 3
++	param set EKF2_REQ_NSATS 6
++	param set EKF2_REQ_PDOP 2
++	param set EKF2_REQ_SACC 0.5
++	param set MC_PITCHRATE_D 0
++	param set MC_PITCHRATE_FF 0.1
++	param set MC_PITCHRATE_I 0.25
++	param set MC_PITCHRATE_MAX 220.002
++	param set MC_PITCHRATE_P 0.1
++	param set MC_PITCH_P 4
++	param set MC_PR_INT_LIM 0.3
++	param set MC_ROLLRATE_D 0
++	param set MC_ROLLRATE_FF 0.1
++	param set MC_ROLLRATE_I 0.25
++	param set MC_ROLLRATE_MAX 220.002
++	param set MC_ROLLRATE_P 0.1
++	param set MC_ROLL_P 4
++	param set MC_RR_INT_LIM 0.3
++	param set MC_YAWRATE_D 0
++	param set MC_YAWRATE_FF 0.1
++	param set MC_YAWRATE_I 0
++	param set MC_YAWRATE_MAX 199.998
++	param set MC_YAWRATE_P 0.5
++	param set MC_YAW_P 3.25
++	param set MC_YAW_WEIGHT 0.4
++	param set MC_YR_INT_LIM 0.2
++	param set MPC_THR_HOVER 0.32175000645
++	param set MPC_THR_MAX 0.9
++	param set MPC_THR_MIN 0.1
++	param set MPC_TILTMAX_AIR 45
++	param set MPC_XY_P 2
++	param set MPC_XY_VEL_D_ACC 1
++	param set MPC_XY_VEL_I_ACC 0.25
++	param set MPC_XY_VEL_MAX 12
++	param set MPC_XY_VEL_P_ACC 4.6
++	param set MPC_Z_P 1.25
++	param set MPC_Z_VEL_D_ACC 0.5
++	param set MPC_Z_VEL_I_ACC 2.5
++	param set MPC_Z_VEL_MAX_DN 1.5
++	param set MPC_Z_VEL_MAX_UP 3
++	param set MPC_Z_VEL_P_ACC 9.5
++	param set SENS_GPS0_DELAY 100
++	param set THR_MDL_FAC 0.548538286
++	param set HIL_ACT_FUNC1 101
++	param set HIL_ACT_FUNC2 102
++	param set HIL_ACT_FUNC3 103
++	param set HIL_ACT_FUNC4 104
++
++	# The simulated sensors of hako_sensor_device count as calibrated, as in
++	# PX4 SITL (device IDs: simulation bus 1, address 1).
++	param set-default SYS_AUTOCFG_CAL 1
++	param set-default CAL_ACC0_ID 1310988
++	param set-default CAL_GYRO0_ID 1310988
++	param set-default CAL_MAG0_ID 196876
++	param set-default CAL_MAG0_PRIO 50
++	param set-default SENS_BOARD_X_OFF 0.000001
++else
++	# The board has no sensor or actuator drivers: run the SIH quadcopter so
++	# that the flight stack runs end to end.
++	param set-default SYS_AUTOSTART 1100
++fi
+diff --git a/boards/aifoundry/erbium/init/rc.board_extras b/boards/aifoundry/erbium/init/rc.board_extras
+index 4398aef6c2..63ac09b981 100644
+--- a/boards/aifoundry/erbium/init/rc.board_extras
++++ b/boards/aifoundry/erbium/init/rc.board_extras
+@@ -9,3 +9,10 @@ if [ -e /dev/kmsg ]
+ then
+ 	mavlink start -d /dev/ttyS0 -b 921600 -r 40000 -x
+ fi
++
++# aifoundry_erbium_hakoniwa: motor outputs (HIL_ACT_FUNCn) for Athrill's
++# Hakoniwa sensor device, which hako_sensor_device writes to.
++if [ -e /bin/hako_sensor_device ]
++then
++	pwm_out_sim start -m hil
++fi
+diff --git a/boards/aifoundry/erbium/init/rc.board_sensors b/boards/aifoundry/erbium/init/rc.board_sensors
+index 2db4c4a48f..3abf244e51 100644
+--- a/boards/aifoundry/erbium/init/rc.board_sensors
++++ b/boards/aifoundry/erbium/init/rc.board_sensors
+@@ -2,3 +2,10 @@
+ #
+ # AIFoundry Erbium specific board sensors init
+ #------------------------------------------------------------------------------
++
++# aifoundry_erbium_hakoniwa: IMU, magnetometer, barometer and GPS of Athrill's
++# Hakoniwa sensor device.
++if [ -e /bin/hako_sensor_device ]
++then
++	hako_sensor_device start
++fi
+diff --git a/boards/aifoundry/erbium/nuttx-config/hakoniwa/defconfig b/boards/aifoundry/erbium/nuttx-config/hakoniwa/defconfig
+new file mode 100644
+index 0000000000..dd6389bae2
+--- /dev/null
++++ b/boards/aifoundry/erbium/nuttx-config/hakoniwa/defconfig
+@@ -0,0 +1,90 @@
++#
++# This file is autogenerated: PLEASE DO NOT EDIT IT.
++#
++# You can use "make menuconfig" to make any modifications to the installed .config file.
++# You can then do "make savedefconfig" to generate a new defconfig file that includes your
++# modifications.
++#
++# CONFIG_DISABLE_OS_API is not set
++# CONFIG_NSH_DISABLEBG is not set
++# CONFIG_NSH_DISABLESCRIPT is not set
++# CONFIG_NSH_DISABLE_LOSMART is not set
++CONFIG_ARCH="risc-v"
++CONFIG_ARCH_BOARD_CUSTOM=y
++CONFIG_ARCH_BOARD_CUSTOM_DIR="../../../../boards/aifoundry/erbium/nuttx-config"
++CONFIG_ARCH_BOARD_CUSTOM_DIR_RELPATH=y
++CONFIG_ARCH_BOARD_CUSTOM_NAME="px4"
++CONFIG_ARCH_CHIP="erbium"
++CONFIG_ARCH_CHIP_ERBIUM=y
++CONFIG_ARCH_INTERRUPTSTACK=4096
++CONFIG_ARCH_RISCV=y
++CONFIG_ARCH_STACKDUMP=y
++CONFIG_BOARD_LOOPSPERMSEC=400000
++CONFIG_BUILTIN=y
++CONFIG_DEV_FIFO_SIZE=0
++CONFIG_DEV_PIPE_SIZE=70
++CONFIG_FS_BINFS=y
++CONFIG_FS_CROMFS=y
++CONFIG_FS_PROCFS=y
++CONFIG_FS_PROCFS_REGISTER=y
++CONFIG_FS_TMPFS=y
++CONFIG_HAVE_CXX=y
++CONFIG_HAVE_CXXINITIALIZE=y
++CONFIG_IDLETHREAD_STACKSIZE=2048
++CONFIG_INIT_ENTRYPOINT="nsh_main"
++CONFIG_INIT_STACKSIZE=8192
++CONFIG_LIBC_FLOATINGPOINT=y
++CONFIG_LIBC_LONG_LONG=y
++CONFIG_LIBC_MAX_EXITFUNS=1
++CONFIG_LIBC_STRERROR=y
++CONFIG_LIBM_TOOLCHAIN=y
++CONFIG_MQ_MAXMSGSIZE=32
++CONFIG_NSH_ARCHINIT=y
++CONFIG_NSH_BUILTIN_APPS=y
++CONFIG_NSH_FILEIOSIZE=512
++CONFIG_NSH_MAXARGUMENTS=15
++CONFIG_NSH_NESTDEPTH=8
++CONFIG_NSH_READLINE=y
++CONFIG_ETC_CROMFS=y
++CONFIG_ETC_ROMFS=y
++CONFIG_ETC_ROMFSSECTSIZE=128
++CONFIG_NSH_STRERROR=y
++CONFIG_NSH_VARS=y
++CONFIG_PIPES=y
++CONFIG_PREALLOC_TIMERS=50
++CONFIG_PRIORITY_INHERITANCE=y
++CONFIG_PTHREAD_MUTEX_TYPES=y
++CONFIG_RAM_SIZE=16776704
++CONFIG_RAM_START=0x40000200
++CONFIG_RR_INTERVAL=200
++CONFIG_SCHED_HPWORK=y
++CONFIG_SCHED_HPWORKPRIORITY=249
++CONFIG_SCHED_HPWORKSTACKSIZE=2048
++CONFIG_SCHED_INSTRUMENTATION=y
++CONFIG_SCHED_INSTRUMENTATION_SWITCH=y
++CONFIG_SCHED_LPWORK=y
++CONFIG_SCHED_LPWORKPRIORITY=50
++CONFIG_SCHED_LPWORKSTACKSIZE=2048
++CONFIG_SCHED_WAITPID=y
++CONFIG_SEM_PREALLOCHOLDERS=32
++CONFIG_SIG_DEFAULT=y
++CONFIG_SIG_SIGALRM_ACTION=y
++CONFIG_SIG_SIGUSR1_ACTION=y
++CONFIG_SIG_SIGUSR2_ACTION=y
++CONFIG_STACK_COLORATION=y
++CONFIG_START_YEAR=2026
++CONFIG_SYSTEM_NSH=y
++CONFIG_TASK_NAME_SIZE=24
++# CONFIG_UART0_SERIAL_CONSOLE is not set
++# CONFIG_SYSLOG_CONSOLE is not set
++# CONFIG_SYSLOG_DEFAULT is not set
++CONFIG_CONSOLE_SYSLOG=y
++CONFIG_RAMLOG=y
++CONFIG_RAMLOG_BUFSIZE=16384
++CONFIG_RAMLOG_SYSLOG=y
++CONFIG_SYSLOG_MAX_CHANNELS=2
++CONFIG_SYSLOG_REGISTER=y
++CONFIG_USEC_PER_TICK=1000
++CONFIG_NSH_ARGCAT=y
++CONFIG_NSH_QUOTE=y
++CONFIG_LINE_MAX=128
