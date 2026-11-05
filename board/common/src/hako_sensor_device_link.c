@@ -122,6 +122,11 @@ bool hako_sensor_link_write_actuator(const HakoActuatorSample *actuator)
 	return hakoniwa_asset_write_pdu(link.asset_name, link.robot_name, link.actuator_channel, buffer, sizeof(buffer)) == 0;
 }
 
+uint64_t hako_sensor_link_async_sample_period_usec(void)
+{
+	return 0U;
+}
+
 void hako_sensor_link_notify_time(uint64_t time_usec)
 {
 	hakoniwa_asset_notify_simtime(link.asset_name, (hako_time_t)time_usec);

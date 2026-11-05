@@ -321,9 +321,26 @@ static void wait_for_sample(void)
 static void hakoniwa_supply_clock(DeviceClockType *clock)
 {
 	HakoActuatorSample actuator;
+	uint64 async_period;
 	uint64 next;
 
 	for (;;) {
+		/*
+		 * The in-process worker owns the aircraft between samples.  Let the
+		 * firmware advance to the next known sample boundary while it runs;
+		 * the serial and shared-memory links return zero and retain the eager
+		 * read used before the worker was added.
+		 */
+		async_period = hako_sensor_link_async_sample_period_usec();
+		if (!has_pending && has_time_offset && (async_period != 0U)) {
+			next = (last_time_usec + async_period - time_offset_usec) * cpu_mhz;
+			if (clock->clock < next) {
+				if ((next - clock->clock) < clock->min_intr_interval) {
+					clock->min_intr_interval = next - clock->clock;
+				}
+				return;
+			}
+		}
 		wait_for_sample();
 		if (!has_time_offset) {
 			time_offset_usec = pending_sensor.time_usec - (clock->clock / cpu_mhz);
@@ -397,17 +414,22 @@ static void devinit(MpuAddressRegionType *region, AthrillExDevOperationType *ops
 		}
 	}
 #ifdef HAKO_SENSOR_DEVICE_INPROC
+	memset(&link, 0, sizeof(link));
 	if (ops->param.get_devcfg_string("HAKO_AIRCRAFT_CONFIG_PATH", &text) != STD_E_OK) {
 		printf("ERROR: hako_sensor_device: HAKO_AIRCRAFT_CONFIG_PATH is needed\n");
 		return;
 	}
-	memset(&link, 0, sizeof(link));
 	link.aircraft_config_path = text;
+	link.aircraft_worker = true;
+	if (ops->param.get_devcfg_value("HAKO_AIRCRAFT_WORKER", &value) == STD_E_OK) {
+		link.aircraft_worker = value != 0U;
+	}
 	if (!hako_sensor_link_initialize(&link)) {
 		printf("ERROR: hako_sensor_device: can not create aircraft from %s\n", text);
 		return;
 	}
-	printf("hako_sensor_device: in-process aircraft from %s\n", text);
+	printf("hako_sensor_device: in-process aircraft from %s (%s)\n", text,
+		link.aircraft_worker ? "worker" : "serial");
 	hakoniwa_mode = true;
 #else
 	if (ops->param.get_devcfg_string("HAKO_SENSOR_DEVICE_ASSET", &text) != STD_E_OK) {

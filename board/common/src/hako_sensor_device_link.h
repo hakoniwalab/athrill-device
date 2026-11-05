@@ -18,6 +18,7 @@ typedef struct {
 	uint32_t sensor_channel;
 	uint32_t gps_channel;
 	uint32_t actuator_channel;
+	bool aircraft_worker;
 } HakoSensorLinkConfig;
 
 #ifdef __cplusplus
@@ -37,6 +38,9 @@ bool hako_sensor_link_poll_events(void);
 bool hako_sensor_link_read(uint64_t last_time_usec, HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps);
 
 bool hako_sensor_link_write_actuator(const HakoActuatorSample *actuator);
+
+/* Nonzero when an in-process worker can run until this next sample period. */
+uint64_t hako_sensor_link_async_sample_period_usec(void);
 
 void hako_sensor_link_notify_time(uint64_t time_usec);
 

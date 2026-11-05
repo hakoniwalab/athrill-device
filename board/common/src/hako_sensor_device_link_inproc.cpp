@@ -4,13 +4,16 @@
 #include "service.hpp"
 
 #include <cmath>
+#include <condition_variable>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <thread>
 
 namespace {
 
@@ -156,6 +159,15 @@ struct InProcessLink {
 	uint64_t sensor_period_usec{0};
 	uint64_t gps_time_usec{0};
 	bool has_actuator{false};
+	bool worker_enabled{true};
+	std::mutex worker_mutex;
+	std::condition_variable worker_condition;
+	std::thread worker_thread;
+	uint64_t worker_after_usec{0};
+	bool worker_pending{false};
+	bool worker_sample_ready{false};
+	bool worker_stop{false};
+	bool worker_failed{false};
 };
 
 std::unique_ptr<InProcessLink> link;
@@ -231,6 +243,71 @@ bool stepUntilSensor(InProcessLink& state, uint64_t last_time_usec)
 		&& sensor.time_usec > last_time_usec;
 }
 
+void runAircraftWorker(InProcessLink *state)
+{
+	std::unique_lock<std::mutex> lock(state->worker_mutex);
+	for (;;) {
+		state->worker_condition.wait(lock, [state] {
+			return state->worker_stop || state->worker_pending;
+		});
+		if (state->worker_stop) {
+			return;
+		}
+
+		const uint64_t last_time_usec = state->worker_after_usec;
+		lock.unlock();
+		const bool success = stepUntilSensor(*state, last_time_usec);
+		lock.lock();
+
+		state->worker_pending = false;
+		state->worker_sample_ready = success;
+		state->worker_failed = !success;
+		state->worker_condition.notify_all();
+	}
+}
+
+bool readWorkerSample(
+	InProcessLink& state, uint64_t last_time_usec,
+	HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps)
+{
+	std::unique_lock<std::mutex> lock(state.worker_mutex);
+	state.worker_condition.wait(lock, [&state] {
+		return state.worker_stop || state.worker_failed || state.worker_sample_ready;
+	});
+	if (state.worker_stop || state.worker_failed) {
+		return false;
+	}
+
+	Hako_HakoHilSensor source_sensor{};
+	Hako_HakoHilGps source_gps{};
+	bool source_has_gps = false;
+	if (!state.mavlink_service->readSensor(source_sensor, source_gps, source_has_gps)
+		|| source_sensor.time_usec <= last_time_usec) {
+		return false;
+	}
+	hako_sensor_link_decode_sensor(&source_sensor, sensor);
+	*has_gps = source_has_gps && source_gps.time_usec != state.gps_time_usec;
+	if (*has_gps) {
+		state.gps_time_usec = source_gps.time_usec;
+		hako_sensor_link_decode_gps(&source_gps, gps);
+	}
+	state.worker_sample_ready = false;
+	return true;
+}
+
+void stopAircraftWorker(InProcessLink& state)
+{
+	if (!state.worker_enabled || !state.worker_thread.joinable()) {
+		return;
+	}
+	{
+		std::lock_guard<std::mutex> lock(state.worker_mutex);
+		state.worker_stop = true;
+		state.worker_condition.notify_all();
+	}
+	state.worker_thread.join();
+}
+
 }  // namespace
 
 extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
@@ -240,6 +317,7 @@ extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
 	}
 	try {
 		auto state = std::make_unique<InProcessLink>();
+		state->worker_enabled = config->aircraft_worker;
 		if (!loadAircraftConfig(*state, config->aircraft_config_path)) {
 			return false;
 		}
@@ -271,6 +349,14 @@ extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
 		if (!state->aircraft_service->startService(true, state->physics_step_usec)) {
 			return false;
 		}
+		if (state->worker_enabled) {
+			/* The worker also prepares the initial sample, before any actuator. */
+			state->worker_pending = true;
+			InProcessLink *worker_state = state.get();
+			state->worker_thread = std::thread([worker_state] {
+				runAircraftWorker(worker_state);
+			});
+		}
 		link = std::move(state);
 		return true;
 	}
@@ -289,8 +375,13 @@ extern "C" bool hako_sensor_link_poll_events(void)
 extern "C" bool hako_sensor_link_read(
 	uint64_t last_time_usec, HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps)
 {
-	if (!link || sensor == nullptr || gps == nullptr || has_gps == nullptr
-		|| !stepUntilSensor(*link, last_time_usec)) {
+	if (!link || sensor == nullptr || gps == nullptr || has_gps == nullptr) {
+		return false;
+	}
+	if (link->worker_enabled) {
+		return readWorkerSample(*link, last_time_usec, sensor, gps, has_gps);
+	}
+	if (!stepUntilSensor(*link, last_time_usec)) {
 		return false;
 	}
 	Hako_HakoHilSensor source_sensor{};
@@ -314,9 +405,27 @@ extern "C" bool hako_sensor_link_write_actuator(const HakoActuatorSample *actuat
 	if (!link || actuator == nullptr) {
 		return false;
 	}
+	if (link->worker_enabled) {
+		std::lock_guard<std::mutex> lock(link->worker_mutex);
+		if (link->worker_stop || link->worker_failed || link->worker_pending
+			|| link->worker_sample_ready) {
+			return false;
+		}
+		link->actuator = *actuator;
+		link->has_actuator = true;
+		link->worker_after_usec = actuator->time_usec;
+		link->worker_pending = true;
+		link->worker_condition.notify_one();
+		return true;
+	}
 	link->actuator = *actuator;
 	link->has_actuator = true;
 	return link->mavlink_service->deliverActuator(link->actuator);
+}
+
+extern "C" uint64_t hako_sensor_link_async_sample_period_usec(void)
+{
+	return link && link->worker_enabled ? link->sensor_period_usec : 0U;
 }
 
 extern "C" void hako_sensor_link_notify_time(uint64_t)
@@ -328,6 +437,7 @@ extern "C" void hako_sensor_link_cleanup(void)
 	if (!link) {
 		return;
 	}
+	stopAircraftWorker(*link);
 	link->aircraft_service->stopService();
 	link->mavlink_service->stopService();
 	link.reset();
