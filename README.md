@@ -26,6 +26,9 @@ Both sides move in lockstep on the data:
 
 Nothing depends on wall-clock time.
 
+A second build of the device can run the Hakoniwa Drone aircraft inside the Athrill process instead, with the
+same flight and no second process: see the design, [docs/in-process-aircraft.md](docs/in-process-aircraft.md).
+
 ## Layout
 
 | Path | What |
