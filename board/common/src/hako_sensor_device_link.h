@@ -14,10 +14,15 @@
 typedef struct {
 	const char *asset_name;
 	const char *robot_name;
+	const char *aircraft_config_path;
 	uint32_t sensor_channel;
 	uint32_t gps_channel;
 	uint32_t actuator_channel;
 } HakoSensorLinkConfig;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /* Registers the asset; false on failure. */
 bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config);
@@ -36,5 +41,9 @@ bool hako_sensor_link_write_actuator(const HakoActuatorSample *actuator);
 void hako_sensor_link_notify_time(uint64_t time_usec);
 
 void hako_sensor_link_cleanup(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -10,6 +10,7 @@
  *   HAKO_SENSOR_DEVICE_SENSOR_CHANNEL    channel of hil_sensor (HakoHilSensor)
  *   HAKO_SENSOR_DEVICE_GPS_CHANNEL       channel of hil_gps (HakoHilGps)
  *   HAKO_SENSOR_DEVICE_ACTUATOR_CHANNEL  channel of hil_actuator (HakoHilActuatorControls)
+ *   HAKO_AIRCRAFT_CONFIG_PATH            in-process build: airframe directory or drone_config JSON
  *   HAKO_SENSOR_DEVICE_TRACE_PATH        optional sensor, GPS and actuator trace (exact float bits)
  *   HAKO_SENSOR_DEVICE_TEST_PERIOD       without Hakoniwa: every N usec of simulated time, a
  *                                        sample of a vehicle at rest (GPS every 25th)
@@ -395,6 +396,20 @@ static void devinit(MpuAddressRegionType *region, AthrillExDevOperationType *ops
 				value, test_vehicle.lat_deg, test_vehicle.lon_deg, test_vehicle.alt_m, test_vehicle.pressure_hpa);
 		}
 	}
+#ifdef HAKO_SENSOR_DEVICE_INPROC
+	if (ops->param.get_devcfg_string("HAKO_AIRCRAFT_CONFIG_PATH", &text) != STD_E_OK) {
+		printf("ERROR: hako_sensor_device: HAKO_AIRCRAFT_CONFIG_PATH is needed\n");
+		return;
+	}
+	memset(&link, 0, sizeof(link));
+	link.aircraft_config_path = text;
+	if (!hako_sensor_link_initialize(&link)) {
+		printf("ERROR: hako_sensor_device: can not create aircraft from %s\n", text);
+		return;
+	}
+	printf("hako_sensor_device: in-process aircraft from %s\n", text);
+	hakoniwa_mode = true;
+#else
 	if (ops->param.get_devcfg_string("HAKO_SENSOR_DEVICE_ASSET", &text) != STD_E_OK) {
 		return;
 	}
@@ -417,6 +432,7 @@ static void devinit(MpuAddressRegionType *region, AthrillExDevOperationType *ops
 	printf("hako_sensor_device: Hakoniwa asset %s, robot %s, channels sensor %u gps %u actuator %u\n",
 		link.asset_name, link.robot_name, link.sensor_channel, link.gps_channel, link.actuator_channel);
 	hakoniwa_mode = true;
+#endif
 }
 
 static void cleanup(void)

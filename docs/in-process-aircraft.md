@@ -34,7 +34,8 @@ PX4 on Athrill STM32 is about 2.5 to 3 instead of 1.85; the prototype measures i
   Nothing in the physics or the sensor models is re-implemented.
 
 So, with the same configuration and the same random seed, every sensor sample and every actuator value, with its
-timestamp, is the same as with the Hakoniwa link.
+simulation timestamp relative to the first sample, is the same as with the Hakoniwa link. HIL itself adds the
+aircraft service's wall-clock start epoch to those timestamps, as it does in the two-process service.
 
 ## Where it goes
 
@@ -60,11 +61,13 @@ shared by all boards.
 ## The aircraft libraries
 
 The in-process link uses the libraries and headers of the Hakoniwa Drone release (`hakoniwa-drone-core`), the same
-ones the aircraft service is built from:
+ones the aircraft service is built from. The v5.0.0 macOS archive exposes all of the required implementation through
+`libhako_service_c.dylib`, despite that library's C-oriented name. The archive omitted a few transitive C++ headers,
+so the build also takes those headers from the matching v5.0.0 source tree; executable code still comes from the free
+release library:
 
 - `aircraft` (`IAirCraftContainer`): the airframe, its physics (MuJoCo) and its sensor models;
-- `service` (`IAircraftServiceContainer`): the 1 ms stepping, the actuator hold over the sensor period, the sensor
-  timestamps and the HIL message encoding;
+- `service` (`IAircraftServiceContainer`): the 1 ms stepping, sensor timestamps and HIL message encoding;
 - `mavlink` (`IMavLinkService`): the message boundary of the aircraft service.
 
 The aircraft service talks to a flight controller through an `IMavLinkService`. Today that is TCP (SITL) or the
@@ -72,11 +75,13 @@ Hakoniwa shared-memory service (PIL). The in-process link adds a third one in th
 
 - `sendMessage(HIL_SENSOR / HIL_GPS)` from the aircraft service stores the message for `hako_sensor_link_read`;
 - `hako_sensor_link_write_actuator` turns the actuator into `HIL_ACTUATOR_CONTROLS` and passes it to the aircraft
-  service through `readMessage` and the receiver callback, which makes the aircraft step.
+  service through `readMessage` and the receiver callback, which makes the aircraft step. The v5.0.0 service's
+  unsynchronised receiver callback advances one 1 ms physics step. If that step has not reached the next sensor
+  period, `hako_sensor_link_read` redelivers the held actuator synchronously until the service sends the sample.
 
-The messages are the same C structures as the PDUs (`hako_mavlink_msgs`), so the conversion code in
-`hako_sensor_device_link.c` is reused as it is. The aircraft service's PDU syncher is a no-operation one: no
-Hakoniwa PDU is written on the control path.
+The messages are the same C structures as the PDUs (`hako_mavlink_msgs`), so both links use the same conversion
+helpers in `hako_sensor_device_link_mavlink.c`. The aircraft service's PDU syncher is a no-operation one: no Hakoniwa
+PDU is written on the control path.
 
 Builds link the release binaries by default. A Hakoniwa Drone PRO build has the same headers and can be linked
 instead. The source in this repository is MIT. A built library that links the release binaries is under their
@@ -96,20 +101,7 @@ licence: free for non-commercial use, see the `hakoniwa-drone-core` release.
 
 ## Viewer
 
-The viewer stays outside the Athrill process and is reached through Hakoniwa, so that nothing of it is on the control
-path:
-
-- After each 1 ms step, the aircraft's thread copies the vehicle state for display (the same PDUs the aircraft service
-  writes for viewers: position, velocity, actuator visualisation, battery) into a small buffer under a mutex.
-- A publisher thread in the device writes the latest buffer to the Hakoniwa PDUs at a fixed wall rate (30 Hz by
-  default). It never waits for the aircraft and the aircraft never waits for it; a slow viewer or a slow Hakoniwa can
-  only skip frames.
-- Any Hakoniwa viewer that shows the Hakoniwa Drone from these PDUs shows the flight, as with the aircraft service.
-- The display PDUs are not time-synchronised with the flight: they show the latest state. The flight itself does not
-  depend on Hakoniwa, so it is identical with the viewer on or off.
-- Without the viewer option, the device does not touch Hakoniwa at all.
-
-Nothing changes in the Athrill core for this.
+The prototype has no viewer or Hakoniwa publisher. The in-process build does not touch Hakoniwa.
 
 ## Configuration
 
@@ -118,8 +110,6 @@ The device configuration of the in-process library takes:
 | Key | Value |
 | --- | --- |
 | `HAKO_AIRCRAFT_CONFIG_PATH` | the airframe directory or `drone_config_0.json` of the Hakoniwa Drone, e.g. `x500-athrill-px4` |
-| `HAKO_AIRCRAFT_VIEWER` | `0` (default) or `1`: publish the display PDUs to Hakoniwa for a viewer |
-| `HAKO_AIRCRAFT_VIEWER_HZ` | publishing rate in wall time, default `30` |
 
 The channel and asset lines of the Hakoniwa link are not used. The airframe configuration gives the sensor period,
 the sensor models and the random seed (`simulation.randomSeed`), as for the aircraft service.
@@ -133,14 +123,13 @@ the sensor models and the random seed (`simulation.randomSeed`), as for the airc
 3. **Speed.** RTF over the hover, no viewer, for PX4 on Athrill STM32, PX4 on Athrill RISC-V (Erbium) and ArduCopter
    on Athrill STM32, against the Hakoniwa link (1.85, 2.07 to 2.11, 1.16 to 1.26).
 4. **The Hakoniwa link unchanged.** The default library and its PIL runs behave as before.
-5. **Viewer.** With the viewer on, the logs of check 1 stay identical.
 
 ## When to use which
 
 | | Hakoniwa link | In-process link |
 | --- | --- | --- |
 | Other Hakoniwa assets (other vehicles, tools) | yes | no |
-| Hakoniwa viewers | yes | yes, display only (latest state) |
+| Hakoniwa viewers | yes | no (prototype) |
 | Speed | the two processes meet at every exchange | no meeting; the firmware and the aircraft alternate in one thread |
 | Same flight | reference | identical to the Hakoniwa link |
 | Typical use | a vehicle in a larger Hakoniwa world | one vehicle: firmware tests, tuning, regression runs, CI |
