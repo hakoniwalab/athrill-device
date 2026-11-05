@@ -135,9 +135,14 @@ static void raise(uint32 bits)
 }
 
 /*
- * A vehicle at rest, level, facing north, at 1013.25 hPa and 20 degC. A small
- * repeating dither stands in for sensor noise: PX4 takes a sensor whose value
- * never changes as stale.
+ * A vehicle at rest, level, facing north, where Hakoniwa Drone's x500 starts
+ * (47.641468 N, 122.140165 W, GPS 121.531 m), with the pressure, temperature and
+ * magnetic field Hakoniwa Drone gives there (998.736 hPa, 15 degC; 53045 nT,
+ * declination 15.0 deg, inclination 69.0 deg). PX4 stores a barometer offset
+ * and the magnetic declination from what it sees at its first boot: with the
+ * same place, a first boot with this test vehicle leaves the values a flight
+ * in Hakoniwa needs. A small repeating dither stands in for sensor noise: PX4
+ * takes a sensor whose value never changes as stale.
  */
 static void test_feed(uint64 time_usec)
 {
@@ -154,19 +159,19 @@ static void test_feed(uint64 time_usec)
 	sensor.gyro[0] = d * 0.1F;
 	sensor.gyro[1] = -d * 0.1F;
 	sensor.gyro[2] = d * 0.05F;
-	sensor.mag[0] = 0.21F + d;
-	sensor.mag[1] = -d;
-	sensor.mag[2] = 0.43F + d;
-	sensor.abs_pressure = 1013.25F + d * 10.0F;
-	sensor.temperature = 20.0F;
+	sensor.mag[0] = 0.18374F + d;
+	sensor.mag[1] = 0.04927F - d;
+	sensor.mag[2] = 0.49517F + d;
+	sensor.abs_pressure = 998.736F + d * 10.0F;
+	sensor.temperature = 15.0F;
 	sensor.fields_updated = HAKO_FIELDS_IMU | HAKO_FIELDS_MAG | HAKO_FIELDS_BARO;
 	raise(hako_sensor_device_latch_sensor(&device, &sensor));
 	if ((test_count % TEST_GPS_EVERY) == 0U) {
 		memset(&gps, 0, sizeof(gps));
 		gps.time_usec = time_usec;
-		gps.lat = 356812360;	/* 35.681236 N */
-		gps.lon = 1397671250;	/* 139.767125 E */
-		gps.alt = 40000;
+		gps.lat = 476414680;	/* 47.641468 N */
+		gps.lon = -1221401650;	/* 122.140165 W */
+		gps.alt = 121531;
 		gps.eph = 100;
 		gps.epv = 150;
 		gps.satellites_visible = 12;

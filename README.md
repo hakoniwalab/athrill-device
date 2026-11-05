@@ -74,7 +74,10 @@ Hakoniwa Drone's aircraft service is the conductor, the only one. Start it first
 lines differ by board; see the board's README.
 
 To check the firmware's drivers without Hakoniwa, replace the channel and asset lines with
-`HAKO_SENSOR_DEVICE_TEST_PERIOD 4000`. The device then gives a vehicle at rest every 4 ms.
+`HAKO_SENSOR_DEVICE_TEST_PERIOD 4000`. The device then gives a vehicle at rest every 4 ms, where Hakoniwa Drone's
+x500 starts (place, pressure and magnetic field). PX4 stores a barometer offset and the magnetic declination at
+its first boot, so a first boot with this test vehicle (to write the parameters, for example) leaves the values a
+flight in Hakoniwa needs.
 
 **Take-off over MAVLink:** the altitude of `MAV_CMD_NAV_TAKEOFF` is above mean sea level. Give the home altitude
 plus the height to climb. QGroundControl does this for you.
