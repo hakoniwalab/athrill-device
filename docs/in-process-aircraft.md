@@ -96,17 +96,20 @@ licence: free for non-commercial use, see the `hakoniwa-drone-core` release.
 
 ## Viewer
 
-The MuJoCo viewer (GLFW) has to run in the main thread on macOS, and the main thread of Athrill runs the CPU. The
-design keeps the control path free of the viewer:
+The viewer stays outside the Athrill process and is reached through Hakoniwa, so that nothing of it is on the control
+path:
 
-- The aircraft's thread copies the vehicle pose (position, attitude, rotor angles) into a small buffer under a mutex
-  after each step. That is the only shared state.
-- The viewer draws from that buffer at its own rate, with its own copy of the MuJoCo model. It never reads the
-  aircraft's simulation data and never waits for it. A slow viewer cannot slow the flight or change it.
-- Running the viewer in the main thread needs one entry point in the Athrill core: a device may register a
-  main-thread function. If one is registered, the core runs the CPU loop in a worker thread and calls the function in
-  the main thread until the run ends. Without it, nothing changes. This is the only core change, and it is optional:
-  the in-process link works without a viewer (batch runs, measurement).
+- After each 1 ms step, the aircraft's thread copies the vehicle state for display (the same PDUs the aircraft service
+  writes for viewers: position, velocity, actuator visualisation, battery) into a small buffer under a mutex.
+- A publisher thread in the device writes the latest buffer to the Hakoniwa PDUs at a fixed wall rate (30 Hz by
+  default). It never waits for the aircraft and the aircraft never waits for it; a slow viewer or a slow Hakoniwa can
+  only skip frames.
+- Any Hakoniwa viewer that shows the Hakoniwa Drone from these PDUs shows the flight, as with the aircraft service.
+- The display PDUs are not time-synchronised with the flight: they show the latest state. The flight itself does not
+  depend on Hakoniwa, so it is identical with the viewer on or off.
+- Without the viewer option, the device does not touch Hakoniwa at all.
+
+Nothing changes in the Athrill core for this.
 
 ## Configuration
 
@@ -115,7 +118,8 @@ The device configuration of the in-process library takes:
 | Key | Value |
 | --- | --- |
 | `HAKO_AIRCRAFT_CONFIG_PATH` | the airframe directory or `drone_config_0.json` of the Hakoniwa Drone, e.g. `x500-athrill-px4` |
-| `HAKO_AIRCRAFT_VIEWER` | `0` (default) or `1` for the MuJoCo viewer (needs the core entry point above) |
+| `HAKO_AIRCRAFT_VIEWER` | `0` (default) or `1`: publish the display PDUs to Hakoniwa for a viewer |
+| `HAKO_AIRCRAFT_VIEWER_HZ` | publishing rate in wall time, default `30` |
 
 The channel and asset lines of the Hakoniwa link are not used. The airframe configuration gives the sensor period,
 the sensor models and the random seed (`simulation.randomSeed`), as for the aircraft service.
@@ -135,7 +139,8 @@ the sensor models and the random seed (`simulation.randomSeed`), as for the airc
 
 | | Hakoniwa link | In-process link |
 | --- | --- | --- |
-| Other Hakoniwa assets (other vehicles, tools, external viewers) | yes | no |
+| Other Hakoniwa assets (other vehicles, tools) | yes | no |
+| Hakoniwa viewers | yes | yes, display only (latest state) |
 | Speed | the two processes meet at every exchange | no meeting; the firmware and the aircraft alternate in one thread |
 | Same flight | reference | identical to the Hakoniwa link |
 | Typical use | a vehicle in a larger Hakoniwa world | one vehicle: firmware tests, tuning, regression runs, CI |
