@@ -4,12 +4,12 @@
 set -eu
 
 usage() {
-    echo "usage: $0 EXAMPLE_DIR PX4_ELF ATHRILL3 INPROC_DEVICE AIRFRAME_CONFIG" >&2
+    echo "usage: $0 EXAMPLE_DIR PX4_ELF ATHRILL3 INPROC_DEVICE HAKO_DRONE_ROOT AIRFRAME_CONFIG" >&2
     echo "environment: ATHRILL_TICKS=-1 HAKO_SENSOR_DEVICE_TRACE_PATH=<file>" >&2
     exit 2
 }
 
-[ "$#" -eq 5 ] || usage
+[ "$#" -eq 6 ] || usage
 
 absolute() {
     path=$1
@@ -22,7 +22,8 @@ example_dir=$(absolute "$1")
 px4_elf=$(absolute "$2")
 athrill=$(absolute "$3")
 device=$(absolute "$4")
-airframe=$(absolute "$5")
+drone_root=$(absolute "$5")
+airframe=$(absolute "$6")
 ticks=${ATHRILL_TICKS:--1}
 trace=${HAKO_SENSOR_DEVICE_TRACE_PATH:-}
 
@@ -31,6 +32,7 @@ trace=${HAKO_SENSOR_DEVICE_TRACE_PATH:-}
 [ -f "$px4_elf" ] || usage
 [ -x "$athrill" ] || usage
 [ -f "$device" ] || usage
+[ -d "$drone_root" ] || usage
 [ -e "$airframe" ] || usage
 
 device_config=$example_dir/device_config-inproc.txt
@@ -44,7 +46,9 @@ trap cleanup_temporary EXIT INT TERM
 
 # The in-process link gets its channel layout from the airframe. Remove only
 # transport-specific lines; preserve the board, UART and MAVLink settings.
-awk '
+awk -v fram="$example_dir/fram.bin" -v sdcard="$example_dir/sd.img" '
+    $1 == "DEVICE_CONFIG_STM32_FRAM_FILE" { print $1, fram; next }
+    $1 == "DEVICE_CONFIG_STM32_SDCARD_IMAGE" { print $1, sdcard; next }
     $1 == "HAKO_SENSOR_DEVICE_ASSET" { next }
     $1 == "HAKO_SENSOR_DEVICE_ROBOT" { next }
     $1 == "HAKO_SENSOR_DEVICE_SENSOR_CHANNEL" { next }
@@ -68,5 +72,7 @@ mv "$memory_tmp" "$memory"
 trap - EXIT INT TERM
 echo "PX4 on Athrill with the in-process aircraft."
 echo "Leave this running and start fly.py against TCP 127.0.0.1:5760 in another terminal."
-cd "$example_dir"
+# Release configs name the MuJoCo XML relative to the release root. The two
+# writable board images above are absolute, so Athrill can safely run here.
+cd "$drone_root"
 exec "$athrill" -c1 -m "$memory" -d "$device_config" -t "$ticks" "$px4_elf"
