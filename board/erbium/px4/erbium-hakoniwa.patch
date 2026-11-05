@@ -6,7 +6,7 @@ index 0000000000..930e631b6d
 @@ -0,0 +1,7 @@
 +# Hakoniwa Drone PRO flies PX4 on Athrill: the sensors come from Athrill's
 +# Hakoniwa sensor device (driver hako_sensor_device, an external module of
-+# athrill-device px4/), the motor outputs go back to it through
++# athrill-device board/erbium/px4/), the motor outputs go back to it through
 +# pwm_out_sim. No SIH. NuttX as in the mavlink variant (MAVLink on UART0 for a
 +# ground station, log in the RAM log and on Athrill's standard output).
 +CONFIG_MODULES_SIMULATION_SIMULATOR_SIH=n

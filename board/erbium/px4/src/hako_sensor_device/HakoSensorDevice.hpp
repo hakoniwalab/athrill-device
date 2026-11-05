@@ -1,7 +1,7 @@
 /*
  * PX4 driver of the Hakoniwa sensor device (Athrill only), see
  * README.md and
- * include/hako_sensor_device_regs.h.
+ * board/common/include/hako_sensor_device_regs.h.
  *
  * On the data-ready interrupt it reads the registers and passes the samples
  * to PX4 like a sensor chip driver does (PX4Accelerometer, PX4Gyroscope,

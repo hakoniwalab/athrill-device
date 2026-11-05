@@ -3,7 +3,7 @@ px4_add_module(
 	MAIN hako_sensor_device
 	EXTERNAL
 	INCLUDES
-		${CMAKE_CURRENT_SOURCE_DIR}/../../../include
+		${CMAKE_CURRENT_SOURCE_DIR}/../../../../common/include
 	SRCS
 		HakoSensorDevice.cpp
 		HakoSensorDevice.hpp
