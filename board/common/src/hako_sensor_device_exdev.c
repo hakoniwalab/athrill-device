@@ -12,6 +12,14 @@
  *   HAKO_SENSOR_DEVICE_ACTUATOR_CHANNEL  channel of hil_actuator (HakoHilActuatorControls)
  *   HAKO_SENSOR_DEVICE_TEST_PERIOD       without Hakoniwa: every N usec of simulated time, a
  *                                        sample of a vehicle at rest (GPS every 25th)
+ *   HAKO_SENSOR_DEVICE_TEST_LAT_DEG      the test vehicle (all eight needed with TEST_PERIOD):
+ *   HAKO_SENSOR_DEVICE_TEST_LON_DEG        GPS latitude and longitude (deg), altitude (m),
+ *   HAKO_SENSOR_DEVICE_TEST_ALT_M          pressure (hPa) and temperature (degC) of the
+ *   HAKO_SENSOR_DEVICE_TEST_PRESSURE_HPA   barometer, magnetic field north, east, down
+ *   HAKO_SENSOR_DEVICE_TEST_TEMPERATURE_C  (gauss). Level and facing north. PX4 stores a
+ *   HAKO_SENSOR_DEVICE_TEST_MAG_N_GAUSS    barometer offset and the magnetic declination
+ *   HAKO_SENSOR_DEVICE_TEST_MAG_E_GAUSS    at its first boot: give the values of the place
+ *   HAKO_SENSOR_DEVICE_TEST_MAG_D_GAUSS    where the vehicle will fly.
  *
  * Samples are latched between CPU batches, at their exact simulated time:
  * supply_clock() caps the next batch at the clock of the next sample.
@@ -29,6 +37,7 @@
 #include "hako_sensor_device_link.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -41,6 +50,16 @@ static uint32 irq = HAKO_SENSOR_DEVICE_PLIC_SOURCE;
 static uint32 cpu_mhz = DEFAULT_CPU_MHZ;
 static uint32 test_period_usec;
 static uint64 test_count;
+
+typedef struct {
+	double lat_deg;
+	double lon_deg;
+	double alt_m;
+	double pressure_hpa;
+	double temperature_c;
+	double mag_gauss[3];
+} TestVehicle;
+static TestVehicle test_vehicle;
 static uint8 register_space[HAKO_SENSOR_DEVICE_SIZE];
 
 static bool hakoniwa_mode;
@@ -135,9 +154,9 @@ static void raise(uint32 bits)
 }
 
 /*
- * A vehicle at rest, level, facing north, at 1013.25 hPa and 20 degC. A small
- * repeating dither stands in for sensor noise: PX4 takes a sensor whose value
- * never changes as stale.
+ * The test vehicle of the device configuration (HAKO_SENSOR_DEVICE_TEST_*), at
+ * rest, level, facing north. A small repeating dither stands in for sensor
+ * noise: PX4 takes a sensor whose value never changes as stale.
  */
 static void test_feed(uint64 time_usec)
 {
@@ -154,19 +173,19 @@ static void test_feed(uint64 time_usec)
 	sensor.gyro[0] = d * 0.1F;
 	sensor.gyro[1] = -d * 0.1F;
 	sensor.gyro[2] = d * 0.05F;
-	sensor.mag[0] = 0.21F + d;
-	sensor.mag[1] = -d;
-	sensor.mag[2] = 0.43F + d;
-	sensor.abs_pressure = 1013.25F + d * 10.0F;
-	sensor.temperature = 20.0F;
+	sensor.mag[0] = (float)test_vehicle.mag_gauss[0] + d;
+	sensor.mag[1] = (float)test_vehicle.mag_gauss[1] - d;
+	sensor.mag[2] = (float)test_vehicle.mag_gauss[2] + d;
+	sensor.abs_pressure = (float)test_vehicle.pressure_hpa + d * 10.0F;
+	sensor.temperature = (float)test_vehicle.temperature_c;
 	sensor.fields_updated = HAKO_FIELDS_IMU | HAKO_FIELDS_MAG | HAKO_FIELDS_BARO;
 	raise(hako_sensor_device_latch_sensor(&device, &sensor));
 	if ((test_count % TEST_GPS_EVERY) == 0U) {
 		memset(&gps, 0, sizeof(gps));
 		gps.time_usec = time_usec;
-		gps.lat = 356812360;	/* 35.681236 N */
-		gps.lon = 1397671250;	/* 139.767125 E */
-		gps.alt = 40000;
+		gps.lat = (int32_t)(test_vehicle.lat_deg * 1e7 + (test_vehicle.lat_deg < 0.0 ? -0.5 : 0.5));
+		gps.lon = (int32_t)(test_vehicle.lon_deg * 1e7 + (test_vehicle.lon_deg < 0.0 ? -0.5 : 0.5));
+		gps.alt = (int32_t)(test_vehicle.alt_m * 1e3 + (test_vehicle.alt_m < 0.0 ? -0.5 : 0.5));
 		gps.eph = 100;
 		gps.epv = 150;
 		gps.satellites_visible = 12;
@@ -174,6 +193,48 @@ static void test_feed(uint64 time_usec)
 		raise(hako_sensor_device_latch_gps(&device, &gps));
 	}
 	test_count++;
+}
+
+/*
+ * A number of the device configuration. Athrill keeps a whole decimal
+ * number as a value (two's complement in 32 bits) and anything else, such as
+ * 47.641468, as a string.
+ */
+static bool get_number(AthrillExDevOperationType *ops, const char *key, double *number)
+{
+	char *text;
+	char *end;
+	uint32 value;
+
+	if (ops->param.get_devcfg_value(key, &value) == STD_E_OK) {
+		*number = (double)(int32_t)value;
+		return true;
+	}
+	if (ops->param.get_devcfg_string(key, &text) == STD_E_OK) {
+		*number = strtod(text, &end);
+		if ((end != text) && (*end == '\0')) {
+			return true;
+		}
+		printf("ERROR: hako_sensor_device: %s is not a number: %s\n", key, text);
+		return false;
+	}
+	printf("ERROR: hako_sensor_device: %s is needed with HAKO_SENSOR_DEVICE_TEST_PERIOD\n", key);
+	return false;
+}
+
+static bool load_test_vehicle(AthrillExDevOperationType *ops)
+{
+	bool ok = true;
+
+	ok = get_number(ops, "HAKO_SENSOR_DEVICE_TEST_LAT_DEG", &test_vehicle.lat_deg) && ok;
+	ok = get_number(ops, "HAKO_SENSOR_DEVICE_TEST_LON_DEG", &test_vehicle.lon_deg) && ok;
+	ok = get_number(ops, "HAKO_SENSOR_DEVICE_TEST_ALT_M", &test_vehicle.alt_m) && ok;
+	ok = get_number(ops, "HAKO_SENSOR_DEVICE_TEST_PRESSURE_HPA", &test_vehicle.pressure_hpa) && ok;
+	ok = get_number(ops, "HAKO_SENSOR_DEVICE_TEST_TEMPERATURE_C", &test_vehicle.temperature_c) && ok;
+	ok = get_number(ops, "HAKO_SENSOR_DEVICE_TEST_MAG_N_GAUSS", &test_vehicle.mag_gauss[0]) && ok;
+	ok = get_number(ops, "HAKO_SENSOR_DEVICE_TEST_MAG_E_GAUSS", &test_vehicle.mag_gauss[1]) && ok;
+	ok = get_number(ops, "HAKO_SENSOR_DEVICE_TEST_MAG_D_GAUSS", &test_vehicle.mag_gauss[2]) && ok;
+	return ok;
 }
 
 static void wait_for_sample(void)
@@ -241,7 +302,14 @@ static void devinit(MpuAddressRegionType *region, AthrillExDevOperationType *ops
 		cpu_mhz = value;
 	}
 	if (ops->param.get_devcfg_value("HAKO_SENSOR_DEVICE_TEST_PERIOD", &value) == STD_E_OK) {
-		test_period_usec = value;
+		if (!load_test_vehicle(ops)) {
+			printf("ERROR: hako_sensor_device: no test vehicle, no samples\n");
+		}
+		else {
+			test_period_usec = value;
+			printf("hako_sensor_device: test vehicle every %u usec at %.7f %.7f %.3f m, %.3f hPa\n",
+				value, test_vehicle.lat_deg, test_vehicle.lon_deg, test_vehicle.alt_m, test_vehicle.pressure_hpa);
+		}
 	}
 	if (ops->param.get_devcfg_string("HAKO_SENSOR_DEVICE_ASSET", &text) != STD_E_OK) {
 		return;

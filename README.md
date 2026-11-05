@@ -74,7 +74,19 @@ Hakoniwa Drone's aircraft service is the conductor, the only one. Start it first
 lines differ by board; see the board's README.
 
 To check the firmware's drivers without Hakoniwa, replace the channel and asset lines with
-`HAKO_SENSOR_DEVICE_TEST_PERIOD 4000`. The device then gives a vehicle at rest every 4 ms.
+`HAKO_SENSOR_DEVICE_TEST_PERIOD 4000` and the test vehicle. The device then gives a vehicle at rest, level and
+facing north, every 4 ms. The test vehicle is given by eight lines, all needed:
+
+| Key | Value |
+| --- | --- |
+| `HAKO_SENSOR_DEVICE_TEST_LAT_DEG`, `_LON_DEG`, `_ALT_M` | GPS position (deg, deg, m above mean sea level) |
+| `HAKO_SENSOR_DEVICE_TEST_PRESSURE_HPA`, `_TEMPERATURE_C` | barometer (hPa, degC) |
+| `HAKO_SENSOR_DEVICE_TEST_MAG_N_GAUSS`, `_E_GAUSS`, `_D_GAUSS` | magnetic field, north, east, down (gauss) |
+
+Give the values of the place where the vehicle will fly. PX4 stores a barometer offset and the magnetic
+declination from what it sees at its first boot. With another place, the first flight after a first boot on the
+test vehicle starts from the wrong values: for the Hakoniwa Drone x500, it held 2.72 m instead of 2.5 m. The
+Athrill STM32 example `examples/px4-hakoniwa/first-boot-config.txt` has the values of the Hakoniwa Drone x500.
 
 **Take-off over MAVLink:** the altitude of `MAV_CMD_NAV_TAKEOFF` is above mean sea level. Give the home altitude
 plus the height to climb. QGroundControl does this for you.
