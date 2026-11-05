@@ -71,39 +71,62 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
     message(FATAL_ERROR "Hakoniwa Drone release libraries were not found under ${HAKO_DRONE_PLATFORM_DIR}")
   endif()
 
+  function(configure_hako_inproc_target target)
+    target_link_libraries(${target} PRIVATE "${HAKO_DRONE_SERVICE_LIBRARY}")
+    target_include_directories(${target} PRIVATE
+      "${HAKO_DRONE_ROOT}/include"
+      "${HAKO_DRONE_SOURCE_DIR}/include"
+      "${HAKO_DRONE_SOURCE_DIR}/include/aircraft/interfaces"
+      "${HAKO_DRONE_SOURCE_DIR}/src"
+      "${HAKO_DRONE_SOURCE_DIR}/thirdparty/nolman/single_include"
+      "${HAKO_DRONE_SOURCE_DIR}/thirdparty/glm"
+      "${HAKO_PDU_REGISTRY_DIR}/pdu/types")
+    target_compile_features(${target} PRIVATE cxx_std_17)
+    target_compile_definitions(${target} PRIVATE HAKO_ENABLE_SENSOR_MODEL_V2)
+    if(APPLE)
+      # Both release dylibs use @loader_path, so keep them beside each consumer.
+      add_custom_command(TARGET ${target} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${HAKO_DRONE_SERVICE_LIBRARY}" "$<TARGET_FILE_DIR:${target}>"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${HAKO_DRONE_MUJOCO_LIBRARY}" "$<TARGET_FILE_DIR:${target}>")
+    endif()
+  endfunction()
+
   add_library(hako_sensor_device_inproc SHARED
     src/hako_sensor_device_exdev.c
     src/hako_sensor_device_link_inproc.cpp
     src/hako_sensor_device_link_mavlink.c)
-  target_link_libraries(hako_sensor_device_inproc PRIVATE
-    hako_sensor_device_core
-    "${HAKO_DRONE_SERVICE_LIBRARY}")
+  target_link_libraries(hako_sensor_device_inproc PRIVATE hako_sensor_device_core)
   target_include_directories(hako_sensor_device_inproc PRIVATE
-    "${HAKO_DRONE_ROOT}/include"
-    "${HAKO_DRONE_SOURCE_DIR}/include"
-    "${HAKO_DRONE_SOURCE_DIR}/include/aircraft/interfaces"
-    "${HAKO_DRONE_SOURCE_DIR}/src"
-    "${HAKO_DRONE_SOURCE_DIR}/thirdparty/nolman/single_include"
-    "${HAKO_DRONE_SOURCE_DIR}/thirdparty/glm"
-    "${HAKO_PDU_REGISTRY_DIR}/pdu/types"
     "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/inc>"
     "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/lib>"
     "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/cpu>"
     "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/device/mpu>"
     "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/device/peripheral/serial/fifo>")
-  target_compile_features(hako_sensor_device_inproc PRIVATE cxx_std_17)
+  configure_hako_inproc_target(hako_sensor_device_inproc)
   target_compile_definitions(hako_sensor_device_inproc PRIVATE
-    HAKO_SENSOR_DEVICE_INPROC HAKO_ENABLE_SENSOR_MODEL_V2
+    HAKO_SENSOR_DEVICE_INPROC
     ATHRILL_EXT_DEVICE OS_LINUX ATHRILL_ADDRESS_WIDTH=${ATHRILL_ADDRESS_WIDTH})
   set_target_properties(hako_sensor_device_inproc PROPERTIES
     C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
   if(APPLE)
     target_link_options(hako_sensor_device_inproc PRIVATE -undefined dynamic_lookup)
-    # Both release dylibs use @loader_path, so keep them beside the EXDEV.
-    add_custom_command(TARGET hako_sensor_device_inproc POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${HAKO_DRONE_SERVICE_LIBRARY}" "$<TARGET_FILE_DIR:hako_sensor_device_inproc>"
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${HAKO_DRONE_MUJOCO_LIBRARY}" "$<TARGET_FILE_DIR:hako_sensor_device_inproc>")
   endif()
+
+  add_executable(hako_sensor_inproc_test
+    test/hako_sensor_inproc_test.cpp
+    src/hako_sensor_device_link_inproc.cpp
+    src/hako_sensor_device_link_mavlink.c)
+  target_include_directories(hako_sensor_inproc_test PRIVATE src include)
+  configure_hako_inproc_target(hako_sensor_inproc_test)
+
+  add_executable(hako_sensor_hakoniwa_test
+    test/hako_sensor_inproc_test.cpp
+    src/hako_sensor_device_link.c
+    src/hako_sensor_device_link_mavlink.c)
+  target_link_libraries(hako_sensor_hakoniwa_test PRIVATE hakoniwa-core::shakoc)
+  target_include_directories(hako_sensor_hakoniwa_test PRIVATE
+    src include "${HAKO_PDU_REGISTRY_DIR}/pdu/types")
+  target_compile_features(hako_sensor_hakoniwa_test PRIVATE cxx_std_17)
 endif()

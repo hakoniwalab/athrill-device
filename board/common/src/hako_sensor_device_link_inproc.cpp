@@ -102,7 +102,7 @@ public:
 		}
 		sensor = sensor_;
 		has_gps = has_gps_;
-		if (has_gps_) {
+		if (has_gps) {
 			gps = gps_;
 		}
 		return true;
