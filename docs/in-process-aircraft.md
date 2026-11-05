@@ -33,9 +33,10 @@ PX4 on Athrill STM32 is about 2.5 to 3 instead of 1.85; the prototype measures i
 - The aircraft itself: the same libraries and the same airframe configuration as the Hakoniwa Drone aircraft service.
   Nothing in the physics or the sensor models is re-implemented.
 
-So, with the same configuration and the same random seed, every sensor sample and every actuator value, with its
-simulation timestamp relative to the first sample, is the same as with the Hakoniwa link. HIL itself adds the
-aircraft service's wall-clock start epoch to those timestamps, as it does in the two-process service.
+So, with the same configuration and the same random seed, every `HIL_SENSOR` sample and every actuator value, with
+its simulation timestamp relative to the first sample, is the same as with the Hakoniwa link. HIL itself adds the
+aircraft service's wall-clock start epoch to those timestamps, as it does in the two-process service. `HIL_GPS` has
+a separate-PDU visibility caveat described below.
 
 ## Where it goes
 
@@ -99,6 +100,22 @@ licence: free for non-commercial use, see the `hakoniwa-drone-core` release.
 - The device asks for samples only at sensor periods; between them, the CPU runs alone, as today.
 - The asset-time notification has no receiver and does nothing.
 
+### GPS visibility at the shared-memory boundary
+
+The v5 aircraft service publishes `HIL_SENSOR` and `HIL_GPS` as separate PDUs. The Hakoniwa device wakes for the
+sensor PDU and then reads GPS. Depending on process scheduling, that read sees either the GPS just published for
+the same 1 ms step or the previous GPS PDU. The in-process callback is synchronous and therefore always has the
+current GPS when it returns the sensor.
+
+The prototype's 60-second disarmed comparison confirmed that all 15,000 sensor records and all 15,000 actuator
+records were bit-identical. The first complete-trace difference was GPS at the 8 ms sensor sample: the Hakoniwa
+link saw time 7,000 us and the in-process link saw 8,000 us. The reference saw the previous GPS step for 12,391
+samples and the current step for 2,609 samples. Later GPS position and velocity fields consequently also select
+adjacent 1 ms samples. This is a scheduling-dependent visibility race in the two-process transport, not a different
+random seed or physics stepping order. An exact complete-PDU equivalence check needs the reference service to
+publish an atomic sensor/GPS snapshot (or an explicit sequence number); reproducing its wall-time race in the
+in-process link would make the deterministic path worse.
+
 ## Viewer
 
 The prototype has no viewer or Hakoniwa publisher. The in-process build does not touch Hakoniwa.
@@ -117,8 +134,8 @@ the sensor models and the random seed (`simulation.randomSeed`), as for the airc
 ## Checks of the prototype
 
 1. **Same flight.** PX4 on Athrill STM32, the Hakoniwa Drone x500, take-off to 2.5 m and hover, once with the
-   Hakoniwa link and once in process, same configuration and seed. The device logs every latched sensor sample and
-   every actuator value with its time; the two logs are identical over the whole flight.
+   Hakoniwa link and once in process, same configuration and seed. Compare the sensor and actuator streams exactly;
+   compare GPS only after giving the shared-memory boundary atomic sensor/GPS snapshot semantics.
 2. **Repeatable.** Two in-process runs give identical logs.
 3. **Speed.** RTF over the hover, no viewer, for PX4 on Athrill STM32, PX4 on Athrill RISC-V (Erbium) and ArduCopter
    on Athrill STM32, against the Hakoniwa link (1.85, 2.07 to 2.11, 1.16 to 1.26).
