@@ -1,0 +1,35 @@
+/* SPDX-License-Identifier: MIT */
+/*
+ * Human-readable source for the small unit-test DTBs.  Each top-level test
+ * below is emitted as a separate blob by ../make_test_dtbs.py.  Regenerate:
+ *
+ *   python3 tests/make_test_dtbs.py tests/dtb
+ *
+ * An equivalent upstream-dtc command for an individual extracted tree is:
+ *
+ *   dtc -I dts -O dtb -o valid.dtb valid.dts
+ */
+
+/dts-v1/;
+
+/ {
+	compatible = "athrill,test-board";
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	clock: clock {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+	};
+
+	device@1000 {
+		compatible = "athrill,test-mmio";
+		reg = <0x1000 0x100>;
+		clocks = <&clock>;
+	};
+};
+
+/* overlap.dtb adds device@1080, reg = <0x1080 0x100>. */
+/* missing-provider.dtb uses clocks = <99>. */
+/* cycle.dtb has two fixed-clock nodes whose clocks refer to each other. */
+/* plugin.dtb replaces the device compatible with "vendor,plugin". */
