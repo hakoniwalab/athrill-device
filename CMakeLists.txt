@@ -27,7 +27,7 @@ target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m)
 
 if(BUILD_TESTING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
-  set(TEST_DTB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/tests/dtb")
+  set(TEST_DTB_DIR "${CMAKE_CURRENT_BINARY_DIR}/tests/dtb")
   add_custom_target(generate-test-dtbs
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/make_test_dtbs.py"
             "${TEST_DTB_DIR}"
