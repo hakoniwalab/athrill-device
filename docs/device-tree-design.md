@@ -56,6 +56,28 @@ order and at the rates the firmware expects, and the vehicle flies.
   V850 target already has one) give rough per-task clock estimates as
   statistics. They never change how Athrill time advances.
 
+### Not modelled yet (future devices)
+
+The current boards are a minimum viable set for x500 flight with PX4 and
+ArduPilot. The devices below are absent or are plain register storage
+(writes read back, nothing behind them). The firmware boots and flies
+without them; they matter only when a vehicle or a test needs them.
+
+| Device | Today | Firmware sees | Needed for |
+|---|---|---|---|
+| CAN (STM32H7 FDCAN1/2, F7 bxCAN) | register storage, no bus | UAVCAN/DroneCAN starts with no nodes | CAN GPS, ESCs, power modules, smart batteries |
+| I2C EEPROM (Pixhawk 6C, I2C4 0x50) | absent | PX4 reports `mtd failure ... bus 4 address 80`; parameters stay in F-RAM | calibration/board data stored in EEPROM |
+| ADC (battery and board power) | register storage | battery and avionics voltage 0 V | battery failsafe, power checks |
+| USB OTG (CDC-ACM) | register storage | no USB link; MAVLink and the shell use UARTs | MAVLink or console over USB |
+| IO co-processor (PX4IO) | absent | PX4IO start fails; main PWM outputs are used | IO-board outputs, IO-side RC input |
+| RC input (SBUS, PPM, DSM) | absent | no RC; control through MAVLink | RC-driven tests |
+| Buzzer, LEDs, safety switch | timer/GPIO pins modelled, nothing attached | no sound or light; no safety-switch input | user-interface checks |
+| IMU heater (timer output), watchdog, RTC | heater pin modelled with nothing attached; watchdog and RTC not modelled as devices | no temperature control, no watchdog reset, no calendar time | thermal or watchdog behaviour |
+
+A future device follows the same structure as the existing ones: a controller
+front end in the target, a protocol on the common channel engine (CAN frames
+would be a new protocol plug-in), and a chip model in this repository.
+
 ## Non-goals
 
 - Devicetree is not a device scripting language and does not replace model
