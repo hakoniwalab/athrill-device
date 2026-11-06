@@ -9,6 +9,7 @@ include(GNUInstallDirs)
 
 add_library(athrill_device STATIC
   src/channel.c
+  src/protocol_i2c.c
   src/protocol_spi.c
   src/athrill_device.c
   src/models/fm25v02.c
@@ -77,6 +78,11 @@ if(BUILD_TESTING)
     ATHRILL_DEVICE_STANDALONE_TYPES)
   target_link_libraries(test_spi_protocol PRIVATE athrill_device)
 
+  add_executable(test_i2c_protocol tests/test_i2c_protocol.c)
+  target_compile_definitions(test_i2c_protocol PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_link_libraries(test_i2c_protocol PRIVATE athrill_device)
+
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_plugin_good PRIVATE include)
@@ -92,12 +98,14 @@ if(BUILD_TESTING)
     COMMAND test_device_tree $<TARGET_FILE:test_plugin_good> $<TARGET_FILE:test_plugin_bad>)
   add_test(NAME channel-engine COMMAND test_channel)
   add_test(NAME protocol-spi COMMAND test_spi_protocol)
+  add_test(NAME protocol-i2c COMMAND test_i2c_protocol)
 endif()
 
 install(TARGETS athrill_device EXPORT athrill-device-targets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(FILES include/athrill_device_if.h include/athrill_channel.h
   include/athrill_protocol_spi.h
+  include/athrill_protocol_i2c.h
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 install(EXPORT athrill-device-targets NAMESPACE athrill-device::
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/athrill-device")
