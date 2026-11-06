@@ -38,6 +38,7 @@ same flight and no second process: see the design, [docs/in-process-aircraft.md]
 | --- | --- |
 | `board/common/` | The sensor device, common to all boards: an Athrill external device (EXDEV) and a Hakoniwa polling asset, with the register map `include/hako_sensor_device_regs.h` |
 | `board/stm32f7xx/` | [Pixhawk 4 (STM32F765)](board/stm32f7xx/README.md) on Athrill STM32. The firmware reads the emulated chips with its own drivers, so **PX4 and ArduPilot** both work unchanged |
+| `board/stm32h7xx/` | [Pixhawk 6C (STM32H743)](board/stm32h7xx/README.md) on Athrill STM32, using the same common device through the v6C sensor, GPS and FMU-output wiring |
 | `board/erbium/` | [AIFoundry Erbium (RISC-V)](board/erbium/README.md) on Athrill RISC-V. No chips: a PX4 driver reads the registers (**PX4 only**) |
 
 ## Build the device
