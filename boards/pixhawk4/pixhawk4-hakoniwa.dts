@@ -1,0 +1,33 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Pixhawk 4 with the Hakoniwa sensor source and actuator sink enabled.
+ * The base board keeps this host integration disabled so SIH and other
+ * self-contained runs do not need the Hakoniwa model plugin.
+ */
+
+#include "pixhawk4.dts"
+
+&hakoniwa_sensor {
+	status = "okay";
+};
+
+&pwm_actuators {
+	value-source = <&hakoniwa_sensor>;
+};
+
+&icm20689 {
+	value-source = <&hakoniwa_sensor>;
+};
+
+&magnetometer {
+	value-source = <&hakoniwa_sensor>;
+};
+
+&barometer {
+	value-source = <&hakoniwa_sensor>;
+};
+
+&gps1 {
+	value-source = <&hakoniwa_sensor>;
+};

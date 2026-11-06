@@ -5,7 +5,7 @@ The Hakoniwa sensor is an explicit Devicetree model plugin for compatible
 maps the compatible to the library; the DT memory map needs only ROM and RAM:
 
 ```text
-DEVICE_CONFIG_DEVICE_TREE /opt/athrill/pixhawk4.dtb
+DEVICE_CONFIG_DEVICE_TREE /opt/athrill/pixhawk4-hakoniwa.dtb
 DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa%2Csensor-device=/opt/athrill/libhako_sensor_device.dylib
 ```
 
@@ -13,9 +13,11 @@ DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa%2Csensor-device=/opt/athrill/libhako_sens
 unchanged configuration tokenizer treats a literal comma as a separator.
 There is no `DEV` entry, model MMIO address, or dynamic-MPU scan.
 
-The sensor chips reference this node with `value-source`; the ordered PWM
-model returns actuator values through the same typed edge. Host-only link,
-channel, airframe, and trace settings remain in `device_config.txt`.
+The Hakoniwa variant enables the node and makes the sensor chips reference it
+with `value-source`; the ordered PWM model returns actuator values through the
+same typed edge. The base `pixhawk4.dtb` keeps the node disabled and has no
+such edges, so SIH and bench runs need no plugin. Host-only link, channel,
+airframe, and trace settings remain in `device_config.txt`.
 
 ## Shared-memory Hakoniwa link
 

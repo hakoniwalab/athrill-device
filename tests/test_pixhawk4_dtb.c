@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void *read_dtb(size_t *size)
+static void *read_dtb(const char *path, size_t *size)
 {
-	FILE *file = fopen(PIXHAWK4_DTB, "rb");
+	FILE *file = fopen(path, "rb");
 	long length;
 	void *blob;
 	assert(file != NULL);
@@ -54,6 +54,26 @@ static void expect_value_source(const void *blob, const char *path,
 	assert(fdt32_to_cpu(*cell) == phandle);
 }
 
+static void expect_no_value_source(const void *blob, const char *path)
+{
+	int node = fdt_path_offset(blob, path);
+	assert(node >= 0);
+	assert(fdt_getprop(blob, node, "value-source", NULL) == NULL);
+}
+
+static int sensor_node(const void *blob, const char *status)
+{
+	int length;
+	int sensor = fdt_path_offset(blob, "/sensor-device");
+	const char *actual;
+	assert(sensor >= 0);
+	assert(strcmp(fdt_getprop(blob, sensor, "compatible", &length),
+		"hakoniwa,sensor-device") == 0);
+	actual = fdt_getprop(blob, sensor, "status", &length);
+	assert(actual != NULL && strcmp(actual, status) == 0);
+	return sensor;
+}
+
 int main(void)
 {
 	static const uint32_t spi_dmas[] = {
@@ -65,7 +85,7 @@ int main(void)
 	static const char spi_names[] = "tx\0rx";
 	static const char sd_names[] = "rx\0tx";
 	size_t size;
-	void *blob = read_dtb(&size);
+	void *blob = read_dtb(PIXHAWK4_DTB, &size);
 	int dma2;
 	int sensor;
 	uint32_t sensor_phandle;
@@ -80,10 +100,19 @@ int main(void)
 		spi_names, sizeof(spi_names));
 	expect_dmas(blob, "/soc/sdmmc@40012c00", sd_dmas,
 		sd_names, sizeof(sd_names));
-	sensor = fdt_path_offset(blob, "/sensor-device");
-	assert(sensor >= 0);
-	assert(strcmp(fdt_getprop(blob, sensor, "compatible", &length),
-		"hakoniwa,sensor-device") == 0);
+	sensor = sensor_node(blob, "disabled");
+	sensor_phandle = fdt_get_phandle(blob, sensor);
+	assert(sensor_phandle != 0U);
+	expect_no_value_source(blob, "/pwm-actuator-map");
+	expect_no_value_source(blob, "/soc/spi@40013000/imu@0");
+	expect_no_value_source(blob, "/soc/i2c@40005c00/magnetometer@e");
+	expect_no_value_source(blob, "/soc/spi@40013400/pressure@0");
+	expect_no_value_source(blob, "/soc/serial@40011000/gnss");
+	free(blob);
+
+	blob = read_dtb(PIXHAWK4_HAKONIWA_DTB, &size);
+	assert(fdt_check_full(blob, size) == 0);
+	sensor = sensor_node(blob, "okay");
 	sensor_phandle = fdt_get_phandle(blob, sensor);
 	assert(sensor_phandle != 0U);
 	expect_value_source(blob, "/pwm-actuator-map", sensor_phandle);
@@ -94,6 +123,6 @@ int main(void)
 		sensor_phandle);
 	expect_value_source(blob, "/soc/serial@40011000/gnss", sensor_phandle);
 	free(blob);
-	puts("Pixhawk 4 DMA and Hakoniwa value wiring is valid");
+	puts("Pixhawk 4 base and Hakoniwa DT wiring is valid");
 	return 0;
 }

@@ -117,7 +117,8 @@ if(BUILD_TESTING)
     third_party/libfdt/libfdt.c)
   target_include_directories(test_pixhawk4_dtb PRIVATE third_party/libfdt)
   target_compile_definitions(test_pixhawk4_dtb PRIVATE
-    PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb")
+    PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
+    PIXHAWK4_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4-hakoniwa.dtb")
 
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

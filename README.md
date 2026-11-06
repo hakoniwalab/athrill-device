@@ -109,7 +109,7 @@ dependencies beside it.
 Hakoniwa Drone's aircraft service is the conductor, the only one. Start it first, then Athrill, then
 `hako-cmd start`.
 
-**Athrill:** select the board DTB and explicitly map
+**Athrill:** select `boards/pixhawk4/pixhawk4-hakoniwa.dtb` and explicitly map
 `hakoniwa%2Csensor-device` to the plugin library in `device_config.txt`.
 The memory definition needs no `DEV` line. Sensor chips and ordered PWM
 actuators are connected to the model by phandles in the board DTB.
