@@ -2,6 +2,7 @@
 #include "athrill_device_if.h"
 #include "athrill_protocol_i2c.h"
 #include "athrill_protocol_spi.h"
+#include "athrill_protocol_uart.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -36,6 +37,8 @@ typedef struct {
 	const AthrillDeviceUartPeripheralOps *uart_ops;
 	void *uart_instance;
 	AthrillDeviceNodeId uart_peripheral;
+	AthrillUartProtocol *uart_protocol;
+	uint64 uart_time;
 	uint8 uart_output[256];
 	uint32 uart_output_count;
 } TestTarget;
@@ -50,6 +53,67 @@ typedef struct {
 	AthrillI2cProtocol *protocol;
 	uint64 time;
 } TestI2cConnection;
+
+typedef struct {
+	AthrillChannel *channel;
+	AthrillUartProtocol *protocol;
+} TestUartConnection;
+
+static sint32 uart_child_receive(void *context, uint8 data,
+	uint64 completion_time)
+{
+	TestTarget *target = context;
+	(void)completion_time;
+	return target->uart_ops->receive_byte(target->uart_instance, data);
+}
+
+static sint32 uart_owner_receive(void *context, uint8 data,
+	uint64 completion_time)
+{
+	TestTarget *target = context;
+	(void)completion_time;
+	assert(target->uart_output_count < sizeof(target->uart_output));
+	target->uart_output[target->uart_output_count++] = data;
+	return 0;
+}
+
+static void uart_connect(TestTarget *target, TestUartConnection *connection)
+{
+	AthrillChannelConfig config;
+	AthrillUartTiming timing = {1000000U, 100000U, 8U, 1U, FALSE};
+	memset(&config, 0, sizeof(config));
+	config.peripheral_width = 1U;
+	config.memory_width = 1U;
+	config.capacity = 1U;
+	config.threshold = 1U;
+	config.burst = 1U;
+	config.count_kind = ATHRILL_CHANNEL_COUNT_SELECTION;
+	config.directions = ATHRILL_CHANNEL_ALLOW_EXCHANGE;
+	assert(athrill_channel_create(&config, &connection->channel) == 0);
+	assert(athrill_uart_protocol_create(connection->channel, &timing,
+		uart_child_receive, target, uart_owner_receive, target,
+		&connection->protocol) == 0);
+	assert(athrill_uart_open(connection->protocol, 0U) == 0);
+	target->uart_protocol = connection->protocol;
+	target->uart_time = 1U;
+}
+
+static void uart_transfer(TestTarget *target, uint8 data)
+{
+	uint64 completion;
+	assert(athrill_uart_send_to_child(target->uart_protocol, data,
+		target->uart_time++, &completion) == 0);
+}
+
+static void uart_disconnect(TestTarget *target,
+	TestUartConnection *connection)
+{
+	assert(athrill_uart_close(connection->protocol,
+		target->uart_time++) == 0);
+	target->uart_protocol = NULL;
+	athrill_uart_protocol_destroy(connection->protocol);
+	athrill_channel_destroy(connection->channel);
+}
 
 static std_bool i2c_child_start(void *context, std_bool read,
 	std_bool repeated, uint64 time)
@@ -425,7 +489,12 @@ static sint32 uart_send_from_node(void *context,
 	AthrillDeviceNodeId peripheral, uint8 data)
 {
 	TestTarget *target = context;
+	uint64 completion;
 	assert(peripheral == target->uart_peripheral);
+	if (target->uart_protocol != NULL) {
+		return athrill_uart_send_from_child(target->uart_protocol, data,
+			target->uart_time++, &completion);
+	}
 	assert(target->uart_output_count < sizeof(target->uart_output));
 	target->uart_output[target->uart_output_count++] = data;
 	return 0;
@@ -621,18 +690,20 @@ int main(int argc, char **argv)
 	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
 	assert(target.uart_bound == 1U && target.uart_ops != NULL);
 	{
+		TestUartConnection connection;
 		static const uint8 poll[] = {
 			0xb5U, 0x62U, 0x0aU, 0x04U, 0U, 0U, 0x0eU, 0x34U
 		};
+		uart_connect(&target, &connection);
 		for (i = 0U; i < sizeof(poll); i++) {
-			assert(target.uart_ops->receive_byte(target.uart_instance,
-				poll[i]) == 0);
+			uart_transfer(&target, poll[i]);
 		}
 		assert(target.uart_output_count > 6U);
 		assert(target.uart_output[0] == 0xb5U &&
 			target.uart_output[1] == 0x62U &&
 			target.uart_output[2] == 0x0aU &&
 			target.uart_output[3] == 0x04U);
+		uart_disconnect(&target, &connection);
 	}
 	athrill_device_destroy(runtime);
 	runtime = NULL;
