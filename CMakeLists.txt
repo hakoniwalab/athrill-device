@@ -15,6 +15,7 @@ add_library(athrill_device STATIC
   src/protocol_spi.c
   src/protocol_uart.c
   src/athrill_device.c
+  src/models/bmi055.c
   src/models/fm25v02.c
   src/models/icm20689.c
   src/models/ist8310.c
