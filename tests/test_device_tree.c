@@ -273,6 +273,16 @@ static sint32 actuator_output(void *context, const float32 *values,
 	return 0;
 }
 
+static sint32 sensor_sample(void *context, AthrillDeviceSensorSample *sample)
+{
+	(void)context;
+	memset(sample, 0, sizeof(*sample));
+	sample->magnetic_field[0] = -0.05F;
+	sample->magnetic_field[1] = 0.2F;
+	sample->magnetic_field[2] = -0.4F;
+	return 0;
+}
+
 static const AthrillDeviceTargetOps target_ops = {
 	.abi_major = ATHRILL_DEVICE_ABI_MAJOR,
 	.abi_minor = ATHRILL_DEVICE_ABI_MINOR,
@@ -297,6 +307,7 @@ static const AthrillDeviceTargetOps target_ops = {
 	.uart_bind_nodes = uart_bind_nodes,
 	.uart_send_from_node = uart_send_from_node,
 	.actuator_output = actuator_output,
+	.sensor_sample = sensor_sample,
 };
 
 static void path(char *buffer, size_t size, const char *name)
@@ -501,15 +512,67 @@ int main(int argc, char **argv)
 	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
 	assert(target.i2c_bound == 1U && target.i2c_ops != NULL);
 	{
-		uint8 pointer = 0U;
-		uint8 who_am_i = 0U;
+		uint8 command[2];
+		uint8 result[7];
 		AthrillDeviceI2cMessage messages[2] = {
-			{&pointer, 1U, FALSE, FALSE},
-			{&who_am_i, 1U, TRUE, TRUE},
+			{command, 1U, FALSE, FALSE},
+			{result, 1U, TRUE, TRUE},
 		};
+		command[0] = 0U;
 		assert(target.i2c_ops->transfer(target.i2c_instance,
 			messages, 2U) == 0);
-		assert(who_am_i == 0x10U);
+		assert(result[0] == 0x10U);
+
+		command[0] = 0x0dU;
+		assert(target.i2c_ops->transfer(target.i2c_instance,
+			messages, 2U) == 0);
+		assert(result[0] == 0U);
+
+		command[0] = 0x0aU;
+		command[1] = 1U;
+		messages[0].size = 2U;
+		messages[0].stop = TRUE;
+		assert(target.i2c_ops->transfer(target.i2c_instance,
+			messages, 1U) == 0);
+		command[0] = 0x02U;
+		messages[0].size = 1U;
+		messages[0].stop = FALSE;
+		messages[1].size = sizeof(result);
+		assert(target.i2c_ops->transfer(target.i2c_instance,
+			messages, 2U) == 0);
+		assert((result[0] & 1U) != 0U);
+		assert(result[1] == 0xefU && result[2] == 0xffU);
+		assert(result[3] == 0x43U && result[4] == 0U);
+		assert(result[5] == 0x85U && result[6] == 0U);
+
+		command[0] = 0x0dU;
+		command[1] = 0xd0U;
+		messages[0].size = 2U;
+		messages[0].stop = TRUE;
+		assert(target.i2c_ops->transfer(target.i2c_instance,
+			messages, 1U) == 0);
+		command[0] = 0x0dU;
+		messages[0].size = 1U;
+		messages[0].stop = FALSE;
+		messages[1].size = 1U;
+		assert(target.i2c_ops->transfer(target.i2c_instance,
+			messages, 2U) == 0);
+		assert(result[0] == 0x50U);
+		command[0] = 0x0aU;
+		command[1] = 1U;
+		messages[0].size = 2U;
+		messages[0].stop = TRUE;
+		assert(target.i2c_ops->transfer(target.i2c_instance,
+			messages, 1U) == 0);
+		command[0] = 0x02U;
+		messages[0].size = 1U;
+		messages[0].stop = FALSE;
+		messages[1].size = sizeof(result);
+		assert(target.i2c_ops->transfer(target.i2c_instance,
+			messages, 2U) == 0);
+		assert(result[1] == 0xbeU && result[2] == 0xffU);
+		assert(result[3] == 0x43U && result[4] == 0U);
+		assert(result[5] == 0x10U && result[6] == 0x02U);
 	}
 	athrill_device_destroy(runtime);
 	runtime = NULL;

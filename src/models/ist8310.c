@@ -14,11 +14,15 @@
 #define REG_DATAXL     0x03U
 #define REG_CNTL1      0x0aU
 #define REG_CNTL2      0x0bU
+#define REG_CNTL3      0x0dU
 #define WAI_VALUE      0x10U
 #define STAT1_DRDY     (1U << 0)
 #define CNTL1_SINGLE   0x01U
 #define CNTL2_SRST     (1U << 0)
-#define LSB_PER_GAUSS  1320.0F
+#define CNTL3_16BIT_X  (1U << 4)
+#define CNTL3_16BIT_MASK (7U << 4)
+#define LSB_PER_GAUSS_DEFAULT (100.0F / 0.3F)
+#define LSB_PER_GAUSS_16BIT 1320.0F
 
 typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
@@ -73,7 +77,10 @@ static void measure(Ist8310 *chip)
 		raw[2] = -sample.magnetic_field[2];
 	}
 	for (i = 0U; i < 3U; i++) {
-		int16_t value = saturate(raw[i] * LSB_PER_GAUSS);
+		float32 scale =
+			(chip->registers[REG_CNTL3] & (CNTL3_16BIT_X << i)) != 0U ?
+			LSB_PER_GAUSS_16BIT : LSB_PER_GAUSS_DEFAULT;
+		int16_t value = saturate(raw[i] * scale);
 		chip->registers[REG_DATAXL + 2U * i] = (uint8)value;
 		chip->registers[REG_DATAXL + 2U * i + 1U] =
 			(uint8)((uint16)value >> 8);
@@ -98,6 +105,9 @@ static void write_register(Ist8310 *chip, uint8 value)
 		} else {
 			chip->registers[address] = value;
 		}
+		break;
+	case REG_CNTL3:
+		chip->registers[address] = value & CNTL3_16BIT_MASK;
 		break;
 	case REG_WAI:
 	case REG_STAT1:
