@@ -6,6 +6,9 @@ Virtual devices that connect firmware running on [Athrill](https://github.com/to
 The first device is the **Hakoniwa sensor device**. With it, unmodified PX4 firmware on Athrill flies the
 Hakoniwa Drone x500 in MuJoCo: Processor-in-the-Loop (PIL).
 
+Every sensor-device parameter, including the Hakoniwa link, standalone test vehicle, trace, and in-process aircraft,
+is listed in the [configuration reference](docs/configuration.md).
+
 ```
   Hakoniwa Drone (aircraft service)        Athrill
   ┌─────────────────────────┐   shared    ┌──────────────────────────────┐
