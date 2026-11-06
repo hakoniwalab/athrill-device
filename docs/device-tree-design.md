@@ -33,6 +33,29 @@ board path without any change. The two paths coexist during migration.
 - Preserve the existing FMUv5 results bit for bit before making the
   Devicetree path the default for that board.
 
+## Fidelity: what the models reproduce
+
+Athrill trades device and cycle accuracy for lightness, speed and
+reproducibility. The aim is to reproduce behaviour at the RTOS level: the
+firmware boots, its drivers accept the chips, tasks and interrupts run in the
+order and at the rates the firmware expects, and the vehicle flies.
+
+- Every instruction costs one clock. Cycle accuracy, CPU load, and CPU time or
+  WCET evaluation are out of scope. A firmware that would overrun its loop on
+  the real chip does not necessarily overrun on Athrill.
+- Time relations still matter and are kept: timer periods, sensor data rates,
+  the order of interrupts and the clock at which a transfer completes (the
+  timing rules of this design). These decide the RTOS-level behaviour.
+- Device models implement what firmware drivers depend on: register fields the
+  drivers read or write, data order, status and completion events. Register
+  details no driver uses, and exact interrupt latency, are not modelled.
+- Correctness is accepted when both PX4 and ArduPilot boot, detect the
+  sensors and fly. Equal results between the C-built and the Devicetree-built
+  board show only that the migration broke nothing.
+- Optional per-instruction clock tables (planned for the Arm targets; the
+  V850 target already has one) give rough per-task clock estimates as
+  statistics. They never change how Athrill time advances.
+
 ## Non-goals
 
 - Devicetree is not a device scripting language and does not replace model
