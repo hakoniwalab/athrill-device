@@ -117,6 +117,13 @@ if(BUILD_TESTING)
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
     PIXHAWK4_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4-hakoniwa.dtb")
 
+  add_executable(test_pixhawk6c_dtb tests/test_pixhawk6c_dtb.c
+    third_party/libfdt/libfdt.c)
+  target_include_directories(test_pixhawk6c_dtb PRIVATE third_party/libfdt)
+  target_compile_definitions(test_pixhawk6c_dtb PRIVATE
+    PIXHAWK6C_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6c/pixhawk6c.dtb"
+    PIXHAWK6C_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6c/pixhawk6c-hakoniwa.dtb")
+
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_plugin_good PRIVATE include)
@@ -137,6 +144,7 @@ if(BUILD_TESTING)
   add_test(NAME protocol-dma COMMAND test_dma_protocol)
   add_test(NAME protocol-sd COMMAND test_sd_protocol)
   add_test(NAME pixhawk4-dtb COMMAND test_pixhawk4_dtb)
+  add_test(NAME pixhawk6c-dtb COMMAND test_pixhawk6c_dtb)
 endif()
 
 install(TARGETS athrill_device EXPORT athrill-device-targets

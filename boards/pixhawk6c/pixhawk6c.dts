@@ -1,0 +1,159 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Athrill Holybro Pixhawk 6C / FMUv6C V6C00 board description.
+ *
+ * SoC description: Zephyr stm32h743Xi.dtsi, Apache-2.0, through
+ * stm32h743-athrill.dtsi at revision
+ * f3fc249035296b87c75fa808b3abf78829fe9378.
+ *
+ * Board wiring facts (no source code copied) come from the BSD-3-Clause
+ * PX4-Autopilot v1.17.0 files:
+ *   boards/px4/fmu-v6c/src/spi.cpp
+ *   boards/px4/fmu-v6c/src/i2c.cpp
+ *   boards/px4/fmu-v6c/src/timer_config.cpp
+ *   boards/px4/fmu-v6c/init/rc.board_sensors
+ *   boards/px4/fmu-v6c/default.px4board
+ *   boards/px4/fmu-v6c/nuttx-config/include/board.h
+ *   boards/px4/fmu-v6c/nuttx-config/include/board_dma_map.h
+ */
+
+/dts-v1/;
+
+#include "stm32h743-athrill.dtsi"
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	model = "Holybro Pixhawk 6C (FMUv6C V6C00) for Athrill";
+	compatible = "holybro,pixhawk6c", "st,stm32h743";
+
+	aliases {
+		gnss0 = &gps1;
+	};
+
+	hakoniwa_sensor: sensor-device {
+		compatible = "hakoniwa,sensor-device";
+		status = "disabled";
+	};
+
+	/* FMU outputs 1..8 in firmware output order. */
+	pwm_actuators: pwm-actuator-map {
+		compatible = "athrill,pwm-actuator-map";
+		pwms = <&pwm1 1 20000000 0>,
+		       <&pwm1 2 20000000 0>,
+		       <&pwm1 3 20000000 0>,
+		       <&pwm1 4 20000000 0>,
+		       <&pwm4 3 20000000 0>,
+		       <&pwm4 4 20000000 0>,
+		       <&pwm5 1 20000000 0>,
+		       <&pwm5 2 20000000 0>;
+		pwm-names = "FMU_CH1", "FMU_CH2", "FMU_CH3", "FMU_CH4",
+			    "FMU_CH5", "FMU_CH6", "FMU_CH7", "FMU_CH8";
+		athrill,output-pins = "PA8", "PE11", "PE13", "PE14",
+				      "PD14", "PD15", "PA0", "PA1";
+	};
+};
+
+/* V6C00 internal sensor bus: accel PC15, gyro PC14, ICM PC13. */
+&spi1 {
+	status = "okay";
+	cs-gpios = <&gpioc 15 GPIO_ACTIVE_LOW>,
+		   <&gpioc 14 GPIO_ACTIVE_LOW>,
+		   <&gpioc 13 GPIO_ACTIVE_LOW>;
+
+	bmi055_accel: accelerometer@0 {
+		compatible = "bosch,bma280";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+		int-gpios = <&gpioe 4 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "yaw-180";
+	};
+
+	bmi055_gyro: gyroscope@1 {
+		compatible = "bosch,bmg160";
+		reg = <1>;
+		spi-max-frequency = <10000000>;
+		int-gpios = <&gpioe 5 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "yaw-180";
+	};
+
+	icm42688p: imu@2 {
+		compatible = "invensense,icm42688", "invensense,icm4268x";
+		reg = <2>;
+		spi-max-frequency = <24000000>;
+		int-gpios = <&gpioe 6 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "yaw-270";
+	};
+};
+
+/* Parameter F-RAM on SPI2, CS PD4. */
+&spi2 {
+	status = "okay";
+	cs-gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
+
+	fram: fram@0 {
+		compatible = "infineon,fm25xxx";
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+		size = <32768>;
+	};
+};
+
+/* V6C00 internal barometer and magnetometer are on I2C4. */
+&i2c4 {
+	status = "okay";
+
+	barometer: pressure@77 {
+		compatible = "meas,ms5611";
+		reg = <0x77>;
+	};
+
+	magnetometer: magnetometer@c {
+		compatible = "isentek,ist8310";
+		reg = <0x0c>;
+		athrill,mount-rotation = "none";
+	};
+};
+
+/* GPS1 is /dev/ttyS0. */
+&usart1 {
+	status = "okay";
+	current-speed = <57600>;
+
+	gps1: gnss {
+		compatible = "u-blox,m8";
+		initial-baudrate = <9600>;
+		fix-rate = <200>;
+	};
+};
+
+&sdmmc2 {
+	status = "okay";
+	bus-width = <4>;
+
+	sdcard: sd-card {
+		compatible = "zephyr,sdmmc-disk";
+		disk-name = "SD";
+		status = "okay";
+	};
+};
+
+&timers1 {
+	status = "okay";
+	pwm1: pwm { status = "okay"; };
+};
+
+&timers4 {
+	status = "okay";
+	pwm4: pwm { status = "okay"; };
+};
+
+&timers5 {
+	status = "okay";
+	pwm5: pwm { status = "okay"; };
+};
+
+/* Keep H743-only allocation visible, including the corrected IRQs. */
+&timers15 { status = "okay"; };
+&timers16 { status = "okay"; };
+&timers17 { status = "okay"; };

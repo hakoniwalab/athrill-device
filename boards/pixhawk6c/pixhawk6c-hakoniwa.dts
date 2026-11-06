@@ -1,0 +1,12 @@
+/* SPDX-License-Identifier: MIT */
+
+#include "pixhawk6c.dts"
+
+&hakoniwa_sensor { status = "okay"; };
+&pwm_actuators { value-source = <&hakoniwa_sensor>; };
+&bmi055_accel { value-source = <&hakoniwa_sensor>; };
+&bmi055_gyro { value-source = <&hakoniwa_sensor>; };
+&icm42688p { value-source = <&hakoniwa_sensor>; };
+&barometer { value-source = <&hakoniwa_sensor>; };
+&magnetometer { value-source = <&hakoniwa_sensor>; };
+&gps1 { value-source = <&hakoniwa_sensor>; };

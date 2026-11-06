@@ -326,9 +326,15 @@ NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter", "stm32f7-crc");
 NAMED_ADAPTER(stm32f7_backup_sram_model, "stm32f7-backup-sram-adapter", "stm32f7-backup-sram");
 NAMED_ADAPTER(sdcard_model, "sdcard-adapter", "sdcard");
 NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-source");
+NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
+NAMED_ADAPTER(stm32h7_rcc_model, "stm32h7-rcc-adapter", "stm32h7-rcc");
+NAMED_ADAPTER(stm32h7_pwr_model, "stm32h7-pwr-adapter", "stm32h7-pwr");
+NAMED_ADAPTER(bmi055_accel_legacy_model, "bmi055-accel-legacy-adapter", "bmi055-accel-legacy");
+NAMED_ADAPTER(bmi055_gyro_legacy_model, "bmi055-gyro-legacy-adapter", "bmi055-gyro-legacy");
+NAMED_ADAPTER(icm42688p_legacy_model, "icm42688p-legacy-adapter", "icm42688p-legacy");
 
 static const char *const structural_compatibles[] = {
-	"holybro,pixhawk4",
+	"holybro,pixhawk4", "holybro,pixhawk6c",
 	"simple-bus", "simple-mfd", "syscon", "fixed-clock",
 	"zephyr,memory-region", "zephyr,memory-attr", "mmio-sram",
 	"st,stm32f7-pinctrl", "st,stm32-pinctrl", "st,stm32-reset",
@@ -366,6 +372,14 @@ static const char *const ublox_m8_compatibles[] = { "u-blox,m8" };
 static const char *const sdcard_compatibles[] = { "zephyr,sdmmc-disk" };
 static const char *const pwm_actuator_compatibles[] = { "athrill,pwm-actuator-map" };
 static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-source" };
+static const char *const stm32h7_soc_compatibles[] = { "st,stm32h743", "st,stm32h7" };
+static const char *const stm32h7_rcc_compatibles[] = { "st,stm32h7-rcc" };
+static const char *const stm32h7_pwr_compatibles[] = { "st,stm32h7-pwr" };
+static const char *const bmi055_accel_compatibles[] = { "bosch,bma280" };
+static const char *const bmi055_gyro_compatibles[] = { "bosch,bmg160" };
+static const char *const icm42688p_compatibles[] = {
+	"invensense,icm42688", "invensense,icm4268x"
+};
 static const char *const test_compatibles[] = {
 	"athrill,test-mmio", "athrill,test-spi-controller",
 	"athrill,test-i2c-controller", "athrill,test-uart-controller"
@@ -401,6 +415,12 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ sdcard_compatibles, 1U, &sdcard_model },
 	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
 	{ bench_sensor_compatibles, 1U, &bench_sensor_model },
+	{ stm32h7_soc_compatibles, 2U, &stm32h7_soc_model },
+	{ stm32h7_rcc_compatibles, 1U, &stm32h7_rcc_model },
+	{ stm32h7_pwr_compatibles, 1U, &stm32h7_pwr_model },
+	{ bmi055_accel_compatibles, 1U, &bmi055_accel_legacy_model },
+	{ bmi055_gyro_compatibles, 1U, &bmi055_gyro_legacy_model },
+	{ icm42688p_compatibles, 2U, &icm42688p_legacy_model },
 	{ test_compatibles, 4U, &test_mmio_model },
 	{ test_peripheral_compatibles, 1U, &test_peripheral_model }
 };

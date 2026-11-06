@@ -1,0 +1,19 @@
+/*
+ * Copyright (c) 2019 Linaro Limited
+ * Copyright (c) 2019 Centaur Analytics, Inc
+ * Copyright (c) 2020 Teslabs Engineering S.L.
+ * Copyright (c) 2024 STMicroelectronics
+ * Copyright (c) 2025 Brill Power
+ * Copyright (c) 2025 ZAL Zentrum fuer Angewandte Luftfahrtforschung GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Athrill's STM32H743Xi SoC layer.  The register ranges, interrupts, clocks,
+ * resets and controller instances come from Zephyr's stm32h743Xi.dtsi at
+ * f3fc249035296b87c75fa808b3abf78829fe9378.  Keeping this small include
+ * layer separate makes the upstream Apache-2.0 provenance explicit while
+ * the MIT board file below contains only Pixhawk 6C wiring.
+ */
+#include <st/h7/stm32h743Xi.dtsi>
