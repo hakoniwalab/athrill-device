@@ -69,6 +69,8 @@ static uint32_t get_be32(const uint8_t *p)
 		((uint32_t)p[2] << 8) | p[3];
 }
 
+static const char *string_at(const void *fdt, uint32_t off);
+
 static int next_tag(const void *fdt, uint32_t offset, uint32_t *tag,
 	uint32_t *next)
 {
@@ -125,6 +127,11 @@ int fdt_check_full(const void *fdt, size_t bufsize)
 			if (--depth < 0) return -FDT_ERR_BADSTRUCTURE;
 		} else if (tag == FDT_PROP && depth <= 0) {
 			return -FDT_ERR_BADSTRUCTURE;
+		} else if (tag == FDT_PROP) {
+			const uint8_t *s = structure(fdt);
+			if (string_at(fdt, get_be32(s + off + 8U)) == NULL) {
+				return -FDT_ERR_BADSTRUCTURE;
+			}
 		} else if (tag == FDT_END) {
 			if (depth != 0 || !seen_root) return -FDT_ERR_BADSTRUCTURE;
 			ended = 1;
@@ -217,6 +224,68 @@ static const char *string_at(const void *fdt, uint32_t off)
 	base = (const char *)fdt + fdt32_to_cpu(h->off_dt_strings);
 	if (memchr(base + off, 0, size - off) == NULL) return NULL;
 	return base + off;
+}
+
+const char *fdt_string(const void *fdt, int stringoffset)
+{
+	if (stringoffset < 0) return NULL;
+	return string_at(fdt, (uint32_t)stringoffset);
+}
+
+int fdt_first_property_offset(const void *fdt, int nodeoffset)
+{
+	uint32_t off, tag, next;
+	int rc;
+
+	if (fdt_get_name(fdt, nodeoffset, NULL) == NULL) return -FDT_ERR_BADOFFSET;
+	rc = next_tag(fdt, (uint32_t)nodeoffset, &tag, &off);
+	if (rc != 0) return rc;
+	while (off < structure_size(fdt)) {
+		rc = next_tag(fdt, off, &tag, &next);
+		if (rc != 0) return rc;
+		if (tag == FDT_PROP) return (int)off;
+		if (tag != FDT_NOP) return -FDT_ERR_NOTFOUND;
+		off = next;
+	}
+	return -FDT_ERR_NOTFOUND;
+}
+
+int fdt_next_property_offset(const void *fdt, int offset)
+{
+	uint32_t off, tag, next;
+	int rc;
+
+	if (offset < 0) return -FDT_ERR_BADOFFSET;
+	rc = next_tag(fdt, (uint32_t)offset, &tag, &off);
+	if (rc != 0 || tag != FDT_PROP) return -FDT_ERR_BADOFFSET;
+	while (off < structure_size(fdt)) {
+		rc = next_tag(fdt, off, &tag, &next);
+		if (rc != 0) return rc;
+		if (tag == FDT_PROP) return (int)off;
+		if (tag != FDT_NOP) return -FDT_ERR_NOTFOUND;
+		off = next;
+	}
+	return -FDT_ERR_NOTFOUND;
+}
+
+const struct fdt_property *fdt_get_property_by_offset(const void *fdt,
+	int offset, int *length)
+{
+	const uint8_t *s = structure(fdt);
+	uint32_t tag, next, len, nameoff;
+	int rc;
+
+	if (offset < 0) goto bad;
+	rc = next_tag(fdt, (uint32_t)offset, &tag, &next);
+	if (rc != 0 || tag != FDT_PROP) goto bad;
+	len = get_be32(s + (uint32_t)offset + 4U);
+	nameoff = get_be32(s + (uint32_t)offset + 8U);
+	if (string_at(fdt, nameoff) == NULL) goto bad;
+	if (length != NULL) *length = (int)len;
+	return (const struct fdt_property *)(s + (uint32_t)offset);
+bad:
+	if (length != NULL) *length = -FDT_ERR_BADOFFSET;
+	return NULL;
 }
 
 const void *fdt_getprop(const void *fdt, int nodeoffset, const char *name,

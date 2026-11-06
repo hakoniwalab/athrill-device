@@ -46,9 +46,15 @@ struct NodeRecord {
 	uint32 dependency_count;
 	MmioWindow windows[MAX_MMIO_WINDOWS];
 	uint32 window_count;
+	AthrillDeviceSpiEndpoint spi_endpoint;
+	AthrillDeviceI2cEndpoint i2c_endpoint;
+	AthrillDeviceUartEndpoint uart_endpoint;
 	std_bool enabled;
 	std_bool structural;
 	std_bool created;
+	std_bool spi_bound;
+	std_bool i2c_bound;
+	std_bool uart_bound;
 };
 
 struct PluginRecord {
@@ -125,12 +131,46 @@ static sint32 noop_tick(void *instance, uint64 now, AthrillDeviceTickResult *res
 }
 
 typedef struct {
+	const AthrillDeviceTargetOps *target_ops;
+	void *target;
+	const AthrillDeviceNode *node;
+} AdapterInstance;
+
+static sint32 adapter_create(const AthrillDeviceCreateArgs *args, void **instance)
+{
+	AdapterInstance *adapter = calloc(1U, sizeof(*adapter));
+	if (adapter == NULL) {
+		return -1;
+	}
+	adapter->target_ops = args->target_ops;
+	adapter->target = args->target;
+	adapter->node = args->node;
+	*instance = adapter;
+	return 0;
+}
+
+static sint32 adapter_connect(void *instance, const AthrillDeviceConnectArgs *args)
+{
+	AdapterInstance *adapter = instance;
+	(void)args;
+	if (adapter->target_ops->model_adapter_connect == NULL) {
+		return -1;
+	}
+	return adapter->target_ops->model_adapter_connect(adapter->target,
+		adapter->node, "pixhawk4-fmu-v5");
+}
+
+typedef struct {
 	uint64 value;
+	const AthrillDeviceNode *node;
 } TestMmio;
 static sint32 test_mmio_create(const AthrillDeviceCreateArgs *args, void **instance)
 {
-	(void)args;
-	*instance = calloc(1U, sizeof(TestMmio));
+	TestMmio *mmio = calloc(1U, sizeof(TestMmio));
+	*instance = mmio;
+	if (mmio != NULL) {
+		mmio->node = args->node;
+	}
 	return *instance != NULL ? 0 : -1;
 }
 static sint32 test_mmio_read(void *instance, uint64 address, uint32 size, uint64 *value)
@@ -158,21 +198,142 @@ static const AthrillDeviceMmioOps test_mmio_ops = {
 	sizeof(AthrillDeviceMmioOps), test_mmio_read, test_mmio_write
 };
 
+static sint32 test_mmio_connect(void *instance,
+	const AthrillDeviceConnectArgs *args)
+{
+	TestMmio *mmio = instance;
+	const void *property;
+	uint32 size, value;
+	AthrillDeviceIrqLine irq;
+	AthrillDeviceGpioLine gpio;
+	AthrillDeviceDmaChannel dma;
+	AthrillDeviceSpiEndpoint spi;
+	AthrillDeviceI2cEndpoint i2c;
+	AthrillDeviceUartEndpoint uart;
+	if (mmio->node->ops->get_property(mmio->node->context,
+		"athrill,test-resources", &property, &size) == 0 &&
+	    (args->resources->get_interrupt(args->context, "irq", 0U, &irq) != 0 ||
+	     args->resources->get_gpio(args->context, "test-gpios", 0U, &gpio) != 0 ||
+	     args->resources->get_dma(args->context, "rx", 0U, &dma) != 0)) {
+		return -1;
+	}
+	if (mmio->node->ops->get_u32(mmio->node->context,
+		"athrill,test-spi-child", 0U, &value) == 0 &&
+	    args->resources->get_spi_child(args->context, value, &spi) != 0) {
+		return -1;
+	}
+	if (mmio->node->ops->get_u32(mmio->node->context,
+		"athrill,test-i2c-child", 0U, &value) == 0 &&
+	    args->resources->get_i2c_child(args->context, (uint16)value,
+		&i2c) != 0) {
+		return -1;
+	}
+	if (mmio->node->ops->get_u32(mmio->node->context,
+		"athrill,test-uart-child", 0U, &value) == 0 &&
+	    args->resources->get_uart_child(args->context, value, &uart) != 0) {
+		return -1;
+	}
+	return 0;
+}
+
+static void test_spi_select(void *instance, std_bool asserted)
+{
+	(void)instance;
+	(void)asserted;
+}
+
+static uint8 test_spi_exchange(void *instance, uint8 mosi)
+{
+	(void)instance;
+	return mosi;
+}
+
+static sint32 test_i2c_transfer(void *instance,
+	AthrillDeviceI2cMessage *messages, uint32 count)
+{
+	(void)instance;
+	(void)messages;
+	(void)count;
+	return 0;
+}
+
+static sint32 test_uart_receive(void *instance, uint8 data)
+{
+	(void)instance;
+	(void)data;
+	return 0;
+}
+
+static const AthrillDeviceSpiPeripheralOps test_spi_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceSpiPeripheralOps), test_spi_select, test_spi_exchange
+};
+static const AthrillDeviceI2cPeripheralOps test_i2c_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceI2cPeripheralOps), test_i2c_transfer
+};
+static const AthrillDeviceUartPeripheralOps test_uart_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceUartPeripheralOps), test_uart_receive
+};
+
 static const AthrillDeviceModelOps structural_model = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceModelOps), "structural", "1", NULL,
 	noop_create, noop_destroy, NULL, NULL, NULL, NULL, NULL, noop_reset, noop_tick
 };
-static const AthrillDeviceModelOps compatibility_model = {
+static const AthrillDeviceModelOps pixhawk4_model = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
-	sizeof(AthrillDeviceModelOps), "fmu-v5-compat", "1", NULL,
-	noop_create, noop_destroy, NULL, NULL, NULL, NULL, NULL, noop_reset, noop_tick
+	sizeof(AthrillDeviceModelOps), "pixhawk4-fmu-v5-adapter", "1", NULL,
+	adapter_create, noop_destroy, NULL, NULL, NULL, NULL, adapter_connect,
+	noop_reset, noop_tick
 };
 static const AthrillDeviceModelOps test_mmio_model = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceModelOps), "test-mmio", "1", NULL,
-	test_mmio_create, noop_destroy, &test_mmio_ops, NULL, NULL, NULL, NULL, noop_reset, noop_tick
+	test_mmio_create, noop_destroy, &test_mmio_ops, NULL, NULL, NULL,
+	test_mmio_connect, noop_reset, noop_tick
 };
+static const AthrillDeviceModelOps test_peripheral_model = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceModelOps), "test-peripheral", "1", NULL,
+	noop_create, noop_destroy, NULL, &test_spi_ops, &test_i2c_ops,
+	&test_uart_ops, NULL, noop_reset, noop_tick
+};
+
+#define NAMED_ADAPTER(variable, name) \
+	static const AthrillDeviceModelOps variable = { \
+		ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR, \
+		sizeof(AthrillDeviceModelOps), name, "1", NULL, \
+		noop_create, noop_destroy, NULL, NULL, NULL, NULL, NULL, \
+		noop_reset, noop_tick \
+	}
+
+NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter");
+NAMED_ADAPTER(stm32f7_gpio_model, "stm32f7-gpio-adapter");
+NAMED_ADAPTER(stm32f7_exti_model, "stm32f7-exti-adapter");
+NAMED_ADAPTER(stm32f7_dma_model, "stm32f7-dma-adapter");
+NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter");
+NAMED_ADAPTER(stm32f7_i2c_model, "stm32f7-i2c-adapter");
+NAMED_ADAPTER(stm32f7_timer_model, "stm32f7-timer-adapter");
+NAMED_ADAPTER(stm32f7_pwm_model, "stm32f7-pwm-adapter");
+NAMED_ADAPTER(stm32f7_uart_model, "stm32f7-uart-adapter");
+NAMED_ADAPTER(stm32f7_sdmmc_model, "stm32f7-sdmmc-adapter");
+NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter");
+NAMED_ADAPTER(stm32f7_rtc_model, "stm32f7-rtc-adapter");
+NAMED_ADAPTER(stm32f7_adc_model, "stm32f7-adc-adapter");
+NAMED_ADAPTER(stm32f7_rng_model, "stm32f7-rng-adapter");
+NAMED_ADAPTER(stm32f7_otgfs_model, "stm32f7-otgfs-adapter");
+NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter");
+NAMED_ADAPTER(stm32f7_backup_sram_model, "stm32f7-backup-sram-adapter");
+NAMED_ADAPTER(icm20689_model, "icm20689-adapter");
+NAMED_ADAPTER(fm25v02_model, "fm25v02-adapter");
+NAMED_ADAPTER(ist8310_model, "ist8310-adapter");
+NAMED_ADAPTER(ms5611_model, "ms5611-adapter");
+NAMED_ADAPTER(ublox_m8_model, "ublox-m8-adapter");
+NAMED_ADAPTER(sdcard_model, "sdcard-adapter");
+NAMED_ADAPTER(pwm_actuator_model, "pwm-actuator-map-adapter");
+NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter");
 
 static const char *const structural_compatibles[] = {
 	"simple-bus", "simple-mfd", "syscon", "fixed-clock",
@@ -183,31 +344,74 @@ static const char *const structural_compatibles[] = {
 	"fixed-layout", "usb-nop-xceiv", "st,stm32-smbus"
 };
 
-/*
- * Gate-1 compatibility registrations.  Their stateful implementation still
- * uses the legacy model entry points while the interface migration proceeds;
- * the DT graph is the sole source of board selection and wiring.
- */
-static const char *const compatibility_compatibles[] = {
-	"holybro,pixhawk4", "st,stm32f765", "st,stm32f7",
-	"st,stm32-gpio", "st,stm32-exti", "st,stm32-dma-v1",
-	"st,stm32-spi-fifo", "st,stm32-spi", "st,stm32-i2c-v2",
-	"st,stm32-timers", "st,stm32-pwm", "st,stm32-usart",
-	"st,stm32-uart", "st,stm32-sdmmc", "st,stm32-flash-controller",
-	"st,stm32f7-flash-controller", "st,stm32-rtc", "st,stm32-adc",
-	"st,stm32-rng", "st,stm32-otgfs", "zephyr,flash-controller",
-	"zephyr,entropy", "zephyr,crc", "st,stm32-backup-sram",
-	"invensense,icm20689", "infineon,fm25xxx", "ramtron,fm25v02a",
-	"isentek,ist8310", "meas,ms5611", "u-blox,m8",
-	"zephyr,sdmmc-disk", "athrill,pwm-actuator-map",
-	"athrill,bench-sensor-source"
+/* FMUv5 registrations are deliberately per model; there is no catch-all. */
+static const char *const pixhawk4_compatibles[] = { "holybro,pixhawk4" };
+static const char *const stm32f7_soc_compatibles[] = { "st,stm32f765", "st,stm32f7" };
+static const char *const stm32f7_gpio_compatibles[] = { "st,stm32-gpio" };
+static const char *const stm32f7_exti_compatibles[] = { "st,stm32-exti" };
+static const char *const stm32f7_dma_compatibles[] = { "st,stm32-dma-v1" };
+static const char *const stm32f7_spi_compatibles[] = { "st,stm32-spi-fifo", "st,stm32-spi" };
+static const char *const stm32f7_i2c_compatibles[] = { "st,stm32-i2c-v2" };
+static const char *const stm32f7_timer_compatibles[] = { "st,stm32-timers" };
+static const char *const stm32f7_pwm_compatibles[] = { "st,stm32-pwm" };
+static const char *const stm32f7_uart_compatibles[] = { "st,stm32-usart", "st,stm32-uart" };
+static const char *const stm32f7_sdmmc_compatibles[] = { "st,stm32-sdmmc" };
+static const char *const stm32f7_flash_compatibles[] = {
+	"st,stm32-flash-controller", "st,stm32f7-flash-controller",
+	"zephyr,flash-controller"
 };
-static const char *const test_compatibles[] = { "athrill,test-mmio" };
+static const char *const stm32f7_rtc_compatibles[] = { "st,stm32-rtc" };
+static const char *const stm32f7_adc_compatibles[] = { "st,stm32-adc" };
+static const char *const stm32f7_rng_compatibles[] = { "st,stm32-rng", "zephyr,entropy" };
+static const char *const stm32f7_otgfs_compatibles[] = { "st,stm32-otgfs" };
+static const char *const stm32f7_crc_compatibles[] = { "zephyr,crc" };
+static const char *const stm32f7_backup_sram_compatibles[] = { "st,stm32-backup-sram" };
+static const char *const icm20689_compatibles[] = { "invensense,icm20689" };
+static const char *const fm25v02_compatibles[] = { "infineon,fm25xxx", "ramtron,fm25v02a" };
+static const char *const ist8310_compatibles[] = { "isentek,ist8310" };
+static const char *const ms5611_compatibles[] = { "meas,ms5611" };
+static const char *const ublox_m8_compatibles[] = { "u-blox,m8" };
+static const char *const sdcard_compatibles[] = { "zephyr,sdmmc-disk" };
+static const char *const pwm_actuator_compatibles[] = { "athrill,pwm-actuator-map" };
+static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-source" };
+static const char *const test_compatibles[] = {
+	"athrill,test-mmio", "athrill,test-spi-controller",
+	"athrill,test-i2c-controller", "athrill,test-uart-controller"
+};
+static const char *const test_peripheral_compatibles[] = {
+	"athrill,test-peripheral"
+};
 
 static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ structural_compatibles, sizeof(structural_compatibles) / sizeof(structural_compatibles[0]), &structural_model },
-	{ compatibility_compatibles, sizeof(compatibility_compatibles) / sizeof(compatibility_compatibles[0]), &compatibility_model },
-	{ test_compatibles, 1U, &test_mmio_model }
+	{ pixhawk4_compatibles, 1U, &pixhawk4_model },
+	{ stm32f7_soc_compatibles, 2U, &stm32f7_soc_model },
+	{ stm32f7_gpio_compatibles, 1U, &stm32f7_gpio_model },
+	{ stm32f7_exti_compatibles, 1U, &stm32f7_exti_model },
+	{ stm32f7_dma_compatibles, 1U, &stm32f7_dma_model },
+	{ stm32f7_spi_compatibles, 2U, &stm32f7_spi_model },
+	{ stm32f7_i2c_compatibles, 1U, &stm32f7_i2c_model },
+	{ stm32f7_timer_compatibles, 1U, &stm32f7_timer_model },
+	{ stm32f7_pwm_compatibles, 1U, &stm32f7_pwm_model },
+	{ stm32f7_uart_compatibles, 2U, &stm32f7_uart_model },
+	{ stm32f7_sdmmc_compatibles, 1U, &stm32f7_sdmmc_model },
+	{ stm32f7_flash_compatibles, 3U, &stm32f7_flash_model },
+	{ stm32f7_rtc_compatibles, 1U, &stm32f7_rtc_model },
+	{ stm32f7_adc_compatibles, 1U, &stm32f7_adc_model },
+	{ stm32f7_rng_compatibles, 2U, &stm32f7_rng_model },
+	{ stm32f7_otgfs_compatibles, 1U, &stm32f7_otgfs_model },
+	{ stm32f7_crc_compatibles, 1U, &stm32f7_crc_model },
+	{ stm32f7_backup_sram_compatibles, 1U, &stm32f7_backup_sram_model },
+	{ icm20689_compatibles, 1U, &icm20689_model },
+	{ fm25v02_compatibles, 2U, &fm25v02_model },
+	{ ist8310_compatibles, 1U, &ist8310_model },
+	{ ms5611_compatibles, 1U, &ms5611_model },
+	{ ublox_m8_compatibles, 1U, &ublox_m8_model },
+	{ sdcard_compatibles, 1U, &sdcard_model },
+	{ pwm_actuator_compatibles, 1U, &pwm_actuator_model },
+	{ bench_sensor_compatibles, 1U, &bench_sensor_model },
+	{ test_compatibles, 4U, &test_mmio_model },
+	{ test_peripheral_compatibles, 1U, &test_peripheral_model }
 };
 
 static const AthrillDeviceModelOps *builtin_for(const char *compatible,
@@ -625,8 +829,8 @@ static int select_models(AthrillDeviceRuntime *runtime,
 			error_line("model-abi", node->path, "compatible", "invalid-model-ops");
 			return -1;
 		}
-		if (node->model == &compatibility_model) {
-			printf("DEVICE_TREE_WARNING node=%s model=fmu-v5-compat reason=legacy-behaviour-adapter\n",
+		if (node->model == &pixhawk4_model) {
+			printf("DEVICE_TREE_WARNING node=%s model=pixhawk4-fmu-v5-adapter reason=stateful-target-adapter\n",
 			       node->path);
 		}
 	}
@@ -656,6 +860,243 @@ static int provider_cells(AthrillDeviceRuntime *runtime, int provider,
 	}
 	return (int)fdt32_to_cpu(*p);
 }
+
+static const char *node_first_compatible(const NodeRecord *node)
+{
+	const char *compatible;
+	int length;
+	compatible = fdt_getprop(node->runtime->dtb, node->offset,
+		"compatible", &length);
+	return string_property_valid(compatible, length) ? compatible : NULL;
+}
+
+static int fill_specifier(AthrillDeviceRuntime *runtime, int provider,
+	const fdt32_t *cells, uint32 cell_count, AthrillDeviceSpecifier *spec)
+{
+	uint32 i;
+	NodeRecord *provider_node;
+	if (provider < 0 || (uint32)provider >= runtime->node_count ||
+	    !runtime->nodes[provider].enabled ||
+	    cell_count > ATHRILL_DEVICE_MAX_SPEC_CELLS || spec == NULL) {
+		return -1;
+	}
+	provider_node = &runtime->nodes[provider];
+	memset(spec, 0, sizeof(*spec));
+	spec->provider = provider_node->public_node.id;
+	spec->provider_path = provider_node->path;
+	spec->provider_compatible = node_first_compatible(provider_node);
+	spec->cell_count = cell_count;
+	for (i = 0U; i < cell_count; i++) {
+		spec->cells[i] = fdt32_to_cpu(cells[i]);
+	}
+	return 0;
+}
+
+static int decode_specifier(NodeRecord *node, const char *property,
+	const char *cell_property, uint32 wanted, AthrillDeviceSpecifier *spec)
+{
+	AthrillDeviceRuntime *runtime = node->runtime;
+	const fdt32_t *cells;
+	int length, at = 0;
+	uint32 current = 0U;
+	cells = fdt_getprop(runtime->dtb, node->offset, property, &length);
+	if (cells == NULL || length <= 0 || length % 4 != 0) {
+		return -1;
+	}
+	while (at < length / 4) {
+		int provider = node_index_by_phandle(runtime, fdt32_to_cpu(cells[at++]));
+		int count;
+		if (provider < 0 || !runtime->nodes[provider].enabled) {
+			return -1;
+		}
+		count = provider_cells(runtime, provider, cell_property);
+		if (count < 0 || count > (int)ATHRILL_DEVICE_MAX_SPEC_CELLS ||
+		    at + count > length / 4) {
+			return -1;
+		}
+		if (current == wanted) {
+			return fill_specifier(runtime, provider, cells + at,
+				(uint32)count, spec);
+		}
+		current++;
+		at += count;
+	}
+	return -1;
+}
+
+static int string_list_index(NodeRecord *node, const char *property,
+	const char *name, uint32 fallback, uint32 *index)
+{
+	const char *list;
+	int length, at;
+	uint32 current = 0U;
+	if (name == NULL || name[0] == 0) {
+		*index = fallback;
+		return 0;
+	}
+	list = fdt_getprop(node->runtime->dtb, node->offset, property, &length);
+	if (!string_property_valid(list, length)) {
+		return -1;
+	}
+	for (at = 0; at < length; at += (int)strlen(list + at) + 1) {
+		if (strcmp(list + at, name) == 0) {
+			*index = current;
+			return 0;
+		}
+		current++;
+	}
+	return -1;
+}
+
+static int inherited_phandle_provider(NodeRecord *node, const char *property)
+{
+	AthrillDeviceRuntime *runtime = node->runtime;
+	int current = (int)node->preorder;
+	while (current >= 0) {
+		const fdt32_t *p;
+		int length;
+		p = fdt_getprop(runtime->dtb, runtime->nodes[current].offset,
+			property, &length);
+		if (p != NULL) {
+			if (length != 4) {
+				return -1;
+			}
+			return node_index_by_phandle(runtime, fdt32_to_cpu(*p));
+		}
+		current = runtime->nodes[current].parent_index;
+	}
+	return -1;
+}
+
+static sint32 resource_get_interrupt(void *context, const char *name,
+	uint32 index, AthrillDeviceIrqLine *line)
+{
+	NodeRecord *node = context;
+	AthrillDeviceRuntime *runtime = node->runtime;
+	AthrillDeviceSpecifier spec;
+	const fdt32_t *cells;
+	uint32 wanted;
+	int length, provider, count;
+	if (line == NULL || string_list_index(node, "interrupt-names", name,
+		index, &wanted) != 0) {
+		return -1;
+	}
+	if (fdt_getprop(runtime->dtb, node->offset,
+		"interrupts-extended", NULL) != NULL) {
+		if (decode_specifier(node, "interrupts-extended", "#interrupt-cells",
+			wanted, &spec) != 0) {
+			return -1;
+		}
+	} else {
+		cells = fdt_getprop(runtime->dtb, node->offset, "interrupts", &length);
+		provider = inherited_phandle_provider(node, "interrupt-parent");
+		if (cells == NULL || provider < 0 || !runtime->nodes[provider].enabled ||
+		    (count = provider_cells(runtime, provider, "#interrupt-cells")) <= 0 ||
+		    count > (int)ATHRILL_DEVICE_MAX_SPEC_CELLS || length <= 0 ||
+		    length % (count * 4) != 0 || wanted >= (uint32)(length / (count * 4)) ||
+		    fill_specifier(runtime, provider, cells + wanted * (uint32)count,
+			(uint32)count, &spec) != 0) {
+			return -1;
+		}
+	}
+	return runtime->target_ops->irq_resolve != NULL ?
+		runtime->target_ops->irq_resolve(runtime->target, &spec, line) : -1;
+}
+
+static sint32 resource_get_gpio(void *context, const char *property,
+	uint32 index, AthrillDeviceGpioLine *line)
+{
+	NodeRecord *node = context;
+	AthrillDeviceSpecifier spec;
+	if (property == NULL || line == NULL ||
+	    decode_specifier(node, property, "#gpio-cells", index, &spec) != 0 ||
+	    node->runtime->target_ops->gpio_resolve == NULL) {
+		return -1;
+	}
+	return node->runtime->target_ops->gpio_resolve(node->runtime->target,
+		&spec, line);
+}
+
+static sint32 resource_get_dma(void *context, const char *name, uint32 index,
+	AthrillDeviceDmaChannel *channel)
+{
+	NodeRecord *node = context;
+	AthrillDeviceSpecifier spec;
+	uint32 wanted;
+	if (channel == NULL || string_list_index(node, "dma-names", name, index,
+		&wanted) != 0 || decode_specifier(node, "dmas", "#dma-cells", wanted,
+		&spec) != 0 || node->runtime->target_ops->dma_resolve == NULL) {
+		return -1;
+	}
+	return node->runtime->target_ops->dma_resolve(node->runtime->target,
+		&spec, channel);
+}
+
+static sint32 resource_get_spi_child(void *context, uint32 index,
+	AthrillDeviceSpiEndpoint *endpoint)
+{
+	NodeRecord *node = context;
+	uint32 i;
+	for (i = 0U; i < node->runtime->node_count; i++) {
+		NodeRecord *child = &node->runtime->nodes[i];
+		const fdt32_t *reg;
+		int length;
+		reg = fdt_getprop(node->runtime->dtb, child->offset, "reg", &length);
+		if (child->enabled && child->parent_index == (int)node->preorder &&
+		    child->spi_bound && reg != NULL && length == 4 &&
+		    fdt32_to_cpu(*reg) == index) {
+			*endpoint = child->spi_endpoint;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+static sint32 resource_get_i2c_child(void *context, uint16 address,
+	AthrillDeviceI2cEndpoint *endpoint)
+{
+	NodeRecord *node = context;
+	uint32 i;
+	for (i = 0U; i < node->runtime->node_count; i++) {
+		NodeRecord *child = &node->runtime->nodes[i];
+		const fdt32_t *reg;
+		int length;
+		reg = fdt_getprop(node->runtime->dtb, child->offset, "reg", &length);
+		if (child->enabled && child->parent_index == (int)node->preorder &&
+		    child->i2c_bound && reg != NULL && length == 4 &&
+		    fdt32_to_cpu(*reg) == address) {
+			*endpoint = child->i2c_endpoint;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+static sint32 resource_get_uart_child(void *context, uint32 index,
+	AthrillDeviceUartEndpoint *endpoint)
+{
+	NodeRecord *node = context;
+	uint32 i, current = 0U;
+	for (i = 0U; i < node->runtime->node_count; i++) {
+		NodeRecord *child = &node->runtime->nodes[i];
+		if (child->enabled && child->parent_index == (int)node->preorder &&
+		    child->uart_bound) {
+			if (current == index) {
+				*endpoint = child->uart_endpoint;
+				return 0;
+			}
+			current++;
+		}
+	}
+	return -1;
+}
+
+static const AthrillDeviceResourceOps resource_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceResourceOps), resource_get_interrupt,
+	resource_get_gpio, resource_get_dma, resource_get_spi_child,
+	resource_get_i2c_child, resource_get_uart_child
+};
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
                                  const char *property, const char *cell_property)
@@ -697,6 +1138,41 @@ static int property_ends_with(const char *name, const char *suffix)
 	return n >= s && strcmp(name + n - s, suffix) == 0;
 }
 
+static int node_has_compatible(const NodeRecord *node, const char *wanted)
+{
+	const char *list;
+	int length, at;
+	list = fdt_getprop(node->runtime->dtb, node->offset, "compatible", &length);
+	if (!string_property_valid(list, length)) {
+		return 0;
+	}
+	for (at = 0; at < length; at += (int)strlen(list + at) + 1)
+		if (strcmp(list + at, wanted) == 0) {
+			return 1;
+		}
+	return 0;
+}
+
+static int is_spi_controller(const NodeRecord *node)
+{
+	return node_has_compatible(node, "st,stm32-spi-fifo") ||
+		node_has_compatible(node, "st,stm32-spi") ||
+		node_has_compatible(node, "athrill,test-spi-controller");
+}
+
+static int is_i2c_controller(const NodeRecord *node)
+{
+	return node_has_compatible(node, "st,stm32-i2c-v2") ||
+		node_has_compatible(node, "athrill,test-i2c-controller");
+}
+
+static int is_uart_controller(const NodeRecord *node)
+{
+	return node_has_compatible(node, "st,stm32-usart") ||
+		node_has_compatible(node, "st,stm32-uart") ||
+		node_has_compatible(node, "athrill,test-uart-controller");
+}
+
 static int build_dependencies(AthrillDeviceRuntime *runtime)
 {
 	static const struct {
@@ -727,13 +1203,37 @@ static int build_dependencies(AthrillDeviceRuntime *runtime)
 			if (add_spec_dependencies(runtime, node, specs[j].property, specs[j].cells) != 0) {
 				return -1;
 			}
+		{
+			int property_offset;
+			for (property_offset = fdt_first_property_offset(runtime->dtb,
+				node->offset); property_offset >= 0;
+				property_offset = fdt_next_property_offset(runtime->dtb,
+					property_offset)) {
+				const struct fdt_property *property;
+				const char *name;
+				property = fdt_get_property_by_offset(runtime->dtb,
+					property_offset, NULL);
+				if (property == NULL) {
+					return -1;
+				}
+				name = fdt_string(runtime->dtb,
+					(int)fdt32_to_cpu(property->nameoff));
+				if (name != NULL && property_ends_with(name, "-gpios") &&
+				    add_spec_dependencies(runtime, node, name,
+					"#gpio-cells") != 0) {
+					return -1;
+				}
+			}
+		}
 		/* interrupt-parent is one phandle, inherited resources are resolved later. */
 		{
 			const fdt32_t *p;
 			int len, provider;
 			p = fdt_getprop(runtime->dtb, node->offset, "interrupt-parent", &len);
-			if (p != NULL && fdt_getprop(runtime->dtb, node->offset, "interrupts", NULL) != NULL) {
-				if (len != 4 || (provider = node_index_by_phandle(runtime, fdt32_to_cpu(*p))) < 0) {
+			if (fdt_getprop(runtime->dtb, node->offset, "interrupts", NULL) != NULL) {
+				provider = inherited_phandle_provider(node, "interrupt-parent");
+				if ((p != NULL && len != 4) || provider < 0 ||
+				    !runtime->nodes[provider].enabled) {
 					error_line("specifier", node->path, "interrupt-parent", "missing-provider");
 					return -1;
 				}
@@ -743,7 +1243,6 @@ static int build_dependencies(AthrillDeviceRuntime *runtime)
 			}
 		}
 	}
-	(void)property_ends_with;
 	return 0;
 }
 
@@ -836,6 +1335,303 @@ static uint32 inherited_cells(AthrillDeviceRuntime *runtime, int node_index,
 	return fallback;
 }
 
+static uint32 string_list_count(const char *list, int length)
+{
+	uint32 count = 0U;
+	int at;
+	if (!string_property_valid(list, length)) {
+		return UINT32_MAX;
+	}
+	for (at = 0; at < length; at += (int)strlen(list + at) + 1) {
+		count++;
+	}
+	return count;
+}
+
+static int specifier_count(NodeRecord *node, const char *property,
+	const char *cell_property, uint32 *result)
+{
+	const fdt32_t *cells;
+	int length, at = 0;
+	uint32 count = 0U;
+	cells = fdt_getprop(node->runtime->dtb, node->offset, property, &length);
+	if (cells == NULL) {
+		*result = 0U;
+		return 0;
+	}
+	if (length <= 0 || length % 4 != 0) {
+		return -1;
+	}
+	while (at < length / 4) {
+		int provider = node_index_by_phandle(node->runtime,
+			fdt32_to_cpu(cells[at++]));
+		int cells_count;
+		if (provider < 0 || !node->runtime->nodes[provider].enabled ||
+		    (cells_count = provider_cells(node->runtime, provider,
+			cell_property)) < 0 ||
+		    cells_count > (int)ATHRILL_DEVICE_MAX_SPEC_CELLS ||
+		    at + cells_count > length / 4) {
+			return -1;
+		}
+		at += cells_count;
+		count++;
+	}
+	*result = count;
+	return 0;
+}
+
+static int validate_named_specifiers(NodeRecord *node, const char *property,
+	const char *cell_property, const char *names_property)
+{
+	const char *names;
+	int names_length;
+	uint32 specs, names_count;
+	if (specifier_count(node, property, cell_property, &specs) != 0) {
+		error_line("specifier", node->path, property, "invalid-list");
+		return -1;
+	}
+	names = fdt_getprop(node->runtime->dtb, node->offset, names_property,
+		&names_length);
+	if (names == NULL) {
+		return 0;
+	}
+	names_count = string_list_count(names, names_length);
+	if (names_count == UINT32_MAX || names_count != specs) {
+		error_line("specifier", node->path, names_property,
+			"name-count-mismatch");
+		return -1;
+	}
+	return 0;
+}
+
+static int validate_interrupt_names(NodeRecord *node)
+{
+	const char *names;
+	const fdt32_t *interrupts;
+	int names_length, interrupts_length, provider, cells;
+	uint32 count, names_count;
+	if (fdt_getprop(node->runtime->dtb, node->offset,
+		"interrupts-extended", NULL) != NULL) {
+		return validate_named_specifiers(node, "interrupts-extended",
+			"#interrupt-cells", "interrupt-names");
+	}
+	names = fdt_getprop(node->runtime->dtb, node->offset,
+		"interrupt-names", &names_length);
+	if (names == NULL) {
+		return 0;
+	}
+	interrupts = fdt_getprop(node->runtime->dtb, node->offset,
+		"interrupts", &interrupts_length);
+	provider = inherited_phandle_provider(node, "interrupt-parent");
+	if (interrupts == NULL || provider < 0 ||
+	    (cells = provider_cells(node->runtime, provider,
+		"#interrupt-cells")) <= 0 ||
+	    interrupts_length <= 0 || interrupts_length % (cells * 4) != 0) {
+		error_line("specifier", node->path, "interrupts", "invalid-list");
+		return -1;
+	}
+	count = (uint32)(interrupts_length / (cells * 4));
+	names_count = string_list_count(names, names_length);
+	if (names_count == UINT32_MAX || names_count != count) {
+		error_line("specifier", node->path, "interrupt-names",
+			"name-count-mismatch");
+		return -1;
+	}
+	return 0;
+}
+
+static int validate_bus_addresses(AthrillDeviceRuntime *runtime,
+	NodeRecord *controller)
+{
+	uint32 i, j;
+	int spi = is_spi_controller(controller);
+	int i2c = is_i2c_controller(controller);
+	if (!spi && !i2c) {
+		return 0;
+	}
+	for (i = 0U; i < runtime->node_count; i++) {
+		NodeRecord *a = &runtime->nodes[i];
+		const fdt32_t *areg;
+		int alength;
+		uint32 address;
+		if (!a->enabled || a->parent_index != (int)controller->preorder ||
+		    fdt_getprop(runtime->dtb, a->offset, "compatible", NULL) == NULL) {
+			continue;
+		}
+		areg = fdt_getprop(runtime->dtb, a->offset, "reg", &alength);
+		if (areg == NULL || alength != 4) {
+			error_line("bus-address", a->path, "reg", "expected-one-cell");
+			return -1;
+		}
+		address = fdt32_to_cpu(*areg);
+		if (i2c && address > 0x7fU) {
+			error_line("bus-address", a->path, "reg", "not-7-bit");
+			return -1;
+		}
+		if (spi && fdt_getprop(runtime->dtb, a->offset,
+			"spi-max-frequency", NULL) == NULL) {
+			error_line("bus-address", a->path, "spi-max-frequency", "missing");
+			return -1;
+		}
+		for (j = 0U; j < i; j++) {
+			NodeRecord *b = &runtime->nodes[j];
+			const fdt32_t *breg;
+			int blength;
+			if (!b->enabled || b->parent_index != (int)controller->preorder) {
+				continue;
+			}
+			breg = fdt_getprop(runtime->dtb, b->offset, "reg", &blength);
+			if (breg != NULL && blength == 4 &&
+			    fdt32_to_cpu(*breg) == address) {
+				error_line("bus-address", a->path, "reg", "duplicate");
+				return -1;
+			}
+		}
+	}
+	return 0;
+}
+
+static int validate_common_properties(AthrillDeviceRuntime *runtime)
+{
+	uint32 i;
+	for (i = 0U; i < runtime->node_count; i++) {
+		NodeRecord *node = &runtime->nodes[i];
+		int property_offset;
+		if (!node->enabled) {
+			continue;
+		}
+		for (property_offset = fdt_first_property_offset(runtime->dtb,
+			node->offset); property_offset >= 0;
+			property_offset = fdt_next_property_offset(runtime->dtb,
+				property_offset)) {
+			const struct fdt_property *property;
+			const char *name;
+			int length;
+			property = fdt_get_property_by_offset(runtime->dtb,
+				property_offset, &length);
+			if (property == NULL) {
+				return -1;
+			}
+			name = fdt_string(runtime->dtb,
+				(int)fdt32_to_cpu(property->nameoff));
+			if (name == NULL) {
+				return -1;
+			}
+			if (name[0] == '#' && property_ends_with(name, "-cells")) {
+				uint32 value;
+				if (length != 4) {
+					error_line("property", node->path, name, "expected-u32");
+					return -1;
+				}
+				value = fdt32_to_cpu(*(const fdt32_t *)property->data);
+				if (((strcmp(name, "#address-cells") == 0 ||
+				      strcmp(name, "#size-cells") == 0) && value > 2U) ||
+				    value > ATHRILL_DEVICE_MAX_SPEC_CELLS) {
+					error_line("property", node->path, name, "unsupported-cell-count");
+					return -1;
+				}
+			}
+			if ((strcmp(name, "phandle") == 0 ||
+			     strcmp(name, "linux,phandle") == 0) && length != 4) {
+				error_line("property", node->path, name, "expected-u32");
+				return -1;
+			}
+		}
+		if (node->parent_index >= 0) {
+			const void *reg;
+			const void *ranges;
+			int length;
+			uint32 address_cells, size_cells, tuple;
+			reg = fdt_getprop(runtime->dtb, node->offset, "reg", &length);
+			if (reg != NULL) {
+				address_cells = inherited_cells(runtime, node->parent_index,
+					"#address-cells", 2U);
+				size_cells = inherited_cells(runtime, node->parent_index,
+					"#size-cells", 1U);
+				tuple = address_cells + size_cells;
+				if (address_cells > 2U || size_cells > 2U || tuple == 0U ||
+				    length <= 0 || length % 4 != 0 ||
+				    (uint32)length / 4U % tuple != 0U) {
+					error_line("property", node->path, "reg", "invalid-tuples");
+					return -1;
+				}
+			}
+			ranges = fdt_getprop(runtime->dtb, node->offset, "ranges", &length);
+			if (ranges != NULL && length != 0) {
+				uint32 parent_cells;
+				address_cells = inherited_cells(runtime, (int)i,
+					"#address-cells", 2U);
+				parent_cells = inherited_cells(runtime, node->parent_index,
+					"#address-cells", 2U);
+				size_cells = inherited_cells(runtime, (int)i,
+					"#size-cells", 1U);
+				tuple = address_cells + parent_cells + size_cells;
+				if (tuple == 0U || length < 0 || length % 4 != 0 ||
+				    (uint32)length / 4U % tuple != 0U) {
+					error_line("property", node->path, "ranges", "invalid-tuples");
+					return -1;
+				}
+			}
+		}
+		if (validate_named_specifiers(node, "dmas", "#dma-cells",
+			"dma-names") != 0 || validate_interrupt_names(node) != 0 ||
+		    validate_bus_addresses(runtime, node) != 0) {
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static int translate_address(AthrillDeviceRuntime *runtime, int bus,
+	uint64 *address, uint64 size)
+{
+	while (bus >= 0 && runtime->nodes[bus].parent_index >= 0) {
+		NodeRecord *bus_node = &runtime->nodes[bus];
+		int parent = bus_node->parent_index;
+		const fdt32_t *ranges;
+		int length;
+		uint32 child_ac, parent_ac, size_cells, tuple, at;
+		ranges = fdt_getprop(runtime->dtb, bus_node->offset, "ranges", &length);
+		if (ranges == NULL || length == 0) {
+			bus = parent;
+			continue;
+		}
+		child_ac = inherited_cells(runtime, bus, "#address-cells", 2U);
+		parent_ac = inherited_cells(runtime, parent, "#address-cells", 2U);
+		size_cells = inherited_cells(runtime, bus, "#size-cells", 1U);
+		tuple = child_ac + parent_ac + size_cells;
+		if (child_ac > 2U || parent_ac > 2U || size_cells > 2U ||
+		    tuple == 0U || length < 0 || length % 4 != 0 ||
+		    (uint32)length / 4U % tuple != 0U) {
+			return -1;
+		}
+		for (at = 0U; at < (uint32)length / 4U; at += tuple) {
+			uint64 child_base, parent_base, range_size, delta;
+			if (cells_value(ranges + at, child_ac, &child_base) != 0 ||
+			    cells_value(ranges + at + child_ac, parent_ac,
+				&parent_base) != 0 ||
+			    cells_value(ranges + at + child_ac + parent_ac,
+				size_cells, &range_size) != 0 || *address < child_base) {
+				continue;
+			}
+			delta = *address - child_base;
+			if (delta <= range_size && size <= range_size - delta) {
+				if (parent_base > UINT64_MAX - delta ||
+				    parent_base + delta > UINT64_MAX - size) {
+					return -1;
+				}
+				*address = parent_base + delta;
+				break;
+			}
+		}
+		if (at >= (uint32)length / 4U) {
+			return -1;
+		}
+		bus = parent;
+	}
+	return 0;
+}
+
 static int reg_windows(AthrillDeviceRuntime *runtime, NodeRecord *node,
                        uint64 addresses[MAX_MMIO_WINDOWS], uint64 sizes[MAX_MMIO_WINDOWS], uint32 *count)
 {
@@ -864,7 +1660,9 @@ static int reg_windows(AthrillDeviceRuntime *runtime, NodeRecord *node,
 	for (i = 0U; i < *count; i++) {
 		if (cells_value(reg + i * tuple, ac, &addresses[i]) != 0 ||
 		    cells_value(reg + i * tuple + ac, sc, &sizes[i]) != 0 || sizes[i] == 0U ||
-		    addresses[i] > UINT64_MAX - sizes[i]) {
+		    addresses[i] > UINT64_MAX - sizes[i] ||
+		    translate_address(runtime, node->parent_index, &addresses[i],
+			sizes[i]) != 0) {
 			return -1;
 		}
 	}
@@ -924,6 +1722,79 @@ static int validate_and_create(AthrillDeviceRuntime *runtime)
 	return 0;
 }
 
+static int bind_bus_children(AthrillDeviceRuntime *runtime)
+{
+	uint32 oi;
+	for (oi = 0U; oi < runtime->order_count; oi++) {
+		NodeRecord *node = &runtime->nodes[runtime->order[oi]];
+		NodeRecord *parent;
+		const fdt32_t *reg;
+		int length;
+		if (node->parent_index < 0) {
+			continue;
+		}
+		parent = &runtime->nodes[node->parent_index];
+		reg = fdt_getprop(runtime->dtb, node->offset, "reg", &length);
+		if (is_spi_controller(parent) && node->model->spi != NULL) {
+			AthrillDeviceSpecifier gpio, *gpio_ptr = NULL;
+			uint32 chip_select;
+			if (!abi_header_ok(node->model->spi->abi_major,
+				node->model->spi->abi_minor, node->model->spi->struct_size,
+				sizeof(AthrillDeviceSpiPeripheralOps)) ||
+			    reg == NULL || length != 4 || runtime->target_ops->spi_bind == NULL) {
+				error_line("spi-bind", node->path, "reg", "invalid-child");
+				return -1;
+			}
+			chip_select = fdt32_to_cpu(*reg);
+			if (fdt_getprop(runtime->dtb, parent->offset, "cs-gpios", NULL) != NULL) {
+				if (decode_specifier(parent, "cs-gpios", "#gpio-cells",
+					chip_select, &gpio) != 0) {
+					error_line("spi-bind", node->path, "cs-gpios", "missing-index");
+					return -1;
+				}
+				gpio_ptr = &gpio;
+			}
+			if (runtime->target_ops->spi_bind(runtime->target,
+				parent->public_node.id, chip_select, gpio_ptr, node->model->spi,
+				node->instance, &node->spi_endpoint) != 0) {
+				error_line("spi-bind", node->path, "reg", "target-rejected");
+				return -1;
+			}
+			node->spi_bound = TRUE;
+		} else if (is_i2c_controller(parent) && node->model->i2c != NULL) {
+			uint32 address;
+			if (!abi_header_ok(node->model->i2c->abi_major,
+				node->model->i2c->abi_minor, node->model->i2c->struct_size,
+				sizeof(AthrillDeviceI2cPeripheralOps)) ||
+			    reg == NULL || length != 4 || runtime->target_ops->i2c_bind == NULL) {
+				error_line("i2c-bind", node->path, "reg", "invalid-child");
+				return -1;
+			}
+			address = fdt32_to_cpu(*reg);
+			if (address > 0x7fU || runtime->target_ops->i2c_bind(runtime->target,
+				parent->public_node.id, (uint16)address, node->model->i2c,
+				node->instance, &node->i2c_endpoint) != 0) {
+				error_line("i2c-bind", node->path, "reg", "target-rejected");
+				return -1;
+			}
+			node->i2c_bound = TRUE;
+		} else if (is_uart_controller(parent) && node->model->uart != NULL) {
+			if (!abi_header_ok(node->model->uart->abi_major,
+				node->model->uart->abi_minor, node->model->uart->struct_size,
+				sizeof(AthrillDeviceUartPeripheralOps)) ||
+			    runtime->target_ops->uart_bind == NULL ||
+			    runtime->target_ops->uart_bind(runtime->target,
+				parent->public_node.id, node->model->uart, node->instance,
+				&node->uart_endpoint) != 0) {
+				error_line("uart-bind", node->path, "-", "target-rejected");
+				return -1;
+			}
+			node->uart_bound = TRUE;
+		}
+	}
+	return 0;
+}
+
 static int register_and_connect(AthrillDeviceRuntime *runtime)
 {
 	uint32 oi, wi;
@@ -940,10 +1811,13 @@ static int register_and_connect(AthrillDeviceRuntime *runtime)
 			node->windows[wi].registered = TRUE;
 		}
 	}
+	if (bind_bus_children(runtime) != 0) {
+		return -1;
+	}
 	for (oi = 0U; oi < runtime->order_count; oi++) {
 		NodeRecord *node = &runtime->nodes[runtime->order[oi]];
 		if (node->model->connect != NULL) {
-			AthrillDeviceConnectArgs args = {NULL, node};
+			AthrillDeviceConnectArgs args = {&resource_ops, node};
 			if (node->model->connect(node->instance, &args) != 0) {
 				error_line("connect", node->path, "-", node->model->model_name);
 				return -1;
@@ -1027,6 +1901,7 @@ sint32 athrill_device_build(const AthrillDeviceBuildOptions *options,
 	runtime->hash[64] = 0;
 	if (load_plugins(runtime, options) != 0 || inventory_nodes(runtime, options) != 0 ||
 	    select_models(runtime, options) != 0 || build_dependencies(runtime) != 0 ||
+	    validate_common_properties(runtime) != 0 ||
 	    stable_topological_sort(runtime) != 0 || validate_and_create(runtime) != 0 ||
 	    register_and_connect(runtime) != 0) {
 		goto fail;

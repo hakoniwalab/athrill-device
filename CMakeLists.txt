@@ -29,7 +29,16 @@ if(BUILD_TESTING)
     BYPRODUCTS
       "${TEST_DTB_DIR}/valid.dtb" "${TEST_DTB_DIR}/overlap.dtb"
       "${TEST_DTB_DIR}/missing-provider.dtb" "${TEST_DTB_DIR}/cycle.dtb"
-      "${TEST_DTB_DIR}/plugin.dtb"
+      "${TEST_DTB_DIR}/plugin.dtb" "${TEST_DTB_DIR}/order.dtb"
+      "${TEST_DTB_DIR}/resources.dtb" "${TEST_DTB_DIR}/wiring.dtb"
+      "${TEST_DTB_DIR}/disabled-provider.dtb"
+      "${TEST_DTB_DIR}/duplicate-phandle.dtb"
+      "${TEST_DTB_DIR}/duplicate-spi.dtb"
+      "${TEST_DTB_DIR}/duplicate-i2c.dtb" "${TEST_DTB_DIR}/bad-reg.dtb"
+      "${TEST_DTB_DIR}/overflow-reg.dtb"
+      "${TEST_DTB_DIR}/overflow-ranges.dtb"
+      "${TEST_DTB_DIR}/truncated.dtb"
+      "${TEST_DTB_DIR}/bad-string-offset.dtb"
     VERBATIM)
   add_executable(test_device_tree tests/test_device_tree.c)
   target_compile_definitions(test_device_tree PRIVATE
