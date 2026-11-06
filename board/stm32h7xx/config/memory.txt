@@ -1,0 +1,8 @@
+ROM, 0x08000000, 2048
+RAM, 0x00000000, 64
+RAM, 0x20000000, 128
+RAM, 0x24000000, 512
+RAM, 0x30000000, 288
+RAM, 0x38000000, 64
+RAM, 0x38800000, 4
+DEV, 0x60000000, ../athrill-device/build-stm32/libhako_sensor_device.dylib
