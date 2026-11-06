@@ -29,7 +29,7 @@ typedef uint8 std_bool;
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       1U
+#define ATHRILL_DEVICE_ABI_MINOR       6U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -119,6 +119,11 @@ typedef struct AthrillDeviceI2cPeripheralOps {
 	uint32 struct_size;
 	sint32 (*transfer)(void *instance, AthrillDeviceI2cMessage *messages,
 	                   uint32 message_count);
+	/* Optional byte-level contract for register-accurate controllers (ABI 1.5). */
+	std_bool (*start)(void *instance, std_bool read);
+	void (*write_byte)(void *instance, uint8 data);
+	uint8 (*read_byte)(void *instance);
+	void (*stop)(void *instance);
 } AthrillDeviceI2cPeripheralOps;
 
 typedef struct AthrillDeviceUartPeripheralOps {
@@ -129,6 +134,30 @@ typedef struct AthrillDeviceUartPeripheralOps {
 } AthrillDeviceUartPeripheralOps;
 
 typedef void (*AthrillDeviceGpioEdge)(void *instance, std_bool level);
+
+typedef struct {
+	float32 acceleration[3];
+	float32 angular_velocity[3];
+	float32 magnetic_field[3];
+	float32 pressure_hpa;
+	float32 temperature_c;
+} AthrillDeviceSensorSample;
+
+typedef struct {
+	sint32 latitude_deg_e7;
+	sint32 longitude_deg_e7;
+	sint32 altitude_mm;
+	uint32 horizontal_accuracy_cm;
+	uint32 vertical_accuracy_cm;
+	uint32 speed_cm_s;
+	sint32 velocity_north_cm_s;
+	sint32 velocity_east_cm_s;
+	sint32 velocity_down_cm_s;
+	uint32 course_cdeg;
+	uint32 fix_type;
+	uint32 satellites;
+	uint64 time_usec;
+} AthrillDeviceGpsSample;
 
 typedef struct AthrillDeviceTargetOps {
 	uint32 abi_major;
@@ -193,6 +222,35 @@ typedef struct AthrillDeviceTargetOps {
 	sint32 (*model_adapter_connect)(void *target,
 	                               const AthrillDeviceNode *node,
 	                               const char *adapter_name);
+
+	/* Added in ABI 1.2; node-aware bus binding and host-only values. */
+	sint32 (*spi_bind_node)(void *target,
+	                       const AthrillDeviceNode *controller,
+	                       uint32 chip_select,
+	                       const AthrillDeviceSpecifier *cs_gpio,
+	                       const AthrillDeviceSpiPeripheralOps *ops,
+	                       void *instance,
+	                       AthrillDeviceSpiEndpoint *endpoint);
+	sint32 (*host_value)(void *target, const char *key, const char **value);
+	/* Added in ABI 1.3; common physical sample consumed by sensor chips. */
+	sint32 (*sensor_sample)(void *target, AthrillDeviceSensorSample *sample);
+	/* Added in ABI 1.4. */
+	sint32 (*i2c_bind_node)(void *target,
+	                       const AthrillDeviceNode *controller,
+	                       uint16 address,
+	                       const AthrillDeviceI2cPeripheralOps *ops,
+	                       void *instance,
+	                       AthrillDeviceI2cEndpoint *endpoint);
+	/* Added in ABI 1.6. */
+	sint32 (*uart_bind_nodes)(void *target,
+	                         const AthrillDeviceNode *controller,
+	                         const AthrillDeviceNode *peripheral,
+	                         const AthrillDeviceUartPeripheralOps *ops,
+	                         void *instance,
+	                         AthrillDeviceUartEndpoint *endpoint);
+	sint32 (*uart_send_from_node)(void *target,
+	                             AthrillDeviceNodeId peripheral, uint8 data);
+	sint32 (*gps_sample)(void *target, AthrillDeviceGpsSample *sample);
 } AthrillDeviceTargetOps;
 
 typedef struct AthrillDeviceResourceOps {

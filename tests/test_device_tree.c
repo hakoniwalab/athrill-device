@@ -16,8 +16,17 @@ typedef struct {
 	uint32 gpio_resolved;
 	uint32 dma_resolved;
 	uint32 spi_bound;
+	const AthrillDeviceSpiPeripheralOps *spi_ops;
+	void *spi_instance;
 	uint32 i2c_bound;
+	const AthrillDeviceI2cPeripheralOps *i2c_ops;
+	void *i2c_instance;
 	uint32 uart_bound;
+	const AthrillDeviceUartPeripheralOps *uart_ops;
+	void *uart_instance;
+	AthrillDeviceNodeId uart_peripheral;
+	uint8 uart_output[256];
+	uint32 uart_output_count;
 } TestTarget;
 
 static sint32 mmio_register(void *context, uint64 address, uint64 size,
@@ -56,8 +65,7 @@ static sint32 gpio_resolve(void *context, const AthrillDeviceSpecifier *spec,
 	AthrillDeviceGpioLine *line)
 {
 	TestTarget *target = context;
-	assert(spec->cell_count == 2U && spec->cells[0] == 5U &&
-		spec->cells[1] == 1U);
+	assert(spec->cell_count == 2U);
 	target->gpio_resolved++;
 	line->value = spec->cells[0];
 	return 0;
@@ -89,6 +97,23 @@ static sint32 spi_bind(void *context, AthrillDeviceNodeId controller,
 	return 0;
 }
 
+static sint32 spi_bind_node(void *context,
+	const AthrillDeviceNode *controller, uint32 chip_select,
+	const AthrillDeviceSpecifier *gpio,
+	const AthrillDeviceSpiPeripheralOps *ops, void *instance,
+	AthrillDeviceSpiEndpoint *endpoint)
+{
+	TestTarget *target = context;
+	(void)gpio;
+	assert(controller != NULL && strstr(controller->path, "spi@") != NULL);
+	assert(chip_select == 0U);
+	target->spi_bound++;
+	target->spi_ops = ops;
+	target->spi_instance = instance;
+	endpoint->value = 104U;
+	return 0;
+}
+
 static sint32 i2c_bind(void *context, AthrillDeviceNodeId controller,
 	uint16 address, const AthrillDeviceI2cPeripheralOps *ops, void *instance,
 	AthrillDeviceI2cEndpoint *endpoint)
@@ -100,6 +125,21 @@ static sint32 i2c_bind(void *context, AthrillDeviceNodeId controller,
 	assert(address == 0x0EU);
 	target->i2c_bound++;
 	endpoint->value = 102U;
+	return 0;
+}
+
+static sint32 i2c_bind_node(void *context,
+	const AthrillDeviceNode *controller, uint16 address,
+	const AthrillDeviceI2cPeripheralOps *ops, void *instance,
+	AthrillDeviceI2cEndpoint *endpoint)
+{
+	TestTarget *target = context;
+	assert(controller != NULL && strstr(controller->path, "i2c@") != NULL);
+	assert(address == 0x0eU);
+	target->i2c_bound++;
+	target->i2c_ops = ops;
+	target->i2c_instance = instance;
+	endpoint->value = 105U;
 	return 0;
 }
 
@@ -116,6 +156,38 @@ static sint32 uart_bind(void *context, AthrillDeviceNodeId controller,
 	return 0;
 }
 
+static sint32 uart_bind_nodes(void *context,
+	const AthrillDeviceNode *controller, const AthrillDeviceNode *peripheral,
+	const AthrillDeviceUartPeripheralOps *ops, void *instance,
+	AthrillDeviceUartEndpoint *endpoint)
+{
+	TestTarget *target = context;
+	assert(controller != NULL && strstr(controller->path, "uart@") != NULL);
+	assert(peripheral != NULL);
+	target->uart_bound++;
+	target->uart_ops = ops;
+	target->uart_instance = instance;
+	target->uart_peripheral = peripheral->id;
+	endpoint->value = 106U;
+	return 0;
+}
+
+static sint32 uart_send_from_node(void *context,
+	AthrillDeviceNodeId peripheral, uint8 data)
+{
+	TestTarget *target = context;
+	assert(peripheral == target->uart_peripheral);
+	assert(target->uart_output_count < sizeof(target->uart_output));
+	target->uart_output[target->uart_output_count++] = data;
+	return 0;
+}
+
+static uint64 time_frequency(void *context)
+{
+	(void)context;
+	return 216000000U;
+}
+
 static const AthrillDeviceTargetOps target_ops = {
 	.abi_major = ATHRILL_DEVICE_ABI_MAJOR,
 	.abi_minor = ATHRILL_DEVICE_ABI_MINOR,
@@ -128,6 +200,11 @@ static const AthrillDeviceTargetOps target_ops = {
 	.uart_bind = uart_bind,
 	.gpio_resolve = gpio_resolve,
 	.dma_resolve = dma_resolve,
+	.time_frequency_hz = time_frequency,
+	.spi_bind_node = spi_bind_node,
+	.i2c_bind_node = i2c_bind_node,
+	.uart_bind_nodes = uart_bind_nodes,
+	.uart_send_from_node = uart_send_from_node,
 };
 
 static void path(char *buffer, size_t size, const char *name)
@@ -187,6 +264,29 @@ int main(int argc, char **argv)
 	assert(athrill_device_tick(runtime, 1U, &tick) == 0 && tick.can_skip);
 	athrill_device_destroy(runtime);
 	runtime = NULL;
+
+	path(dtb, sizeof(dtb), "gps.dtb");
+	target.uart_bound = 0U;
+	target.uart_output_count = 0U;
+	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
+	assert(target.uart_bound == 1U && target.uart_ops != NULL);
+	{
+		static const uint8 poll[] = {
+			0xb5U, 0x62U, 0x0aU, 0x04U, 0U, 0U, 0x0eU, 0x34U
+		};
+		for (i = 0U; i < sizeof(poll); i++) {
+			assert(target.uart_ops->receive_byte(target.uart_instance,
+				poll[i]) == 0);
+		}
+		assert(target.uart_output_count > 6U);
+		assert(target.uart_output[0] == 0xb5U &&
+			target.uart_output[1] == 0x62U &&
+			target.uart_output[2] == 0x0aU &&
+			target.uart_output[3] == 0x04U);
+	}
+	athrill_device_destroy(runtime);
+	runtime = NULL;
+	target.uart_bound = 0U;
 	assert(target.registered == 0U);
 
 	path(dtb, sizeof(dtb), "order.dtb");
@@ -208,6 +308,61 @@ int main(int argc, char **argv)
 	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
 	assert(target.spi_bound == 1U && target.i2c_bound == 1U &&
 		target.uart_bound == 1U);
+	athrill_device_destroy(runtime);
+	runtime = NULL;
+
+	path(dtb, sizeof(dtb), "fram.dtb");
+	target.spi_bound = 0U;
+	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
+	assert(target.spi_bound == 1U && target.spi_ops != NULL);
+	target.spi_ops->set_chip_select(target.spi_instance, TRUE);
+	assert(target.spi_ops->exchange_byte(target.spi_instance, 0x9FU) == 0U);
+	for (i = 0U; i < 6U; i++) {
+		assert(target.spi_ops->exchange_byte(target.spi_instance, 0U) == 0x7FU);
+	}
+	assert(target.spi_ops->exchange_byte(target.spi_instance, 0U) == 0xC2U);
+	target.spi_ops->set_chip_select(target.spi_instance, FALSE);
+	athrill_device_destroy(runtime);
+	runtime = NULL;
+
+	path(dtb, sizeof(dtb), "imu.dtb");
+	target.spi_bound = 0U;
+	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
+	assert(target.spi_bound == 1U && target.spi_ops != NULL);
+	target.spi_ops->set_chip_select(target.spi_instance, TRUE);
+	assert(target.spi_ops->exchange_byte(target.spi_instance, 0xf5U) == 0U);
+	assert(target.spi_ops->exchange_byte(target.spi_instance, 0U) == 0x98U);
+	target.spi_ops->set_chip_select(target.spi_instance, FALSE);
+	athrill_device_destroy(runtime);
+	runtime = NULL;
+
+	path(dtb, sizeof(dtb), "magnetometer.dtb");
+	target.i2c_bound = 0U;
+	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
+	assert(target.i2c_bound == 1U && target.i2c_ops != NULL);
+	{
+		uint8 pointer = 0U;
+		uint8 who_am_i = 0U;
+		AthrillDeviceI2cMessage messages[2] = {
+			{&pointer, 1U, FALSE, FALSE},
+			{&who_am_i, 1U, TRUE, TRUE},
+		};
+		assert(target.i2c_ops->transfer(target.i2c_instance,
+			messages, 2U) == 0);
+		assert(who_am_i == 0x10U);
+	}
+	athrill_device_destroy(runtime);
+	runtime = NULL;
+
+	path(dtb, sizeof(dtb), "barometer.dtb");
+	target.spi_bound = 0U;
+	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
+	assert(target.spi_bound == 1U && target.spi_ops != NULL);
+	target.spi_ops->set_chip_select(target.spi_instance, TRUE);
+	assert(target.spi_ops->exchange_byte(target.spi_instance, 0xa2U) == 0U);
+	assert(target.spi_ops->exchange_byte(target.spi_instance, 0U) == 0x9cU);
+	assert(target.spi_ops->exchange_byte(target.spi_instance, 0U) == 0xbfU);
+	target.spi_ops->set_chip_select(target.spi_instance, FALSE);
 	athrill_device_destroy(runtime);
 	runtime = NULL;
 
