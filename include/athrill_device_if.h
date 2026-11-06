@@ -29,7 +29,7 @@ typedef uint8 std_bool;
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       6U
+#define ATHRILL_DEVICE_ABI_MINOR       7U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -57,6 +57,26 @@ typedef struct {
 typedef struct {
 	uint64 value;
 } AthrillDeviceDmaChannel;
+
+typedef struct {
+	std_bool enabled;
+	uint64 period_clocks;
+	uint64 high_clocks;
+} AthrillDevicePwmSample;
+
+typedef struct AthrillDevicePwmProviderOps {
+	uint32 abi_major;
+	uint32 abi_minor;
+	uint32 struct_size;
+	sint32 (*sample)(void *instance, uint32 channel,
+	                 AthrillDevicePwmSample *sample);
+} AthrillDevicePwmProviderOps;
+
+typedef struct {
+	const AthrillDevicePwmProviderOps *ops;
+	void *instance;
+	uint32 channel;
+} AthrillDevicePwmChannel;
 
 typedef struct {
 	AthrillDeviceNodeId provider;
@@ -251,6 +271,12 @@ typedef struct AthrillDeviceTargetOps {
 	sint32 (*uart_send_from_node)(void *target,
 	                             AthrillDeviceNodeId peripheral, uint8 data);
 	sint32 (*gps_sample)(void *target, AthrillDeviceGpsSample *sample);
+	/* Added in ABI 1.7; board actuator output produced from DT PWM channels. */
+	sint32 (*actuator_output)(void *target, const float32 *values,
+	                         uint32 count);
+	/* Added in ABI 1.7; atomic MCU GPIO bank output (distinct from input drive). */
+	sint32 (*gpio_outputs)(void *target, const AthrillDeviceGpioLine *lines,
+	                      uint32 count, uint32 levels);
 } AthrillDeviceTargetOps;
 
 typedef struct AthrillDeviceResourceOps {
@@ -269,6 +295,9 @@ typedef struct AthrillDeviceResourceOps {
 	                        AthrillDeviceI2cEndpoint *endpoint);
 	sint32 (*get_uart_child)(void *context, uint32 index,
 	                         AthrillDeviceUartEndpoint *endpoint);
+	/* Added in ABI 1.7. */
+	sint32 (*get_pwm)(void *context, const char *property, uint32 index,
+	                  AthrillDevicePwmChannel *channel);
 } AthrillDeviceResourceOps;
 
 typedef struct {
@@ -305,6 +334,8 @@ typedef struct AthrillDeviceModelOps {
 	sint32 (*reset)(void *instance);
 	sint32 (*tick)(void *instance, uint64 now,
 	               AthrillDeviceTickResult *result);
+	/* Added in ABI 1.7; optional provider implemented by timer models. */
+	const AthrillDevicePwmProviderOps *pwm;
 } AthrillDeviceModelOps;
 
 typedef struct {

@@ -316,8 +316,6 @@ NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
 NAMED_ADAPTER(stm32f7_dma_model, "stm32f7-dma-adapter", "stm32f7-dma");
 NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter", "stm32f7-spi");
 NAMED_ADAPTER(stm32f7_i2c_model, "stm32f7-i2c-adapter", "stm32f7-i2c");
-NAMED_ADAPTER(stm32f7_timer_model, "stm32f7-timer-adapter", "stm32f7-timer");
-NAMED_ADAPTER(stm32f7_pwm_model, "stm32f7-pwm-adapter", "stm32f7-pwm");
 NAMED_ADAPTER(stm32f7_uart_model, "stm32f7-uart-adapter", "stm32f7-uart");
 NAMED_ADAPTER(stm32f7_sdmmc_model, "stm32f7-sdmmc-adapter", "stm32f7-sdmmc");
 NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter", "stm32f7-flash");
@@ -328,7 +326,6 @@ NAMED_ADAPTER(stm32f7_otgfs_model, "stm32f7-otgfs-adapter", "stm32f7-otgfs");
 NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter", "stm32f7-crc");
 NAMED_ADAPTER(stm32f7_backup_sram_model, "stm32f7-backup-sram-adapter", "stm32f7-backup-sram");
 NAMED_ADAPTER(sdcard_model, "sdcard-adapter", "sdcard");
-NAMED_ADAPTER(pwm_actuator_model, "pwm-actuator-map-adapter", "pwm-actuator-map");
 NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-source");
 
 static const char *const structural_compatibles[] = {
@@ -387,8 +384,8 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_dma_compatibles, 1U, &stm32f7_dma_model },
 	{ stm32f7_spi_compatibles, 2U, &stm32f7_spi_model },
 	{ stm32f7_i2c_compatibles, 1U, &stm32f7_i2c_model },
-	{ stm32f7_timer_compatibles, 1U, &stm32f7_timer_model },
-	{ stm32f7_pwm_compatibles, 1U, &stm32f7_pwm_model },
+	{ stm32f7_timer_compatibles, 1U, &athrill_device_stm32_tim_model },
+	{ stm32f7_pwm_compatibles, 1U, &structural_model },
 	{ stm32f7_uart_compatibles, 2U, &stm32f7_uart_model },
 	{ stm32f7_sdmmc_compatibles, 1U, &stm32f7_sdmmc_model },
 	{ stm32f7_flash_compatibles, 3U, &stm32f7_flash_model },
@@ -404,7 +401,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ ms5611_compatibles, 1U, &athrill_device_ms5611_model },
 	{ ublox_m8_compatibles, 1U, &athrill_device_ublox_m8_model },
 	{ sdcard_compatibles, 1U, &sdcard_model },
-	{ pwm_actuator_compatibles, 1U, &pwm_actuator_model },
+	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
 	{ bench_sensor_compatibles, 1U, &bench_sensor_model },
 	{ test_compatibles, 4U, &test_mmio_model },
 	{ test_peripheral_compatibles, 1U, &test_peripheral_model }
@@ -1028,6 +1025,33 @@ static sint32 resource_get_dma(void *context, const char *name, uint32 index,
 		&spec, channel);
 }
 
+static sint32 resource_get_pwm(void *context, const char *property,
+	uint32 index, AthrillDevicePwmChannel *channel)
+{
+	NodeRecord *node = context;
+	NodeRecord *provider, *timer;
+	AthrillDeviceSpecifier spec;
+	if (property == NULL || channel == NULL ||
+	    decode_specifier(node, property, "#pwm-cells", index, &spec) != 0 ||
+	    spec.provider == 0U || spec.provider > node->runtime->node_count ||
+	    spec.cell_count == 0U) {
+		return -1;
+	}
+	provider = &node->runtime->nodes[spec.provider - 1U];
+	if (provider->parent_index < 0) {
+		return -1;
+	}
+	timer = &node->runtime->nodes[provider->parent_index];
+	if (!provider->enabled || !timer->enabled || !timer->created ||
+	    timer->model->pwm == NULL) {
+		return -1;
+	}
+	channel->ops = timer->model->pwm;
+	channel->instance = timer->instance;
+	channel->channel = spec.cells[0];
+	return 0;
+}
+
 static sint32 resource_get_spi_child(void *context, uint32 index,
 	AthrillDeviceSpiEndpoint *endpoint)
 {
@@ -1091,7 +1115,7 @@ static const AthrillDeviceResourceOps resource_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceResourceOps), resource_get_interrupt,
 	resource_get_gpio, resource_get_dma, resource_get_spi_child,
-	resource_get_i2c_child, resource_get_uart_child
+	resource_get_i2c_child, resource_get_uart_child, resource_get_pwm
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,

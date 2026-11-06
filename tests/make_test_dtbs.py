@@ -19,13 +19,13 @@ def strings(*values: str) -> bytes:
 
 PROPERTY_NAMES = [
     "compatible", "#address-cells", "#size-cells", "#clock-cells",
-    "#interrupt-cells", "#gpio-cells", "#dma-cells", "phandle", "reg",
+    "#interrupt-cells", "#gpio-cells", "#dma-cells", "#pwm-cells", "phandle", "reg",
     "ranges", "clocks", "interrupt-controller", "interrupt-parent",
     "interrupts", "interrupt-names", "test-gpios", "dmas", "dma-names",
     "spi-max-frequency", "athrill,test-resources",
     "athrill,test-spi-child", "athrill,test-i2c-child",
     "athrill,test-uart-child", "status", "size",
-    "int-gpios", "axis-align-x",
+    "int-gpios", "axis-align-x", "pwms", "pwm-names",
 ]
 STRING_BLOCK = strings(*PROPERTY_NAMES)
 STRING_OFFSETS: dict[str, int] = {}
@@ -187,6 +187,25 @@ def main() -> None:
                                         "line10-15")),
         ], []),
     ])
+    timer_pwm = board([
+        provider("intc", 2, "#interrupt-cells", 1),
+        node("timers@40000800", [
+            ("compatible", strings("st,stm32-timers")),
+            ("reg", be32(0x40000800, 0x400)),
+            ("interrupt-parent", be32(2)),
+            ("interrupts", be32(30)),
+            ("interrupt-names", strings("global")),
+        ], [node("pwm", [
+            ("compatible", strings("st,stm32-pwm")),
+            ("#pwm-cells", be32(3)),
+            ("phandle", be32(5)),
+        ], [])]),
+        node("pwm-actuator-map", [
+            ("compatible", strings("athrill,pwm-actuator-map")),
+            ("pwms", be32(5, 1, 20_000_000, 0)),
+            ("pwm-names", strings("FMU_CH1")),
+        ], []),
+    ])
     overflow_reg = node("", [
         ("compatible", strings("athrill,test-board")),
         ("#address-cells", be32(2)), ("#size-cells", be32(2)),
@@ -224,6 +243,7 @@ def main() -> None:
         "imu.dtb": imu,
         "gpio.dtb": gpio,
         "exti.dtb": exti,
+        "timer-pwm.dtb": timer_pwm,
         "overlap.dtb": board([clock("clock", 1),
                               device("device@1000", 0x1000, 0x100, 1),
                               device("device@1080", 0x1080, 0x100, 1)]),

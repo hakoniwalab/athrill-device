@@ -20,6 +20,9 @@ typedef struct {
 	uint32 gpio_driven;
 	uint32 irq_set_count;
 	uint64 last_irq;
+	uint64 clock;
+	float32 actuator_values[16];
+	uint32 actuator_count;
 	uint32 dma_resolved;
 	uint32 spi_bound;
 	const AthrillDeviceSpiPeripheralOps *spi_ops;
@@ -77,6 +80,13 @@ static sint32 irq_set(void *context, AthrillDeviceIrqLine line,
 	return 0;
 }
 
+static std_bool irq_is_active(void *context, AthrillDeviceIrqLine line)
+{
+	(void)context;
+	(void)line;
+	return FALSE;
+}
+
 static sint32 gpio_drive(void *context, AthrillDeviceGpioLine line,
 	std_bool level)
 {
@@ -87,6 +97,25 @@ static sint32 gpio_drive(void *context, AthrillDeviceGpioLine line,
 	target->gpio_driven++;
 	if (target->gpio_edges[pin] != NULL) {
 		target->gpio_edges[pin](target->gpio_edge_instances[pin], level);
+	}
+	return 0;
+}
+
+static sint32 gpio_outputs(void *context, const AthrillDeviceGpioLine *lines,
+	uint32 count, uint32 levels)
+{
+	TestTarget *target = context;
+	uint32 index;
+	for (index = 0U; index < count; index++) {
+		uint32 pin = (uint32)lines[index].value - 1U;
+		std_bool level = (levels & (1U << index)) != 0U;
+		if (pin >= 192U) {
+			return -1;
+		}
+		if (target->gpio_levels[pin] != level &&
+		    gpio_drive(context, lines[index], level) != 0) {
+			return -1;
+		}
 	}
 	return 0;
 }
@@ -229,6 +258,21 @@ static uint64 time_frequency(void *context)
 	return 216000000U;
 }
 
+static uint64 time_now(void *context)
+{
+	return ((TestTarget *)context)->clock;
+}
+
+static sint32 actuator_output(void *context, const float32 *values,
+	uint32 count)
+{
+	TestTarget *target = context;
+	assert(count <= 16U);
+	memcpy(target->actuator_values, values, count * sizeof(*values));
+	target->actuator_count = count;
+	return 0;
+}
+
 static const AthrillDeviceTargetOps target_ops = {
 	.abi_major = ATHRILL_DEVICE_ABI_MAJOR,
 	.abi_minor = ATHRILL_DEVICE_ABI_MINOR,
@@ -237,18 +281,22 @@ static const AthrillDeviceTargetOps target_ops = {
 	.mmio_unregister = mmio_unregister,
 	.irq_resolve = irq_resolve,
 	.irq_set = irq_set,
+	.irq_is_active = irq_is_active,
+	.time_now = time_now,
 	.spi_bind = spi_bind,
 	.i2c_bind = i2c_bind,
 	.uart_bind = uart_bind,
 	.gpio_resolve = gpio_resolve,
 	.gpio_drive = gpio_drive,
 	.gpio_subscribe = gpio_subscribe,
+	.gpio_outputs = gpio_outputs,
 	.dma_resolve = dma_resolve,
 	.time_frequency_hz = time_frequency,
 	.spi_bind_node = spi_bind_node,
 	.i2c_bind_node = i2c_bind_node,
 	.uart_bind_nodes = uart_bind_nodes,
 	.uart_send_from_node = uart_send_from_node,
+	.actuator_output = actuator_output,
 };
 
 static void path(char *buffer, size_t size, const char *name)
@@ -354,6 +402,28 @@ int main(int argc, char **argv)
 	target.gpio_resolved = 0U;
 	target.irq_resolved = 0U;
 	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
+
+	path(dtb, sizeof(dtb), "timer-pwm.dtb");
+	target.registered = 0U;
+	target.irq_resolved = 0U;
+	target.actuator_count = 0U;
+	target.clock = 0U;
+	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
+	assert(target.registered == 1U && target.irq_resolved == 1U);
+	assert(target.ops->write(target.instance, 0x40000828U, 4U, 107U) == 0);
+	assert(target.ops->write(target.instance, 0x4000082cU, 4U, 19999U) == 0);
+	assert(target.ops->write(target.instance, 0x40000834U, 4U, 1500U) == 0);
+	assert(target.ops->write(target.instance, 0x40000818U, 4U, 6U << 4) == 0);
+	assert(target.ops->write(target.instance, 0x40000820U, 4U, 1U) == 0);
+	assert(target.ops->write(target.instance, 0x40000814U, 4U, 1U) == 0);
+	assert(target.ops->write(target.instance, 0x40000800U, 4U, 1U) == 0);
+	assert(athrill_device_tick(runtime, 1U, &tick) == 0);
+	assert(target.actuator_count == 1U &&
+		target.actuator_values[0] > 0.499F &&
+		target.actuator_values[0] < 0.501F);
+	athrill_device_destroy(runtime);
+	runtime = NULL;
+	target.irq_resolved = 0U;
 
 	path(dtb, sizeof(dtb), "gps.dtb");
 	target.uart_bound = 0U;
