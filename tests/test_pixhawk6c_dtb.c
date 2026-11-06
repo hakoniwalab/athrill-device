@@ -168,6 +168,14 @@ static void check_common(const void *blob, int hakoniwa)
 	expect_interrupts(blob, "/soc/i2c@58001c00", i2c4_irqs, 2U);
 	expect_interrupts(blob, "/soc/serial@40011000", usart1_irq, 1U);
 	expect_interrupts(blob, "/soc/sdmmc@48022400", sdmmc2_irq, 1U);
+	expect_compatible(blob, "/soc/sdmmc@48022400", "st,stm32-sdmmc");
+	expect_reg(blob, "/soc/sdmmc@48022400", 0x48022400U);
+	expect_status(blob, "/soc/sdmmc@48022400", "okay");
+	expect_u32(blob, "/soc/sdmmc@48022400", "bus-width", 4U);
+	expect_compatible(blob, "/soc/sdmmc@48022400/sd-card",
+		"zephyr,sdmmc-disk");
+	expect_status(blob, "/soc/sdmmc@48022400/sd-card", "okay");
+	expect_string(blob, "/soc/sdmmc@48022400/sd-card", "disk-name", "SD");
 
 	/* SPI1 CS order is accel PC15, gyro PC14, ICM PC13. */
 	cells = fdt_getprop(blob, node(blob, "/soc/spi@40013000"), "cs-gpios", &length);

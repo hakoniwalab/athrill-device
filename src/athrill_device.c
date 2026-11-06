@@ -316,7 +316,7 @@ NAMED_ADAPTER(stm32_dma_model, "stm32-dma-adapter", "stm32-dma");
 NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter", "stm32f7-spi");
 NAMED_ADAPTER(stm32f7_i2c_model, "stm32f7-i2c-adapter", "stm32f7-i2c");
 NAMED_ADAPTER(stm32f7_uart_model, "stm32f7-uart-adapter", "stm32f7-uart");
-NAMED_ADAPTER(stm32f7_sdmmc_model, "stm32f7-sdmmc-adapter", "stm32f7-sdmmc");
+NAMED_ADAPTER(stm32_sdmmc_model, "stm32-sdmmc-adapter", "stm32-sdmmc");
 NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter", "stm32f7-flash");
 NAMED_ADAPTER(stm32f7_rtc_model, "stm32f7-rtc-adapter", "stm32f7-rtc");
 NAMED_ADAPTER(stm32f7_adc_model, "stm32f7-adc-adapter", "stm32f7-adc");
@@ -352,7 +352,7 @@ static const char *const stm32f7_i2c_compatibles[] = { "st,stm32-i2c-v2" };
 static const char *const stm32f7_timer_compatibles[] = { "st,stm32-timers" };
 static const char *const stm32f7_pwm_compatibles[] = { "st,stm32-pwm" };
 static const char *const stm32f7_uart_compatibles[] = { "st,stm32-usart", "st,stm32-uart" };
-static const char *const stm32f7_sdmmc_compatibles[] = { "st,stm32-sdmmc" };
+static const char *const stm32_sdmmc_compatibles[] = { "st,stm32-sdmmc" };
 static const char *const stm32f7_flash_compatibles[] = {
 	"st,stm32-flash-controller", "st,stm32f7-flash-controller",
 	"zephyr,flash-controller"
@@ -400,7 +400,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_timer_compatibles, 1U, &athrill_device_stm32_tim_model },
 	{ stm32f7_pwm_compatibles, 1U, &structural_model },
 	{ stm32f7_uart_compatibles, 2U, &stm32f7_uart_model },
-	{ stm32f7_sdmmc_compatibles, 1U, &stm32f7_sdmmc_model },
+	{ stm32_sdmmc_compatibles, 1U, &stm32_sdmmc_model },
 	{ stm32f7_flash_compatibles, 3U, &stm32f7_flash_model },
 	{ stm32f7_rtc_compatibles, 1U, &stm32f7_rtc_model },
 	{ stm32f7_adc_compatibles, 1U, &stm32f7_adc_model },
