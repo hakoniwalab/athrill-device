@@ -1,0 +1,152 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Athrill Pixhawk 4 / FMUv5 board description.
+ *
+ * SoC description: Zephyr stm32f765Xi.dtsi, Apache-2.0.
+ * Board wiring facts (no PX4 source code copied):
+ *   PX4-Autopilot boards/px4/fmu-v5/src/spi.cpp
+ *   PX4-Autopilot boards/px4/fmu-v5/src/i2c.cpp
+ *   PX4-Autopilot boards/px4/fmu-v5/src/timer_config.cpp
+ *   PX4-Autopilot boards/px4/fmu-v5/init/rc.board_sensors
+ *   PX4-Autopilot boards/px4/fmu-v5/default.px4board
+ *   PX4-Autopilot boards/px4/fmu-v5/nuttx-config/include/board.h
+ * Those PX4 files are BSD-3-Clause.  This file records the V500 baseline
+ * devices currently instantiated by Athrill, not every alternate hardware
+ * revision or unmodelled external connector.
+ */
+
+/dts-v1/;
+
+#include <st/f7/stm32f765Xi.dtsi>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/sensor/sensor_axis_align.h>
+
+/ {
+	model = "Holybro Pixhawk 4 (FMUv5) for Athrill";
+	compatible = "holybro,pixhawk4", "st,stm32f765";
+
+	aliases {
+		gnss0 = &gps1;
+	};
+
+	/*
+	 * Ordered FMU outputs 1..8.  The order, not the node declaration order,
+	 * is the actuator order consumed by Athrill.
+	 */
+	pwm_actuators: pwm-actuator-map {
+		compatible = "athrill,pwm-actuator-map";
+		pwms = <&pwm1 4 20000000 0>,
+		       <&pwm1 3 20000000 0>,
+		       <&pwm1 2 20000000 0>,
+		       <&pwm1 1 20000000 0>,
+		       <&pwm4 2 20000000 0>,
+		       <&pwm4 3 20000000 0>,
+		       <&pwm12 1 20000000 0>,
+		       <&pwm12 2 20000000 0>;
+		pwm-names = "FMU_CH1", "FMU_CH2", "FMU_CH3", "FMU_CH4",
+			    "FMU_CH5", "FMU_CH6", "FMU_CH7", "FMU_CH8";
+		athrill,output-pins = "PE14", "PA10", "PE11", "PE9",
+				      "PD13", "PD14", "PH6", "PH9";
+	};
+};
+
+/* SPI1 sensor bus: ICM-20689 CS PF2, DRDY PB4, PX4 rotation 2 (yaw 90). */
+&spi1 {
+	status = "okay";
+	cs-gpios = <&gpiof 2 GPIO_ACTIVE_LOW>;
+
+	icm20689: imu@0 {
+		compatible = "invensense,icm20689";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+		int-gpios = <&gpiob 4 GPIO_ACTIVE_HIGH>;
+		axis-align-x = <SENSOR_AXIS_ALIGN_DT_Y>;
+		axis-align-x-sign = <SENSOR_AXIS_ALIGN_DT_NEG>;
+		axis-align-y = <SENSOR_AXIS_ALIGN_DT_X>;
+		axis-align-y-sign = <SENSOR_AXIS_ALIGN_DT_POS>;
+		axis-align-z = <SENSOR_AXIS_ALIGN_DT_Z>;
+	};
+};
+
+/* SPI2 parameter F-RAM: FM25V02 (256 Kbit / 32768 bytes), CS PF5. */
+&spi2 {
+	status = "okay";
+	cs-gpios = <&gpiof 5 GPIO_ACTIVE_LOW>;
+
+	fram: fram@0 {
+		compatible = "infineon,fm25xxx";
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+		size = <32768>;
+	};
+};
+
+/* I2C3 internal IST8310 at its default 0x0e address, PX4 rotation 10. */
+&i2c3 {
+	status = "okay";
+
+	magnetometer: magnetometer@e {
+		compatible = "isentek,ist8310";
+		reg = <0x0e>;
+		athrill,mount-rotation = "roll-180-yaw-90";
+	};
+};
+
+/* SPI4 internal MS5611 barometer, CS PF10. */
+&spi4 {
+	status = "okay";
+	cs-gpios = <&gpiof 10 GPIO_ACTIVE_LOW>;
+
+	barometer: pressure@0 {
+		compatible = "meas,ms5611";
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+	};
+};
+
+/* GPS1 is /dev/ttyS0 (USART1): PX4 fmu-v5/default.px4board and board.h. */
+&usart1 {
+	status = "okay";
+	current-speed = <57600>;
+
+	gps1: gnss {
+		compatible = "u-blox,m8";
+		initial-baudrate = <9600>;
+		fix-rate = <200>;
+	};
+};
+
+/* SDMMC1: CK PC12, CMD PD2, D0..D3 PC8..PC11, card detect PG0. */
+&sdmmc1 {
+	status = "okay";
+	bus-width = <4>;
+	cd-gpios = <&gpiog 0 GPIO_ACTIVE_LOW>;
+
+	sdcard: sd-card {
+		compatible = "zephyr,sdmmc-disk";
+		disk-name = "SD";
+		status = "okay";
+	};
+};
+
+&timers1 {
+	status = "okay";
+	pwm1: pwm {
+		status = "okay";
+	};
+};
+
+&timers4 {
+	status = "okay";
+	pwm4: pwm {
+		status = "okay";
+	};
+};
+
+&timers12 {
+	status = "okay";
+	pwm12: pwm {
+		status = "okay";
+	};
+};
