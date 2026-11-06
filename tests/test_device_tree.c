@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: MIT */
 #include "athrill_device_if.h"
+#include "athrill_protocol_spi.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -37,6 +38,75 @@ typedef struct {
 	uint8 uart_output[256];
 	uint32 uart_output_count;
 } TestTarget;
+
+typedef struct {
+	AthrillChannel *channel;
+	AthrillSpiProtocol *protocol;
+} TestSpiConnection;
+
+static void spi_child_select(void *context, uint64 time)
+{
+	TestTarget *target = context;
+	(void)time;
+	target->spi_ops->set_chip_select(target->spi_instance, TRUE);
+}
+
+static sint32 spi_child_exchange(void *context, uint8 transmitted,
+	uint8 *received, uint64 time)
+{
+	TestTarget *target = context;
+	(void)time;
+	*received = target->spi_ops->exchange_byte(target->spi_instance,
+		transmitted);
+	return 0;
+}
+
+static void spi_child_deselect(void *context, uint64 time)
+{
+	TestTarget *target = context;
+	(void)time;
+	target->spi_ops->set_chip_select(target->spi_instance, FALSE);
+}
+
+static const AthrillSpiChildOps spi_child_ops = {
+	spi_child_select, spi_child_exchange, spi_child_deselect
+};
+
+static void spi_connect(TestTarget *target, uint32 chip_select,
+	TestSpiConnection *connection)
+{
+	AthrillChannelConfig config;
+	memset(&config, 0, sizeof(config));
+	config.peripheral_width = 1U;
+	config.memory_width = 1U;
+	config.capacity = 1U;
+	config.threshold = 1U;
+	config.burst = 1U;
+	config.selection.kind = ATHRILL_CHANNEL_SELECT_CHIP;
+	config.selection.value = chip_select;
+	config.count_kind = ATHRILL_CHANNEL_COUNT_SELECTION;
+	config.directions = ATHRILL_CHANNEL_ALLOW_EXCHANGE;
+	assert(athrill_channel_create(&config, &connection->channel) == 0);
+	assert(athrill_spi_protocol_create(connection->channel, &spi_child_ops,
+		target, &connection->protocol) == 0);
+	assert(athrill_spi_select(connection->protocol, chip_select, 1U) == 1);
+}
+
+static uint8 spi_transfer(TestSpiConnection *connection, uint8 transmitted,
+	uint64 time)
+{
+	uint8 received;
+	assert(athrill_spi_exchange(connection->protocol, transmitted, &received,
+		time) == 0);
+	return received;
+}
+
+static void spi_disconnect(TestSpiConnection *connection, uint64 time)
+{
+	assert(athrill_spi_deselect(connection->protocol, time) == 0);
+	athrill_spi_protocol_destroy(connection->protocol);
+	athrill_channel_destroy(connection->channel);
+}
 
 static sint32 mmio_register(void *context, uint64 address, uint64 size,
 	const AthrillDeviceMmioOps *ops, void *instance,
@@ -500,10 +570,13 @@ int main(int argc, char **argv)
 	target.spi_bound = 0U;
 	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
 	assert(target.spi_bound == 1U && target.spi_ops != NULL);
-	target.spi_ops->set_chip_select(target.spi_instance, TRUE);
-	assert(target.spi_ops->exchange_byte(target.spi_instance, 0xf5U) == 0U);
-	assert(target.spi_ops->exchange_byte(target.spi_instance, 0U) == 0x98U);
-	target.spi_ops->set_chip_select(target.spi_instance, FALSE);
+	{
+		TestSpiConnection connection;
+		spi_connect(&target, 0U, &connection);
+		assert(spi_transfer(&connection, 0xf5U, 2U) == 0U);
+		assert(spi_transfer(&connection, 0U, 3U) == 0x98U);
+		spi_disconnect(&connection, 4U);
+	}
 	athrill_device_destroy(runtime);
 	runtime = NULL;
 
