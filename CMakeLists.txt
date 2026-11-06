@@ -9,6 +9,7 @@ include(GNUInstallDirs)
 
 add_library(athrill_device STATIC
   src/channel.c
+  src/protocol_dma.c
   src/protocol_i2c.c
   src/protocol_spi.c
   src/protocol_uart.c
@@ -89,6 +90,11 @@ if(BUILD_TESTING)
     ATHRILL_DEVICE_STANDALONE_TYPES)
   target_link_libraries(test_uart_protocol PRIVATE athrill_device)
 
+  add_executable(test_dma_protocol tests/test_dma_protocol.c)
+  target_compile_definitions(test_dma_protocol PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_link_libraries(test_dma_protocol PRIVATE athrill_device)
+
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_plugin_good PRIVATE include)
@@ -106,6 +112,7 @@ if(BUILD_TESTING)
   add_test(NAME protocol-spi COMMAND test_spi_protocol)
   add_test(NAME protocol-i2c COMMAND test_i2c_protocol)
   add_test(NAME protocol-uart COMMAND test_uart_protocol)
+  add_test(NAME protocol-dma COMMAND test_dma_protocol)
 endif()
 
 install(TARGETS athrill_device EXPORT athrill-device-targets
@@ -114,6 +121,7 @@ install(FILES include/athrill_device_if.h include/athrill_channel.h
   include/athrill_protocol_spi.h
   include/athrill_protocol_i2c.h
   include/athrill_protocol_uart.h
+  include/athrill_protocol_dma.h
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 install(EXPORT athrill-device-targets NAMESPACE athrill-device::
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/athrill-device")
