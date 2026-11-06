@@ -556,13 +556,24 @@ int main(int argc, char **argv)
 	target.spi_bound = 0U;
 	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
 	assert(target.spi_bound == 1U && target.spi_ops != NULL);
-	target.spi_ops->set_chip_select(target.spi_instance, TRUE);
-	assert(target.spi_ops->exchange_byte(target.spi_instance, 0x9FU) == 0U);
-	for (i = 0U; i < 6U; i++) {
-		assert(target.spi_ops->exchange_byte(target.spi_instance, 0U) == 0x7FU);
+	{
+		TestSpiConnection connection;
+		spi_connect(&target, 0U, &connection);
+		assert(spi_transfer(&connection, 0x9fU, 2U) == 0U);
+		for (i = 0U; i < 6U; i++) {
+			assert(spi_transfer(&connection, 0U, 3U + i) == 0x7fU);
+		}
+		assert(spi_transfer(&connection, 0U, 9U) == 0xc2U);
+		spi_disconnect(&connection, 10U);
+
+		spi_connect(&target, 0U, &connection);
+		assert(spi_transfer(&connection, 0x06U, 11U) == 0U);
+		spi_disconnect(&connection, 12U);
+		spi_connect(&target, 0U, &connection);
+		assert(spi_transfer(&connection, 0x05U, 13U) == 0U);
+		assert(spi_transfer(&connection, 0U, 14U) == 0x02U);
+		spi_disconnect(&connection, 15U);
 	}
-	assert(target.spi_ops->exchange_byte(target.spi_instance, 0U) == 0xC2U);
-	target.spi_ops->set_chip_select(target.spi_instance, FALSE);
 	athrill_device_destroy(runtime);
 	runtime = NULL;
 
