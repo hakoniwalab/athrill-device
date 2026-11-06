@@ -71,8 +71,8 @@ without them; they matter only when a vehicle or a test needs them.
 | USB OTG (CDC-ACM) | register storage | no USB link; MAVLink and the shell use UARTs | MAVLink or console over USB |
 | IO co-processor (PX4IO) | absent | PX4IO start fails; main PWM outputs are used | IO-board outputs, IO-side RC input |
 | RC input (SBUS, PPM, DSM) | absent | no RC; control through MAVLink | RC-driven tests |
-| Buzzer, LEDs, safety switch | register storage | no sound or light; no safety-switch input | user-interface checks |
-| IMU heater, watchdog, RTC | register storage | no temperature control, no watchdog reset, no calendar time | thermal or watchdog behaviour |
+| Buzzer, LEDs, safety switch | timer/GPIO pins modelled, nothing attached | no sound or light; no safety-switch input | user-interface checks |
+| IMU heater (timer output), watchdog, RTC | heater pin modelled with nothing attached; watchdog and RTC not modelled as devices | no temperature control, no watchdog reset, no calendar time | thermal or watchdog behaviour |
 
 A future device follows the same structure as the existing ones: a controller
 front end in the target, a protocol on the common channel engine (CAN frames
