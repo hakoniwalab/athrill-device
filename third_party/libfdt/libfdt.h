@@ -41,6 +41,11 @@ int fdt_next_node(const void *fdt, int offset, int *depth);
 const char *fdt_get_name(const void *fdt, int nodeoffset, int *length);
 const void *fdt_getprop(const void *fdt, int nodeoffset, const char *name,
 	int *length);
+int fdt_first_property_offset(const void *fdt, int nodeoffset);
+int fdt_next_property_offset(const void *fdt, int offset);
+const struct fdt_property *fdt_get_property_by_offset(const void *fdt,
+	int offset, int *length);
+const char *fdt_string(const void *fdt, int stringoffset);
 int fdt_parent_offset(const void *fdt, int nodeoffset);
 int fdt_path_offset(const void *fdt, const char *path);
 int fdt_get_path(const void *fdt, int nodeoffset, char *buf, int buflen);

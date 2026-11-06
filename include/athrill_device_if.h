@@ -29,7 +29,7 @@ typedef uint8 std_bool;
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       0U
+#define ATHRILL_DEVICE_ABI_MINOR       1U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -183,6 +183,16 @@ typedef struct AthrillDeviceTargetOps {
 	                      AthrillDeviceDmaChannel *channel);
 	sint32 (*dma_request)(void *target, AthrillDeviceDmaChannel channel,
 	                      std_bool asserted);
+
+	/*
+	 * Transitional migration hook for a named built-in adapter.  It lets a
+	 * target place an existing stateful model behind this ABI while that model
+	 * is moved out of the target.  The compatible is exact and adapters are
+	 * registered individually; this is not an unmodelled-node fallback.
+	 */
+	sint32 (*model_adapter_connect)(void *target,
+	                               const AthrillDeviceNode *node,
+	                               const char *adapter_name);
 } AthrillDeviceTargetOps;
 
 typedef struct AthrillDeviceResourceOps {
