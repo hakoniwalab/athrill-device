@@ -654,11 +654,14 @@ int main(int argc, char **argv)
 	target.spi_bound = 0U;
 	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
 	assert(target.spi_bound == 1U && target.spi_ops != NULL);
-	target.spi_ops->set_chip_select(target.spi_instance, TRUE);
-	assert(target.spi_ops->exchange_byte(target.spi_instance, 0xa2U) == 0U);
-	assert(target.spi_ops->exchange_byte(target.spi_instance, 0U) == 0x9cU);
-	assert(target.spi_ops->exchange_byte(target.spi_instance, 0U) == 0xbfU);
-	target.spi_ops->set_chip_select(target.spi_instance, FALSE);
+	{
+		TestSpiConnection connection;
+		spi_connect(&target, 0U, &connection);
+		assert(spi_transfer(&connection, 0xa2U, 2U) == 0U);
+		assert(spi_transfer(&connection, 0U, 3U) == 0x9cU);
+		assert(spi_transfer(&connection, 0U, 4U) == 0xbfU);
+		spi_disconnect(&connection, 5U);
+	}
 	athrill_device_destroy(runtime);
 	runtime = NULL;
 
