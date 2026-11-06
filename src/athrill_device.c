@@ -329,6 +329,7 @@ NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-s
 NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
 NAMED_ADAPTER(stm32h7_rcc_model, "stm32h7-rcc-adapter", "stm32h7-rcc");
 NAMED_ADAPTER(stm32h7_pwr_model, "stm32h7-pwr-adapter", "stm32h7-pwr");
+NAMED_ADAPTER(stm32h7_spi_model, "stm32h7-spi-adapter", "stm32h7-spi");
 NAMED_ADAPTER(bmi055_accel_legacy_model, "bmi055-accel-legacy-adapter", "bmi055-accel-legacy");
 NAMED_ADAPTER(bmi055_gyro_legacy_model, "bmi055-gyro-legacy-adapter", "bmi055-gyro-legacy");
 NAMED_ADAPTER(icm42688p_legacy_model, "icm42688p-legacy-adapter", "icm42688p-legacy");
@@ -375,6 +376,7 @@ static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-so
 static const char *const stm32h7_soc_compatibles[] = { "st,stm32h743", "st,stm32h7" };
 static const char *const stm32h7_rcc_compatibles[] = { "st,stm32h7-rcc" };
 static const char *const stm32h7_pwr_compatibles[] = { "st,stm32h7-pwr" };
+static const char *const stm32h7_spi_compatibles[] = { "st,stm32h7-spi" };
 static const char *const bmi055_accel_compatibles[] = { "bosch,bma280" };
 static const char *const bmi055_gyro_compatibles[] = { "bosch,bmg160" };
 static const char *const icm42688p_compatibles[] = {
@@ -418,6 +420,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32h7_soc_compatibles, 2U, &stm32h7_soc_model },
 	{ stm32h7_rcc_compatibles, 1U, &stm32h7_rcc_model },
 	{ stm32h7_pwr_compatibles, 1U, &stm32h7_pwr_model },
+	{ stm32h7_spi_compatibles, 1U, &stm32h7_spi_model },
 	{ bmi055_accel_compatibles, 1U, &bmi055_accel_legacy_model },
 	{ bmi055_gyro_compatibles, 1U, &bmi055_gyro_legacy_model },
 	{ icm42688p_compatibles, 2U, &icm42688p_legacy_model },
@@ -1246,7 +1249,8 @@ static int node_has_compatible(const NodeRecord *node, const char *wanted)
 
 static int is_spi_controller(const NodeRecord *node)
 {
-	return node_has_compatible(node, "st,stm32-spi-fifo") ||
+	return node_has_compatible(node, "st,stm32h7-spi") ||
+		node_has_compatible(node, "st,stm32-spi-fifo") ||
 		node_has_compatible(node, "st,stm32-spi") ||
 		node_has_compatible(node, "athrill,test-spi-controller");
 }
