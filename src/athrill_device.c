@@ -311,7 +311,6 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 		noop_reset, noop_tick \
 	}
 
-NAMED_ADAPTER(pixhawk4_model, "pixhawk4-fmu-v5-adapter", "pixhawk4-board");
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
 NAMED_ADAPTER(stm32f7_dma_model, "stm32f7-dma-adapter", "stm32f7-dma");
 NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter", "stm32f7-spi");
@@ -329,6 +328,7 @@ NAMED_ADAPTER(sdcard_model, "sdcard-adapter", "sdcard");
 NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-source");
 
 static const char *const structural_compatibles[] = {
+	"holybro,pixhawk4",
 	"simple-bus", "simple-mfd", "syscon", "fixed-clock",
 	"zephyr,memory-region", "zephyr,memory-attr", "mmio-sram",
 	"st,stm32f7-pinctrl", "st,stm32-pinctrl", "st,stm32-reset",
@@ -338,7 +338,6 @@ static const char *const structural_compatibles[] = {
 };
 
 /* FMUv5 registrations are deliberately per model; there is no catch-all. */
-static const char *const pixhawk4_compatibles[] = { "holybro,pixhawk4" };
 static const char *const stm32f7_soc_compatibles[] = { "st,stm32f765", "st,stm32f7" };
 static const char *const stm32f7_gpio_compatibles[] = { "st,stm32-gpio" };
 static const char *const stm32f7_exti_compatibles[] = { "st,stm32-exti" };
@@ -377,7 +376,6 @@ static const char *const test_peripheral_compatibles[] = {
 
 static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ structural_compatibles, sizeof(structural_compatibles) / sizeof(structural_compatibles[0]), &structural_model },
-	{ pixhawk4_compatibles, 1U, &pixhawk4_model },
 	{ stm32f7_soc_compatibles, 2U, &stm32f7_soc_model },
 	{ stm32f7_gpio_compatibles, 1U, &athrill_device_stm32_gpio_model },
 	{ stm32f7_exti_compatibles, 1U, &athrill_device_stm32_exti_model },
@@ -827,10 +825,6 @@ static int select_models(AthrillDeviceRuntime *runtime,
 		if (node->model != NULL && !model_ops_valid(node->model)) {
 			error_line("model-abi", node->path, "compatible", "invalid-model-ops");
 			return -1;
-		}
-		if (node->model == &pixhawk4_model) {
-			printf("DEVICE_TREE_WARNING node=%s model=pixhawk4-fmu-v5-adapter reason=stateful-target-adapter\n",
-			       node->path);
 		}
 	}
 	return 0;
