@@ -17,3 +17,23 @@
  * the MIT board file below contains only Pixhawk 6C wiring.
  */
 #include <st/h7/stm32h743Xi.dtsi>
+
+/*
+ * The generic STM32 timer compatible is shared with F7, but H743 runs every
+ * enabled timer kernel at 240 MHz from a 480 MHz CPU.  Mark the instances so
+ * the common model selects the H7 clock/IRQ table instead of the F7 table.
+ */
+&timers1 { athrill,stm32h7-timer; };
+&timers2 { athrill,stm32h7-timer; };
+&timers3 { athrill,stm32h7-timer; };
+&timers4 { athrill,stm32h7-timer; };
+&timers5 { athrill,stm32h7-timer; };
+&timers6 { athrill,stm32h7-timer; };
+&timers7 { athrill,stm32h7-timer; };
+&timers8 { athrill,stm32h7-timer; };
+&timers12 { athrill,stm32h7-timer; };
+&timers13 { athrill,stm32h7-timer; };
+&timers14 { athrill,stm32h7-timer; };
+&timers15 { athrill,stm32h7-timer; };
+&timers16 { athrill,stm32h7-timer; };
+&timers17 { athrill,stm32h7-timer; };

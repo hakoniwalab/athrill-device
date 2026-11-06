@@ -26,6 +26,7 @@ PROPERTY_NAMES = [
     "athrill,test-spi-child", "athrill,test-i2c-child",
     "athrill,test-uart-child", "status", "size",
     "int-gpios", "axis-align-x", "pwms", "pwm-names",
+    "athrill,stm32h7-timer",
 ]
 STRING_BLOCK = strings(*PROPERTY_NAMES)
 STRING_OFFSETS: dict[str, int] = {}
@@ -206,6 +207,26 @@ def main() -> None:
             ("pwm-names", strings("FMU_CH1")),
         ], []),
     ])
+    timer_h7_pwm = board([
+        provider("intc", 2, "#interrupt-cells", 1),
+        node("timers@40010000", [
+            ("compatible", strings("st,stm32-timers")),
+            ("athrill,stm32h7-timer", b""),
+            ("reg", be32(0x40010000, 0x400)),
+            ("interrupt-parent", be32(2)),
+            ("interrupts", be32(25, 27, 26, 24)),
+            ("interrupt-names", strings("up", "cc", "trgcom", "brk")),
+        ], [node("pwm", [
+            ("compatible", strings("st,stm32-pwm")),
+            ("#pwm-cells", be32(3)),
+            ("phandle", be32(5)),
+        ], [])]),
+        node("pwm-actuator-map", [
+            ("compatible", strings("athrill,pwm-actuator-map")),
+            ("pwms", be32(5, 1, 20_000_000, 0)),
+            ("pwm-names", strings("FMU_CH1")),
+        ], []),
+    ])
     overflow_reg = node("", [
         ("compatible", strings("athrill,test-board")),
         ("#address-cells", be32(2)), ("#size-cells", be32(2)),
@@ -244,6 +265,7 @@ def main() -> None:
         "gpio.dtb": gpio,
         "exti.dtb": exti,
         "timer-pwm.dtb": timer_pwm,
+        "timer-h7-pwm.dtb": timer_h7_pwm,
         "overlap.dtb": board([clock("clock", 1),
                               device("device@1000", 0x1000, 0x100, 1),
                               device("device@1080", 0x1080, 0x100, 1)]),

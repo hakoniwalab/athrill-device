@@ -208,9 +208,10 @@ sizes, names, versions, callbacks, and exported compatible. A plugin cannot
 replace a built-in compatible, and two plugins cannot claim the same
 compatible. Keep the library loaded for the lifetime of every model instance.
 
-The existing Hakoniwa sensor EXDEV library is not automatically a model
-plugin. It must first export the plugin ABI and the
-`hakoniwa,sensor-device` model before it can be configured this way.
+The Hakoniwa sensor library exports both this model-plugin ABI and the legacy
+EXDEV ABI during the migration window. New DT boards use the explicit plugin
+mapping; existing C boards may retain their `DEV` line until the EXDEV
+deprecation gate.
 
 ## 5. Run the merged Devicetree path
 

@@ -74,6 +74,8 @@ struct AthrillDeviceRuntime {
 	uint32 node_count;
 	uint32 *order;
 	uint32 order_count;
+	uint32 *tick_order;
+	uint32 tick_order_count;
 	PluginRecord *plugins;
 	uint32 plugin_count;
 };
@@ -1409,6 +1411,60 @@ static int stable_topological_sort(AthrillDeviceRuntime *runtime)
 	return 0;
 }
 
+static int tick_before_value_source(const AthrillDeviceRuntime *runtime,
+	const NodeRecord *node, uint32 source_index)
+{
+	const fdt32_t *source;
+	int length;
+	int provider;
+
+	if (fdt_getprop(runtime->dtb, node->offset,
+	    "athrill,tick-before-value-source", NULL) == NULL) {
+		return 0;
+	}
+	source = fdt_getprop(runtime->dtb, node->offset, "value-source",
+		&length);
+	if (source == NULL || length != (int)sizeof(*source)) {
+		return 0;
+	}
+	provider = node_index_by_phandle(runtime, fdt32_to_cpu(*source));
+	return provider >= 0 && (uint32)provider == source_index;
+}
+
+static int build_tick_order(AthrillDeviceRuntime *runtime)
+{
+	uint8 *added;
+	uint32 i, j;
+
+	runtime->tick_order = calloc(runtime->order_count,
+		sizeof(*runtime->tick_order));
+	added = calloc(runtime->order_count, 1U);
+	if (runtime->tick_order == NULL || added == NULL) {
+		free(added);
+		return -1;
+	}
+	for (i = 0U; i < runtime->order_count; i++) {
+		uint32 source_index = runtime->order[i];
+		for (j = 0U; j < runtime->order_count; j++) {
+			NodeRecord *candidate =
+				&runtime->nodes[runtime->order[j]];
+			if (!added[j] && tick_before_value_source(runtime,
+			    candidate, source_index)) {
+				runtime->tick_order[runtime->tick_order_count++] =
+					runtime->order[j];
+				added[j] = 1U;
+			}
+		}
+		if (!added[i]) {
+			runtime->tick_order[runtime->tick_order_count++] =
+				source_index;
+			added[i] = 1U;
+		}
+	}
+	free(added);
+	return runtime->tick_order_count == runtime->order_count ? 0 : -1;
+}
+
 static int cells_value(const fdt32_t *cells, uint32 count, uint64 *value)
 {
 	uint32 i;
@@ -2026,7 +2082,8 @@ sint32 athrill_device_build(const AthrillDeviceBuildOptions *options,
 	if (load_plugins(runtime, options) != 0 || inventory_nodes(runtime, options) != 0 ||
 	    select_models(runtime, options) != 0 || build_dependencies(runtime) != 0 ||
 	    validate_common_properties(runtime) != 0 ||
-	    stable_topological_sort(runtime) != 0 || validate_and_create(runtime) != 0 ||
+	    stable_topological_sort(runtime) != 0 || build_tick_order(runtime) != 0 ||
+	    validate_and_create(runtime) != 0 ||
 	    register_and_connect(runtime) != 0) {
 		goto fail;
 	}
@@ -2054,6 +2111,28 @@ sint32 athrill_device_reset(AthrillDeviceRuntime *runtime)
 	return 0;
 }
 
+static sint32 tick_one(NodeRecord *node, uint64 now,
+	AthrillDeviceTickResult *result)
+{
+	AthrillDeviceTickResult one;
+
+	if (!node->created || node->model->tick == NULL) {
+		return 0;
+	}
+	one.next_event_interval = ATHRILL_DEVICE_NO_EVENT;
+	one.can_skip = TRUE;
+	if (node->model->tick(node->instance, now, &one) != 0) {
+		return -1;
+	}
+	if (one.next_event_interval < result->next_event_interval) {
+		result->next_event_interval = one.next_event_interval;
+	}
+	if (!one.can_skip) {
+		result->can_skip = FALSE;
+	}
+	return 0;
+}
+
 sint32 athrill_device_tick(AthrillDeviceRuntime *runtime, uint64 now,
                            AthrillDeviceTickResult *result)
 {
@@ -2063,22 +2142,10 @@ sint32 athrill_device_tick(AthrillDeviceRuntime *runtime, uint64 now,
 	}
 	result->next_event_interval = ATHRILL_DEVICE_NO_EVENT;
 	result->can_skip = TRUE;
-	for (i = 0U; i < runtime->order_count; i++) {
-		NodeRecord *node = &runtime->nodes[runtime->order[i]];
-		AthrillDeviceTickResult one;
-		if (!node->created || node->model->tick == NULL) {
-			continue;
-		}
-		one.next_event_interval = ATHRILL_DEVICE_NO_EVENT;
-		one.can_skip = TRUE;
-		if (node->model->tick(node->instance, now, &one) != 0) {
+	for (i = 0U; i < runtime->tick_order_count; i++) {
+		NodeRecord *node = &runtime->nodes[runtime->tick_order[i]];
+		if (tick_one(node, now, result) != 0) {
 			return -1;
-		}
-		if (one.next_event_interval < result->next_event_interval)
-			result->next_event_interval =
-			    one.next_event_interval;
-		if (!one.can_skip) {
-			result->can_skip = FALSE;
 		}
 	}
 	return 0;
@@ -2116,6 +2183,7 @@ void athrill_device_destroy(AthrillDeviceRuntime *runtime)
 		}
 	free(runtime->plugins);
 	free(runtime->order);
+	free(runtime->tick_order);
 	free(runtime->nodes);
 	free(runtime->dtb);
 	free(runtime);

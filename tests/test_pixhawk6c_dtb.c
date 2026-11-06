@@ -69,6 +69,14 @@ static void expect_u32(const void *blob, const char *path,
 	TEST_CHECK(fdt32_to_cpu(*actual) == value);
 }
 
+static void expect_boolean(const void *blob, const char *path,
+	const char *property)
+{
+	int length;
+	const void *actual = fdt_getprop(blob, node(blob, path), property, &length);
+	TEST_CHECK(actual != NULL && length == 0);
+}
+
 static void expect_interrupts(const void *blob, const char *path,
 	const uint32_t *lines, uint32_t count)
 {
@@ -228,6 +236,12 @@ static void check_common(const void *blob, int hakoniwa)
 	expect_interrupts(blob, "/soc/timers@40014000", tim15_irq, 1U);
 	expect_interrupts(blob, "/soc/timers@40014400", tim16_irq, 1U);
 	expect_interrupts(blob, "/soc/timers@40014800", tim17_irq, 1U);
+	expect_boolean(blob, "/soc/timers@40010000", "athrill,stm32h7-timer");
+	expect_boolean(blob, "/soc/timers@40000800", "athrill,stm32h7-timer");
+	expect_boolean(blob, "/soc/timers@40000c00", "athrill,stm32h7-timer");
+	expect_boolean(blob, "/soc/timers@40014000", "athrill,stm32h7-timer");
+	expect_boolean(blob, "/soc/timers@40014400", "athrill,stm32h7-timer");
+	expect_boolean(blob, "/soc/timers@40014800", "athrill,stm32h7-timer");
 
 	expect_interrupts(blob, "/soc/spi@40013000", spi1_irq, 1U);
 	expect_interrupts(blob, "/soc/spi@40003800", spi2_irq, 1U);
@@ -296,6 +310,13 @@ static void check_common(const void *blob, int hakoniwa)
 	expect_status(blob, "/sensor-device", hakoniwa ? "okay" : "disabled");
 	for (i = 0U; i < sizeof(value_paths) / sizeof(value_paths[0]); i++) {
 		expect_value_source(blob, value_paths[i], sensor_phandle, hakoniwa);
+	}
+	if (hakoniwa) {
+		expect_boolean(blob, "/pwm-actuator-map",
+			"athrill,tick-before-value-source");
+	} else {
+		TEST_CHECK(fdt_getprop(blob, node(blob, "/pwm-actuator-map"),
+			"athrill,tick-before-value-source", NULL) == NULL);
 	}
 }
 

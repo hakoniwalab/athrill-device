@@ -59,6 +59,11 @@ chooses one of the two for `hakoniwa,sensor-device`; the memory definition
 needs no `DEV` line. The default library keeps no dependency on the aircraft
 libraries.
 
+Both libraries also retain the legacy `athrill_ex_device` symbol during the
+EXDEV migration window, so an existing C-board `DEV` line continues to use
+the same link backend. The DT plugin and EXDEV entry points are alternatives
+for one run; a configuration must not instantiate both.
+
 Nothing changes in the Athrill core or in the targets. STM32 and RISC-V get it the same way, because the device is
 shared by all boards.
 

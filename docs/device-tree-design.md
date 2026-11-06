@@ -124,8 +124,13 @@ runs. If the key is absent, the target calls its legacy reset and
 `board_attach()` path exactly as it does today.
 
 During `device_supply_clock`, the target calls `athrill_device_tick` with the
-current virtual clock. athrill-device ticks models in the immutable creation
-order and returns the smallest nonzero interval to any model's next event.
+current virtual clock. athrill-device normally ticks models in the immutable
+creation order and returns the smallest nonzero interval to any model's next
+event. A value consumer with `athrill,tick-before-value-source` is ticked
+immediately before the model referenced by its `value-source` phandle. This
+explicitly models same-cycle producer/consumer paths such as timer PWM to the
+Hakoniwa aircraft without reversing the construction dependency needed to
+connect the models.
 The target takes the minimum of that value and its CPU-architectural devices'
 value in `DeviceClockType.min_intr_interval`. `UINT64_MAX` has the existing
 meaning of no known event (`DEVICE_CLOCK_MAX_INTERVAL`). A model may also

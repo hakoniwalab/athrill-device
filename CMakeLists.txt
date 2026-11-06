@@ -68,6 +68,7 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/gpio.dtb"
       "${TEST_DTB_DIR}/exti.dtb"
       "${TEST_DTB_DIR}/timer-pwm.dtb"
+      "${TEST_DTB_DIR}/timer-h7-pwm.dtb"
       "${TEST_DTB_DIR}/disabled-provider.dtb"
       "${TEST_DTB_DIR}/duplicate-phandle.dtb"
       "${TEST_DTB_DIR}/duplicate-spi.dtb"
