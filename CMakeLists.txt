@@ -95,6 +95,12 @@ if(BUILD_TESTING)
     ATHRILL_DEVICE_STANDALONE_TYPES)
   target_link_libraries(test_dma_protocol PRIVATE athrill_device)
 
+  add_executable(test_pixhawk4_dtb tests/test_pixhawk4_dtb.c
+    third_party/libfdt/libfdt.c)
+  target_include_directories(test_pixhawk4_dtb PRIVATE third_party/libfdt)
+  target_compile_definitions(test_pixhawk4_dtb PRIVATE
+    PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb")
+
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_plugin_good PRIVATE include)
@@ -113,6 +119,7 @@ if(BUILD_TESTING)
   add_test(NAME protocol-i2c COMMAND test_i2c_protocol)
   add_test(NAME protocol-uart COMMAND test_uart_protocol)
   add_test(NAME protocol-dma COMMAND test_dma_protocol)
+  add_test(NAME pixhawk4-dtb COMMAND test_pixhawk4_dtb)
 endif()
 
 install(TARGETS athrill_device EXPORT athrill-device-targets
