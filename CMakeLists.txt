@@ -11,6 +11,7 @@ add_library(athrill_device STATIC
   src/channel.c
   src/protocol_dma.c
   src/protocol_i2c.c
+  src/protocol_sd.c
   src/protocol_spi.c
   src/protocol_uart.c
   src/athrill_device.c
@@ -95,6 +96,11 @@ if(BUILD_TESTING)
     ATHRILL_DEVICE_STANDALONE_TYPES)
   target_link_libraries(test_dma_protocol PRIVATE athrill_device)
 
+  add_executable(test_sd_protocol tests/test_sd_protocol.c)
+  target_compile_definitions(test_sd_protocol PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_link_libraries(test_sd_protocol PRIVATE athrill_device)
+
   add_executable(test_pixhawk4_dtb tests/test_pixhawk4_dtb.c
     third_party/libfdt/libfdt.c)
   target_include_directories(test_pixhawk4_dtb PRIVATE third_party/libfdt)
@@ -119,6 +125,7 @@ if(BUILD_TESTING)
   add_test(NAME protocol-i2c COMMAND test_i2c_protocol)
   add_test(NAME protocol-uart COMMAND test_uart_protocol)
   add_test(NAME protocol-dma COMMAND test_dma_protocol)
+  add_test(NAME protocol-sd COMMAND test_sd_protocol)
   add_test(NAME pixhawk4-dtb COMMAND test_pixhawk4_dtb)
 endif()
 
@@ -127,6 +134,7 @@ install(TARGETS athrill_device EXPORT athrill-device-targets
 install(FILES include/athrill_device_if.h include/athrill_channel.h
   include/athrill_protocol_spi.h
   include/athrill_protocol_i2c.h
+  include/athrill_protocol_sd.h
   include/athrill_protocol_uart.h
   include/athrill_protocol_dma.h
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
