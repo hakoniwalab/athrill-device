@@ -27,7 +27,8 @@ ctest --test-dir build --output-on-failure
 `libfdt` is the read-only subset pinned to dtc v1.7.2 and used under its
 BSD-2-Clause option; its retained notice is in
 `LICENSES/BSD-2-Clause-libfdt.txt`.  The checked-in Pixhawk 4 board source and
-blob are documented in [`boards/pixhawk4/`](boards/pixhawk4/README.md).
+blob are documented in [`boards/pixhawk4/`](boards/pixhawk4/README.md). To add
+another board, follow [Adding a board from a Devicetree](docs/adding-a-board.md).
 
 ```
   Hakoniwa Drone (aircraft service)        Athrill
