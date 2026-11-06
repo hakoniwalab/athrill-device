@@ -18,6 +18,7 @@ add_library(athrill_device STATIC
   src/models/bmi055.c
   src/models/fm25v02.c
   src/models/icm20689.c
+  src/models/icm42688p.c
   src/models/ist8310.c
   src/models/ms5611.c
   src/models/pwm_actuator.c

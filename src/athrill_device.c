@@ -330,7 +330,6 @@ NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
 NAMED_ADAPTER(stm32h7_rcc_model, "stm32h7-rcc-adapter", "stm32h7-rcc");
 NAMED_ADAPTER(stm32h7_pwr_model, "stm32h7-pwr-adapter", "stm32h7-pwr");
 NAMED_ADAPTER(stm32h7_spi_model, "stm32h7-spi-adapter", "stm32h7-spi");
-NAMED_ADAPTER(icm42688p_legacy_model, "icm42688p-legacy-adapter", "icm42688p-legacy");
 
 static const char *const structural_compatibles[] = {
 	"holybro,pixhawk4", "holybro,pixhawk6c",
@@ -421,7 +420,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32h7_spi_compatibles, 1U, &stm32h7_spi_model },
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
 	{ bmi055_gyro_compatibles, 1U, &athrill_device_bmi055_model },
-	{ icm42688p_compatibles, 2U, &icm42688p_legacy_model },
+	{ icm42688p_compatibles, 2U, &athrill_device_icm42688p_model },
 	{ test_compatibles, 4U, &test_mmio_model },
 	{ test_peripheral_compatibles, 1U, &test_peripheral_model }
 };
