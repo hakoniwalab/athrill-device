@@ -9,6 +9,26 @@ Hakoniwa Drone x500 in MuJoCo: Processor-in-the-Loop (PIL).
 Every sensor-device parameter, including the Hakoniwa link, standalone test vehicle, trace, and in-process aircraft,
 is listed in the [configuration reference](docs/configuration.md).
 
+The repository also provides the target-independent Devicetree device-graph
+framework in `include/`, `src/`, and `third_party/libfdt/`.  A target opts in
+with `DEVICE_CONFIG_DEVICE_TREE`; without that key its existing device path is
+unchanged.  The framework validates a DTB, resolves compatible models and
+explicit plugins, constructs them in stable dependency order, rolls back a
+failed build, and logs the exact DTB SHA-256 plus host-only values.
+
+Build and test the framework on its own:
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+ctest --test-dir build --output-on-failure
+```
+
+`libfdt` is the read-only subset pinned to dtc v1.7.2 and used under its
+BSD-2-Clause option; its retained notice is in
+`LICENSES/BSD-2-Clause-libfdt.txt`.  The checked-in Pixhawk 4 board source and
+blob are documented in [`boards/pixhawk4/`](boards/pixhawk4/README.md).
+
 ```
   Hakoniwa Drone (aircraft service)        Athrill
   ┌─────────────────────────┐   shared    ┌──────────────────────────────┐
