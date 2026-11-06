@@ -5,6 +5,7 @@
  */
 #include "athrill_device_if.h"
 #include "libfdt.h"
+#include "models/models.h"
 #include "sha256.h"
 
 #include <ctype.h>
@@ -149,7 +150,8 @@ static sint32 adapter_create(const AthrillDeviceCreateArgs *args, void **instanc
 	return 0;
 }
 
-static sint32 adapter_connect(void *instance, const AthrillDeviceConnectArgs *args)
+static sint32 adapter_connect_named(void *instance,
+	const AthrillDeviceConnectArgs *args, const char *adapter_name)
 {
 	AdapterInstance *adapter = instance;
 	(void)args;
@@ -157,7 +159,7 @@ static sint32 adapter_connect(void *instance, const AthrillDeviceConnectArgs *ar
 		return -1;
 	}
 	return adapter->target_ops->model_adapter_connect(adapter->target,
-		adapter->node, "pixhawk4-fmu-v5");
+		adapter->node, adapter_name);
 }
 
 typedef struct {
@@ -282,12 +284,6 @@ static const AthrillDeviceModelOps structural_model = {
 	sizeof(AthrillDeviceModelOps), "structural", "1", NULL,
 	noop_create, noop_destroy, NULL, NULL, NULL, NULL, NULL, noop_reset, noop_tick
 };
-static const AthrillDeviceModelOps pixhawk4_model = {
-	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
-	sizeof(AthrillDeviceModelOps), "pixhawk4-fmu-v5-adapter", "1", NULL,
-	adapter_create, noop_destroy, NULL, NULL, NULL, NULL, adapter_connect,
-	noop_reset, noop_tick
-};
 static const AthrillDeviceModelOps test_mmio_model = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceModelOps), "test-mmio", "1", NULL,
@@ -301,39 +297,41 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 	&test_uart_ops, NULL, noop_reset, noop_tick
 };
 
-#define NAMED_ADAPTER(variable, name) \
+#define NAMED_ADAPTER(variable, name, adapter_name) \
+	static sint32 variable##_connect(void *instance, \
+		const AthrillDeviceConnectArgs *args) \
+	{ \
+		return adapter_connect_named(instance, args, adapter_name); \
+	} \
 	static const AthrillDeviceModelOps variable = { \
 		ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR, \
 		sizeof(AthrillDeviceModelOps), name, "1", NULL, \
-		noop_create, noop_destroy, NULL, NULL, NULL, NULL, NULL, \
+		adapter_create, noop_destroy, NULL, NULL, NULL, NULL, \
+		variable##_connect, \
 		noop_reset, noop_tick \
 	}
 
-NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter");
-NAMED_ADAPTER(stm32f7_gpio_model, "stm32f7-gpio-adapter");
-NAMED_ADAPTER(stm32f7_exti_model, "stm32f7-exti-adapter");
-NAMED_ADAPTER(stm32f7_dma_model, "stm32f7-dma-adapter");
-NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter");
-NAMED_ADAPTER(stm32f7_i2c_model, "stm32f7-i2c-adapter");
-NAMED_ADAPTER(stm32f7_timer_model, "stm32f7-timer-adapter");
-NAMED_ADAPTER(stm32f7_pwm_model, "stm32f7-pwm-adapter");
-NAMED_ADAPTER(stm32f7_uart_model, "stm32f7-uart-adapter");
-NAMED_ADAPTER(stm32f7_sdmmc_model, "stm32f7-sdmmc-adapter");
-NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter");
-NAMED_ADAPTER(stm32f7_rtc_model, "stm32f7-rtc-adapter");
-NAMED_ADAPTER(stm32f7_adc_model, "stm32f7-adc-adapter");
-NAMED_ADAPTER(stm32f7_rng_model, "stm32f7-rng-adapter");
-NAMED_ADAPTER(stm32f7_otgfs_model, "stm32f7-otgfs-adapter");
-NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter");
-NAMED_ADAPTER(stm32f7_backup_sram_model, "stm32f7-backup-sram-adapter");
-NAMED_ADAPTER(icm20689_model, "icm20689-adapter");
-NAMED_ADAPTER(fm25v02_model, "fm25v02-adapter");
-NAMED_ADAPTER(ist8310_model, "ist8310-adapter");
-NAMED_ADAPTER(ms5611_model, "ms5611-adapter");
-NAMED_ADAPTER(ublox_m8_model, "ublox-m8-adapter");
-NAMED_ADAPTER(sdcard_model, "sdcard-adapter");
-NAMED_ADAPTER(pwm_actuator_model, "pwm-actuator-map-adapter");
-NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter");
+NAMED_ADAPTER(pixhawk4_model, "pixhawk4-fmu-v5-adapter", "pixhawk4-board");
+NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
+NAMED_ADAPTER(stm32f7_gpio_model, "stm32f7-gpio-adapter", "stm32f7-gpio");
+NAMED_ADAPTER(stm32f7_exti_model, "stm32f7-exti-adapter", "stm32f7-exti");
+NAMED_ADAPTER(stm32f7_dma_model, "stm32f7-dma-adapter", "stm32f7-dma");
+NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter", "stm32f7-spi");
+NAMED_ADAPTER(stm32f7_i2c_model, "stm32f7-i2c-adapter", "stm32f7-i2c");
+NAMED_ADAPTER(stm32f7_timer_model, "stm32f7-timer-adapter", "stm32f7-timer");
+NAMED_ADAPTER(stm32f7_pwm_model, "stm32f7-pwm-adapter", "stm32f7-pwm");
+NAMED_ADAPTER(stm32f7_uart_model, "stm32f7-uart-adapter", "stm32f7-uart");
+NAMED_ADAPTER(stm32f7_sdmmc_model, "stm32f7-sdmmc-adapter", "stm32f7-sdmmc");
+NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter", "stm32f7-flash");
+NAMED_ADAPTER(stm32f7_rtc_model, "stm32f7-rtc-adapter", "stm32f7-rtc");
+NAMED_ADAPTER(stm32f7_adc_model, "stm32f7-adc-adapter", "stm32f7-adc");
+NAMED_ADAPTER(stm32f7_rng_model, "stm32f7-rng-adapter", "stm32f7-rng");
+NAMED_ADAPTER(stm32f7_otgfs_model, "stm32f7-otgfs-adapter", "stm32f7-otgfs");
+NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter", "stm32f7-crc");
+NAMED_ADAPTER(stm32f7_backup_sram_model, "stm32f7-backup-sram-adapter", "stm32f7-backup-sram");
+NAMED_ADAPTER(sdcard_model, "sdcard-adapter", "sdcard");
+NAMED_ADAPTER(pwm_actuator_model, "pwm-actuator-map-adapter", "pwm-actuator-map");
+NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-source");
 
 static const char *const structural_compatibles[] = {
 	"simple-bus", "simple-mfd", "syscon", "fixed-clock",
@@ -402,11 +400,11 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_otgfs_compatibles, 1U, &stm32f7_otgfs_model },
 	{ stm32f7_crc_compatibles, 1U, &stm32f7_crc_model },
 	{ stm32f7_backup_sram_compatibles, 1U, &stm32f7_backup_sram_model },
-	{ icm20689_compatibles, 1U, &icm20689_model },
-	{ fm25v02_compatibles, 2U, &fm25v02_model },
-	{ ist8310_compatibles, 1U, &ist8310_model },
-	{ ms5611_compatibles, 1U, &ms5611_model },
-	{ ublox_m8_compatibles, 1U, &ublox_m8_model },
+	{ icm20689_compatibles, 1U, &athrill_device_icm20689_model },
+	{ fm25v02_compatibles, 2U, &athrill_device_fm25v02_model },
+	{ ist8310_compatibles, 1U, &athrill_device_ist8310_model },
+	{ ms5611_compatibles, 1U, &athrill_device_ms5611_model },
+	{ ublox_m8_compatibles, 1U, &athrill_device_ublox_m8_model },
 	{ sdcard_compatibles, 1U, &sdcard_model },
 	{ pwm_actuator_compatibles, 1U, &pwm_actuator_model },
 	{ bench_sensor_compatibles, 1U, &bench_sensor_model },
@@ -1741,7 +1739,9 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 			if (!abi_header_ok(node->model->spi->abi_major,
 				node->model->spi->abi_minor, node->model->spi->struct_size,
 				sizeof(AthrillDeviceSpiPeripheralOps)) ||
-			    reg == NULL || length != 4 || runtime->target_ops->spi_bind == NULL) {
+			    reg == NULL || length != 4 ||
+			    (runtime->target_ops->spi_bind_node == NULL &&
+			     runtime->target_ops->spi_bind == NULL)) {
 				error_line("spi-bind", node->path, "reg", "invalid-child");
 				return -1;
 			}
@@ -1754,9 +1754,13 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 				}
 				gpio_ptr = &gpio;
 			}
-			if (runtime->target_ops->spi_bind(runtime->target,
+			if ((runtime->target_ops->spi_bind_node != NULL ?
+			     runtime->target_ops->spi_bind_node(runtime->target,
+				&parent->public_node, chip_select, gpio_ptr, node->model->spi,
+				node->instance, &node->spi_endpoint) :
+			     runtime->target_ops->spi_bind(runtime->target,
 				parent->public_node.id, chip_select, gpio_ptr, node->model->spi,
-				node->instance, &node->spi_endpoint) != 0) {
+				node->instance, &node->spi_endpoint)) != 0) {
 				error_line("spi-bind", node->path, "reg", "target-rejected");
 				return -1;
 			}
@@ -1766,14 +1770,21 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 			if (!abi_header_ok(node->model->i2c->abi_major,
 				node->model->i2c->abi_minor, node->model->i2c->struct_size,
 				sizeof(AthrillDeviceI2cPeripheralOps)) ||
-			    reg == NULL || length != 4 || runtime->target_ops->i2c_bind == NULL) {
+			    reg == NULL || length != 4 ||
+			    (runtime->target_ops->i2c_bind_node == NULL &&
+			     runtime->target_ops->i2c_bind == NULL)) {
 				error_line("i2c-bind", node->path, "reg", "invalid-child");
 				return -1;
 			}
 			address = fdt32_to_cpu(*reg);
-			if (address > 0x7fU || runtime->target_ops->i2c_bind(runtime->target,
+			if (address > 0x7fU ||
+			    (runtime->target_ops->i2c_bind_node != NULL ?
+			     runtime->target_ops->i2c_bind_node(runtime->target,
+				&parent->public_node, (uint16)address, node->model->i2c,
+				node->instance, &node->i2c_endpoint) :
+			     runtime->target_ops->i2c_bind(runtime->target,
 				parent->public_node.id, (uint16)address, node->model->i2c,
-				node->instance, &node->i2c_endpoint) != 0) {
+				node->instance, &node->i2c_endpoint)) != 0) {
 				error_line("i2c-bind", node->path, "reg", "target-rejected");
 				return -1;
 			}
@@ -1782,10 +1793,15 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 			if (!abi_header_ok(node->model->uart->abi_major,
 				node->model->uart->abi_minor, node->model->uart->struct_size,
 				sizeof(AthrillDeviceUartPeripheralOps)) ||
-			    runtime->target_ops->uart_bind == NULL ||
-			    runtime->target_ops->uart_bind(runtime->target,
+			    (runtime->target_ops->uart_bind_nodes == NULL &&
+			     runtime->target_ops->uart_bind == NULL) ||
+			    (runtime->target_ops->uart_bind_nodes != NULL ?
+			     runtime->target_ops->uart_bind_nodes(runtime->target,
+				&parent->public_node, &node->public_node, node->model->uart,
+				node->instance, &node->uart_endpoint) :
+			     runtime->target_ops->uart_bind(runtime->target,
 				parent->public_node.id, node->model->uart, node->instance,
-				&node->uart_endpoint) != 0) {
+				&node->uart_endpoint)) != 0) {
 				error_line("uart-bind", node->path, "-", "target-rejected");
 				return -1;
 			}

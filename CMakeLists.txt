@@ -9,6 +9,11 @@ include(GNUInstallDirs)
 
 add_library(athrill_device STATIC
   src/athrill_device.c
+  src/models/fm25v02.c
+  src/models/icm20689.c
+  src/models/ist8310.c
+  src/models/ms5611.c
+  src/models/ublox_m8.c
   src/sha256.c
   third_party/libfdt/libfdt.c)
 add_library(athrill-device::athrill-device ALIAS athrill_device)
@@ -18,7 +23,7 @@ target_include_directories(athrill_device
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE src third_party/libfdt)
 target_compile_definitions(athrill_device PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
-target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS})
+target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m)
 
 if(BUILD_TESTING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -31,6 +36,11 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/missing-provider.dtb" "${TEST_DTB_DIR}/cycle.dtb"
       "${TEST_DTB_DIR}/plugin.dtb" "${TEST_DTB_DIR}/order.dtb"
       "${TEST_DTB_DIR}/resources.dtb" "${TEST_DTB_DIR}/wiring.dtb"
+      "${TEST_DTB_DIR}/fram.dtb"
+      "${TEST_DTB_DIR}/barometer.dtb"
+      "${TEST_DTB_DIR}/magnetometer.dtb"
+      "${TEST_DTB_DIR}/gps.dtb"
+      "${TEST_DTB_DIR}/imu.dtb"
       "${TEST_DTB_DIR}/disabled-provider.dtb"
       "${TEST_DTB_DIR}/duplicate-phandle.dtb"
       "${TEST_DTB_DIR}/duplicate-spi.dtb"
@@ -43,6 +53,9 @@ if(BUILD_TESTING)
   add_executable(test_device_tree tests/test_device_tree.c)
   target_compile_definitions(test_device_tree PRIVATE
     ATHRILL_DEVICE_STANDALONE_TYPES TEST_DTB_DIR="${TEST_DTB_DIR}")
+  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(test_device_tree PRIVATE -UNDEBUG)
+  endif()
   target_link_libraries(test_device_tree PRIVATE athrill_device)
   add_dependencies(test_device_tree generate-test-dtbs)
 

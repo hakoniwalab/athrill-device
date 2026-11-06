@@ -24,7 +24,8 @@ PROPERTY_NAMES = [
     "interrupts", "interrupt-names", "test-gpios", "dmas", "dma-names",
     "spi-max-frequency", "athrill,test-resources",
     "athrill,test-spi-child", "athrill,test-i2c-child",
-    "athrill,test-uart-child", "status",
+    "athrill,test-uart-child", "status", "size",
+    "int-gpios", "axis-align-x",
 ]
 STRING_BLOCK = strings(*PROPERTY_NAMES)
 STRING_OFFSETS: dict[str, int] = {}
@@ -132,6 +133,42 @@ def main() -> None:
                        [peripheral("peer")],
                        "athrill,test-uart-child", 0),
     ])
+    fram = board([
+        bus_controller("spi", 0x2000, [node("fram@0", [
+            ("compatible", strings("infineon,fm25xxx")),
+            ("reg", be32(0)),
+            ("spi-max-frequency", be32(20_000_000)),
+            ("size", be32(32768)),
+        ], [])]),
+    ])
+    barometer = board([
+        bus_controller("spi", 0x2000, [node("pressure@0", [
+            ("compatible", strings("meas,ms5611")),
+            ("reg", be32(0)),
+            ("spi-max-frequency", be32(20_000_000)),
+        ], [])]),
+    ])
+    magnetometer = board([
+        bus_controller("i2c", 0x3000, [node("magnetometer@e", [
+            ("compatible", strings("isentek,ist8310")),
+            ("reg", be32(0x0e)),
+        ], [])]),
+    ])
+    gps = board([
+        bus_controller("uart", 0x4000, [node("gnss", [
+            ("compatible", strings("u-blox,m8")),
+        ], [])]),
+    ])
+    imu = board([
+        provider("gpio", 3, "#gpio-cells", 2),
+        bus_controller("spi", 0x2000, [node("imu@0", [
+            ("compatible", strings("invensense,icm20689")),
+            ("reg", be32(0)),
+            ("spi-max-frequency", be32(8_000_000)),
+            ("int-gpios", be32(3, 4, 0)),
+            ("axis-align-x", be32(2)),
+        ], [])]),
+    ])
     overflow_reg = node("", [
         ("compatible", strings("athrill,test-board")),
         ("#address-cells", be32(2)), ("#size-cells", be32(2)),
@@ -162,6 +199,11 @@ def main() -> None:
             provider("dma", 4, "#dma-cells", 1), resources,
         ]),
         "wiring.dtb": wiring,
+        "fram.dtb": fram,
+        "barometer.dtb": barometer,
+        "magnetometer.dtb": magnetometer,
+        "gps.dtb": gps,
+        "imu.dtb": imu,
         "overlap.dtb": board([clock("clock", 1),
                               device("device@1000", 0x1000, 0x100, 1),
                               device("device@1080", 0x1080, 0x100, 1)]),
