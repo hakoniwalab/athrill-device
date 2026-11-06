@@ -1,4 +1,5 @@
 #include "hako_sensor_device_link.h"
+#include "hako_sensor_device_link_mavlink.h"
 
 #include <string.h>
 
@@ -92,44 +93,13 @@ bool hako_sensor_link_read(uint64_t last_time_usec, HakoSensorSample *sensor, Ha
 	if ((s == NULL) || (s->time_usec <= last_time_usec)) {
 		return false;
 	}
-	memset(sensor, 0, sizeof(*sensor));
-	sensor->time_usec = s->time_usec;
-	sensor->acc[0] = s->xacc;
-	sensor->acc[1] = s->yacc;
-	sensor->acc[2] = s->zacc;
-	sensor->gyro[0] = s->xgyro;
-	sensor->gyro[1] = s->ygyro;
-	sensor->gyro[2] = s->zgyro;
-	sensor->mag[0] = s->xmag;
-	sensor->mag[1] = s->ymag;
-	sensor->mag[2] = s->zmag;
-	sensor->abs_pressure = s->abs_pressure;
-	sensor->diff_pressure = s->diff_pressure;
-	sensor->pressure_alt = s->pressure_alt;
-	sensor->temperature = s->temperature;
-	sensor->fields_updated = s->fields_updated;
-	sensor->id = s->id;
+	hako_sensor_link_decode_sensor(s, sensor);
 
 	*has_gps = false;
 	g = (const Hako_HakoHilGps *)read_pdu(link.gps_channel, gps_buffer, sizeof(gps_buffer));
 	if ((g != NULL) && (g->time_usec != gps_time_usec)) {
 		gps_time_usec = g->time_usec;
-		memset(gps, 0, sizeof(*gps));
-		gps->time_usec = g->time_usec;
-		gps->lat = g->lat;
-		gps->lon = g->lon;
-		gps->alt = g->alt;
-		gps->eph = g->eph;
-		gps->epv = g->epv;
-		gps->vel = g->vel;
-		gps->vn = g->vn;
-		gps->ve = g->ve;
-		gps->vd = g->vd;
-		gps->cog = g->cog;
-		gps->satellites_visible = g->satellites_visible;
-		gps->id = g->id;
-		gps->yaw = g->yaw;
-		gps->fix_type = g->fix_type;
+		hako_sensor_link_decode_gps(g, gps);
 		*has_gps = true;
 	}
 	return true;
@@ -140,7 +110,6 @@ bool hako_sensor_link_write_actuator(const HakoActuatorSample *actuator)
 	char buffer[PDU_SIZE(Hako_HakoHilActuatorControls)];
 	HakoPduMetaDataType *meta = (HakoPduMetaDataType *)buffer;
 	Hako_HakoHilActuatorControls *body;
-	uint32_t i;
 
 	memset(buffer, 0, sizeof(buffer));
 	meta->magicno = HAKO_PDU_META_DATA_MAGICNO;
@@ -149,13 +118,13 @@ bool hako_sensor_link_write_actuator(const HakoActuatorSample *actuator)
 	meta->heap_off = (uint32_t)sizeof(buffer);
 	meta->total_size = (uint32_t)sizeof(buffer);
 	body = (Hako_HakoHilActuatorControls *)(buffer + meta->base_off);
-	body->time_usec = actuator->time_usec;
-	for (i = 0U; i < HAKO_ACTUATOR_CHANNELS; i++) {
-		body->controls[i] = actuator->controls[i];
-	}
-	body->mode = actuator->mode;
-	body->flags = actuator->flags;
+	hako_sensor_link_encode_actuator(actuator, body);
 	return hakoniwa_asset_write_pdu(link.asset_name, link.robot_name, link.actuator_channel, buffer, sizeof(buffer)) == 0;
+}
+
+uint64_t hako_sensor_link_async_sample_period_usec(void)
+{
+	return 0U;
 }
 
 void hako_sensor_link_notify_time(uint64_t time_usec)

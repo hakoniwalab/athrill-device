@@ -26,6 +26,9 @@ Both sides move in lockstep on the data:
 
 Nothing depends on wall-clock time.
 
+A second build of the device can run the Hakoniwa Drone aircraft inside the Athrill process instead, with the
+same flight and no second process: see the design, [docs/in-process-aircraft.md](docs/in-process-aircraft.md).
+
 ## Layout
 
 | Path | What |
@@ -60,6 +63,21 @@ The result is `build-stm32/libhako_sensor_device.dylib` (`.so` on Linux). For Er
 `-DATHRILL_ADDRESS_WIDTH=64`. Other locations of the sources can be given with `-DATHRILL_SOURCE_DIR=...` and
 `-DHAKO_PDU_REGISTRY_DIR=...`.
 
+The macOS in-process prototype is an opt-in second target. It links the v5 release binaries; because that archive
+omits some transitive public C++ headers, it also needs a matching v5 source tree for headers only:
+
+```bash
+cmake -S board/common -B build-stm32-inproc -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_PREFIX_PATH="$HAKONIWA_FOUNDATION_PREFIX" -DATHRILL_ADDRESS_WIDTH=32 \
+  -DHAKO_SENSOR_DEVICE_BUILD_INPROC=ON \
+  -DHAKO_DRONE_ROOT=/path/to/hakoniwa-drone-core \
+  -DHAKO_DRONE_SOURCE_DIR=/path/to/matching-hakoniwa-drone-v5-source
+cmake --build build-stm32-inproc -j
+```
+
+This produces `libhako_sensor_device_inproc.dylib` beside the default library and copies its two runtime release
+dependencies beside it.
+
 ## Use it
 
 **Hakoniwa Drone (v5.0.0 or later):**
@@ -90,6 +108,13 @@ Athrill STM32 example `examples/px4-hakoniwa/first-boot-config.txt` has the valu
 
 **Take-off over MAVLink:** the altitude of `MAV_CMD_NAV_TAKEOFF` is above mean sea level. Give the home altitude
 plus the height to climb. QGroundControl does this for you.
+
+For a prepared disposable copy of Athrill STM32's `examples/px4-hakoniwa`, the two launchers under `tools/` build
+the mode-specific memory and device configuration, start the required processes, and wait. Both leave PX4's TCP
+MAVLink endpoint available for `fly.py` in another terminal. Run either script without arguments for its path list;
+set `ATHRILL_TICKS` for a finite run and `HAKO_SENSOR_DEVICE_TRACE_PATH` to enable the exact trace. The Hakoniwa
+launcher also honors `HAKO_CONFIG_PATH`. The in-process launcher defaults to `HAKO_AIRCRAFT_WORKER=1`; set it to
+`0` to retain the serial stepping path for exact-result and performance comparisons.
 
 ## Checked
 
