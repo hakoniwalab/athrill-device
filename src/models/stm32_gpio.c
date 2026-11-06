@@ -119,15 +119,10 @@ static sint32 gpio_read(void *instance, uint64 address, uint32 size,
 static void set_odr(Stm32Gpio *gpio, uint32 value)
 {
 	uint32 old = gpio->regs[GPIO_ODR / 4U];
-	uint32 changed, pin;
 	gpio->regs[GPIO_ODR / 4U] = value & 0xffffU;
-	changed = old ^ gpio->regs[GPIO_ODR / 4U];
-	for (pin = 0U; pin < GPIO_PINS; pin++) {
-		if ((changed & (1U << pin)) != 0U) {
-			(void)gpio->target_ops->gpio_drive(gpio->target,
-				gpio->lines[pin],
-				(gpio->regs[GPIO_ODR / 4U] & (1U << pin)) != 0U);
-		}
+	if (old != gpio->regs[GPIO_ODR / 4U]) {
+		(void)gpio->target_ops->gpio_outputs(gpio->target, gpio->lines,
+			GPIO_PINS, gpio->regs[GPIO_ODR / 4U]);
 	}
 }
 
@@ -191,7 +186,7 @@ static sint32 gpio_connect(void *instance,
 	(void)args;
 	if (gpio->target_ops->gpio_resolve == NULL ||
 	    gpio->target_ops->gpio_subscribe == NULL ||
-	    gpio->target_ops->gpio_drive == NULL) {
+	    gpio->target_ops->gpio_outputs == NULL) {
 		return -1;
 	}
 	for (pin = 0U; pin < GPIO_PINS; pin++) {
@@ -218,7 +213,7 @@ static sint32 gpio_reset(void *instance)
 	uint32 port_base = gpio->base >= H7_GPIO_BASE ? H7_GPIO_BASE : F7_GPIO_BASE;
 	uint32 port = (gpio->base - port_base) / GPIO_STRIDE;
 	memset(gpio->regs, 0, sizeof(gpio->regs));
-	gpio->inputs = 0U;
+	/* Preserve levels driven by board models during the connect phase. */
 	if (port == 0U) {
 		gpio->regs[GPIO_MODER / 4U] = 0xa8000000U;
 		gpio->regs[GPIO_PUPDR / 4U] = 0x64000000U;
