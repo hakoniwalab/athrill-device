@@ -312,7 +312,7 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 	}
 
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
-NAMED_ADAPTER(stm32f7_dma_model, "stm32f7-dma-adapter", "stm32f7-dma");
+NAMED_ADAPTER(stm32_dma_model, "stm32-dma-adapter", "stm32-dma");
 NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter", "stm32f7-spi");
 NAMED_ADAPTER(stm32f7_i2c_model, "stm32f7-i2c-adapter", "stm32f7-i2c");
 NAMED_ADAPTER(stm32f7_uart_model, "stm32f7-uart-adapter", "stm32f7-uart");
@@ -330,6 +330,7 @@ NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
 NAMED_ADAPTER(stm32h7_rcc_model, "stm32h7-rcc-adapter", "stm32h7-rcc");
 NAMED_ADAPTER(stm32h7_pwr_model, "stm32h7-pwr-adapter", "stm32h7-pwr");
 NAMED_ADAPTER(stm32h7_spi_model, "stm32h7-spi-adapter", "stm32h7-spi");
+NAMED_ADAPTER(stm32h7_dmamux_model, "stm32h7-dmamux-adapter", "stm32h7-dmamux");
 
 static const char *const structural_compatibles[] = {
 	"holybro,pixhawk4", "holybro,pixhawk6c",
@@ -345,7 +346,7 @@ static const char *const structural_compatibles[] = {
 static const char *const stm32f7_soc_compatibles[] = { "st,stm32f765", "st,stm32f7" };
 static const char *const stm32f7_gpio_compatibles[] = { "st,stm32-gpio" };
 static const char *const stm32f7_exti_compatibles[] = { "st,stm32-exti" };
-static const char *const stm32f7_dma_compatibles[] = { "st,stm32-dma-v1" };
+static const char *const stm32_dma_compatibles[] = { "st,stm32-dma-v1" };
 static const char *const stm32f7_spi_compatibles[] = { "st,stm32-spi-fifo", "st,stm32-spi" };
 static const char *const stm32f7_i2c_compatibles[] = { "st,stm32-i2c-v2" };
 static const char *const stm32f7_timer_compatibles[] = { "st,stm32-timers" };
@@ -374,6 +375,7 @@ static const char *const stm32h7_soc_compatibles[] = { "st,stm32h743", "st,stm32
 static const char *const stm32h7_rcc_compatibles[] = { "st,stm32h7-rcc" };
 static const char *const stm32h7_pwr_compatibles[] = { "st,stm32h7-pwr" };
 static const char *const stm32h7_spi_compatibles[] = { "st,stm32h7-spi" };
+static const char *const stm32h7_dmamux_compatibles[] = { "st,stm32-dmamux" };
 static const char *const bmi055_accel_compatibles[] = { "bosch,bma280" };
 static const char *const bmi055_gyro_compatibles[] = { "bosch,bmg160" };
 static const char *const icm42688p_compatibles[] = {
@@ -392,7 +394,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_soc_compatibles, 2U, &stm32f7_soc_model },
 	{ stm32f7_gpio_compatibles, 1U, &athrill_device_stm32_gpio_model },
 	{ stm32f7_exti_compatibles, 1U, &athrill_device_stm32_exti_model },
-	{ stm32f7_dma_compatibles, 1U, &stm32f7_dma_model },
+	{ stm32_dma_compatibles, 1U, &stm32_dma_model },
 	{ stm32f7_spi_compatibles, 2U, &stm32f7_spi_model },
 	{ stm32f7_i2c_compatibles, 1U, &stm32f7_i2c_model },
 	{ stm32f7_timer_compatibles, 1U, &athrill_device_stm32_tim_model },
@@ -418,6 +420,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32h7_rcc_compatibles, 1U, &stm32h7_rcc_model },
 	{ stm32h7_pwr_compatibles, 1U, &stm32h7_pwr_model },
 	{ stm32h7_spi_compatibles, 1U, &stm32h7_spi_model },
+	{ stm32h7_dmamux_compatibles, 1U, &stm32h7_dmamux_model },
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
 	{ bmi055_gyro_compatibles, 1U, &athrill_device_bmi055_model },
 	{ icm42688p_compatibles, 2U, &athrill_device_icm42688p_model },

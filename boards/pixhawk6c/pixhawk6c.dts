@@ -54,6 +54,14 @@
 	};
 };
 
+/*
+ * FMUv6C assigns all active DMA streams to DMA1/2 through DMAMUX1.
+ * BDMA and DMAMUX2 have no board allocation and remain disabled.
+ */
+&dma1 { status = "okay"; };
+&dma2 { status = "okay"; };
+&dmamux1 { status = "okay"; };
+
 /* V6C00 internal sensor bus: accel PC15, gyro PC14, ICM PC13. */
 &spi1 {
 	status = "okay";

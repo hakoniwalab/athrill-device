@@ -47,6 +47,15 @@ static void expect_reg(const void *blob, const char *path, uint32_t value)
 	assert(fdt32_to_cpu(reg[0]) == value);
 }
 
+static void expect_u32(const void *blob, const char *path,
+	const char *property, uint32_t value)
+{
+	int length;
+	const fdt32_t *actual = fdt_getprop(blob, node(blob, path), property, &length);
+	assert(actual != NULL && length == (int)sizeof(*actual));
+	assert(fdt32_to_cpu(*actual) == value);
+}
+
 static void expect_interrupts(const void *blob, const char *path,
 	const uint32_t *lines, uint32_t count)
 {
@@ -102,6 +111,9 @@ static void check_common(const void *blob, int hakoniwa)
 	static const uint32_t i2c4_irqs[] = { 95U, 96U };
 	static const uint32_t usart1_irq[] = { 37U };
 	static const uint32_t sdmmc2_irq[] = { 124U };
+	static const uint32_t dma1_irqs[] = { 11U, 12U, 13U, 14U, 15U, 16U, 17U, 47U };
+	static const uint32_t dma2_irqs[] = { 56U, 57U, 58U, 59U, 60U, 68U, 69U, 70U };
+	static const uint32_t dmamux1_irq[] = { 102U };
 	static const char *const value_paths[] = {
 		"/pwm-actuator-map",
 		"/soc/spi@40013000/accelerometer@0",
@@ -122,6 +134,27 @@ static void check_common(const void *blob, int hakoniwa)
 		"st,stm32-flash-controller");
 	expect_compatible(blob, "/soc/interrupt-controller@58000000", "st,stm32-exti");
 	expect_compatible(blob, "/soc/interrupt-controller@e000e100", "arm,v7m-nvic");
+	expect_compatible(blob, "/soc/dma@40020000", "st,stm32-dma-v1");
+	expect_compatible(blob, "/soc/dma@40020400", "st,stm32-dma-v1");
+	expect_compatible(blob, "/soc/dmamux@40020800", "st,stm32-dmamux");
+	expect_reg(blob, "/soc/dma@40020000", 0x40020000U);
+	expect_reg(blob, "/soc/dma@40020400", 0x40020400U);
+	expect_reg(blob, "/soc/dmamux@40020800", 0x40020800U);
+	expect_status(blob, "/soc/dma@40020000", "okay");
+	expect_status(blob, "/soc/dma@40020400", "okay");
+	expect_status(blob, "/soc/dmamux@40020800", "okay");
+	expect_status(blob, "/soc/bdma@58025400", "disabled");
+	expect_status(blob, "/soc/dmamux@58025800", "disabled");
+	expect_u32(blob, "/soc/dma@40020000", "dma-offset", 0U);
+	expect_u32(blob, "/soc/dma@40020000", "dma-requests", 8U);
+	expect_u32(blob, "/soc/dma@40020400", "dma-offset", 8U);
+	expect_u32(blob, "/soc/dma@40020400", "dma-requests", 8U);
+	expect_u32(blob, "/soc/dmamux@40020800", "dma-channels", 16U);
+	expect_u32(blob, "/soc/dmamux@40020800", "dma-generators", 8U);
+	expect_u32(blob, "/soc/dmamux@40020800", "dma-requests", 107U);
+	expect_interrupts(blob, "/soc/dma@40020000", dma1_irqs, 8U);
+	expect_interrupts(blob, "/soc/dma@40020400", dma2_irqs, 8U);
+	expect_interrupts(blob, "/soc/dmamux@40020800", dmamux1_irq, 1U);
 
 	expect_interrupts(blob, "/soc/timers@40010000", tim1_irqs, 4U);
 	expect_interrupts(blob, "/soc/timers@40000800", tim4_irq, 1U);
