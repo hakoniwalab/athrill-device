@@ -20,6 +20,7 @@
 
 #include <st/f7/stm32f765Xi.dtsi>
 #include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/dma/stm32_dma.h>
 #include <zephyr/dt-bindings/sensor/sensor_axis_align.h>
 
 / {
@@ -28,6 +29,11 @@
 
 	aliases {
 		gnss0 = &gps1;
+	};
+
+	hakoniwa_sensor: sensor-device {
+		compatible = "hakoniwa,sensor-device";
+		status = "disabled";
 	};
 
 	/*
@@ -55,6 +61,9 @@
 &spi1 {
 	status = "okay";
 	cs-gpios = <&gpiof 2 GPIO_ACTIVE_LOW>;
+	dmas = <&dma2 3 3 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma2 0 3 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx";
 
 	icm20689: imu@0 {
 		compatible = "invensense,icm20689";
@@ -122,12 +131,20 @@
 	status = "okay";
 	bus-width = <4>;
 	cd-gpios = <&gpiog 0 GPIO_ACTIVE_LOW>;
+	/* The F7 controller changes the direction of its one allocated stream. */
+	dmas = <&dma2 6 4 (STM32_DMA_PERIPH_RX | STM32_DMA_32BITS) STM32_DMA_FIFO_FULL>,
+	       <&dma2 6 4 (STM32_DMA_PERIPH_TX | STM32_DMA_32BITS) STM32_DMA_FIFO_FULL>;
+	dma-names = "rx", "tx";
 
 	sdcard: sd-card {
 		compatible = "zephyr,sdmmc-disk";
 		disk-name = "SD";
 		status = "okay";
 	};
+};
+
+&dma2 {
+	status = "okay";
 };
 
 &timers1 {

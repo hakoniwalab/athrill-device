@@ -25,6 +25,8 @@ device=$(absolute "$4")
 drone_root=$(absolute "$5")
 hako_root=$(absolute "$6")
 airframe=$(absolute "$7")
+script_dir=$(cd "$(dirname "$0")" && pwd)
+device_tree=$(absolute "${DEVICE_CONFIG_DEVICE_TREE:-$script_dir/../boards/pixhawk4/pixhawk4-hakoniwa.dtb}")
 ticks=${ATHRILL_TICKS:--1}
 trace=${HAKO_SENSOR_DEVICE_TRACE_PATH:-}
 host=${HAKO_SERVICE_HOST:-127.0.0.1}
@@ -82,8 +84,13 @@ trap on_signal INT TERM
 
 awk '
     $1 == "HAKO_SENSOR_DEVICE_TRACE_PATH" { next }
+    $1 == "DEVICE_CONFIG_DEVICE_TREE" { next }
+    $1 == "DEVICE_CONFIG_DEVICE_PLUGIN_0" { next }
+    $1 == "DEVICE_CONFIG_STM32_UART2_TCP_PORT" { next }
     { print }
 ' "$example_dir/device_config.txt" >"$config_tmp"
+printf 'DEVICE_CONFIG_DEVICE_TREE %s\n' "$device_tree" >>"$config_tmp"
+printf 'DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa%%2Csensor-device=%s\n' "$device" >>"$config_tmp"
 if [ -n "$trace" ]; then
     trace=$(absolute "$trace")
     printf 'HAKO_SENSOR_DEVICE_TRACE_PATH %s\n' "$trace" >>"$config_tmp"
@@ -94,7 +101,6 @@ asset=$(awk '$1 == "HAKO_SENSOR_DEVICE_ASSET" { print $2; exit }' "$device_confi
 [ -n "$asset" ] || usage
 
 awk '$1 != "DEV," || $2 != "0x60000000,"' "$example_dir/memory.txt" >"$memory_tmp"
-printf 'DEV, 0x60000000, %s\n' "$device" >>"$memory_tmp"
 mv "$memory_tmp" "$memory"
 
 # recover removes only a stopped runtime. It makes a previous interrupted run
@@ -146,7 +152,7 @@ done
 
 "$hako_cmd" start
 echo "PX4 and the Hakoniwa aircraft service are running."
-echo "Leave this running and start fly.py against TCP 127.0.0.1:5760 in another terminal."
+echo "TCP 5760 is disabled; use a configured file or other non-TCP control sink if needed."
 set +e
 wait "$athrill_pid"
 result=$?

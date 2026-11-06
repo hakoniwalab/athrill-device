@@ -1,7 +1,7 @@
 # In-process aircraft: Athrill flies the Hakoniwa Drone without a second process
 
 This is the design of a second build of the Hakoniwa sensor device. It runs the Hakoniwa Drone aircraft (physics,
-sensor models, actuator handling) inside the Athrill process. The firmware, the device registers and the timeline
+sensor models, actuator handling) inside the Athrill process. The firmware, typed sensor/actuator boundary and timeline
 stay the same as with the Hakoniwa link; only the transport between the device and the aircraft changes.
 
 ## Why
@@ -24,7 +24,7 @@ PX4 on Athrill STM32 is about 2.5 to 3 instead of 1.85; the prototype measures i
 
 ## What stays the same
 
-- The firmware, the board models and the sensor device's registers, interrupts and latching.
+- The firmware, board models, typed sensor values, actuator values and scheduling.
 - The order of one exchange (Gauss-Seidel lockstep):
   1. the aircraft publishes a sensor sample with its time;
   2. the device runs the CPU to that time, latches the sample and raises data ready;
@@ -52,9 +52,12 @@ The sensor device already reaches Hakoniwa through one small interface, `board/c
 | `hako_sensor_link_cleanup` | leaves Hakoniwa | destroys the aircraft |
 
 The in-process link is a second implementation of this interface, `board/common/src/hako_sensor_device_link_inproc.cpp`.
-The device code (`hako_sensor_device_exdev.c`, `hako_sensor_device.c`) does not change. The build makes a second
-library, `libhako_sensor_device_inproc`, next to `libhako_sensor_device`. The Athrill memory definition chooses one of
-the two, as it chooses the device today. The default library keeps no dependency on the aircraft libraries.
+The model code (`hako_sensor_device_model.c`) does not change. The build makes
+a second plugin, `libhako_sensor_device_inproc`, next to
+`libhako_sensor_device`. An explicit `DEVICE_CONFIG_DEVICE_PLUGIN_0` mapping
+chooses one of the two for `hakoniwa,sensor-device`; the memory definition
+needs no `DEV` line. The default library keeps no dependency on the aircraft
+libraries.
 
 Nothing changes in the Athrill core or in the targets. STM32 and RISC-V get it the same way, because the device is
 shared by all boards.

@@ -19,6 +19,8 @@
 typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
 	void *target;
+	const AthrillDeviceNode *node;
+	AthrillDeviceValueSource source;
 	uint16 prom[8];
 	uint8 command;
 	uint8 out[3];
@@ -165,7 +167,10 @@ static void command(Ms5611 *chip, uint8 value)
 	           (value & 0xf0U) == CMD_CONVERT_D2) {
 		uint32 osr = ((uint32)value >> 1) & 7U;
 		std_bool d1 = (value & 0xf0U) == CMD_CONVERT_D1;
-		if (chip->target_ops->sensor_sample != NULL) {
+		if (chip->source.ops != NULL) {
+			(void)chip->source.ops->sensor_sample(chip->source.instance,
+				&sample);
+		} else if (chip->target_ops->sensor_sample != NULL) {
 			(void)chip->target_ops->sensor_sample(chip->target, &sample);
 		}
 		if (chip->noise && osr < 5U) {
@@ -224,8 +229,17 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	chip->target_ops = args->target_ops;
 	chip->target = args->target;
+	chip->node = args->node;
 	*instance = chip;
 	return 0;
+}
+
+static sint32 connect_model(void *instance,
+	const AthrillDeviceConnectArgs *args)
+{
+	Ms5611 *chip = instance;
+	return athrill_device_connect_value_source(chip->node, args,
+		&chip->source);
 }
 
 static sint32 tick(void *instance, uint64 now,
@@ -246,5 +260,5 @@ static const AthrillDeviceSpiPeripheralOps spi_ops = {
 const AthrillDeviceModelOps athrill_device_ms5611_model = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceModelOps), "ms5611", "1", NULL,
-	create, free, NULL, &spi_ops, NULL, NULL, NULL, reset, tick
+	create, free, NULL, &spi_ops, NULL, NULL, connect_model, reset, tick
 };

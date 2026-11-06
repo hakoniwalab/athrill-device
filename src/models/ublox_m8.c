@@ -44,6 +44,8 @@ typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
 	void *target;
 	AthrillDeviceNodeId node;
+	const AthrillDeviceNode *node_description;
+	AthrillDeviceValueSource source;
 	uint64 cpu_hz;
 	uint8 frame[FRAME_MAX];
 	uint32 frame_len;
@@ -254,8 +256,10 @@ static void measure(UbloxM8 *gps, uint64 clock)
 	time_of(gps, clock, pvt, &itow);
 	put32(&pvt[0], itow);
 	put32(&pvt[12], 50U);
-	fix = gps->target_ops->gps_sample != NULL &&
-		gps->target_ops->gps_sample(gps->target, &sample) == 0 &&
+	fix = ((gps->source.ops != NULL &&
+		gps->source.ops->gps_sample(gps->source.instance, &sample) == 0) ||
+		(gps->source.ops == NULL && gps->target_ops->gps_sample != NULL &&
+		gps->target_ops->gps_sample(gps->target, &sample) == 0)) &&
 		sample.fix_type >= 2U;
 	if (fix) {
 		pvt[20] = (uint8)sample.fix_type;
@@ -304,11 +308,15 @@ static sint32 reset(void *instance)
 	const AthrillDeviceTargetOps *target_ops = gps->target_ops;
 	void *target = gps->target;
 	AthrillDeviceNodeId node = gps->node;
+	const AthrillDeviceNode *node_description = gps->node_description;
+	AthrillDeviceValueSource source = gps->source;
 	uint64 cpu_hz = gps->cpu_hz;
 	memset(gps, 0, sizeof(*gps));
 	gps->target_ops = target_ops;
 	gps->target = target;
 	gps->node = node;
+	gps->node_description = node_description;
+	gps->source = source;
 	gps->cpu_hz = cpu_hz;
 	gps->measurement_period_ms = 1000U;
 	return 0;
@@ -323,6 +331,7 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	gps->target_ops = args->target_ops;
 	gps->target = args->target;
 	gps->node = args->node->id;
+	gps->node_description = args->node;
 	if (args->target_ops->time_frequency_hz == NULL ||
 	    (gps->cpu_hz = args->target_ops->time_frequency_hz(args->target)) == 0U) {
 		free(gps);
@@ -330,6 +339,14 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	*instance = gps;
 	return 0;
+}
+
+static sint32 connect_model(void *instance,
+	const AthrillDeviceConnectArgs *args)
+{
+	UbloxM8 *gps = instance;
+	return athrill_device_connect_value_source(gps->node_description, args,
+		&gps->source);
 }
 
 static sint32 tick(void *instance, uint64 now,
@@ -363,5 +380,5 @@ static const AthrillDeviceUartPeripheralOps uart_ops = {
 const AthrillDeviceModelOps athrill_device_ublox_m8_model = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceModelOps), "ublox-m8", "1", NULL,
-	create, free, NULL, NULL, NULL, &uart_ops, NULL, reset, tick
+	create, free, NULL, NULL, NULL, &uart_ops, connect_model, reset, tick
 };

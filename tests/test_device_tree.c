@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: MIT */
 #include "athrill_device_if.h"
+#include "athrill_protocol_i2c.h"
 #include "athrill_protocol_spi.h"
+#include "athrill_protocol_uart.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -35,6 +37,8 @@ typedef struct {
 	const AthrillDeviceUartPeripheralOps *uart_ops;
 	void *uart_instance;
 	AthrillDeviceNodeId uart_peripheral;
+	AthrillUartProtocol *uart_protocol;
+	uint64 uart_time;
 	uint8 uart_output[256];
 	uint32 uart_output_count;
 } TestTarget;
@@ -43,6 +47,175 @@ typedef struct {
 	AthrillChannel *channel;
 	AthrillSpiProtocol *protocol;
 } TestSpiConnection;
+
+typedef struct {
+	AthrillChannel *channel;
+	AthrillI2cProtocol *protocol;
+	uint64 time;
+} TestI2cConnection;
+
+typedef struct {
+	AthrillChannel *channel;
+	AthrillUartProtocol *protocol;
+} TestUartConnection;
+
+static sint32 uart_child_receive(void *context, uint8 data,
+	uint64 completion_time)
+{
+	TestTarget *target = context;
+	(void)completion_time;
+	return target->uart_ops->receive_byte(target->uart_instance, data);
+}
+
+static sint32 uart_owner_receive(void *context, uint8 data,
+	uint64 completion_time)
+{
+	TestTarget *target = context;
+	(void)completion_time;
+	assert(target->uart_output_count < sizeof(target->uart_output));
+	target->uart_output[target->uart_output_count++] = data;
+	return 0;
+}
+
+static void uart_connect(TestTarget *target, TestUartConnection *connection)
+{
+	AthrillChannelConfig config;
+	AthrillUartTiming timing = {1000000U, 100000U, 8U, 1U, FALSE};
+	memset(&config, 0, sizeof(config));
+	config.peripheral_width = 1U;
+	config.memory_width = 1U;
+	config.capacity = 1U;
+	config.threshold = 1U;
+	config.burst = 1U;
+	config.count_kind = ATHRILL_CHANNEL_COUNT_SELECTION;
+	config.directions = ATHRILL_CHANNEL_ALLOW_EXCHANGE;
+	assert(athrill_channel_create(&config, &connection->channel) == 0);
+	assert(athrill_uart_protocol_create(connection->channel, &timing,
+		uart_child_receive, target, uart_owner_receive, target,
+		&connection->protocol) == 0);
+	assert(athrill_uart_open(connection->protocol, 0U) == 0);
+	target->uart_protocol = connection->protocol;
+	target->uart_time = 1U;
+}
+
+static void uart_transfer(TestTarget *target, uint8 data)
+{
+	uint64 completion;
+	assert(athrill_uart_send_to_child(target->uart_protocol, data,
+		target->uart_time++, &completion) == 0);
+}
+
+static void uart_disconnect(TestTarget *target,
+	TestUartConnection *connection)
+{
+	assert(athrill_uart_close(connection->protocol,
+		target->uart_time++) == 0);
+	target->uart_protocol = NULL;
+	athrill_uart_protocol_destroy(connection->protocol);
+	athrill_channel_destroy(connection->channel);
+}
+
+static std_bool i2c_child_start(void *context, std_bool read,
+	std_bool repeated, uint64 time)
+{
+	TestTarget *target = context;
+	(void)repeated;
+	(void)time;
+	assert(target->i2c_ops->start != NULL);
+	return target->i2c_ops->start(target->i2c_instance, read);
+}
+
+static std_bool i2c_child_write(void *context, uint8 data, uint64 time)
+{
+	TestTarget *target = context;
+	(void)time;
+	assert(target->i2c_ops->write_byte != NULL);
+	target->i2c_ops->write_byte(target->i2c_instance, data);
+	return TRUE;
+}
+
+static sint32 i2c_child_read(void *context, uint8 *data,
+	std_bool master_ack, uint64 time)
+{
+	TestTarget *target = context;
+	(void)master_ack;
+	(void)time;
+	assert(target->i2c_ops->read_byte != NULL);
+	*data = target->i2c_ops->read_byte(target->i2c_instance);
+	return 0;
+}
+
+static void i2c_child_stop(void *context, uint64 time)
+{
+	TestTarget *target = context;
+	(void)time;
+	assert(target->i2c_ops->stop != NULL);
+	target->i2c_ops->stop(target->i2c_instance);
+}
+
+static const AthrillI2cChildOps i2c_child_ops = {
+	i2c_child_start, i2c_child_write, i2c_child_read, i2c_child_stop
+};
+
+static void i2c_connect(TestTarget *target, uint16 address,
+	TestI2cConnection *connection)
+{
+	AthrillChannelConfig config;
+	memset(&config, 0, sizeof(config));
+	config.peripheral_width = 1U;
+	config.memory_width = 1U;
+	config.capacity = 1U;
+	config.threshold = 1U;
+	config.burst = 1U;
+	config.selection.kind = ATHRILL_CHANNEL_SELECT_ADDRESS;
+	config.selection.value = address;
+	config.count_kind = ATHRILL_CHANNEL_COUNT_SELECTION;
+	config.directions = ATHRILL_CHANNEL_ALLOW_EXCHANGE;
+	assert(athrill_channel_create(&config, &connection->channel) == 0);
+	assert(athrill_i2c_protocol_create(connection->channel, &i2c_child_ops,
+		target, &connection->protocol) == 0);
+	connection->time = 1U;
+}
+
+static sint32 i2c_transfer_messages(TestI2cConnection *connection,
+	uint16 address, AthrillDeviceI2cMessage *messages, uint32 count)
+{
+	uint32 message, byte;
+	for (message = 0U; message < count; message++) {
+		AthrillDeviceI2cMessage *current = &messages[message];
+		if (athrill_i2c_start(connection->protocol, address, current->read,
+			connection->time++) != 1) {
+			return -1;
+		}
+		for (byte = 0U; byte < current->size; byte++) {
+			if (current->read) {
+				if (athrill_i2c_read(connection->protocol,
+					&current->data[byte], byte + 1U < current->size,
+					connection->time++) != 0) {
+					return -1;
+				}
+			} else {
+				std_bool ack;
+				if (athrill_i2c_write(connection->protocol,
+					current->data[byte], &ack,
+					connection->time++) != 0 || !ack) {
+					return -1;
+				}
+			}
+		}
+		if (current->stop && athrill_i2c_stop(connection->protocol,
+			connection->time++) != 0) {
+			return -1;
+		}
+	}
+	return 0;
+}
+
+static void i2c_disconnect(TestI2cConnection *connection)
+{
+	athrill_i2c_protocol_destroy(connection->protocol);
+	athrill_channel_destroy(connection->channel);
+}
 
 static void spi_child_select(void *context, uint64 time)
 {
@@ -316,7 +489,12 @@ static sint32 uart_send_from_node(void *context,
 	AthrillDeviceNodeId peripheral, uint8 data)
 {
 	TestTarget *target = context;
+	uint64 completion;
 	assert(peripheral == target->uart_peripheral);
+	if (target->uart_protocol != NULL) {
+		return athrill_uart_send_from_child(target->uart_protocol, data,
+			target->uart_time++, &completion);
+	}
 	assert(target->uart_output_count < sizeof(target->uart_output));
 	target->uart_output[target->uart_output_count++] = data;
 	return 0;
@@ -512,18 +690,20 @@ int main(int argc, char **argv)
 	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
 	assert(target.uart_bound == 1U && target.uart_ops != NULL);
 	{
+		TestUartConnection connection;
 		static const uint8 poll[] = {
 			0xb5U, 0x62U, 0x0aU, 0x04U, 0U, 0U, 0x0eU, 0x34U
 		};
+		uart_connect(&target, &connection);
 		for (i = 0U; i < sizeof(poll); i++) {
-			assert(target.uart_ops->receive_byte(target.uart_instance,
-				poll[i]) == 0);
+			uart_transfer(&target, poll[i]);
 		}
 		assert(target.uart_output_count > 6U);
 		assert(target.uart_output[0] == 0xb5U &&
 			target.uart_output[1] == 0x62U &&
 			target.uart_output[2] == 0x0aU &&
 			target.uart_output[3] == 0x04U);
+		uart_disconnect(&target, &connection);
 	}
 	athrill_device_destroy(runtime);
 	runtime = NULL;
@@ -596,19 +776,21 @@ int main(int argc, char **argv)
 	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
 	assert(target.i2c_bound == 1U && target.i2c_ops != NULL);
 	{
+		TestI2cConnection connection;
 		uint8 command[2];
 		uint8 result[7];
 		AthrillDeviceI2cMessage messages[2] = {
 			{command, 1U, FALSE, FALSE},
 			{result, 1U, TRUE, TRUE},
 		};
+		i2c_connect(&target, 0x0eU, &connection);
 		command[0] = 0U;
-		assert(target.i2c_ops->transfer(target.i2c_instance,
+		assert(i2c_transfer_messages(&connection, 0x0eU,
 			messages, 2U) == 0);
 		assert(result[0] == 0x10U);
 
 		command[0] = 0x0dU;
-		assert(target.i2c_ops->transfer(target.i2c_instance,
+		assert(i2c_transfer_messages(&connection, 0x0eU,
 			messages, 2U) == 0);
 		assert(result[0] == 0U);
 
@@ -616,13 +798,13 @@ int main(int argc, char **argv)
 		command[1] = 1U;
 		messages[0].size = 2U;
 		messages[0].stop = TRUE;
-		assert(target.i2c_ops->transfer(target.i2c_instance,
+		assert(i2c_transfer_messages(&connection, 0x0eU,
 			messages, 1U) == 0);
 		command[0] = 0x02U;
 		messages[0].size = 1U;
 		messages[0].stop = FALSE;
 		messages[1].size = sizeof(result);
-		assert(target.i2c_ops->transfer(target.i2c_instance,
+		assert(i2c_transfer_messages(&connection, 0x0eU,
 			messages, 2U) == 0);
 		assert((result[0] & 1U) != 0U);
 		assert(result[1] == 0xefU && result[2] == 0xffU);
@@ -633,30 +815,31 @@ int main(int argc, char **argv)
 		command[1] = 0xd0U;
 		messages[0].size = 2U;
 		messages[0].stop = TRUE;
-		assert(target.i2c_ops->transfer(target.i2c_instance,
+		assert(i2c_transfer_messages(&connection, 0x0eU,
 			messages, 1U) == 0);
 		command[0] = 0x0dU;
 		messages[0].size = 1U;
 		messages[0].stop = FALSE;
 		messages[1].size = 1U;
-		assert(target.i2c_ops->transfer(target.i2c_instance,
+		assert(i2c_transfer_messages(&connection, 0x0eU,
 			messages, 2U) == 0);
 		assert(result[0] == 0x50U);
 		command[0] = 0x0aU;
 		command[1] = 1U;
 		messages[0].size = 2U;
 		messages[0].stop = TRUE;
-		assert(target.i2c_ops->transfer(target.i2c_instance,
+		assert(i2c_transfer_messages(&connection, 0x0eU,
 			messages, 1U) == 0);
 		command[0] = 0x02U;
 		messages[0].size = 1U;
 		messages[0].stop = FALSE;
 		messages[1].size = sizeof(result);
-		assert(target.i2c_ops->transfer(target.i2c_instance,
+		assert(i2c_transfer_messages(&connection, 0x0eU,
 			messages, 2U) == 0);
 		assert(result[1] == 0xbeU && result[2] == 0xffU);
 		assert(result[3] == 0x43U && result[4] == 0U);
 		assert(result[5] == 0x10U && result[6] == 0x02U);
+		i2c_disconnect(&connection);
 	}
 	athrill_device_destroy(runtime);
 	runtime = NULL;

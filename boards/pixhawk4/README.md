@@ -6,10 +6,16 @@ Apache-2.0 `stm32f765Xi.dtsi` from pinned Zephyr revision
 BSD-3-Clause PX4 board files from which wiring facts were taken.  No
 ArduPilot hwdef text is used.
 
-The checked-in `pixhawk4.dtb` has SHA-256:
+The base board keeps `/sensor-device` disabled and leaves the chip models on
+the target-provided sensor source.  This is the DTB for self-contained PX4
+SIH and bench runs.  `pixhawk4-hakoniwa.dts` includes the base, enables the
+Hakoniwa node, and adds the `value-source` edges used by Hakoniwa and PIL.
+
+The checked-in blobs have SHA-256:
 
 ```text
-fa07dfd4a9925553235e158b92ae21e2bdbd32458767424254e24270fd340e67
+d69341d08b5bf05fc1ceba6deb5fb400ea1162dd52ba60aa08e77fc3696a8c13  pixhawk4.dtb
+f7b93e0e8a82b5dcf8d1267ce89290765c72c1efd053f2a62db287d110aea501  pixhawk4-hakoniwa.dtb
 ```
 
 It was made with GNU cpp and dtc 1.7.x from a Linux container, from the
@@ -21,9 +27,17 @@ ZEPHYR=$ROOT/zephyr/zephyr
 mkdir -p "$ROOT/build"
 cpp -nostdinc -undef -x assembler-with-cpp \
   -I "$ZEPHYR/dts" -I "$ZEPHYR/include" \
-  "$ROOT/dts/pixhawk4.dts" "$ROOT/build/pixhawk4.pre.dts"
-dtc -I dts -O dtb -o "$ROOT/build/pixhawk4.dtb" \
+  -I "$ROOT/boards/pixhawk4" \
+  "$ROOT/boards/pixhawk4/pixhawk4.dts" "$ROOT/build/pixhawk4.pre.dts"
+cpp -nostdinc -undef -x assembler-with-cpp \
+  -I "$ZEPHYR/dts" -I "$ZEPHYR/include" \
+  -I "$ROOT/boards/pixhawk4" \
+  "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa.dts" \
+  "$ROOT/build/pixhawk4-hakoniwa.pre.dts"
+dtc -I dts -O dtb -o "$ROOT/boards/pixhawk4/pixhawk4.dtb" \
   "$ROOT/build/pixhawk4.pre.dts"
+dtc -I dts -O dtb -o "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa.dtb" \
+  "$ROOT/build/pixhawk4-hakoniwa.pre.dts"
 ```
 
 The Zephyr include remains an external build input; it is not copied into

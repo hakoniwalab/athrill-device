@@ -11,6 +11,7 @@ add_library(athrill_device STATIC
   src/channel.c
   src/protocol_dma.c
   src/protocol_i2c.c
+  src/protocol_sd.c
   src/protocol_spi.c
   src/protocol_uart.c
   src/athrill_device.c
@@ -33,6 +34,18 @@ target_include_directories(athrill_device
   PRIVATE src third_party/libfdt)
 target_compile_definitions(athrill_device PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
 target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m)
+
+# Dependency-free reference plugin used by board/boot checks.  Production
+# Hakoniwa and in-process variants are built from board/common and use the
+# same model implementation with their respective link backends.
+add_library(athrill_hakoniwa_sensor MODULE
+  board/common/src/hako_sensor_device_model.c)
+target_include_directories(athrill_hakoniwa_sensor PRIVATE
+  include board/common/src board/common/include)
+target_compile_definitions(athrill_hakoniwa_sensor PRIVATE
+  ATHRILL_DEVICE_STANDALONE_TYPES ATHRILL_HAKONIWA_PASSIVE)
+set_target_properties(athrill_hakoniwa_sensor PROPERTIES
+  PREFIX "" OUTPUT_NAME "athrill_hakoniwa_sensor")
 
 if(BUILD_TESTING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
@@ -95,6 +108,18 @@ if(BUILD_TESTING)
     ATHRILL_DEVICE_STANDALONE_TYPES)
   target_link_libraries(test_dma_protocol PRIVATE athrill_device)
 
+  add_executable(test_sd_protocol tests/test_sd_protocol.c)
+  target_compile_definitions(test_sd_protocol PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_link_libraries(test_sd_protocol PRIVATE athrill_device)
+
+  add_executable(test_pixhawk4_dtb tests/test_pixhawk4_dtb.c
+    third_party/libfdt/libfdt.c)
+  target_include_directories(test_pixhawk4_dtb PRIVATE third_party/libfdt)
+  target_compile_definitions(test_pixhawk4_dtb PRIVATE
+    PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
+    PIXHAWK4_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4-hakoniwa.dtb")
+
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_plugin_good PRIVATE include)
@@ -113,6 +138,8 @@ if(BUILD_TESTING)
   add_test(NAME protocol-i2c COMMAND test_i2c_protocol)
   add_test(NAME protocol-uart COMMAND test_uart_protocol)
   add_test(NAME protocol-dma COMMAND test_dma_protocol)
+  add_test(NAME protocol-sd COMMAND test_sd_protocol)
+  add_test(NAME pixhawk4-dtb COMMAND test_pixhawk4_dtb)
 endif()
 
 install(TARGETS athrill_device EXPORT athrill-device-targets
@@ -120,6 +147,7 @@ install(TARGETS athrill_device EXPORT athrill-device-targets
 install(FILES include/athrill_device_if.h include/athrill_channel.h
   include/athrill_protocol_spi.h
   include/athrill_protocol_i2c.h
+  include/athrill_protocol_sd.h
   include/athrill_protocol_uart.h
   include/athrill_protocol_dma.h
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")

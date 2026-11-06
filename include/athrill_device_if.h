@@ -29,7 +29,7 @@ typedef uint8 std_bool;
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       7U
+#define ATHRILL_DEVICE_ABI_MINOR       8U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -179,6 +179,22 @@ typedef struct {
 	uint64 time_usec;
 } AthrillDeviceGpsSample;
 
+typedef struct AthrillDeviceValueProviderOps {
+	uint32 abi_major;
+	uint32 abi_minor;
+	uint32 struct_size;
+	sint32 (*sensor_sample)(void *instance,
+	                       AthrillDeviceSensorSample *sample);
+	sint32 (*gps_sample)(void *instance, AthrillDeviceGpsSample *sample);
+	sint32 (*actuator_output)(void *instance, const float32 *values,
+	                         uint32 count);
+} AthrillDeviceValueProviderOps;
+
+typedef struct {
+	const AthrillDeviceValueProviderOps *ops;
+	void *instance;
+} AthrillDeviceValueSource;
+
 typedef struct AthrillDeviceTargetOps {
 	uint32 abi_major;
 	uint32 abi_minor;
@@ -298,6 +314,9 @@ typedef struct AthrillDeviceResourceOps {
 	/* Added in ABI 1.7. */
 	sint32 (*get_pwm)(void *context, const char *property, uint32 index,
 	                  AthrillDevicePwmChannel *channel);
+	/* Added in ABI 1.8; typed model-to-model sensor/actuator values. */
+	sint32 (*get_value_source)(void *context, const char *property,
+	                          AthrillDeviceValueSource *source);
 } AthrillDeviceResourceOps;
 
 typedef struct {
@@ -336,6 +355,8 @@ typedef struct AthrillDeviceModelOps {
 	               AthrillDeviceTickResult *result);
 	/* Added in ABI 1.7; optional provider implemented by timer models. */
 	const AthrillDevicePwmProviderOps *pwm;
+	/* Added in ABI 1.8; optional sensor/GPS source and actuator sink. */
+	const AthrillDeviceValueProviderOps *values;
 } AthrillDeviceModelOps;
 
 typedef struct {
