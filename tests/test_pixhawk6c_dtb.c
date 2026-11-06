@@ -67,6 +67,15 @@ static void expect_status(const void *blob, const char *path, const char *wanted
 	assert(status != NULL && strcmp(status, wanted) == 0);
 }
 
+static void expect_string(const void *blob, const char *path,
+	const char *property, const char *wanted)
+{
+	int length;
+	const char *actual = fdt_getprop(blob, node(blob, path), property, &length);
+	assert(actual != NULL && length == (int)strlen(wanted) + 1);
+	assert(strcmp(actual, wanted) == 0);
+}
+
 static void expect_value_source(const void *blob, const char *path,
 	uint32_t phandle, int present)
 {
@@ -146,7 +155,11 @@ static void check_common(const void *blob, int hakoniwa)
 	assert(fdt32_to_cpu(cells[1]) == 4U);
 	expect_reg(blob, "/soc/spi@40003800/fram@0", 0U);
 	expect_reg(blob, "/soc/i2c@58001c00/pressure@77", 0x77U);
+	expect_compatible(blob, "/soc/i2c@58001c00/magnetometer@c",
+		"isentek,ist8310");
 	expect_reg(blob, "/soc/i2c@58001c00/magnetometer@c", 0x0cU);
+	expect_string(blob, "/soc/i2c@58001c00/magnetometer@c",
+		"athrill,mount-rotation", "none");
 
 	/* Eight ordered PWM entries: TIM1 1..4, TIM4 3..4, TIM5 1..2. */
 	cells = fdt_getprop(blob, node(blob, "/pwm-actuator-map"), "pwms", &length);
