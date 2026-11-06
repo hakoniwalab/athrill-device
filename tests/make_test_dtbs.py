@@ -169,6 +169,12 @@ def main() -> None:
             ("axis-align-x", be32(2)),
         ], [])]),
     ])
+    gpio = board([node("gpio@40020000", [
+        ("compatible", strings("st,stm32-gpio")),
+        ("reg", be32(0x40020000, 0x400)),
+        ("#gpio-cells", be32(2)),
+        ("phandle", be32(3)),
+    ], [])])
     overflow_reg = node("", [
         ("compatible", strings("athrill,test-board")),
         ("#address-cells", be32(2)), ("#size-cells", be32(2)),
@@ -204,6 +210,7 @@ def main() -> None:
         "magnetometer.dtb": magnetometer,
         "gps.dtb": gps,
         "imu.dtb": imu,
+        "gpio.dtb": gpio,
         "overlap.dtb": board([clock("clock", 1),
                               device("device@1000", 0x1000, 0x100, 1),
                               device("device@1080", 0x1080, 0x100, 1)]),

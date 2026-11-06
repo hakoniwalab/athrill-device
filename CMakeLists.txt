@@ -13,6 +13,7 @@ add_library(athrill_device STATIC
   src/models/icm20689.c
   src/models/ist8310.c
   src/models/ms5611.c
+  src/models/stm32_gpio.c
   src/models/ublox_m8.c
   src/sha256.c
   third_party/libfdt/libfdt.c)
@@ -41,6 +42,7 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/magnetometer.dtb"
       "${TEST_DTB_DIR}/gps.dtb"
       "${TEST_DTB_DIR}/imu.dtb"
+      "${TEST_DTB_DIR}/gpio.dtb"
       "${TEST_DTB_DIR}/disabled-provider.dtb"
       "${TEST_DTB_DIR}/duplicate-phandle.dtb"
       "${TEST_DTB_DIR}/duplicate-spi.dtb"

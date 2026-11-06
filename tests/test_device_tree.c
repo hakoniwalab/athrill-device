@@ -14,6 +14,10 @@ typedef struct {
 	uint32 registered;
 	uint32 irq_resolved;
 	uint32 gpio_resolved;
+	AthrillDeviceGpioEdge gpio_edges[16];
+	void *gpio_edge_instances[16];
+	std_bool gpio_levels[16];
+	uint32 gpio_driven;
 	uint32 dma_resolved;
 	uint32 spi_bound;
 	const AthrillDeviceSpiPeripheralOps *spi_ops;
@@ -61,13 +65,38 @@ static sint32 irq_resolve(void *context, const AthrillDeviceSpecifier *spec,
 	return 0;
 }
 
+static sint32 gpio_drive(void *context, AthrillDeviceGpioLine line,
+	std_bool level)
+{
+	TestTarget *target = context;
+	uint32 pin = (uint32)line.value - 1U;
+	assert(pin < 16U);
+	target->gpio_levels[pin] = level;
+	target->gpio_driven++;
+	if (target->gpio_edges[pin] != NULL) {
+		target->gpio_edges[pin](target->gpio_edge_instances[pin], level);
+	}
+	return 0;
+}
+
+static sint32 gpio_subscribe(void *context, AthrillDeviceGpioLine line,
+	AthrillDeviceGpioEdge callback, void *instance)
+{
+	TestTarget *target = context;
+	uint32 pin = (uint32)line.value - 1U;
+	assert(pin < 16U && callback != NULL);
+	target->gpio_edges[pin] = callback;
+	target->gpio_edge_instances[pin] = instance;
+	return 0;
+}
+
 static sint32 gpio_resolve(void *context, const AthrillDeviceSpecifier *spec,
 	AthrillDeviceGpioLine *line)
 {
 	TestTarget *target = context;
 	assert(spec->cell_count == 2U);
 	target->gpio_resolved++;
-	line->value = spec->cells[0];
+	line->value = spec->cells[0] + 1U;
 	return 0;
 }
 
@@ -199,6 +228,8 @@ static const AthrillDeviceTargetOps target_ops = {
 	.i2c_bind = i2c_bind,
 	.uart_bind = uart_bind,
 	.gpio_resolve = gpio_resolve,
+	.gpio_drive = gpio_drive,
+	.gpio_subscribe = gpio_subscribe,
 	.dma_resolve = dma_resolve,
 	.time_frequency_hz = time_frequency,
 	.spi_bind_node = spi_bind_node,
@@ -264,6 +295,27 @@ int main(int argc, char **argv)
 	assert(athrill_device_tick(runtime, 1U, &tick) == 0 && tick.can_skip);
 	athrill_device_destroy(runtime);
 	runtime = NULL;
+
+	path(dtb, sizeof(dtb), "gpio.dtb");
+	target.gpio_resolved = 0U;
+	target.gpio_driven = 0U;
+	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
+	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
+	assert(target.registered == 1U && target.addresses[0] == 0x40020000U &&
+		target.sizes[0] == 0x400U && target.gpio_resolved == 16U);
+	assert(target.ops->write(target.instance, 0x40020000U, 4U, 1U << 8) == 0);
+	assert(target.ops->write(target.instance, 0x40020014U, 4U, 1U << 4) == 0);
+	assert(target.gpio_driven == 1U && target.gpio_levels[4]);
+	{
+		AthrillDeviceGpioLine line = {3U};
+		assert(gpio_drive(&target, line, TRUE) == 0);
+		assert(target.ops->read(target.instance, 0x40020010U, 4U,
+			&value) == 0 && (value & (1U << 2)) != 0U);
+	}
+	athrill_device_destroy(runtime);
+	runtime = NULL;
+	target.gpio_resolved = 0U;
+	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
 
 	path(dtb, sizeof(dtb), "gps.dtb");
 	target.uart_bound = 0U;
