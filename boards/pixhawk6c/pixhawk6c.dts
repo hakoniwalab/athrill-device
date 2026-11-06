@@ -52,15 +52,48 @@
 		athrill,output-pins = "PA8", "PE11", "PE13", "PE14",
 				      "PD14", "PD15", "PA0", "PA1";
 	};
+
+	soc {
+		/* Boot-time H743 fabric registers not described by the upstream DTSI. */
+		syscfg: system-config@58000400 {
+			compatible = "st,stm32h7-syscfg";
+			reg = <0x58000400 0x400>;
+		};
+
+		axi_target7: axi-target@51008000 {
+			compatible = "st,stm32h7-axi-target";
+			reg = <0x51008000 0x400>;
+		};
+
+		dbgmcu: debug@5c001000 {
+			compatible = "st,stm32h7-dbgmcu";
+			reg = <0x5c001000 0x1000>;
+		};
+
+		system_memory: system-memory@1ff1e800 {
+			compatible = "st,stm32h7-system-memory";
+			reg = <0x1ff1e800 0x100>;
+		};
+	};
 };
 
-/*
- * FMUv6C assigns all active DMA streams to DMA1/2 through DMAMUX1.
- * BDMA and DMAMUX2 have no board allocation and remain disabled.
- */
+/* FMUv6C allocates transfers on DMA1/2; startup also resets BDMA/DMAMUX2. */
 &dma1 { status = "okay"; };
 &dma2 { status = "okay"; };
 &dmamux1 { status = "okay"; };
+&bdma1 { status = "okay"; };
+&dmamux2 { status = "okay"; };
+
+/* Boot-time peripherals touched by PX4 or ArduPilot on this board. */
+&adc12_common { status = "okay"; };
+&adc1 { status = "okay"; };
+&adc3_common { status = "okay"; };
+&adc3 { status = "okay"; };
+&rng { status = "okay"; };
+&rtc { status = "okay"; };
+&iwdg { status = "okay"; };
+&usbotg_fs { status = "okay"; };
+&fdcan1 { status = "okay"; };
 
 /* V6C00 internal sensor bus: accel PC15, gyro PC14, ICM PC13. */
 &spi1 {

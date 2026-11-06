@@ -85,6 +85,26 @@ static void expect_string(const void *blob, const char *path,
 	assert(strcmp(actual, wanted) == 0);
 }
 
+static void expect_string_list(const void *blob, const char *path,
+	const char *property, const char *const *wanted, uint32_t count)
+{
+	int length;
+	uint32_t i;
+	const char *value = fdt_getprop(blob, node(blob, path), property, &length);
+	const char *end;
+
+	assert(value != NULL && length > 0);
+	end = value + length;
+	for (i = 0U; i < count; i++) {
+		size_t item_length;
+		assert(value < end);
+		item_length = strlen(value) + 1U;
+		assert(strcmp(value, wanted[i]) == 0);
+		value += item_length;
+	}
+	assert(value == end);
+}
+
 static void expect_value_source(const void *blob, const char *path,
 	uint32_t phandle, int present)
 {
@@ -114,6 +134,13 @@ static void check_common(const void *blob, int hakoniwa)
 	static const uint32_t dma1_irqs[] = { 11U, 12U, 13U, 14U, 15U, 16U, 17U, 47U };
 	static const uint32_t dma2_irqs[] = { 56U, 57U, 58U, 59U, 60U, 68U, 69U, 70U };
 	static const uint32_t dmamux1_irq[] = { 102U };
+	static const char *const pwm_names[] = {
+		"FMU_CH1", "FMU_CH2", "FMU_CH3", "FMU_CH4",
+		"FMU_CH5", "FMU_CH6", "FMU_CH7", "FMU_CH8"
+	};
+	static const char *const output_pins[] = {
+		"PA8", "PE11", "PE13", "PE14", "PD14", "PD15", "PA0", "PA1"
+	};
 	static const char *const value_paths[] = {
 		"/pwm-actuator-map",
 		"/soc/spi@40013000/accelerometer@0",
@@ -143,8 +170,24 @@ static void check_common(const void *blob, int hakoniwa)
 	expect_status(blob, "/soc/dma@40020000", "okay");
 	expect_status(blob, "/soc/dma@40020400", "okay");
 	expect_status(blob, "/soc/dmamux@40020800", "okay");
-	expect_status(blob, "/soc/bdma@58025400", "disabled");
-	expect_status(blob, "/soc/dmamux@58025800", "disabled");
+	expect_status(blob, "/soc/bdma@58025400", "okay");
+	expect_status(blob, "/soc/dmamux@58025800", "okay");
+	expect_compatible(blob, "/soc/bdma@58025400", "st,stm32-bdma");
+	expect_compatible(blob, "/soc/watchdog@58004800", "st,stm32-watchdog");
+	expect_compatible(blob, "/soc/system-config@58000400", "st,stm32h7-syscfg");
+	expect_compatible(blob, "/soc/axi-target@51008000", "st,stm32h7-axi-target");
+	expect_compatible(blob, "/soc/debug@5c001000", "st,stm32h7-dbgmcu");
+	expect_compatible(blob, "/soc/system-memory@1ff1e800", "st,stm32h7-system-memory");
+	expect_compatible(blob, "/soc/can@4000a000", "st,stm32h7-fdcan");
+	expect_status(blob, "/soc/can@4000a000", "okay");
+	expect_status(blob, "/soc/adc@40022000", "okay");
+	expect_status(blob, "/soc/adc@40022000/adc@40022000", "okay");
+	expect_status(blob, "/soc/adc@58026000", "okay");
+	expect_status(blob, "/soc/adc@58026000/adc@58026000", "okay");
+	expect_status(blob, "/soc/rng@48021800", "okay");
+	expect_status(blob, "/soc/rtc@58004000", "okay");
+	expect_status(blob, "/soc/watchdog@58004800", "okay");
+	expect_status(blob, "/soc/usb@40080000", "okay");
 	expect_u32(blob, "/soc/dma@40020000", "dma-offset", 0U);
 	expect_u32(blob, "/soc/dma@40020000", "dma-requests", 8U);
 	expect_u32(blob, "/soc/dma@40020400", "dma-offset", 8U);
@@ -214,6 +257,13 @@ static void check_common(const void *blob, int hakoniwa)
 		assert(fdt32_to_cpu(cells[i * 4U]) == provider);
 		assert(fdt32_to_cpu(cells[i * 4U + 1U]) == channel);
 	}
+	expect_status(blob, "/soc/timers@40010000/pwm", "okay");
+	expect_status(blob, "/soc/timers@40000800/pwm", "okay");
+	expect_status(blob, "/soc/timers@40000c00/pwm", "okay");
+	expect_string_list(blob, "/pwm-actuator-map", "pwm-names", pwm_names, 8U);
+	expect_string_list(blob, "/pwm-actuator-map", "athrill,output-pins",
+		output_pins, 8U);
+	expect_compatible(blob, "/sensor-device", "hakoniwa,sensor-device");
 
 	sensor = node(blob, "/sensor-device");
 	sensor_phandle = fdt_get_phandle(blob, sensor);
