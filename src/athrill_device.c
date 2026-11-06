@@ -86,14 +86,14 @@ static void error_line(const char *code, const char *path,
 	       reason != NULL ? reason : "-");
 }
 
-static void print_escaped(const char *value)
+static void fprint_escaped(FILE *stream, const char *value)
 {
 	const unsigned char *p = (const unsigned char *)value;
 	while (*p != 0U) {
 		if (*p >= 0x21U && *p <= 0x7eU && *p != '\\' && *p != '=') {
-			putchar(*p);
+			fputc(*p, stream);
 		} else {
-			printf("\\x%02x", *p);
+			fprintf(stream, "\\x%02x", *p);
 		}
 		p++;
 	}
@@ -1925,25 +1925,25 @@ static void log_runtime(AthrillDeviceRuntime *runtime,
 	uint32 i;
 	printf("DEVICE_TREE sha256=%s size=%u\n", runtime->hash, runtime->dtb_size);
 	for (i = 0U; i < options->host_value_count; i++) {
-		printf("DEVICE_TREE_HOST sha256=%s key=", runtime->hash);
-		print_escaped(options->host_values[i].key);
-		printf(" value=");
-		print_escaped(options->host_values[i].value);
-		putchar('\n');
+		fprintf(stderr, "DEVICE_TREE_HOST sha256=%s key=", runtime->hash);
+		fprint_escaped(stderr, options->host_values[i].key);
+		fprintf(stderr, " value=");
+		fprint_escaped(stderr, options->host_values[i].value);
+		fputc('\n', stderr);
 	}
 	for (i = 0U; i < runtime->order_count; i++) {
 		NodeRecord *node = &runtime->nodes[runtime->order[i]];
-		printf("DEVICE_MODEL path=");
-		print_escaped(node->path);
-		printf(" compatible=");
-		print_escaped(node->matched != NULL ? node->matched : "-");
-		printf(" provider=");
-		print_escaped(node->provider_name);
-		printf(" model=");
-		print_escaped(node->model->model_name);
-		printf(" version=");
-		print_escaped(node->model->model_version);
-		putchar('\n');
+		fprintf(stderr, "DEVICE_MODEL path=");
+		fprint_escaped(stderr, node->path);
+		fprintf(stderr, " compatible=");
+		fprint_escaped(stderr, node->matched != NULL ? node->matched : "-");
+		fprintf(stderr, " provider=");
+		fprint_escaped(stderr, node->provider_name);
+		fprintf(stderr, " model=");
+		fprint_escaped(stderr, node->model->model_name);
+		fprintf(stderr, " version=");
+		fprint_escaped(stderr, node->model->model_version);
+		fputc('\n', stderr);
 	}
 }
 
