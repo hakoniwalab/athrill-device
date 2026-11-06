@@ -6,7 +6,7 @@ Virtual devices that connect firmware running on [Athrill](https://github.com/to
 The first device is the **Hakoniwa sensor device**. With it, unmodified PX4 firmware on Athrill flies the
 Hakoniwa Drone x500 in MuJoCo: Processor-in-the-Loop (PIL).
 
-Every sensor-device parameter, including the Hakoniwa link, standalone test vehicle, trace, and in-process aircraft,
+Every sensor-model parameter, including the Hakoniwa link, trace, and in-process aircraft,
 is listed in the [configuration reference](docs/configuration.md).
 
 The repository also provides the target-independent Devicetree device-graph
@@ -33,8 +33,8 @@ blob are documented in [`boards/pixhawk4/`](boards/pixhawk4/README.md).
   Hakoniwa Drone (aircraft service)        Athrill
   ┌─────────────────────────┐   shared    ┌──────────────────────────────┐
   │ physics (MuJoCo)         │   memory   │ Hakoniwa sensor device        │
-  │ sensor model              │ ─────────▶ │ (this repository, an EXDEV)   │
-  │                          │ hil_sensor │   ↓ registers / chips          │
+  │ sensor model              │ ─────────▶ │ Devicetree model plugin       │
+  │                          │ hil_sensor │   ↓ typed sources / chips      │
   │                          │ hil_gps    │ PX4 firmware (unmodified)      │
   │                          │ ◀───────── │   ↑ motor outputs (PWM)        │
   │                          │hil_actuator│                                │
@@ -56,7 +56,7 @@ same flight and no second process: see the design, [docs/in-process-aircraft.md]
 
 | Path | What |
 | --- | --- |
-| `board/common/` | The sensor device, common to all boards: an Athrill external device (EXDEV) and a Hakoniwa polling asset, with the register map `include/hako_sensor_device_regs.h` |
+| `board/common/` | The `hakoniwa,sensor-device` model plugin, common to all boards, with shared-memory and in-process link backends |
 | `board/stm32f7xx/` | [Pixhawk 4 (STM32F765)](board/stm32f7xx/README.md) on Athrill STM32. The firmware reads the emulated chips with its own drivers, so **PX4 and ArduPilot** both work unchanged |
 | `board/stm32h7xx/` | [Pixhawk 6C (STM32H743)](board/stm32h7xx/README.md) on Athrill STM32, using the same common device through the v6C sensor, GPS and FMU-output wiring |
 | `board/erbium/` | [AIFoundry Erbium (RISC-V)](board/erbium/README.md) on Athrill RISC-V. No chips: a PX4 driver reads the registers (**PX4 only**) |
@@ -67,32 +67,29 @@ Put the repositories side by side, as the defaults expect:
 
 ```text
 work/
-├── athrill/                  # Athrill core (toppers/athrill v3.0.0 or later): EXDEV headers
 ├── hakoniwa-pdu-registry/    # PDU C types (hako_mavlink_msgs)
 └── athrill-device/           # this repository
 ```
 
 Build against the same Hakoniwa Foundation as Hakoniwa Drone. With the Business Pack, its install prefix is
-`hakoniwa-business-pack/work/foundation/install`; set `HAKONIWA_FOUNDATION_PREFIX` to that path. `ATHRILL_ADDRESS_WIDTH` is the width of the
-`athrill3` that loads the device: 32 for STM32, 64 for RISC-V.
+`hakoniwa-business-pack/work/foundation/install`; set `HAKONIWA_FOUNDATION_PREFIX` to that path.
 
 ```bash
 cd athrill-device
 cmake -S board/common -B build-stm32 -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_PREFIX_PATH="$HAKONIWA_FOUNDATION_PREFIX" -DATHRILL_ADDRESS_WIDTH=32
+  -DCMAKE_PREFIX_PATH="$HAKONIWA_FOUNDATION_PREFIX"
 cmake --build build-stm32 -j
 ```
 
-The result is `build-stm32/libhako_sensor_device.dylib` (`.so` on Linux). For Erbium, use `build-erbium` and
-`-DATHRILL_ADDRESS_WIDTH=64`. Other locations of the sources can be given with `-DATHRILL_SOURCE_DIR=...` and
-`-DHAKO_PDU_REGISTRY_DIR=...`.
+The result is `build-stm32/libhako_sensor_device.dylib` (`.so` on Linux).
+Other locations of the PDU types can be given with `-DHAKO_PDU_REGISTRY_DIR=...`.
 
 The macOS in-process prototype is an opt-in second target. It links the v5 release binaries; because that archive
 omits some transitive public C++ headers, it also needs a matching v5 source tree for headers only:
 
 ```bash
 cmake -S board/common -B build-stm32-inproc -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_PREFIX_PATH="$HAKONIWA_FOUNDATION_PREFIX" -DATHRILL_ADDRESS_WIDTH=32 \
+  -DCMAKE_PREFIX_PATH="$HAKONIWA_FOUNDATION_PREFIX" \
   -DHAKO_SENSOR_DEVICE_BUILD_INPROC=ON \
   -DHAKO_DRONE_ROOT=/path/to/hakoniwa-drone-core \
   -DHAKO_DRONE_SOURCE_DIR=/path/to/matching-hakoniwa-drone-v5-source
@@ -112,30 +109,16 @@ dependencies beside it.
 Hakoniwa Drone's aircraft service is the conductor, the only one. Start it first, then Athrill, then
 `hako-cmd start`.
 
-**Athrill:** the memory definition maps the device, and the device configuration names it. The address and the
-lines differ by board; see the board's README.
-
-To check the firmware's drivers without Hakoniwa, replace the channel and asset lines with
-`HAKO_SENSOR_DEVICE_TEST_PERIOD 4000` and the test vehicle. The device then gives a vehicle at rest, level and
-facing north, every 4 ms. The test vehicle is given by eight lines, all needed:
-
-| Key | Value |
-| --- | --- |
-| `HAKO_SENSOR_DEVICE_TEST_LAT_DEG`, `_LON_DEG`, `_ALT_M` | GPS position (deg, deg, m above mean sea level) |
-| `HAKO_SENSOR_DEVICE_TEST_PRESSURE_HPA`, `_TEMPERATURE_C` | barometer (hPa, degC) |
-| `HAKO_SENSOR_DEVICE_TEST_MAG_N_GAUSS`, `_E_GAUSS`, `_D_GAUSS` | magnetic field, north, east, down (gauss) |
-
-Give the values of the place where the vehicle will fly. PX4 stores a barometer offset and the magnetic
-declination from what it sees at its first boot. With another place, the first flight after a first boot on the
-test vehicle starts from the wrong values: for the Hakoniwa Drone x500, it held 2.72 m instead of 2.5 m. The
-Athrill STM32 example `examples/px4-hakoniwa/first-boot-config.txt` has the values of the Hakoniwa Drone x500.
+**Athrill:** select the board DTB and explicitly map
+`hakoniwa%2Csensor-device` to the plugin library in `device_config.txt`.
+The memory definition needs no `DEV` line. Sensor chips and ordered PWM
+actuators are connected to the model by phandles in the board DTB.
 
 **Take-off over MAVLink:** the altitude of `MAV_CMD_NAV_TAKEOFF` is above mean sea level. Give the home altitude
 plus the height to climb. QGroundControl does this for you.
 
 For a prepared disposable copy of Athrill STM32's `examples/px4-hakoniwa`, the two launchers under `tools/` build
-the mode-specific memory and device configuration, start the required processes, and wait. Both leave PX4's TCP
-MAVLink endpoint available for `fly.py` in another terminal. Run either script without arguments for its path list;
+the mode-specific memory and device configuration, start the required processes, and wait. Run either script without arguments for its path list;
 set `ATHRILL_TICKS` for a finite run and `HAKO_SENSOR_DEVICE_TRACE_PATH` to enable the exact trace. The Hakoniwa
 launcher also honors `HAKO_CONFIG_PATH`. The in-process launcher defaults to `HAKO_AIRCRAFT_WORKER=1`; set it to
 `0` to retain the serial stepping path for exact-result and performance comparisons.
@@ -143,7 +126,7 @@ launcher also honors `HAKO_CONFIG_PATH`. The in-process launcher defaults to `HA
 ## Checked
 
 macOS (Apple M-series), Hakoniwa Drone v5.0.0 (sensor model v2), PX4 `px4_fmu-v5_default` on Athrill STM32 with
-this device (32-bit): the x500 arms and takes off to 2.51 m (target 2.5 m).
+this model: the x500 arms and takes off to 2.51 m (target 2.5 m).
 
 ## Licence
 

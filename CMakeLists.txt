@@ -35,6 +35,18 @@ target_include_directories(athrill_device
 target_compile_definitions(athrill_device PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
 target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m)
 
+# Dependency-free reference plugin used by board/boot checks.  Production
+# Hakoniwa and in-process variants are built from board/common and use the
+# same model implementation with their respective link backends.
+add_library(athrill_hakoniwa_sensor MODULE
+  board/common/src/hako_sensor_device_model.c)
+target_include_directories(athrill_hakoniwa_sensor PRIVATE
+  include board/common/src board/common/include)
+target_compile_definitions(athrill_hakoniwa_sensor PRIVATE
+  ATHRILL_DEVICE_STANDALONE_TYPES ATHRILL_HAKONIWA_PASSIVE)
+set_target_properties(athrill_hakoniwa_sensor PROPERTIES
+  PREFIX "" OUTPUT_NAME "athrill_hakoniwa_sensor")
+
 if(BUILD_TESTING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
   set(TEST_DTB_DIR "${CMAKE_CURRENT_BINARY_DIR}/tests/dtb")

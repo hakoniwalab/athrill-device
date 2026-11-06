@@ -56,6 +56,8 @@ typedef struct {
 typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
 	void *target;
+	const AthrillDeviceNode *node;
+	AthrillDeviceValueSource source;
 	uint8 registers[128];
 	uint64 clocks_per_sample;
 	std_bool rotated;
@@ -115,7 +117,9 @@ static void raw_sample(const Icm20689 *chip, RawSample *raw)
 	float32 gyro_factor = gyro_scale[
 		(chip->registers[REG_GYRO_CONFIG] >> 3) & 3U] * RAD_TO_DEG;
 	uint32 i;
-	if (chip->target_ops->sensor_sample != NULL) {
+	if (chip->source.ops != NULL) {
+		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
+	} else if (chip->target_ops->sensor_sample != NULL) {
 		(void)chip->target_ops->sensor_sample(chip->target, &sample);
 	}
 	to_chip_axes(chip, sample.acceleration, acceleration);
@@ -361,6 +365,7 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	chip->target_ops = args->target_ops;
 	chip->target = args->target;
+	chip->node = args->node;
 	chip->clocks_per_sample = frequency / 8000U;
 	chip->rotated = args->node->ops->get_property(args->node->context,
 		"axis-align-x", &alignment, &size) == 0;
@@ -372,6 +377,10 @@ static sint32 connect_model(void *instance,
 	const AthrillDeviceConnectArgs *args)
 {
 	Icm20689 *chip = instance;
+	if (athrill_device_connect_value_source(chip->node, args,
+		&chip->source) != 0) {
+		return -1;
+	}
 	if (args->resources->get_gpio(args->context, "int-gpios", 0U,
 		&chip->data_ready) != 0) {
 		return -1;

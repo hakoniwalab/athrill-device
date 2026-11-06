@@ -455,8 +455,11 @@ the working directory, `PATH`, or an environment variable. A proposed
 configuration form is:
 
 ```text
-DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa,sensor-device=/opt/athrill/libhako_sensor_device.so
+DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa%2Csensor-device=/opt/athrill/libhako_sensor_device.so
 ```
+
+The STM32 target decodes `%2C` to the compatible's comma because the
+unchanged Athrill configuration tokenizer treats a comma as a separator.
 
 The target enumerates the zero-based indexed keys in ascending order and
 stops at the first absent key. Each key has one value, so it remains

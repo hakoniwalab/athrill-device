@@ -596,7 +596,13 @@ static int model_ops_valid(const AthrillDeviceModelOps *ops)
 	                                    ops->struct_size, sizeof(AthrillDeviceModelOps)) &&
 	       ops->model_name != NULL && ops->model_name[0] != 0 &&
 	       ops->model_version != NULL && ops->model_version[0] != 0 &&
-	       ops->create != NULL && ops->destroy != NULL;
+	       ops->create != NULL && ops->destroy != NULL &&
+	       (ops->values == NULL ||
+	        (abi_header_ok(ops->values->abi_major, ops->values->abi_minor,
+	         ops->values->struct_size, sizeof(AthrillDeviceValueProviderOps)) &&
+	         ops->values->sensor_sample != NULL &&
+	         ops->values->gps_sample != NULL &&
+	         ops->values->actuator_output != NULL));
 }
 
 static int load_plugins(AthrillDeviceRuntime *runtime,
@@ -1052,6 +1058,33 @@ static sint32 resource_get_pwm(void *context, const char *property,
 	return 0;
 }
 
+static sint32 resource_get_value_source(void *context, const char *property,
+	AthrillDeviceValueSource *source)
+{
+	NodeRecord *node = context;
+	const fdt32_t *cell;
+	NodeRecord *provider;
+	int length;
+	int provider_index;
+	if (property == NULL || source == NULL) {
+		return -1;
+	}
+	cell = fdt_getprop(node->runtime->dtb, node->offset, property, &length);
+	if (cell == NULL || length != 4 ||
+	    (provider_index = node_index_by_phandle(node->runtime,
+		fdt32_to_cpu(*cell))) < 0) {
+		return -1;
+	}
+	provider = &node->runtime->nodes[provider_index];
+	if (!provider->enabled || !provider->created || provider->model == NULL ||
+	    provider->model->values == NULL) {
+		return -1;
+	}
+	source->ops = provider->model->values;
+	source->instance = provider->instance;
+	return 0;
+}
+
 static sint32 resource_get_spi_child(void *context, uint32 index,
 	AthrillDeviceSpiEndpoint *endpoint)
 {
@@ -1115,7 +1148,8 @@ static const AthrillDeviceResourceOps resource_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceResourceOps), resource_get_interrupt,
 	resource_get_gpio, resource_get_dma, resource_get_spi_child,
-	resource_get_i2c_child, resource_get_uart_child, resource_get_pwm
+	resource_get_i2c_child, resource_get_uart_child, resource_get_pwm,
+	resource_get_value_source
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
@@ -1148,6 +1182,29 @@ static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node
 			return -1;
 		}
 		at += count;
+	}
+	return 0;
+}
+
+static int add_phandle_dependency(AthrillDeviceRuntime *runtime,
+	NodeRecord *node, const char *property)
+{
+	const fdt32_t *cell;
+	int length;
+	int provider;
+	cell = fdt_getprop(runtime->dtb, node->offset, property, &length);
+	if (cell == NULL) {
+		return 0;
+	}
+	provider = length == 4 ? node_index_by_phandle(runtime,
+		fdt32_to_cpu(*cell)) : -1;
+	if (provider < 0 || !runtime->nodes[provider].enabled) {
+		error_line("specifier", node->path, property, "missing-provider");
+		return -1;
+	}
+	if (add_dependency(node, (uint32)provider) != 0) {
+		error_line("dependency", node->path, property, "self-reference");
+		return -1;
 	}
 	return 0;
 }
@@ -1223,6 +1280,9 @@ static int build_dependencies(AthrillDeviceRuntime *runtime)
 			if (add_spec_dependencies(runtime, node, specs[j].property, specs[j].cells) != 0) {
 				return -1;
 			}
+		if (add_phandle_dependency(runtime, node, "value-source") != 0) {
+			return -1;
+		}
 		{
 			int property_offset;
 			for (property_offset = fdt_first_property_offset(runtime->dtb,

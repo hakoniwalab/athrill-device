@@ -27,6 +27,8 @@
 typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
 	void *target;
+	const AthrillDeviceNode *node;
+	AthrillDeviceValueSource source;
 	uint8 registers[256];
 	uint8 pointer;
 	std_bool address_next;
@@ -64,7 +66,9 @@ static void measure(Ist8310 *chip)
 	AthrillDeviceSensorSample sample = {0};
 	float32 raw[3];
 	uint32 i;
-	if (chip->target_ops->sensor_sample != NULL) {
+	if (chip->source.ops != NULL) {
+		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
+	} else if (chip->target_ops->sensor_sample != NULL) {
 		(void)chip->target_ops->sensor_sample(chip->target, &sample);
 	}
 	if (chip->rotated) {
@@ -197,6 +201,7 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	chip->target_ops = args->target_ops;
 	chip->target = args->target;
+	chip->node = args->node;
 	if (args->node->ops->get_string(args->node->context,
 		"athrill,mount-rotation", 0U, &rotation) == 0 &&
 	    strcmp(rotation, "roll-180-yaw-90") == 0) {
@@ -204,6 +209,14 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	*instance = chip;
 	return 0;
+}
+
+static sint32 connect_model(void *instance,
+	const AthrillDeviceConnectArgs *args)
+{
+	Ist8310 *chip = instance;
+	return athrill_device_connect_value_source(chip->node, args,
+		&chip->source);
 }
 
 static sint32 tick(void *instance, uint64 now,
@@ -225,5 +238,5 @@ static const AthrillDeviceI2cPeripheralOps i2c_ops = {
 const AthrillDeviceModelOps athrill_device_ist8310_model = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceModelOps), "ist8310", "1", NULL,
-	create, free, NULL, NULL, &i2c_ops, NULL, NULL, reset, tick
+	create, free, NULL, NULL, &i2c_ops, NULL, connect_model, reset, tick
 };

@@ -42,6 +42,18 @@ static void expect_dmas(const void *blob, const char *path,
 	assert(memcmp(actual_names, names, (size_t)names_length) == 0);
 }
 
+static void expect_value_source(const void *blob, const char *path,
+	uint32_t phandle)
+{
+	int node = fdt_path_offset(blob, path);
+	int length;
+	const fdt32_t *cell;
+	assert(node >= 0);
+	cell = fdt_getprop(blob, node, "value-source", &length);
+	assert(cell != NULL && length == (int)sizeof(*cell));
+	assert(fdt32_to_cpu(*cell) == phandle);
+}
+
 int main(void)
 {
 	static const uint32_t spi_dmas[] = {
@@ -55,6 +67,8 @@ int main(void)
 	size_t size;
 	void *blob = read_dtb(&size);
 	int dma2;
+	int sensor;
+	uint32_t sensor_phandle;
 	int length;
 	const char *status;
 	assert(fdt_check_full(blob, size) == 0);
@@ -66,7 +80,20 @@ int main(void)
 		spi_names, sizeof(spi_names));
 	expect_dmas(blob, "/soc/sdmmc@40012c00", sd_dmas,
 		sd_names, sizeof(sd_names));
+	sensor = fdt_path_offset(blob, "/sensor-device");
+	assert(sensor >= 0);
+	assert(strcmp(fdt_getprop(blob, sensor, "compatible", &length),
+		"hakoniwa,sensor-device") == 0);
+	sensor_phandle = fdt_get_phandle(blob, sensor);
+	assert(sensor_phandle != 0U);
+	expect_value_source(blob, "/pwm-actuator-map", sensor_phandle);
+	expect_value_source(blob, "/soc/spi@40013000/imu@0", sensor_phandle);
+	expect_value_source(blob, "/soc/i2c@40005c00/magnetometer@e",
+		sensor_phandle);
+	expect_value_source(blob, "/soc/spi@40013400/pressure@0",
+		sensor_phandle);
+	expect_value_source(blob, "/soc/serial@40011000/gnss", sensor_phandle);
 	free(blob);
-	puts("Pixhawk 4 DMA wiring is valid");
+	puts("Pixhawk 4 DMA and Hakoniwa value wiring is valid");
 	return 0;
 }

@@ -12,6 +12,8 @@
 typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
 	void *target;
+	const AthrillDeviceNode *node;
+	AthrillDeviceValueSource sink;
 	AthrillDevicePwmChannel outputs[MAX_OUTPUTS];
 	uint32 output_count;
 	uint64 clocks_per_us;
@@ -48,6 +50,7 @@ static sint32 actuator_create(const AthrillDeviceCreateArgs *args,
 	}
 	actuator->target_ops = args->target_ops;
 	actuator->target = args->target;
+	actuator->node = args->node;
 	actuator->clocks_per_us = frequency / 1000000U;
 	if (args->target_ops->host_value != NULL &&
 	    args->target_ops->host_value(args->target,
@@ -82,7 +85,8 @@ static sint32 actuator_connect(void *instance,
 		}
 	}
 	actuator->output_count = index;
-	return index != 0U ? 0 : -1;
+	return index != 0U ? athrill_device_connect_value_source(actuator->node,
+		args, &actuator->sink) : -1;
 }
 
 static sint32 actuator_reset(void *instance)
@@ -133,8 +137,15 @@ static sint32 actuator_tick(void *instance, uint64 now,
 			changed = TRUE;
 		}
 	}
-	return !changed || actuator->target_ops->actuator_output(actuator->target,
-		actuator->commands, actuator->output_count) == 0 ? 0 : -1;
+	if (!changed) {
+		return 0;
+	}
+	if (actuator->sink.ops != NULL) {
+		return actuator->sink.ops->actuator_output(actuator->sink.instance,
+			actuator->commands, actuator->output_count);
+	}
+	return actuator->target_ops->actuator_output(actuator->target,
+		actuator->commands, actuator->output_count);
 }
 
 const AthrillDeviceModelOps athrill_device_pwm_actuator_model = {

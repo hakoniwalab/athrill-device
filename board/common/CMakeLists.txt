@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-# Hakoniwa sensor device for Athrill (an EXDEV shared library), see
-# README.md.
+# Hakoniwa sensor device for Athrill (a Devicetree model plugin).
 project(hako-athrill-sensor-device LANGUAGES C)
 
 # The Athrill headers are C11 with GNU extensions. GCC 15 defaults to C23, where
@@ -13,14 +12,6 @@ set(CMAKE_C_EXTENSIONS ON)
 option(HAKO_SENSOR_DEVICE_BUILD_INPROC
   "Build the sensor device with a Hakoniwa Drone aircraft in process" OFF)
 
-set(ATHRILL_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../athrill"
-    CACHE PATH "Athrill core source tree (toppers/athrill v3.0.0 or later)")
-get_filename_component(ATHRILL_SOURCE_DIR "${ATHRILL_SOURCE_DIR}" ABSOLUTE)
-set(ATHRILL_SRC_DIR "${ATHRILL_SOURCE_DIR}/src")
-if(NOT EXISTS "${ATHRILL_SRC_DIR}/inc/athrill_exdev.h")
-  message(FATAL_ERROR "Athrill EXDEV headers not found under ${ATHRILL_SOURCE_DIR}")
-endif()
-
 # The register behaviour, without Athrill (also used by tests).
 add_library(hako_sensor_device_core STATIC src/hako_sensor_device.c)
 target_include_directories(hako_sensor_device_core PUBLIC src include)
@@ -31,29 +22,19 @@ find_package(hakoniwa-core CONFIG REQUIRED)
 set(HAKO_PDU_REGISTRY_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../hakoniwa-pdu-registry"
     CACHE PATH "hakoniwa-pdu-registry source tree")
 
-# The EXDEV loaded by athrill3 (memory.txt: DEV, 0x20000000, <this library>).
+# Explicit plugin for compatible hakoniwa,sensor-device.
 add_library(hako_sensor_device SHARED
-  src/hako_sensor_device_exdev.c
+  src/hako_sensor_device_model.c
   src/hako_sensor_device_link.c
   src/hako_sensor_device_link_mavlink.c)
-target_link_libraries(hako_sensor_device PRIVATE hako_sensor_device_core hakoniwa-core::shakoc)
-target_include_directories(hako_sensor_device PRIVATE "${HAKO_PDU_REGISTRY_DIR}/pdu/types")
 target_include_directories(hako_sensor_device PRIVATE
-  "${ATHRILL_SRC_DIR}/inc"
-  "${ATHRILL_SRC_DIR}/lib"
-  "${ATHRILL_SRC_DIR}/cpu"
-  "${ATHRILL_SRC_DIR}/device/mpu"
-  "${ATHRILL_SRC_DIR}/device/peripheral/serial/fifo")
-# Must match the athrill3 that loads the device: the RISC-V target uses a
-# 64-bit bus, and AthrillAddrType is part of the EXDEV structures.
-set(ATHRILL_ADDRESS_WIDTH 64 CACHE STRING "Address width of the athrill3 that loads the device (32 or 64)")
+  "${CMAKE_CURRENT_LIST_DIR}/../../include"
+  "${CMAKE_CURRENT_LIST_DIR}/include"
+  "${HAKO_PDU_REGISTRY_DIR}/pdu/types")
+target_link_libraries(hako_sensor_device PRIVATE hakoniwa-core::shakoc)
 target_compile_definitions(hako_sensor_device PRIVATE
-  ATHRILL_EXT_DEVICE OS_LINUX ATHRILL_ADDRESS_WIDTH=${ATHRILL_ADDRESS_WIDTH})
+  ATHRILL_DEVICE_STANDALONE_TYPES)
 set_target_properties(hako_sensor_device PROPERTIES C_VISIBILITY_PRESET hidden)
-if(APPLE)
-  # Athrill provides the EXDEV interface symbols at load time.
-  target_link_options(hako_sensor_device PRIVATE -undefined dynamic_lookup)
-endif()
 
 if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
   enable_language(CXX)
@@ -100,25 +81,17 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
   endfunction()
 
   add_library(hako_sensor_device_inproc SHARED
-    src/hako_sensor_device_exdev.c
+    src/hako_sensor_device_model.c
     src/hako_sensor_device_link_inproc.cpp
     src/hako_sensor_device_link_mavlink.c)
-  target_link_libraries(hako_sensor_device_inproc PRIVATE hako_sensor_device_core)
   target_include_directories(hako_sensor_device_inproc PRIVATE
-    "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/inc>"
-    "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/lib>"
-    "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/cpu>"
-    "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/device/mpu>"
-    "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/device/peripheral/serial/fifo>")
+    "${CMAKE_CURRENT_LIST_DIR}/../../include"
+    "${CMAKE_CURRENT_LIST_DIR}/include")
   configure_hako_inproc_target(hako_sensor_device_inproc)
   target_compile_definitions(hako_sensor_device_inproc PRIVATE
-    HAKO_SENSOR_DEVICE_INPROC
-    ATHRILL_EXT_DEVICE OS_LINUX ATHRILL_ADDRESS_WIDTH=${ATHRILL_ADDRESS_WIDTH})
+    HAKO_SENSOR_DEVICE_INPROC ATHRILL_DEVICE_STANDALONE_TYPES)
   set_target_properties(hako_sensor_device_inproc PROPERTIES
     C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
-  if(APPLE)
-    target_link_options(hako_sensor_device_inproc PRIVATE -undefined dynamic_lookup)
-  endif()
 
   add_executable(hako_sensor_inproc_test
     test/hako_sensor_inproc_test.cpp

@@ -9,7 +9,7 @@ ArduPilot hwdef text is used.
 The checked-in `pixhawk4.dtb` has SHA-256:
 
 ```text
-9be4956ebdb9c3c1bffc346f31a73511dd0b723248a0e127986f7c718c7d490a
+a995f5ef43e3fa2324df2fdb879ef45e7b6762d63193771f9268920c0e5207a3
 ```
 
 It was made with GNU cpp and dtc 1.7.x from a Linux container, from the

@@ -1,7 +1,6 @@
 /*
- * Hakoniwa sensor device for Athrill: the registers (hako_sensor_device_regs.h)
- * and their behaviour, without Athrill or Hakoniwa. The EXDEV glue
- * (hako_sensor_device_exdev.c) feeds samples in and takes motor values out.
+ * Legacy Hakoniwa sensor register behaviour, retained for its focused tests.
+ * The Devicetree plugin uses the sample and actuator types below directly.
  */
 #ifndef HAKO_SENSOR_DEVICE_H
 #define HAKO_SENSOR_DEVICE_H

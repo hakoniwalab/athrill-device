@@ -31,12 +31,17 @@
 		gnss0 = &gps1;
 	};
 
+	hakoniwa_sensor: sensor-device {
+		compatible = "hakoniwa,sensor-device";
+	};
+
 	/*
 	 * Ordered FMU outputs 1..8.  The order, not the node declaration order,
 	 * is the actuator order consumed by Athrill.
 	 */
 	pwm_actuators: pwm-actuator-map {
 		compatible = "athrill,pwm-actuator-map";
+		value-source = <&hakoniwa_sensor>;
 		pwms = <&pwm1 4 20000000 0>,
 		       <&pwm1 3 20000000 0>,
 		       <&pwm1 2 20000000 0>,
@@ -62,6 +67,7 @@
 
 	icm20689: imu@0 {
 		compatible = "invensense,icm20689";
+		value-source = <&hakoniwa_sensor>;
 		reg = <0>;
 		spi-max-frequency = <8000000>;
 		int-gpios = <&gpiob 4 GPIO_ACTIVE_HIGH>;
@@ -92,6 +98,7 @@
 
 	magnetometer: magnetometer@e {
 		compatible = "isentek,ist8310";
+		value-source = <&hakoniwa_sensor>;
 		reg = <0x0e>;
 		athrill,mount-rotation = "roll-180-yaw-90";
 	};
@@ -104,6 +111,7 @@
 
 	barometer: pressure@0 {
 		compatible = "meas,ms5611";
+		value-source = <&hakoniwa_sensor>;
 		reg = <0>;
 		spi-max-frequency = <20000000>;
 	};
@@ -116,6 +124,7 @@
 
 	gps1: gnss {
 		compatible = "u-blox,m8";
+		value-source = <&hakoniwa_sensor>;
 		initial-baudrate = <9600>;
 		fix-rate = <200>;
 	};
