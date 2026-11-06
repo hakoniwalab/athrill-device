@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include "athrill_protocol_dma.h"
 
-#include <assert.h>
+#include "test_check.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -44,7 +44,7 @@ static sint32 memory_read(void *context, uint64 address, uint8 width,
 	uint64 *value)
 {
 	Endpoints *endpoints = context;
-	assert(address + width <= sizeof(endpoints->memory));
+	TEST_CHECK(address + width <= sizeof(endpoints->memory));
 	*value = read_little_endian(&endpoints->memory[address], width);
 	endpoints->memory_reads++;
 	return 0;
@@ -54,7 +54,7 @@ static sint32 memory_write(void *context, uint64 address, uint8 width,
 	uint64 value)
 {
 	Endpoints *endpoints = context;
-	assert(address + width <= sizeof(endpoints->memory));
+	TEST_CHECK(address + width <= sizeof(endpoints->memory));
 	write_little_endian(&endpoints->memory[address], width, value);
 	endpoints->memory_writes++;
 	return 0;
@@ -84,7 +84,7 @@ static void notify(void *context, AthrillChannelNotification event,
 	std_bool asserted, uint64 time)
 {
 	Notifications *notifications = context;
-	assert(notifications->count < 32U);
+	TEST_CHECK(notifications->count < 32U);
 	notifications->event[notifications->count] = event;
 	notifications->asserted[notifications->count] = asserted;
 	notifications->time[notifications->count] = time;
@@ -128,7 +128,7 @@ static AthrillChannel *make_channel(uint8 peripheral_width,
 		ATHRILL_CHANNEL_NOTIFY_COMPLETE;
 	config.notify = notify;
 	config.notify_context = notifications;
-	assert(athrill_channel_create(&config, &channel) == 0);
+	TEST_CHECK(athrill_channel_create(&config, &channel) == 0);
 	return channel;
 }
 
@@ -147,30 +147,30 @@ static void test_memory_packing(void)
 	for (i = 0U; i < 8U; i++) {
 		endpoints.memory[i] = (uint8)(0x11U * (i + 1U));
 	}
-	assert(athrill_dma_protocol_create(channel, &endpoint_ops, &endpoints,
+	TEST_CHECK(athrill_dma_protocol_create(channel, &endpoint_ops, &endpoints,
 		&dma) == 0);
-	assert(athrill_dma_start(dma, 0U, TRUE, 0U) == 0);
-	assert(athrill_dma_request(dma, 6U, 1U) == 0);
-	assert(athrill_dma_remaining(dma) == 4U);
-	assert(athrill_dma_request(dma, 7U, 10U) == 1);
-	assert(endpoints.peripheral_output[0] == 0x2211U);
-	assert(athrill_dma_remaining(dma) == 3U &&
+	TEST_CHECK(athrill_dma_start(dma, 0U, TRUE, 0U) == 0);
+	TEST_CHECK(athrill_dma_request(dma, 6U, 1U) == 0);
+	TEST_CHECK(athrill_dma_remaining(dma) == 4U);
+	TEST_CHECK(athrill_dma_request(dma, 7U, 10U) == 1);
+	TEST_CHECK(endpoints.peripheral_output[0] == 0x2211U);
+	TEST_CHECK(athrill_dma_remaining(dma) == 3U &&
 		athrill_dma_completion_time(dma) == 10U);
-	assert(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_TO_CHILD, TRUE, 10U));
-	assert(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_TO_CHILD, FALSE, 10U));
-	assert(athrill_dma_request(dma, 7U, 20U) == 1);
-	assert(endpoints.peripheral_output[1] == 0x4433U);
-	assert(athrill_dma_remaining(dma) == 2U);
-	assert(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_HALF, TRUE, 20U));
-	assert(athrill_dma_request(dma, 7U, 30U) == 1);
-	assert(athrill_dma_request(dma, 7U, 40U) == 1);
-	assert(endpoints.peripheral_output[2] == 0x6655U &&
+	TEST_CHECK(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_TO_CHILD, TRUE, 10U));
+	TEST_CHECK(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_TO_CHILD, FALSE, 10U));
+	TEST_CHECK(athrill_dma_request(dma, 7U, 20U) == 1);
+	TEST_CHECK(endpoints.peripheral_output[1] == 0x4433U);
+	TEST_CHECK(athrill_dma_remaining(dma) == 2U);
+	TEST_CHECK(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_HALF, TRUE, 20U));
+	TEST_CHECK(athrill_dma_request(dma, 7U, 30U) == 1);
+	TEST_CHECK(athrill_dma_request(dma, 7U, 40U) == 1);
+	TEST_CHECK(endpoints.peripheral_output[2] == 0x6655U &&
 		endpoints.peripheral_output[3] == 0x8877U);
-	assert(athrill_dma_remaining(dma) == 0U);
-	assert(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_COMPLETE, TRUE, 40U));
-	assert(athrill_dma_request(dma, 7U, 41U) != 0);
-	assert(endpoints.memory_reads == 8U);
-	assert(athrill_dma_stop(dma, 50U) == 0);
+	TEST_CHECK(athrill_dma_remaining(dma) == 0U);
+	TEST_CHECK(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_COMPLETE, TRUE, 40U));
+	TEST_CHECK(athrill_dma_request(dma, 7U, 41U) != 0);
+	TEST_CHECK(endpoints.memory_reads == 8U);
+	TEST_CHECK(athrill_dma_stop(dma, 50U) == 0);
 	athrill_dma_protocol_destroy(dma);
 	athrill_channel_destroy(channel);
 }
@@ -186,22 +186,22 @@ static void test_peripheral_packing(void)
 	endpoints.peripheral_input[1] = 0x22U;
 	endpoints.peripheral_input[2] = 0x33U;
 	endpoints.peripheral_input[3] = 0x44U;
-	assert(athrill_dma_protocol_create(channel, &endpoint_ops, &endpoints,
+	TEST_CHECK(athrill_dma_protocol_create(channel, &endpoint_ops, &endpoints,
 		&dma) == 0);
-	assert(athrill_dma_start(dma, 4U, TRUE, 0U) == 0);
-	assert(athrill_dma_request(dma, 7U, 10U) == 1);
-	assert(endpoints.memory_writes == 0U);
-	assert(athrill_dma_request(dma, 7U, 20U) == 1);
-	assert(endpoints.memory_writes == 1U && endpoints.memory[4] == 0x11U &&
+	TEST_CHECK(athrill_dma_start(dma, 4U, TRUE, 0U) == 0);
+	TEST_CHECK(athrill_dma_request(dma, 7U, 10U) == 1);
+	TEST_CHECK(endpoints.memory_writes == 0U);
+	TEST_CHECK(athrill_dma_request(dma, 7U, 20U) == 1);
+	TEST_CHECK(endpoints.memory_writes == 1U && endpoints.memory[4] == 0x11U &&
 		endpoints.memory[5] == 0x22U);
-	assert(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_TO_OWNER, TRUE, 20U));
-	assert(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_HALF, TRUE, 20U));
-	assert(athrill_dma_request(dma, 7U, 30U) == 1);
-	assert(athrill_dma_request(dma, 7U, 40U) == 1);
-	assert(endpoints.memory_writes == 2U && endpoints.memory[6] == 0x33U &&
+	TEST_CHECK(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_TO_OWNER, TRUE, 20U));
+	TEST_CHECK(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_HALF, TRUE, 20U));
+	TEST_CHECK(athrill_dma_request(dma, 7U, 30U) == 1);
+	TEST_CHECK(athrill_dma_request(dma, 7U, 40U) == 1);
+	TEST_CHECK(endpoints.memory_writes == 2U && endpoints.memory[6] == 0x33U &&
 		endpoints.memory[7] == 0x44U);
-	assert(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_COMPLETE, TRUE, 40U));
-	assert(athrill_dma_stop(dma, 50U) == 0);
+	TEST_CHECK(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_COMPLETE, TRUE, 40U));
+	TEST_CHECK(athrill_dma_stop(dma, 50U) == 0);
 	athrill_dma_protocol_destroy(dma);
 	athrill_channel_destroy(channel);
 }
@@ -218,21 +218,21 @@ static void test_circular_unpacking(void)
 	endpoints.memory[1] = 0x22U;
 	endpoints.memory[2] = 0x33U;
 	endpoints.memory[3] = 0x44U;
-	assert(athrill_dma_protocol_create(channel, &endpoint_ops, &endpoints,
+	TEST_CHECK(athrill_dma_protocol_create(channel, &endpoint_ops, &endpoints,
 		&dma) == 0);
-	assert(athrill_dma_start(dma, 0U, TRUE, 0U) == 0);
+	TEST_CHECK(athrill_dma_start(dma, 0U, TRUE, 0U) == 0);
 	for (i = 0U; i < 4U; i++) {
-		assert(athrill_dma_request(dma, 7U, (i + 1U) * 10U) == 1);
-		assert(endpoints.peripheral_output[i] == 0x11U * (i + 1U));
+		TEST_CHECK(athrill_dma_request(dma, 7U, (i + 1U) * 10U) == 1);
+		TEST_CHECK(endpoints.peripheral_output[i] == 0x11U * (i + 1U));
 	}
-	assert(endpoints.memory_reads == 1U);
-	assert(athrill_dma_remaining(dma) == 4U);
-	assert(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_HALF, TRUE, 20U));
-	assert(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_COMPLETE, TRUE, 40U));
-	assert(athrill_dma_request(dma, 7U, 50U) == 1);
-	assert(endpoints.peripheral_output[4] == 0x11U);
-	assert(endpoints.memory_reads == 2U && athrill_dma_remaining(dma) == 3U);
-	assert(athrill_dma_stop(dma, 60U) == 0);
+	TEST_CHECK(endpoints.memory_reads == 1U);
+	TEST_CHECK(athrill_dma_remaining(dma) == 4U);
+	TEST_CHECK(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_HALF, TRUE, 20U));
+	TEST_CHECK(saw(&notifications, ATHRILL_CHANNEL_NOTIFY_COMPLETE, TRUE, 40U));
+	TEST_CHECK(athrill_dma_request(dma, 7U, 50U) == 1);
+	TEST_CHECK(endpoints.peripheral_output[4] == 0x11U);
+	TEST_CHECK(endpoints.memory_reads == 2U && athrill_dma_remaining(dma) == 3U);
+	TEST_CHECK(athrill_dma_stop(dma, 60U) == 0);
 	athrill_dma_protocol_destroy(dma);
 	athrill_channel_destroy(channel);
 }

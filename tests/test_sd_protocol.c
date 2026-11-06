@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MIT */
 #include "athrill_protocol_sd.h"
 
-#include <assert.h>
+#include "test_check.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -29,7 +29,7 @@ static sint32 command(void *context, uint32 index, uint32 argument,
 static sint32 read_data(void *context, uint8 *data, uint32 length)
 {
 	Card *card = context;
-	assert(length == sizeof(card->bytes));
+	TEST_CHECK(length == sizeof(card->bytes));
 	card->reads++;
 	memcpy(data, card->bytes, length);
 	return 0;
@@ -38,7 +38,7 @@ static sint32 read_data(void *context, uint8 *data, uint32 length)
 static sint32 write_data(void *context, const uint8 *data, uint32 length)
 {
 	Card *card = context;
-	assert(length == sizeof(card->bytes));
+	TEST_CHECK(length == sizeof(card->bytes));
 	card->writes++;
 	memcpy(card->bytes, data, length);
 	return 0;
@@ -59,21 +59,21 @@ int main(void)
 	AthrillSdProtocol *protocol = NULL;
 	AthrillSdResponse response;
 	uint8 data[4];
-	assert(athrill_sd_protocol_create(&ops, &card, &protocol) == 0);
-	assert(athrill_sd_command(protocol, 17U, 7U, &response) == 0);
-	assert(response.words[0] == 7U && response.data == ATHRILL_SD_DATA_READ);
-	assert(athrill_sd_pending(protocol) == ATHRILL_SD_DATA_READ);
-	assert(athrill_sd_write(protocol, data, sizeof(data)) == -1);
-	assert(athrill_sd_read(protocol, data, sizeof(data)) == 0);
-	assert(memcmp(data, card.bytes, sizeof(data)) == 0);
-	assert(athrill_sd_read(protocol, data, sizeof(data)) == -1);
-	assert(athrill_sd_transfer_done(protocol) == 0);
-	assert(athrill_sd_pending(protocol) == ATHRILL_SD_DATA_NONE);
+	TEST_CHECK(athrill_sd_protocol_create(&ops, &card, &protocol) == 0);
+	TEST_CHECK(athrill_sd_command(protocol, 17U, 7U, &response) == 0);
+	TEST_CHECK(response.words[0] == 7U && response.data == ATHRILL_SD_DATA_READ);
+	TEST_CHECK(athrill_sd_pending(protocol) == ATHRILL_SD_DATA_READ);
+	TEST_CHECK(athrill_sd_write(protocol, data, sizeof(data)) == -1);
+	TEST_CHECK(athrill_sd_read(protocol, data, sizeof(data)) == 0);
+	TEST_CHECK(memcmp(data, card.bytes, sizeof(data)) == 0);
+	TEST_CHECK(athrill_sd_read(protocol, data, sizeof(data)) == -1);
+	TEST_CHECK(athrill_sd_transfer_done(protocol) == 0);
+	TEST_CHECK(athrill_sd_pending(protocol) == ATHRILL_SD_DATA_NONE);
 	data[0] = 9U;
-	assert(athrill_sd_command(protocol, 24U, 8U, &response) == 0);
-	assert(athrill_sd_write(protocol, data, sizeof(data)) == 0);
-	assert(athrill_sd_transfer_done(protocol) == 0);
-	assert(card.commands == 2U && card.reads == 1U && card.writes == 1U &&
+	TEST_CHECK(athrill_sd_command(protocol, 24U, 8U, &response) == 0);
+	TEST_CHECK(athrill_sd_write(protocol, data, sizeof(data)) == 0);
+	TEST_CHECK(athrill_sd_transfer_done(protocol) == 0);
+	TEST_CHECK(card.commands == 2U && card.reads == 1U && card.writes == 1U &&
 		card.completions == 2U && card.bytes[0] == 9U);
 	athrill_sd_protocol_destroy(protocol);
 	puts("SD protocol tests passed");
