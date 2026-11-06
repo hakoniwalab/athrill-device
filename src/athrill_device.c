@@ -313,7 +313,6 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 
 NAMED_ADAPTER(pixhawk4_model, "pixhawk4-fmu-v5-adapter", "pixhawk4-board");
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
-NAMED_ADAPTER(stm32f7_gpio_model, "stm32f7-gpio-adapter", "stm32f7-gpio");
 NAMED_ADAPTER(stm32f7_exti_model, "stm32f7-exti-adapter", "stm32f7-exti");
 NAMED_ADAPTER(stm32f7_dma_model, "stm32f7-dma-adapter", "stm32f7-dma");
 NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter", "stm32f7-spi");
@@ -384,7 +383,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ structural_compatibles, sizeof(structural_compatibles) / sizeof(structural_compatibles[0]), &structural_model },
 	{ pixhawk4_compatibles, 1U, &pixhawk4_model },
 	{ stm32f7_soc_compatibles, 2U, &stm32f7_soc_model },
-	{ stm32f7_gpio_compatibles, 1U, &stm32f7_gpio_model },
+	{ stm32f7_gpio_compatibles, 1U, &athrill_device_stm32_gpio_model },
 	{ stm32f7_exti_compatibles, 1U, &stm32f7_exti_model },
 	{ stm32f7_dma_compatibles, 1U, &stm32f7_dma_model },
 	{ stm32f7_spi_compatibles, 2U, &stm32f7_spi_model },
