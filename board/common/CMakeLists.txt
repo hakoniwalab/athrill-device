@@ -4,6 +4,12 @@ cmake_minimum_required(VERSION 3.20)
 # README.md.
 project(hako-athrill-sensor-device LANGUAGES C)
 
+# The Athrill headers are C11 with GNU extensions. GCC 15 defaults to C23, where
+# bool is a keyword and Athrill's std_types.h typedef no longer compiles.
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS ON)
+
 option(HAKO_SENSOR_DEVICE_BUILD_INPROC
   "Build the sensor device with a Hakoniwa Drone aircraft in process" OFF)
 
