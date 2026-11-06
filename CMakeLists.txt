@@ -9,6 +9,7 @@ include(GNUInstallDirs)
 
 add_library(athrill_device STATIC
   src/channel.c
+  src/protocol_spi.c
   src/athrill_device.c
   src/models/fm25v02.c
   src/models/icm20689.c
@@ -71,6 +72,11 @@ if(BUILD_TESTING)
   target_compile_definitions(test_channel PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_link_libraries(test_channel PRIVATE athrill_device)
 
+  add_executable(test_spi_protocol tests/test_spi_protocol.c)
+  target_compile_definitions(test_spi_protocol PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_link_libraries(test_spi_protocol PRIVATE athrill_device)
+
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_plugin_good PRIVATE include)
@@ -85,11 +91,13 @@ if(BUILD_TESTING)
   add_test(NAME device-tree-framework
     COMMAND test_device_tree $<TARGET_FILE:test_plugin_good> $<TARGET_FILE:test_plugin_bad>)
   add_test(NAME channel-engine COMMAND test_channel)
+  add_test(NAME protocol-spi COMMAND test_spi_protocol)
 endif()
 
 install(TARGETS athrill_device EXPORT athrill-device-targets
   ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}")
 install(FILES include/athrill_device_if.h include/athrill_channel.h
+  include/athrill_protocol_spi.h
   DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 install(EXPORT athrill-device-targets NAMESPACE athrill-device::
   DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/athrill-device")
