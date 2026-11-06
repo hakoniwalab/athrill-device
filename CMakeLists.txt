@@ -78,9 +78,6 @@ if(BUILD_TESTING)
   add_executable(test_device_tree tests/test_device_tree.c)
   target_compile_definitions(test_device_tree PRIVATE
     ATHRILL_DEVICE_STANDALONE_TYPES TEST_DTB_DIR="${TEST_DTB_DIR}")
-  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-    target_compile_options(test_device_tree PRIVATE -UNDEBUG)
-  endif()
   target_link_libraries(test_device_tree PRIVATE athrill_device)
   add_dependencies(test_device_tree generate-test-dtbs)
 
