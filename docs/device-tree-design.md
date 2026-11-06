@@ -752,24 +752,20 @@ and the no-configuration legacy path still passes.
   Hakoniwa gates. Their architectural interrupt controllers remain in their
   targets and implement the same common interface.
 
-## Open questions for Mori
+## Decisions on the remaining points
 
-1. Should host-only values such as F-RAM/SD image paths, Hakoniwa asset and
-   channel names, and trace paths be `athrill,*` DT properties, or remain in
-   `device_config.txt` and be passed as model build options? Keeping them out
-   of the DTB makes the DTB a purer hardware description; putting them in it
-   makes the logged DTB hash cover the complete device setup.
-2. Is the proposed explicit indexed plugin mapping—key
-   `DEVICE_CONFIG_DEVICE_PLUGIN_<n>` and value `<compatible>=<path>`—the desired
-   plugin discovery policy, including the rule that plugins cannot override
-   built-ins?
-3. Should an enabled but unimplemented Zephyr node be a hard error, as
-   proposed, or may the board DTS explicitly mark selected clock/reset-only
-   nodes as structural and ignored?
-4. For the provisional F7/H7 catch-all register models, should migration
-   require an individual model for every enabled block immediately, or allow
-   a named, warning-producing compatibility model until the FMUv6C gate is
-   complete?
+1. Host-only values (F-RAM/SD image paths, Hakoniwa asset and channel names,
+   trace paths) stay in `device_config.txt` and are passed to the models as
+   build options. The DTB stays a hardware description; the run log records
+   these values together with the DTB hash.
+2. Plugins are listed explicitly: `DEVICE_CONFIG_DEVICE_PLUGIN_<n>` with the value
+   `<compatible>=<path>`. A plugin cannot override a built-in model. This is the
+   successor of EXDEV's user device libraries.
+3. An enabled node without a model is an error. The board DTS may mark
+   structural clock/reset-only nodes as ignored explicitly.
+4. During migration, the provisional F7/H7 register catch-all may remain as a
+   named compatibility model that prints a warning; it must be gone by the
+   FMUv6C gate.
 
 ## Investigation references
 
