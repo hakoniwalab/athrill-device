@@ -47,6 +47,19 @@ static void expect_reg(const void *blob, const char *path, uint32_t value)
 	TEST_CHECK(fdt32_to_cpu(reg[0]) == value);
 }
 
+static void expect_reg_windows(const void *blob, const char *path,
+	const uint32_t *addresses, const uint32_t *sizes, uint32_t count)
+{
+	int length;
+	uint32_t i;
+	const fdt32_t *reg = fdt_getprop(blob, node(blob, path), "reg", &length);
+	TEST_CHECK(reg != NULL && length == (int)(count * 2U * sizeof(*reg)));
+	for (i = 0U; i < count; i++) {
+		TEST_CHECK(fdt32_to_cpu(reg[i * 2U]) == addresses[i]);
+		TEST_CHECK(fdt32_to_cpu(reg[i * 2U + 1U]) == sizes[i]);
+	}
+}
+
 static void expect_u32(const void *blob, const char *path,
 	const char *property, uint32_t value)
 {
@@ -134,6 +147,10 @@ static void check_common(const void *blob, int hakoniwa)
 	static const uint32_t dma1_irqs[] = { 11U, 12U, 13U, 14U, 15U, 16U, 17U, 47U };
 	static const uint32_t dma2_irqs[] = { 56U, 57U, 58U, 59U, 60U, 68U, 69U, 70U };
 	static const uint32_t dmamux1_irq[] = { 102U };
+	static const uint32_t fdcan1_addresses[] = { 0x4000a000U, 0x4000ac00U };
+	static const uint32_t fdcan1_sizes[] = { 0x400U, 0x2800U };
+	static const uint32_t fdcan2_addresses[] = { 0x4000a400U };
+	static const uint32_t fdcan2_sizes[] = { 0x400U };
 	static const char *const pwm_names[] = {
 		"FMU_CH1", "FMU_CH2", "FMU_CH3", "FMU_CH4",
 		"FMU_CH5", "FMU_CH6", "FMU_CH7", "FMU_CH8"
@@ -180,6 +197,12 @@ static void check_common(const void *blob, int hakoniwa)
 	expect_compatible(blob, "/soc/system-memory@1ff1e800", "st,stm32h7-system-memory");
 	expect_compatible(blob, "/soc/can@4000a000", "st,stm32h7-fdcan");
 	expect_status(blob, "/soc/can@4000a000", "okay");
+	expect_reg_windows(blob, "/soc/can@4000a000", fdcan1_addresses,
+		fdcan1_sizes, 2U);
+	expect_compatible(blob, "/soc/can@4000a400", "st,stm32h7-fdcan");
+	expect_status(blob, "/soc/can@4000a400", "okay");
+	expect_reg_windows(blob, "/soc/can@4000a400", fdcan2_addresses,
+		fdcan2_sizes, 1U);
 	expect_status(blob, "/soc/adc@40022000", "okay");
 	expect_status(blob, "/soc/adc@40022000/adc@40022000", "okay");
 	expect_status(blob, "/soc/adc@58026000", "okay");

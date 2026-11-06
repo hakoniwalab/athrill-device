@@ -13,6 +13,6 @@ remain in `device_config.txt`.
 The reviewed DTB hashes are filled in after compilation:
 
 ```text
-847de4bc228254ad3766a78125b2aab46d6d35c6a6a51a4cbfc41bf61718fa44  pixhawk6c.dtb
-6ba20885e491d90fabd7f680da7dd70127e8affe8ae5c1d1e859abf5e84a2b72  pixhawk6c-hakoniwa.dtb
+bcb1d61b00448d29f1d2f4f7e8a4c86cdad13af2c7028bfae4c85eea0dd9d7f4  pixhawk6c.dtb
+f4258e51eba50506f73c16a4341fd9b59154cec71bd515cbe8e4f4c2191e158a  pixhawk6c-hakoniwa.dtb
 ```

@@ -93,7 +93,16 @@
 &rtc { status = "okay"; };
 &iwdg { status = "okay"; };
 &usbotg_fs { status = "okay"; };
-&fdcan1 { status = "okay"; };
+&fdcan1 {
+	status = "okay";
+	/* STM32H743 FDCAN1 registers plus the shared 2560-word message RAM. */
+	reg = <0x4000a000 0x400>, <0x4000ac00 0x2800>;
+};
+&fdcan2 {
+	status = "okay";
+	/* The shared message RAM is owned by fdcan1 above. */
+	reg = <0x4000a400 0x400>;
+};
 
 /* V6C00 internal sensor bus: accel PC15, gyro PC14, ICM PC13. */
 &spi1 {
