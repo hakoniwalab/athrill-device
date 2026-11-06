@@ -175,6 +175,18 @@ def main() -> None:
         ("#gpio-cells", be32(2)),
         ("phandle", be32(3)),
     ], [])])
+    exti = board([
+        provider("intc", 2, "#interrupt-cells", 1),
+        node("interrupt-controller@40013c00", [
+            ("compatible", strings("st,stm32-exti")),
+            ("reg", be32(0x40013c00, 0x400)),
+            ("interrupt-parent", be32(2)),
+            ("interrupts", be32(6, 7, 8, 9, 10, 23, 40)),
+            ("interrupt-names", strings("line0", "line1", "line2",
+                                        "line3", "line4", "line5-9",
+                                        "line10-15")),
+        ], []),
+    ])
     overflow_reg = node("", [
         ("compatible", strings("athrill,test-board")),
         ("#address-cells", be32(2)), ("#size-cells", be32(2)),
@@ -211,6 +223,7 @@ def main() -> None:
         "gps.dtb": gps,
         "imu.dtb": imu,
         "gpio.dtb": gpio,
+        "exti.dtb": exti,
         "overlap.dtb": board([clock("clock", 1),
                               device("device@1000", 0x1000, 0x100, 1),
                               device("device@1080", 0x1080, 0x100, 1)]),

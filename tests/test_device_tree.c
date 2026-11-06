@@ -14,10 +14,12 @@ typedef struct {
 	uint32 registered;
 	uint32 irq_resolved;
 	uint32 gpio_resolved;
-	AthrillDeviceGpioEdge gpio_edges[16];
-	void *gpio_edge_instances[16];
-	std_bool gpio_levels[16];
+	AthrillDeviceGpioEdge gpio_edges[192];
+	void *gpio_edge_instances[192];
+	std_bool gpio_levels[192];
 	uint32 gpio_driven;
+	uint32 irq_set_count;
+	uint64 last_irq;
 	uint32 dma_resolved;
 	uint32 spi_bound;
 	const AthrillDeviceSpiPeripheralOps *spi_ops;
@@ -59,9 +61,19 @@ static sint32 irq_resolve(void *context, const AthrillDeviceSpecifier *spec,
 	AthrillDeviceIrqLine *line)
 {
 	TestTarget *target = context;
-	assert(spec->cell_count == 1U && spec->cells[0] == 17U);
+	assert(spec->cell_count == 1U);
 	target->irq_resolved++;
 	line->value = spec->cells[0];
+	return 0;
+}
+
+static sint32 irq_set(void *context, AthrillDeviceIrqLine line,
+	std_bool asserted)
+{
+	TestTarget *target = context;
+	assert(asserted);
+	target->irq_set_count++;
+	target->last_irq = line.value;
 	return 0;
 }
 
@@ -70,7 +82,7 @@ static sint32 gpio_drive(void *context, AthrillDeviceGpioLine line,
 {
 	TestTarget *target = context;
 	uint32 pin = (uint32)line.value - 1U;
-	assert(pin < 16U);
+	assert(pin < 192U);
 	target->gpio_levels[pin] = level;
 	target->gpio_driven++;
 	if (target->gpio_edges[pin] != NULL) {
@@ -84,7 +96,7 @@ static sint32 gpio_subscribe(void *context, AthrillDeviceGpioLine line,
 {
 	TestTarget *target = context;
 	uint32 pin = (uint32)line.value - 1U;
-	assert(pin < 16U && callback != NULL);
+	assert(pin < 192U && callback != NULL);
 	target->gpio_edges[pin] = callback;
 	target->gpio_edge_instances[pin] = instance;
 	return 0;
@@ -96,7 +108,7 @@ static sint32 gpio_resolve(void *context, const AthrillDeviceSpecifier *spec,
 	TestTarget *target = context;
 	assert(spec->cell_count == 2U);
 	target->gpio_resolved++;
-	line->value = spec->cells[0] + 1U;
+	line->value = target->gpio_resolved;
 	return 0;
 }
 
@@ -224,6 +236,7 @@ static const AthrillDeviceTargetOps target_ops = {
 	.mmio_register = mmio_register,
 	.mmio_unregister = mmio_unregister,
 	.irq_resolve = irq_resolve,
+	.irq_set = irq_set,
 	.spi_bind = spi_bind,
 	.i2c_bind = i2c_bind,
 	.uart_bind = uart_bind,
@@ -315,6 +328,31 @@ int main(int argc, char **argv)
 	athrill_device_destroy(runtime);
 	runtime = NULL;
 	target.gpio_resolved = 0U;
+	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
+
+	path(dtb, sizeof(dtb), "exti.dtb");
+	target.gpio_resolved = 0U;
+	target.irq_resolved = 0U;
+	target.irq_set_count = 0U;
+	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
+	assert(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
+	assert(target.registered == 2U && target.irq_resolved == 7U &&
+		target.gpio_resolved == 176U);
+	/* Route line 4 to GPIOB, enable its rising edge and drive PB4 high. */
+	assert(target.ops->write(target.instance, 0x4001380cU, 4U, 1U) == 0);
+	assert(target.ops->write(target.instance, 0x40013c00U, 4U, 1U << 4) == 0);
+	assert(target.ops->write(target.instance, 0x40013c08U, 4U, 1U << 4) == 0);
+	{
+		AthrillDeviceGpioLine line = {16U + 4U + 1U};
+		assert(gpio_drive(&target, line, TRUE) == 0);
+	}
+	assert(target.irq_set_count == 1U && target.last_irq == 10U);
+	assert(target.ops->read(target.instance, 0x40013c14U, 4U,
+		&value) == 0 && (value & (1U << 4)) != 0U);
+	athrill_device_destroy(runtime);
+	runtime = NULL;
+	target.gpio_resolved = 0U;
+	target.irq_resolved = 0U;
 	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
 
 	path(dtb, sizeof(dtb), "gps.dtb");
