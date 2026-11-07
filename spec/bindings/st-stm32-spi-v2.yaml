@@ -1,0 +1,181 @@
+ip: st-stm32-spi-v2
+compatible:
+- st,stm32h7-spi
+manual: RM0433 Rev 8 section 50 (SPI/I2S), STM32H742/743/753/750
+model: spi-controller
+model_version: 1.0.0
+features:
+- base
+- dma
+- fifo_threshold
+- transfer_size
+svd:
+  st,stm32h7: SPI1
+aliases:
+  I2SCFGR: CGFR
+bindings:
+  enable:
+    reg: CR1
+    field: SPE
+    access: rw
+  master:
+    reg: CFG2
+    field: MASTER
+    access: rw
+  clock_mode:
+    reg: CFG2
+    field:
+    - CPOL
+    - CPHA
+    access: rw
+  bit_order:
+    reg: CFG2
+    field: LSBFRST
+    access: rw
+  frame_size:
+    reg: CFG1
+    field: DSIZE
+    access: rw
+    note: DSIZE = bits - 1
+  baud_divider:
+    reg: CFG1
+    field: MBR
+    access: rw
+    note: divider = 2^(MBR+1)
+  tx_data:
+    reg: TXDR
+    access: fifo
+  rx_data:
+    reg: RXDR
+    access: fifo
+  tx_space:
+    reg: SR
+    field: TXP
+    access: ro
+  rx_available:
+    reg: SR
+    field: RXP
+    access: ro
+  busy:
+    derived: SPE and CSTART and not (EOT)
+    note: v2 has no BSY bit; the model reports activity through TXC/EOT
+  overrun:
+    reg: SR
+    field: OVR
+    access: ro
+  overrun_ack:
+    reg: IFCR
+    field: OVRC
+    access: w1c
+  tx_irq_enable:
+    reg: IER
+    field: TXPIE
+    access: rs
+    note: 'TXPIE is rs: set by software, cleared by hardware at EOT (RM0433 50.11.5)'
+  rx_irq_enable:
+    reg: IER
+    field: RXPIE
+    access: rw
+  error_irq_enable:
+    reg: IER
+    field: OVRIE
+    access: rw
+  irq:
+    devicetree: interrupts
+  tx_dma_enable:
+    reg: CFG1
+    field: TXDMAEN
+    access: rw
+  rx_dma_enable:
+    reg: CFG1
+    field: RXDMAEN
+    access: rw
+  tx_dma_request:
+    devicetree: dmas, dma-names = tx
+  rx_dma_request:
+    devicetree: dmas, dma-names = rx
+  fifo_threshold:
+    reg: CFG1
+    field: FTHVL
+    access: rw
+    note: 'frames = FTHLV + 1; the SVD spells the field FTHVL (RM0433: FTHLV)'
+  transfer_size:
+    reg: CR2
+    field: TSIZE
+    access: rw
+  start:
+    reg: CR1
+    field: CSTART
+    access: rs
+  end_of_transfer:
+    reg: SR
+    field: EOT
+    access: ro
+  end_of_transfer_ack:
+    reg: IFCR
+    field: EOTC
+    access: w1c
+  eot_irq_enable:
+    reg: IER
+    field: EOTIE
+    access: rw
+constants:
+  fifo_depth_bytes: 16
+unmodelled:
+- reg: CR1
+  fields:
+  - CSUSP
+  - MASRX
+  - HDDIR
+  - SSI
+  - CRC33_17
+  - RCRCINI
+  - TCRCINI
+  - IOLOCK
+  answer: stored and read back
+- reg: CR2
+  fields:
+  - TSER
+  answer: stored and read back
+- reg: CFG1
+  fields:
+  - UDRCFG
+  - UDRDET
+  - CRCSIZE
+  - CRCEN
+  answer: stored and read back
+- reg: CFG2
+  fields:
+  - MSSI
+  - MIDI
+  - IOSWP
+  - COMM
+  - SP
+  - SSM
+  - SSIOP
+  - SSOE
+  - SSOM
+  - AFCNTR
+  answer: stored and read back
+- reg: SR
+  fields:
+  - DXP
+  - TXTF
+  - UDR
+  - CRCE
+  - TIFRE
+  - MODF
+  - TSERF
+  - SUSP
+  - TXC
+  - RXPLVL
+  - RXWNE
+  - CTSIZE
+  answer: as the existing model reports; tester found gaps (#30 of the target)
+- reg:
+  - CRCPOLY
+  - TXCRC
+  - RXCRC
+  - UDRDR
+  - I2SCFGR
+  answer: reset value

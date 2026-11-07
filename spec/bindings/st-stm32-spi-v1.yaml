@@ -1,0 +1,135 @@
+ip: st-stm32-spi-v1
+compatible:
+- st,stm32-spi-fifo
+- st,stm32-spi
+manual: RM0410 Rev 5 section 35 (SPI/I2S), STM32F76xxx/F77xxx
+model: spi-controller
+model_version: 1.0.0
+features:
+- base
+- dma
+svd:
+  st,stm32f7: SPI1
+bindings:
+  enable:
+    reg: CR1
+    field: SPE
+    access: rw
+  master:
+    reg: CR1
+    field: MSTR
+    access: rw
+  clock_mode:
+    reg: CR1
+    field:
+    - CPOL
+    - CPHA
+    access: rw
+  bit_order:
+    reg: CR1
+    field: LSBFIRST
+    access: rw
+  frame_size:
+    reg: CR2
+    field: DS
+    access: rw
+    note: DS = bits - 1
+  baud_divider:
+    reg: CR1
+    field: BR
+    access: rw
+    note: divider = 2^(BR+1)
+  tx_data:
+    reg: DR
+    access: fifo
+    note: write side of DR
+  rx_data:
+    reg: DR
+    access: fifo
+    note: read side of DR
+  tx_space:
+    reg: SR
+    field: TXE
+    access: ro
+  rx_available:
+    reg: SR
+    field: RXNE
+    access: ro
+    note: 'with FRXTH: one 8-bit frame or 16 bits available'
+  busy:
+    reg: SR
+    field: BSY
+    access: ro
+  overrun:
+    reg: SR
+    field: OVR
+    access: ro
+  overrun_ack:
+    sequence: read DR then read SR
+    access: rc
+  tx_irq_enable:
+    reg: CR2
+    field: TXEIE
+    access: rw
+  rx_irq_enable:
+    reg: CR2
+    field: RXNEIE
+    access: rw
+  error_irq_enable:
+    reg: CR2
+    field: ERRIE
+    access: rw
+  irq:
+    devicetree: interrupts
+  tx_dma_enable:
+    reg: CR2
+    field: TXDMAEN
+    access: rw
+  rx_dma_enable:
+    reg: CR2
+    field: RXDMAEN
+    access: rw
+  tx_dma_request:
+    devicetree: dmas, dma-names = tx
+  rx_dma_request:
+    devicetree: dmas, dma-names = rx
+constants:
+  fifo_depth_bytes: 4
+unmodelled:
+- reg: CR1
+  fields:
+  - CPHA_effect
+  - BIDIMODE
+  - BIDIOE
+  - CRCEN
+  - CRCNEXT
+  - CRCL
+  - RXONLY
+  - SSM
+  - SSI
+  answer: stored and read back
+- reg: CR2
+  fields:
+  - SSOE
+  - NSSP
+  - FRF
+  - FRXTH
+  - LDMA_RX
+  - LDMA_TX
+  answer: stored and read back
+- reg: SR
+  fields:
+  - CRCERR
+  - MODF
+  - FRE
+  - FRLVL
+  - FTLVL
+  answer: reset value except FRLVL/FTLVL as the existing model reports
+- reg: CRCPR
+  answer: stored and read back
+- reg:
+  - RXCRCR
+  - TXCRCR
+  - I2SCFGR
+  - I2SPR
+  answer: reset value

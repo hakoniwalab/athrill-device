@@ -58,3 +58,19 @@ patches:
     svd_has: "0xA3C5DD01"
     evidence: {manual: RM0433 Rev 9, section: "55.10.5 SDMMC_RESPCMDR"}
     found: "SVD vs hand-written map vs manual, 2026-11-07"
+  - soc: "st,stm32h7"
+    peripheral: SPI1
+    register: IER
+    field_access: {TXPIE: read-write, DPXPIE: read-write}
+    svd_has: {TXPIE: read-only, DPXPIE: read-only}
+    manual_access: "rs (set by software, cleared by hardware)"
+    evidence: {manual: RM0433 Rev 9, section: "50.11.5 SPI_IER", page: 2223}
+    found: "map_gen access check, 2026-11-07"
+  - soc: "st,stm32h7"
+    peripheral: SPI1
+    register: CR1
+    field_access: {CSTART: read-write}
+    svd_has: {CSTART: read-only}
+    manual_access: "rs (set by software to start, cleared by hardware at EOT)"
+    evidence: {manual: RM0433 Rev 9, section: "50.11.1 SPI_CR1", page: 2216}
+    found: "map_gen access check, 2026-11-07"

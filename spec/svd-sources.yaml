@@ -14,14 +14,6 @@ svd:
     sha256: caf5a96613babd9621bc106f12198b45e683c180f8842f4ddf317f2a7381cc90
     licence: Apache-2.0 (Copyright STMicroelectronics)
 checks:
-- map: spec/maps/st-stm32-spi-v1.yaml
-  soc: st,stm32f7
-  peripheral: SPI1
-- map: spec/maps/st-stm32-spi-v2.yaml
-  soc: st,stm32h7
-  peripheral: SPI1
-  aliases:
-    I2SCFGR: CGFR
 - map: spec/maps/st-stm32-usart-v1.yaml
   soc: st,stm32f7
   peripheral: USART1
@@ -89,3 +81,4 @@ reference_manuals:
   note: 'Reset values checked against the manuals'' register descriptions (2026-11-07): 179 of 199 mapped registers found
     by text search; the rest checked by hand where they matter.'
 patches: spec/svd-patches.yaml (the SVD is canonical; corrections only there, each with manual evidence)
+note_checks: Hand-written maps still to be converted to spec/bindings + generated maps. SPI is generated (tools/map_gen.py).

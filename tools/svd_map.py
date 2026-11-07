@@ -102,6 +102,14 @@ class Svd:
             if patch["peripheral"] not in family or patch["register"] not in out:
                 continue
             reg = out[patch["register"]]
+            if "field_access" in patch:
+                for fn, acc in patch["field_access"].items():
+                    have = reg["fields"].get(fn, {}).get("access")
+                    if have != patch["svd_has"][fn]:
+                        raise SystemExit(f"svd-patches: {patch['peripheral']}.{patch['register']}.{fn} SVD now has "
+                                         f"{have}, not {patch['svd_has'][fn]}: the SVD changed, review the patch")
+                    reg["fields"][fn]["access"] = acc
+                continue
             if "svd_has" in patch and "reset" in patch and reg["reset"] != int(str(patch["svd_has"]), 0):
                 raise SystemExit(f"svd-patches: {patch['peripheral']}.{patch['register']} SVD now has "
                                  f"0x{reg['reset']:08X}, not {patch['svd_has']}: the SVD changed, review the patch")
