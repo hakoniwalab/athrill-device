@@ -198,10 +198,22 @@ typedef struct {
 	void *instance;
 } AthrillDeviceValueSource;
 
+/*
+ * Required interface: what athrill-device needs from the host. The target
+ * implements it and the models call it; models never call the target or
+ * the Athrill core directly.
+ *
+ * Only the CPU-side services stay (marked REQUIRED). The operations marked
+ * TO BE REMOVED exist only because some models still live in the target
+ * (SPI, UART, I2C, DMA, GPIO bridging, the target's sensor source); they go
+ * when those models move to athrill-device (hakoniwalab/athrill-device#13).
+ * Marks only: the layout and the ABI are unchanged.
+ */
 typedef struct AthrillDeviceTargetOps {
 	uint32 abi_major;
 	uint32 abi_minor;
 	uint32 struct_size;
+	/* ---- REQUIRED: MMIO regions, IRQ, time, clock, memory ---- */
 	sint32 (*mmio_register)(void *target, uint64 address, uint64 size,
 	                        const AthrillDeviceMmioOps *ops, void *instance,
 	                        AthrillDeviceMmioToken *token);
@@ -219,6 +231,11 @@ typedef struct AthrillDeviceTargetOps {
 	                      uint32 size);
 	sint32 (*memory_write)(void *target, uint64 address, const void *data,
 	                       uint32 size);
+	/* ---- TO BE REMOVED: bridges to bus and DMA models in the target ----
+	 * The GPIO operations are also called by the GPIO, EXTI and chip models
+	 * of athrill-device today: the target keeps the GPIO line table because
+	 * its SPI chip selects share the lines. With the models moved, the table
+	 * lives in athrill-device and those calls change too. */
 	sint32 (*spi_bind)(void *target, AthrillDeviceNodeId controller,
 	                   uint32 chip_select, const AthrillDeviceSpecifier *cs_gpio,
 	                   const AthrillDeviceSpiPeripheralOps *ops, void *instance,
@@ -253,7 +270,7 @@ typedef struct AthrillDeviceTargetOps {
 	                      std_bool asserted);
 
 	/*
-	 * Transitional migration hook for a named built-in adapter.  It lets a
+	 * TO BE REMOVED: transitional migration hook for a named built-in adapter.  It lets a
 	 * target place an existing stateful model behind this ABI while that model
 	 * is moved out of the target.  The compatible is exact and adapters are
 	 * registered individually; this is not an unmodelled-node fallback.
@@ -263,6 +280,7 @@ typedef struct AthrillDeviceTargetOps {
 	                               const char *adapter_name);
 
 	/* Added in ABI 1.2; node-aware bus binding and host-only values. */
+	/* TO BE REMOVED: bridge to the SPI model in the target */
 	sint32 (*spi_bind_node)(void *target,
 	                       const AthrillDeviceNode *controller,
 	                       uint32 chip_select,
@@ -270,10 +288,14 @@ typedef struct AthrillDeviceTargetOps {
 	                       const AthrillDeviceSpiPeripheralOps *ops,
 	                       void *instance,
 	                       AthrillDeviceSpiEndpoint *endpoint);
+	/* REQUIRED: host-only configuration values */
 	sint32 (*host_value)(void *target, const char *key, const char **value);
 	/* Added in ABI 1.3; common physical sample consumed by sensor chips. */
+	/* TO BE REMOVED: the target's sensor source; chips use value sources
+	 * (ABI 1.8, get_value_source) of athrill-device models instead */
 	sint32 (*sensor_sample)(void *target, AthrillDeviceSensorSample *sample);
 	/* Added in ABI 1.4. */
+	/* TO BE REMOVED: bridge to the I2C model in the target */
 	sint32 (*i2c_bind_node)(void *target,
 	                       const AthrillDeviceNode *controller,
 	                       uint16 address,
@@ -281,6 +303,7 @@ typedef struct AthrillDeviceTargetOps {
 	                       void *instance,
 	                       AthrillDeviceI2cEndpoint *endpoint);
 	/* Added in ABI 1.6. */
+	/* TO BE REMOVED: bridges to the UART model and the sensor source in the target */
 	sint32 (*uart_bind_nodes)(void *target,
 	                         const AthrillDeviceNode *controller,
 	                         const AthrillDeviceNode *peripheral,
@@ -291,9 +314,11 @@ typedef struct AthrillDeviceTargetOps {
 	                             AthrillDeviceNodeId peripheral, uint8 data);
 	sint32 (*gps_sample)(void *target, AthrillDeviceGpsSample *sample);
 	/* Added in ABI 1.7; board actuator output produced from DT PWM channels. */
+	/* TO BE REMOVED: the target's sensor source (actuator sink) */
 	sint32 (*actuator_output)(void *target, const float32 *values,
 	                         uint32 count);
 	/* Added in ABI 1.7; atomic MCU GPIO bank output (distinct from input drive). */
+	/* TO BE REMOVED: bridge to the SPI chip selects in the target */
 	sint32 (*gpio_outputs)(void *target, const AthrillDeviceGpioLine *lines,
 	                      uint32 count, uint32 levels);
 } AthrillDeviceTargetOps;
