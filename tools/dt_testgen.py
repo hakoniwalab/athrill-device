@@ -120,6 +120,25 @@ class PwmMap:
 
 
 @dataclasses.dataclass(frozen=True)
+class GpioInterruptConsumer:
+    node: Node
+    gpio: Specifier
+    gpio_base: int
+    exti_base: int
+    exticr_base: int
+    interrupt: Interrupt
+
+
+@dataclasses.dataclass(frozen=True)
+class GpioChipSelect:
+    controller_path: str
+    child_path: str
+    chip_select: int
+    gpio: Specifier
+    gpio_base: int
+
+
+@dataclasses.dataclass(frozen=True)
 class MmioWindow:
     address: int
     size: int
@@ -543,6 +562,61 @@ def find_pwm_maps(fdt: Fdt) -> list[PwmMap]:
     return result
 
 
+def node_at(fdt: Fdt, path: str) -> Node:
+    node = next((value for value in fdt.nodes if value.path == path), None)
+    if node is None:
+        raise ValueError(f"missing node {path}")
+    return node
+
+
+def find_gpio_interrupt_consumers(fdt: Fdt) -> list[GpioInterruptConsumer]:
+    exti_nodes = [node for node in fdt.nodes
+                  if enabled(node) and "st,stm32-exti" in compatible(node)]
+    if len(exti_nodes) != 1:
+        raise ValueError("board must have exactly one enabled STM32 EXTI controller")
+    exti = exti_nodes[0]
+    exti_windows = reg_windows(exti)
+    interrupts = node_interrupts(fdt, exti)
+    if len(exti_windows) != 1 or len(interrupts) != 7:
+        raise ValueError(f"{exti.path}: expected one reg and seven interrupt groups")
+    exti_base = exti_windows[0].address
+    exticr_base = 0x40013808 if exti_base == 0x40013c00 else 0x58000408
+    result = []
+    for node in fdt.nodes:
+        if not enabled(node) or "int-gpios" not in node.properties:
+            continue
+        gpios = decode_specifiers(fdt, node, "int-gpios", "#gpio-cells")
+        for gpio in gpios:
+            if len(gpio.cells) != 2 or gpio.cells[0] >= 16:
+                raise ValueError(f"{node.path}: invalid int-gpios")
+            provider = node_at(fdt, gpio.provider_path)
+            windows = reg_windows(provider)
+            if len(windows) != 1:
+                raise ValueError(f"{provider.path}: GPIO provider has no single reg")
+            pin = gpio.cells[0]
+            group = pin if pin <= 4 else (5 if pin <= 9 else 6)
+            result.append(GpioInterruptConsumer(
+                node, gpio, windows[0].address, exti_base, exticr_base,
+                interrupts[group]))
+    return result
+
+
+def find_gpio_chip_selects(fdt: Fdt, controllers: list[SpiController]) -> list[GpioChipSelect]:
+    result = []
+    for controller in controllers:
+        for child in controller.children:
+            if child.cs_gpio is None:
+                continue
+            provider = node_at(fdt, child.cs_gpio.provider_path)
+            windows = reg_windows(provider)
+            if len(windows) != 1 or len(child.cs_gpio.cells) != 2:
+                raise ValueError(f"{provider.path}: invalid CS GPIO provider")
+            result.append(GpioChipSelect(
+                controller.node.path, child.node.path, child.chip_select,
+                child.cs_gpio, windows[0].address))
+    return result
+
+
 def load_test_specs(paths: list[Path]) -> dict[str, str]:
     """Read the small documented YAML subset without a YAML dependency."""
     result: dict[str, str] = {}
@@ -577,6 +651,8 @@ def load_test_specs(paths: list[Path]) -> dict[str, str]:
         "ADV-DMA-005.T1": "dma-controller",
         "ADV-SD-004.T1": "sd-card",
         "ADV-PWM-001.T1": "pwm-map",
+        "ADV-GPIO-001.T1": "gpio-int-consumer",
+        "ADV-GPIO-002.T1": "spi-cs-gpio",
     }
     for test_id, target in required.items():
         if result.get(test_id) != target:
@@ -848,6 +924,31 @@ def generated_pwm_cases(board: str, maps: list[PwmMap]) -> list[dict[str, object
     } for pwm_map in maps]
 
 
+def generated_gpio_cases(board: str, interrupt_consumers: list[GpioInterruptConsumer],
+                         chip_selects: list[GpioChipSelect]) -> list[dict[str, object]]:
+    result = []
+    for consumer in interrupt_consumers:
+        result.append({
+            "name": case_name(board, consumer.node.path, "ADV-GPIO-001.T1"),
+            "test_spec_id": "ADV-GPIO-001.T1", "item_id": "ADV-GPIO-001",
+            "node_path": consumer.node.path,
+            "derived_properties": {"int-gpios": specifier_json(consumer.gpio),
+                                   "interrupt": dataclasses.asdict(consumer.interrupt)},
+            "kind": "gpio-interrupt", "area": "gpio", "consumer": consumer,
+        })
+    for chip_select in chip_selects:
+        result.append({
+            "name": case_name(board, chip_select.child_path, "ADV-GPIO-002.T1"),
+            "test_spec_id": "ADV-GPIO-002.T1", "item_id": "ADV-GPIO-002",
+            "node_path": chip_select.child_path,
+            "derived_properties": {"controller": chip_select.controller_path,
+                                   "chip_select": chip_select.chip_select,
+                                   "cs_gpio": specifier_json(chip_select.gpio)},
+            "kind": "gpio-chip-select", "area": "gpio", "chip_select": chip_select,
+        })
+    return result
+
+
 def pwm_setup_lines(pwm_map: PwmMap) -> list[str]:
     lines = []
     timers: dict[str, list[tuple[int, PwmEntry]]] = {}
@@ -1059,6 +1160,52 @@ def render_case(case: dict[str, object]) -> str:
             lines.append(
                 f"\tCHECK(trace_contains({c_string(f'output={index + 1} channel={entry.channel} pulse_us={pulse} ')}));"
             )
+    elif case["kind"] == "gpio-interrupt":
+        consumer = case["consumer"]
+        assert isinstance(consumer, GpioInterruptConsumer)
+        pin, flags = consumer.gpio.cells
+        port_base = 0x58020000 if consumer.gpio_base >= 0x58020000 else 0x40020000
+        port = (consumer.gpio_base - port_base) // 0x400
+        active_low = bool(flags & 1)
+        imr_offset = 0x80 if consumer.exti_base == 0x58000000 else 0x00
+        trigger_offset = (0x04 if active_low else 0x00) if consumer.exti_base == 0x58000000 else (0x0c if active_low else 0x08)
+        pending_offset = 0x88 if consumer.exti_base == 0x58000000 else 0x14
+        irq_cells, irq_count = c_interrupt(consumer.interrupt)
+        lines.extend([
+            f"\tCHECK(mmio_write32({consumer.exticr_base + 4 * (pin // 4)}ULL, "
+            f"{port << (4 * (pin % 4))}U) == 0);",
+            f"\tCHECK(mmio_write32({consumer.exti_base + imr_offset}ULL, {1 << pin}U) == 0);",
+            f"\tCHECK(mmio_write32({consumer.exti_base + trigger_offset}ULL, {1 << pin}U) == 0);",
+            f"\tCHECK(drive_named_gpio({c_string(consumer.gpio.provider_path)}, {pin}U, "
+            f"{'TRUE' if active_low else 'FALSE'}) == 0);",
+            "\tclear_irq_assertions();",
+            f"\tCHECK(drive_named_gpio({c_string(consumer.gpio.provider_path)}, {pin}U, "
+            f"{'FALSE' if active_low else 'TRUE'}) == 0);",
+            f"\tCHECK(mmio_read32({consumer.exti_base + pending_offset}ULL, &index) == 0);",
+            f"\tCHECK((index & {1 << pin}U) != 0U);",
+            f"\t{{ static const uint32 wanted[] = {{{irq_cells}}};",
+            f"\t  CHECK(irq_asserted({c_string(consumer.interrupt.provider_path)}, wanted, {irq_count}U)); }}",
+        ])
+    elif case["kind"] == "gpio-chip-select":
+        chip_select = case["chip_select"]
+        assert isinstance(chip_select, GpioChipSelect)
+        pin, flags = chip_select.gpio.cells
+        active_low = bool(flags & 1)
+        lines.extend([
+            f"\tindex = find_binding({c_string(chip_select.controller_path)}, {chip_select.chip_select}U);",
+            "\tCHECK(index < target.binding_count);",
+            f"\tCHECK(mmio_write32({chip_select.gpio_base}ULL, {1 << (2 * pin)}U) == 0);",
+        ])
+        if active_low:
+            lines.append(f"\tCHECK(mmio_write32({chip_select.gpio_base + 0x18}ULL, {1 << pin}U) == 0);")
+        lines.extend([
+            "\tclear_chip_select_events();",
+            f"\tCHECK(mmio_write32({chip_select.gpio_base + 0x18}ULL, "
+            f"{(1 << (pin + 16)) if active_low else (1 << pin)}U) == 0);",
+            "\tCHECK(target.chip_select_events == 1U);",
+            "\tCHECK(target.bindings[index].selected);",
+            "\tCHECK(count_selected_bindings() == 1U);",
+        ])
     else:
         raise ValueError(f"unknown generated case kind {case['kind']}")
     lines.extend(["\tdestroy_board();", "\treturn 0;", "}"])
@@ -1101,6 +1248,8 @@ def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
 #define MAX_MMIO 64U
 #define MAX_IRQS 128U
 #define MAX_ADAPTERS 64U
+#define MAX_GPIO_LINES 256U
+#define MAX_GPIO_SUBSCRIPTIONS 512U
 
 typedef struct {{
 \tchar controller[192];
@@ -1109,6 +1258,9 @@ typedef struct {{
 \tchar gpio_provider[192];
 \tuint32 gpio_cell_count;
 \tuint32 gpio_cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
+\tconst AthrillDeviceSpiPeripheralOps *ops;
+\tvoid *instance;
+\tstd_bool selected;
 }} Binding;
 
 typedef struct {{
@@ -1139,9 +1291,15 @@ typedef struct {{
 \tchar provider[192];
 \tuint32 cell_count;
 \tuint32 cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
+\tAthrillDeviceIrqLine line;
+\tstd_bool asserted;
 }} IrqResolution;
 typedef struct {{ char *out; char *err; }} Capture;
 typedef struct {{ char node[192]; char name[64]; }} AdapterConnection;
+typedef struct {{
+\tchar provider[192]; uint32 pin; AthrillDeviceGpioLine line; std_bool level;
+}} GpioResolution;
+typedef struct {{ AthrillDeviceGpioLine line; AthrillDeviceGpioEdge callback; void *instance; }} GpioSubscription;
 
 typedef struct {{
 \tBinding bindings[MAX_BINDINGS];
@@ -1158,6 +1316,11 @@ typedef struct {{
 \tuint32 irq_count;
 \tAdapterConnection adapters[MAX_ADAPTERS];
 \tuint32 adapter_count;
+\tGpioResolution gpio_lines[MAX_GPIO_LINES];
+\tuint32 gpio_line_count;
+\tGpioSubscription gpio_subscriptions[MAX_GPIO_SUBSCRIPTIONS];
+\tuint32 gpio_subscription_count;
+\tuint32 chip_select_events;
 \tfloat32 actuator_values[16];
 \tuint32 actuator_count;
 \tuint64 next_handle;
@@ -1206,12 +1369,27 @@ static sint32 irq_resolve(void *context, const AthrillDeviceSpecifier *spec,
 \tresolution->cell_count = spec->cell_count;
 \tfor (index = 0U; index < spec->cell_count; index++) resolution->cells[index] = spec->cells[index];
 \tline->value = ++value->next_handle;
+\tresolution->line = *line;
 \treturn 0;
 }}
 static sint32 irq_set(void *context, AthrillDeviceIrqLine line, std_bool asserted)
-{{ (void)context; (void)line; (void)asserted; return 0; }}
+{{
+\tTestTarget *value = context;
+\tuint32 index;
+\tfor (index = 0U; index < value->irq_count; index++)
+\t\tif (value->irqs[index].line.value == line.value) {{
+\t\t\tvalue->irqs[index].asserted = asserted; return 0;
+\t\t}}
+\treturn -1;
+}}
 static std_bool irq_is_active(void *context, AthrillDeviceIrqLine line)
-{{ (void)context; (void)line; return FALSE; }}
+{{
+\tTestTarget *value = context;
+\tuint32 index;
+\tfor (index = 0U; index < value->irq_count; index++)
+\t\tif (value->irqs[index].line.value == line.value) return value->irqs[index].asserted;
+\treturn FALSE;
+}}
 static uint64 time_now(void *context) {{ (void)context; return 0U; }}
 static uint64 time_frequency(void *context) {{ (void)context; return {time_frequency_hz}U; }}
 static sint32 clock_frequency(void *context, AthrillDeviceNodeId node,
@@ -1242,6 +1420,8 @@ static sint32 spi_bind_node(void *context, const AthrillDeviceNode *controller,
 \tbinding = &value->bindings[value->binding_count++];
 \tcopy_text(binding->controller, sizeof(binding->controller), controller->path);
 \tbinding->chip_select = chip_select;
+\tbinding->ops = ops;
+\tbinding->instance = instance;
 \tif (gpio != NULL) {{
 \t\tbinding->has_gpio = TRUE;
 \t\tcopy_text(binding->gpio_provider, sizeof(binding->gpio_provider), gpio->provider_path);
@@ -1300,17 +1480,79 @@ static sint32 uart_send(void *context, AthrillDeviceNodeId peripheral, uint8 dat
 
 static sint32 gpio_resolve(void *context, const AthrillDeviceSpecifier *spec,
 \tAthrillDeviceGpioLine *line)
-{{ (void)spec; line->value = ++((TestTarget *)context)->next_handle; return 0; }}
+{{
+\tTestTarget *value = context;
+\tconst char *provider;
+\tuint32 index;
+\tif (spec == NULL || spec->provider_path == NULL || spec->cell_count < 1U) return -1;
+\tprovider = strrchr(spec->provider_path, '/'); provider = provider != NULL ? provider + 1 : spec->provider_path;
+\tfor (index = 0U; index < value->gpio_line_count; index++)
+\t\tif (value->gpio_lines[index].pin == spec->cells[0] &&
+\t\t    strcmp(value->gpio_lines[index].provider, provider) == 0) {{
+\t\t\t*line = value->gpio_lines[index].line; return 0;
+\t\t}}
+\tif (value->gpio_line_count >= MAX_GPIO_LINES) return -1;
+\tcopy_text(value->gpio_lines[value->gpio_line_count].provider,
+\t\tsizeof(value->gpio_lines[value->gpio_line_count].provider), provider);
+\tvalue->gpio_lines[value->gpio_line_count].pin = spec->cells[0];
+\tvalue->gpio_lines[value->gpio_line_count].line.value = ++value->next_handle;
+\t*line = value->gpio_lines[value->gpio_line_count++].line;
+\treturn 0;
+}}
 static sint32 gpio_read(void *context, AthrillDeviceGpioLine line, std_bool *level)
 {{ (void)context; (void)line; *level = FALSE; return 0; }}
 static sint32 gpio_drive(void *context, AthrillDeviceGpioLine line, std_bool level)
-{{ (void)context; (void)line; (void)level; return 0; }}
+{{
+\tTestTarget *value = context;
+\tuint32 index, found = 0U;
+\tfor (index = 0U; index < value->gpio_line_count; index++)
+\t\tif (value->gpio_lines[index].line.value == line.value) {{
+\t\t\tfound = 1U;
+\t\t\tif (value->gpio_lines[index].level == level) return 0;
+\t\t\tvalue->gpio_lines[index].level = level;
+\t\t\tbreak;
+\t\t}}
+\tif (!found) return -1;
+\tfor (index = 0U; index < value->gpio_subscription_count; index++)
+\t\tif (value->gpio_subscriptions[index].line.value == line.value)
+\t\t\tvalue->gpio_subscriptions[index].callback(
+\t\t\t\tvalue->gpio_subscriptions[index].instance, level);
+\tfor (index = 0U; index < value->binding_count; index++) {{
+\t\tBinding *binding = &value->bindings[index];
+\t\tuint32 gpio_index;
+\t\tif (!binding->has_gpio) continue;
+\t\tfor (gpio_index = 0U; gpio_index < value->gpio_line_count; gpio_index++)
+\t\t\tif (value->gpio_lines[gpio_index].line.value == line.value &&
+\t\t\t    value->gpio_lines[gpio_index].pin == binding->gpio_cells[0] &&
+\t\t\t    strcmp(value->gpio_lines[gpio_index].provider,
+\t\t\t\tstrrchr(binding->gpio_provider, '/') + 1) == 0) {{
+\t\t\t\tstd_bool selected = level == ((binding->gpio_cells[1] & 1U) ? FALSE : TRUE);
+\t\t\t\tif (selected != binding->selected) {{
+\t\t\t\t\tbinding->selected = selected; value->chip_select_events++;
+\t\t\t\t\tbinding->ops->set_chip_select(binding->instance, selected);
+\t\t\t\t}}
+\t\t\t}}
+\t}}
+\treturn 0;
+}}
 static sint32 gpio_subscribe(void *context, AthrillDeviceGpioLine line,
 \tAthrillDeviceGpioEdge callback, void *instance)
-{{ (void)context; (void)line; (void)callback; (void)instance; return 0; }}
+{{
+\tTestTarget *value = context;
+\tGpioSubscription *subscription;
+\tif (callback == NULL || value->gpio_subscription_count >= MAX_GPIO_SUBSCRIPTIONS) return -1;
+\tsubscription = &value->gpio_subscriptions[value->gpio_subscription_count++];
+\tsubscription->line = line; subscription->callback = callback; subscription->instance = instance;
+\treturn 0;
+}}
 static sint32 gpio_outputs(void *context, const AthrillDeviceGpioLine *lines,
 \tuint32 count, uint32 levels)
-{{ (void)context; (void)lines; (void)count; (void)levels; return 0; }}
+{{
+\tuint32 index;
+\tfor (index = 0U; index < count; index++)
+\t\tif (gpio_drive(context, lines[index], (levels & (1U << index)) != 0U) != 0) return -1;
+\treturn 0;
+}}
 
 static sint32 dma_resolve(void *context, const AthrillDeviceSpecifier *spec,
 \tAthrillDeviceDmaChannel *channel)
@@ -1602,6 +1844,57 @@ static int mmio_write32(uint64 address, uint32 value)
 \treturn -1;
 }}
 
+static int mmio_read32(uint64 address, uint32 *value)
+{{
+\tuint32 index;
+\tuint64 result;
+\tfor (index = 0U; index < target.mmio_count; index++)
+\t\tif (address >= target.mmio[index].address &&
+\t\t    address + 4U <= target.mmio[index].address + target.mmio[index].size &&
+\t\t    target.mmio[index].ops->read(target.mmio[index].instance,
+\t\t\taddress, 4U, &result) == 0) {{ *value = (uint32)result; return 0; }}
+\treturn -1;
+}}
+
+static sint32 drive_named_gpio(const char *provider_path, uint32 pin, std_bool level)
+{{
+\tconst char *provider = strrchr(provider_path, '/');
+\tuint32 index;
+\tprovider = provider != NULL ? provider + 1 : provider_path;
+\tfor (index = 0U; index < target.gpio_line_count; index++)
+\t\tif (target.gpio_lines[index].pin == pin &&
+\t\t    strcmp(target.gpio_lines[index].provider, provider) == 0)
+\t\t\treturn gpio_drive(&target, target.gpio_lines[index].line, level);
+\treturn -1;
+}}
+
+static void clear_irq_assertions(void)
+{{
+\tuint32 index;
+\tfor (index = 0U; index < target.irq_count; index++) target.irqs[index].asserted = FALSE;
+}}
+
+static int irq_asserted(const char *provider, const uint32 *cells, uint32 count)
+{{
+\tuint32 index;
+\tfor (index = 0U; index < target.irq_count; index++)
+\t\tif (target.irqs[index].asserted && target.irqs[index].cell_count == count &&
+\t\t    strcmp(target.irqs[index].provider, provider) == 0 &&
+\t\t    memcmp(target.irqs[index].cells, cells, count * sizeof(*cells)) == 0) return 1;
+\treturn 0;
+}}
+
+static void clear_chip_select_events(void)
+{{ target.chip_select_events = 0U; }}
+
+static uint32 count_selected_bindings(void)
+{{
+\tuint32 index, count = 0U;
+\tfor (index = 0U; index < target.binding_count; index++)
+\t\tif (target.bindings[index].selected) count++;
+\treturn count;
+}}
+
 static int trace_contains(const char *needle)
 {{
 \tFILE *stream = fopen(pwm_trace_path, "r");
@@ -1675,6 +1968,8 @@ def main() -> int:
         dma_controllers = find_dma_controllers(fdt)
         sd_cards = find_sd_cards(fdt)
         pwm_maps = find_pwm_maps(fdt)
+        gpio_interrupt_consumers = find_gpio_interrupt_consumers(fdt)
+        gpio_chip_selects = find_gpio_chip_selects(fdt, spi_controllers)
         relative = dtb.as_posix().split("/boards/", 1)[-1]
         board = relative.replace("/", "__").removesuffix(".dtb")
         negative_path = args.out / f"{c_identifier(board)}__unknown-compatible.dtb"
@@ -1685,7 +1980,9 @@ def main() -> int:
                  generated_dt_cases(board, fdt, negative_path, negative_node) +
                  generated_dma_cases(board, dma_controllers) +
                  generated_sd_cases(board, sd_cards) +
-                 generated_pwm_cases(board, pwm_maps))
+                 generated_pwm_cases(board, pwm_maps) +
+                 generated_gpio_cases(board, gpio_interrupt_consumers,
+                                      gpio_chip_selects))
         dt_instances = [node for node in fdt.nodes if is_model_instance(node)]
         dt_mmio_nodes = [node for node in fdt.nodes
                          if enabled(node) and MMIO_MODEL_COMPATIBLES.intersection(compatible(node))
@@ -1706,6 +2003,8 @@ def main() -> int:
             "sd_cards": len(sd_cards),
             "pwm_maps": len(pwm_maps),
             "pwm_entries": sum(len(value.entries) for value in pwm_maps),
+            "gpio_interrupt_consumers": len(gpio_interrupt_consumers),
+            "gpio_chip_selects": len(gpio_chip_selects),
         })
         use_plugin = "hakoniwa" in dtb.stem
         source = args.out / f"{c_identifier(board)}.c"

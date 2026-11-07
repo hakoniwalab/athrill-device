@@ -309,6 +309,14 @@ def report(args: argparse.Namespace) -> str:
             "1500 us command and observe a normalized actuator value; they do not test "
             "the specified 1000/1500/2000 us set or directly assert measured period.",
         ])
+    if "ADV-GPIO-001" in items:
+        specification_findings.append(
+            "ADV-GPIO-001: RM0410 Rev 5 section 11.3 is wakeup-event management, "
+            "not GPIO-to-EXTI routing. F7 routing is described by EXTI external-line "
+            "mapping (11.8), EXTI registers (11.9), and the SYSCFG EXTICR registers "
+            "(7.2.4 through 7.2.7). RM0433 sections 20.4 and 12.3 correctly cover the "
+            "H7 mapping and EXTICR registers. The specification was not changed."
+        )
     output.extend(["", "## Specification review findings", ""])
     output.extend(f"- {finding}" for finding in specification_findings)
     if not specification_findings:
@@ -396,6 +404,20 @@ def report(args: argparse.Namespace) -> str:
             output.append(
                 f"| {value['board']} | {value.get('pwm_maps', 0)} | "
                 f"{value.get('pwm_entries', 0)} |"
+            )
+
+    if any("gpio_interrupt_consumers" in value for value in board_coverage):
+        output.extend([
+            "",
+            "## GPIO/EXTI applicability by board DTB",
+            "",
+            "| Board DTB | int-gpios consumers | SPI CS GPIO mappings |",
+            "|---|---:|---:|",
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            output.append(
+                f"| {value['board']} | {value.get('gpio_interrupt_consumers', 0)} | "
+                f"{value.get('gpio_chip_selects', 0)} |"
             )
 
     output.extend([
