@@ -1,0 +1,415 @@
+ip: st-stm32-i2c-v2
+compatible:
+- st,stm32-i2c-v2
+soc: st,stm32f7 | st,stm32h7
+manual: RM0410 Rev 5 section 33 (I2C); RM0433 Rev 8 section 47 (I2C). Same register layout on F7 and H7.
+model: i2c-controller
+model_version: 1.0.0
+features:
+- base
+- dma
+bindings:
+  enable:
+    reg: CR1
+    field: PE
+    access: rw
+  target_address:
+    reg: CR2
+    field: SADD
+    access: rw
+    note: 7-bit address in SADD[7:1]
+  direction:
+    reg: CR2
+    field: RD_WRN
+    access: rw
+  byte_count:
+    reg: CR2
+    field: NBYTES
+    access: rw
+  auto_end:
+    reg: CR2
+    field: AUTOEND
+    access: rw
+  reload:
+    reg: CR2
+    field: RELOAD
+    access: rw
+  start:
+    reg: CR2
+    field: START
+    access: w1s
+  stop:
+    reg: CR2
+    field: STOP
+    access: w1s
+  tx_data:
+    reg: TXDR
+    access: fifo
+  rx_data:
+    reg: RXDR
+    access: fifo
+  tx_space:
+    reg: ISR
+    field: TXIS
+    access: ro
+  rx_available:
+    reg: ISR
+    field: RXNE
+    access: ro
+  transfer_complete:
+    reg: ISR
+    field: TC
+    access: ro
+  reload_complete:
+    reg: ISR
+    field: TCR
+    access: ro
+  stop_detected:
+    reg: ISR
+    field: STOPF
+    access: ro
+  nack:
+    reg: ISR
+    field: NACKF
+    access: ro
+  busy:
+    reg: ISR
+    field: BUSY
+    access: ro
+  status_ack:
+    reg: ICR
+    field:
+    - STOPCF
+    - NACKCF
+    access: w1c
+  irq_enables:
+    reg: CR1
+    field:
+    - TXIE
+    - RXIE
+    - TCIE
+    - STOPIE
+    - NACKIE
+    - ERRIE
+    access: rw
+  irq:
+    devicetree: interrupts (event, error)
+  tx_dma_enable:
+    reg: CR1
+    field: TXDMAEN
+    access: rw
+  rx_dma_enable:
+    reg: CR1
+    field: RXDMAEN
+    access: rw
+  tx_dma_request:
+    devicetree: dmas, dma-names = tx
+  rx_dma_request:
+    devicetree: dmas, dma-names = rx
+constants:
+  max_nbytes: 255
+unmodelled:
+- reg:
+  - OAR1
+  - OAR2
+  - TIMEOUTR
+  - PECR
+  answer: stored and read back
+- reg: CR1
+  fields:
+  - DNF
+  - ANFOFF
+  - SBC
+  - NOSTRETCH
+  - GCEN
+  - SMBHEN
+  - SMBDEN
+  - ALERTEN
+  - PECEN
+  - ADDRIE
+  answer: stored
+- reg: ISR
+  fields:
+  - TXE
+  - ADDR
+  - BERR
+  - ARLO
+  - OVR
+  - PECERR
+  - TIMEOUT
+  - ALERT
+  - DIR
+  - ADDCODE
+  answer: TXE follows TXIS; others reset value
+registers_source: RM0433 Rev 8 section 47.7 / RM0410 Rev 5 section 33.7 (I2C registers), hand-written; to be checked against
+  ST CMSIS headers now and the SVD-generated map (#31)
+registers:
+  CR1:
+    offset: '0x00'
+    reset: '0x00000000'
+    fields:
+      PE:
+        lsb: 0
+        width: 1
+      TXIE:
+        lsb: 1
+        width: 1
+      RXIE:
+        lsb: 2
+        width: 1
+      ADDRIE:
+        lsb: 3
+        width: 1
+      NACKIE:
+        lsb: 4
+        width: 1
+      STOPIE:
+        lsb: 5
+        width: 1
+      TCIE:
+        lsb: 6
+        width: 1
+      ERRIE:
+        lsb: 7
+        width: 1
+      DNF:
+        lsb: 8
+        width: 4
+      ANFOFF:
+        lsb: 12
+        width: 1
+      TXDMAEN:
+        lsb: 14
+        width: 1
+      RXDMAEN:
+        lsb: 15
+        width: 1
+      SBC:
+        lsb: 16
+        width: 1
+      NOSTRETCH:
+        lsb: 17
+        width: 1
+      GCEN:
+        lsb: 19
+        width: 1
+      SMBHEN:
+        lsb: 20
+        width: 1
+      SMBDEN:
+        lsb: 21
+        width: 1
+      ALERTEN:
+        lsb: 22
+        width: 1
+      PECEN:
+        lsb: 23
+        width: 1
+  CR2:
+    offset: '0x04'
+    reset: '0x00000000'
+    fields:
+      SADD:
+        lsb: 0
+        width: 10
+      RD_WRN:
+        lsb: 10
+        width: 1
+      ADD10:
+        lsb: 11
+        width: 1
+      HEAD10R:
+        lsb: 12
+        width: 1
+      START:
+        lsb: 13
+        width: 1
+      STOP:
+        lsb: 14
+        width: 1
+      NACK:
+        lsb: 15
+        width: 1
+      NBYTES:
+        lsb: 16
+        width: 8
+      RELOAD:
+        lsb: 24
+        width: 1
+      AUTOEND:
+        lsb: 25
+        width: 1
+      PECBYTE:
+        lsb: 26
+        width: 1
+  OAR1:
+    offset: '0x08'
+    reset: '0x00000000'
+    fields:
+      OA1:
+        lsb: 0
+        width: 10
+      OA1MODE:
+        lsb: 10
+        width: 1
+      OA1EN:
+        lsb: 15
+        width: 1
+  OAR2:
+    offset: '0x0C'
+    reset: '0x00000000'
+    fields:
+      OA2:
+        lsb: 1
+        width: 7
+      OA2MSK:
+        lsb: 8
+        width: 3
+      OA2EN:
+        lsb: 15
+        width: 1
+  TIMINGR:
+    offset: '0x10'
+    reset: '0x00000000'
+    fields:
+      SCLL:
+        lsb: 0
+        width: 8
+      SCLH:
+        lsb: 8
+        width: 8
+      SDADEL:
+        lsb: 16
+        width: 4
+      SCLDEL:
+        lsb: 20
+        width: 4
+      PRESC:
+        lsb: 28
+        width: 4
+  TIMEOUTR:
+    offset: '0x14'
+    reset: '0x00000000'
+    fields:
+      TIMEOUTA:
+        lsb: 0
+        width: 12
+      TIDLE:
+        lsb: 12
+        width: 1
+      TIMOUTEN:
+        lsb: 15
+        width: 1
+      TIMEOUTB:
+        lsb: 16
+        width: 12
+      TEXTEN:
+        lsb: 31
+        width: 1
+  ISR:
+    offset: '0x18'
+    reset: '0x00000001'
+    fields:
+      TXE:
+        lsb: 0
+        width: 1
+      TXIS:
+        lsb: 1
+        width: 1
+      RXNE:
+        lsb: 2
+        width: 1
+      ADDR:
+        lsb: 3
+        width: 1
+      NACKF:
+        lsb: 4
+        width: 1
+      STOPF:
+        lsb: 5
+        width: 1
+      TC:
+        lsb: 6
+        width: 1
+      TCR:
+        lsb: 7
+        width: 1
+      BERR:
+        lsb: 8
+        width: 1
+      ARLO:
+        lsb: 9
+        width: 1
+      OVR:
+        lsb: 10
+        width: 1
+      PECERR:
+        lsb: 11
+        width: 1
+      TIMEOUT:
+        lsb: 12
+        width: 1
+      ALERT:
+        lsb: 13
+        width: 1
+      BUSY:
+        lsb: 15
+        width: 1
+      DIR:
+        lsb: 16
+        width: 1
+      ADDCODE:
+        lsb: 17
+        width: 7
+  ICR:
+    offset: '0x1C'
+    reset: '0x00000000'
+    fields:
+      ADDRCF:
+        lsb: 3
+        width: 1
+      NACKCF:
+        lsb: 4
+        width: 1
+      STOPCF:
+        lsb: 5
+        width: 1
+      BERRCF:
+        lsb: 8
+        width: 1
+      ARLOCF:
+        lsb: 9
+        width: 1
+      OVRCF:
+        lsb: 10
+        width: 1
+      PECCF:
+        lsb: 11
+        width: 1
+      TIMOUTCF:
+        lsb: 12
+        width: 1
+      ALERTCF:
+        lsb: 13
+        width: 1
+  PECR:
+    offset: '0x20'
+    reset: '0x00000000'
+    fields:
+      PEC:
+        lsb: 0
+        width: 8
+  RXDR:
+    offset: '0x24'
+    reset: '0x00000000'
+    fields:
+      RXDATA:
+        lsb: 0
+        width: 8
+  TXDR:
+    offset: '0x28'
+    reset: '0x00000000'
+    fields:
+      TXDATA:
+        lsb: 0
+        width: 8
