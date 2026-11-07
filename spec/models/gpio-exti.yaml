@@ -1,0 +1,48 @@
+model: gpio-exti
+version: 1.0.0
+summary: GPIO ports, the external interrupt controller (EXTI) and its port-to-line selection (SYSCFG), as used for chip selects, data-ready lines, LEDs and buttons.
+
+terms:
+  # gpio
+  - {name: pin_mode,          kind: control, feature: base, meaning: "Per pin input, output, alternate function or analog."}
+  - {name: output_level,      kind: control, feature: base, meaning: "Per pin driven level in output mode."}
+  - {name: set_reset,         kind: control, feature: base, meaning: "Atomic set/reset of output levels (write-only)."}
+  - {name: input_level,       kind: status,  feature: base, meaning: "Per pin level read back: driven level for outputs, external level (from a chip model or a host input) for inputs."}
+  - {name: pin_config,        kind: control, feature: base, meaning: "Speed, pull, open-drain, alternate function number: stored only."}
+  # exti
+  - {name: line_source,       kind: control, feature: exti, meaning: "Per EXTI line 0-15: which port's pin of that number feeds it (SYSCFG)."}
+  - {name: rising_trigger,    kind: control, feature: exti, meaning: "Per line: a rising edge sets pending."}
+  - {name: falling_trigger,   kind: control, feature: exti, meaning: "Per line: a falling edge sets pending."}
+  - {name: line_irq_enable,   kind: control, feature: exti, meaning: "Per line: pending raises the line's interrupt."}
+  - {name: software_trigger,  kind: control, feature: exti, meaning: "Per line: sets pending by software."}
+  - {name: pending,           kind: status,  feature: exti, meaning: "Per line: an edge or software trigger occurred."}
+  - {name: pending_ack,       kind: ack,     feature: exti, meaning: "Write 1 to clear pending."}
+  - {name: line_irq,          kind: event,   feature: exti, meaning: "Interrupt of the line or line group (EXTI0..4, EXTI9_5, EXTI15_10; Devicetree interrupts)."}
+
+features:
+  base: GPIO levels.
+  exti: Edge-triggered external interrupts with port selection.
+
+behaviour:
+  - id: ADV-GPIO-B001
+    feature: base
+    rule: A pin in output mode drives output_level; set_reset changes only the pins it names, set winning over reset for the same pin; input_level of an output pin reads the driven level.
+  - id: ADV-GPIO-B002
+    feature: base
+    rule: A pin in input mode reads the level given by the connected model (chip interrupt line, cs-gpios consumer) or host input; unconnected inputs read their reset level.
+  - id: ADV-GPIO-B003
+    feature: base
+    rule: A change of a pin's level is delivered to the models connected to that pin (chip select to the SPI child, ADV-GPIO-002) at the clock of the write.
+  - id: ADV-GPIO-B004
+    feature: exti
+    rule: An edge on pin n of the port selected by line_source for line n sets pending of line n when the matching trigger is enabled (ADV-GPIO-001); edges on other ports' pin n do not.
+  - id: ADV-GPIO-B005
+    feature: exti
+    rule: line_irq is raised while pending and line_irq_enable for any line of its group; pending_ack clears pending.
+  - id: ADV-GPIO-B006
+    feature: exti
+    rule: software_trigger sets pending as an edge would.
+
+timing: Level changes and edges take effect at the clock of the write or of the model's event.
+out_of_scope:
+  - event (non-interrupt) mode, wake-up and low-power domains, configurable lines above 15 other than as stored, pin locking (stored only), analog behaviour

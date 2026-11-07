@@ -1,0 +1,71 @@
+model: dma-controller
+version: 1.0.0
+summary: Stream/channel DMA controller (and request multiplexer) as used by PX4 and ArduPilot for UART, SPI, I2C, SDMMC and ADC transfers.
+
+terms:
+  # base (per stream)
+  - {name: stream_enable,      kind: control, feature: base, meaning: "The stream accepts requests; clearing it stops the stream."}
+  - {name: direction,          kind: control, feature: base, meaning: "Peripheral-to-memory, memory-to-peripheral or memory-to-memory."}
+  - {name: request_select,     kind: control, feature: base, meaning: "Which peripheral request drives the stream (channel number, or the multiplexer's request id)."}
+  - {name: peripheral_address, kind: control, feature: base, meaning: "Address on the peripheral side."}
+  - {name: memory_address,     kind: control, feature: base, meaning: "Address on the memory side (and second buffer with double_buffer)."}
+  - {name: item_count,         kind: control, feature: base, meaning: "Items left; decremented per item, reloaded in circular mode."}
+  - {name: peripheral_width,   kind: control, feature: base, meaning: "Item size on the peripheral side (8/16/32)."}
+  - {name: memory_width,       kind: control, feature: base, meaning: "Item size on the memory side."}
+  - {name: peripheral_increment, kind: control, feature: base, meaning: "Peripheral address advances per item."}
+  - {name: memory_increment,   kind: control, feature: base, meaning: "Memory address advances per item."}
+  - {name: circular,           kind: control, feature: base, meaning: "item_count and addresses reload after the last item."}
+  - {name: half_transfer,      kind: status,  feature: base, meaning: "Half of the items moved."}
+  - {name: transfer_complete,  kind: status,  feature: base, meaning: "All items moved."}
+  - {name: transfer_error,     kind: status,  feature: base, meaning: "Access to an address with no memory or device."}
+  - {name: flag_ack,           kind: ack,     feature: base, meaning: "Clears the stream's flags (write 1 to clear)."}
+  - {name: ht_irq_enable,      kind: control, feature: base, meaning: "half_transfer raises the stream irq."}
+  - {name: tc_irq_enable,      kind: control, feature: base, meaning: "transfer_complete raises the stream irq."}
+  - {name: te_irq_enable,      kind: control, feature: base, meaning: "transfer_error raises the stream irq."}
+  - {name: stream_irq,         kind: event,   feature: base, meaning: "One interrupt line per stream (Devicetree interrupts, in stream order)."}
+  # fifo
+  - {name: fifo_mode,          kind: control, feature: fifo, meaning: "Direct mode or FIFO mode with threshold; needed for width conversion."}
+  # double_buffer
+  - {name: double_buffer,      kind: control, feature: double_buffer, meaning: "Memory side alternates between two buffers."}
+  - {name: current_target,     kind: status,  feature: double_buffer, meaning: "Which of the two buffers is in use."}
+  # mux
+  - {name: mux_request_id,     kind: control, feature: mux, meaning: "Request multiplexer: peripheral request id routed to the stream's channel."}
+
+features:
+  base: Streams with addresses, counts, widths, increments, circular mode, HT/TC/TE.
+  fifo: FIFO mode and width conversion.
+  double_buffer: Double-buffer memory side.
+  mux: Requests routed through a request multiplexer (DMAMUX) instead of fixed channel numbers.
+
+behaviour:
+  - id: ADV-DMA-B001
+    feature: base
+    rule: While stream_enable is on, each request from the selected peripheral moves one item between the two addresses in direction, and item_count decreases by one (ADV-DMA-001); requests from other peripherals are ignored.
+  - id: ADV-DMA-B002
+    feature: mux
+    rule: With the multiplexer, only requests whose id equals mux_request_id of the stream's channel reach the stream.
+  - id: ADV-DMA-B003
+    feature: base
+    rule: half_transfer turns on when item_count reaches half, transfer_complete when it reaches 0, each at the clock of that item (ADV-DMA-002); without circular the stream then turns stream_enable off.
+  - id: ADV-DMA-B004
+    feature: base
+    rule: With circular, after the last item item_count and addresses reload and the stream continues (ADV-DMA-003).
+  - id: ADV-DMA-B005
+    feature: fifo
+    rule: With different peripheral and memory widths, items are packed and unpacked as the reference manual's width table states (ADV-DMA-004).
+  - id: ADV-DMA-B006
+    feature: base
+    rule: An access to an address with no memory or device sets transfer_error and turns the stream off.
+  - id: ADV-DMA-B007
+    feature: base
+    rule: stream_irq is raised while (ht_irq_enable and half_transfer) or (tc_irq_enable and transfer_complete) or (te_irq_enable and transfer_error); flag_ack clears the acknowledged flags.
+  - id: ADV-DMA-B008
+    feature: double_buffer
+    rule: With double_buffer, after each complete pass the memory side switches buffers and current_target changes.
+  - id: ADV-DMA-B009
+    feature: base
+    rule: Configuration changes to addresses, count, widths or direction while stream_enable is on are ignored, as the manuals require the stream to be off.
+
+timing: Each item completes at the clock of the request that caused it; the timing rules of docs/device-tree-design.md apply.
+out_of_scope:
+  - bus arbitration and stream priority timing, burst transfers (stored only), peripheral flow control, MDMA, request generators of the multiplexer, synchronization inputs
