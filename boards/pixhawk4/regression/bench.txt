@@ -10,11 +10,18 @@
 # console.norm: console.txt without the two Devicetree lines
 # ("DEVICE_CONFIG_DEVICE_TREE = <local path>", "DEVICE_TREE sha256=...") so that
 # the C path and the Devicetree path give the same value.
+# Re-recorded 2026-11-08 (instructions, console.norm): the I2C controller ends
+# the CPU batch on every register read on every board (before, only the
+# target's H7 path did). The sensor samples are read a few instructions
+# apart, so console values differ in their last digits; every bench check
+# passes, F-RAM and SD card are unchanged, and the PX4 SIH flight checks
+# (examples/px4-sih/verify: determinism, hover, MAVLink flight, published run)
+# all pass.
 firmware_sha256 f8a78a13f3a545305cce45eeef677e4d436325ee6a6065b1753c387283f3d05e
-instructions 2131907110
+instructions 2135922026
 sha256 fram.bin 00ee14df6986fc5baf43fdc3ea53db8088ed207dd2bd588b842d53053e7947fe
 sha256 sd.img 12e2df7d9124ac9839d1c37a203a30b0c50eb7178cfd1c1988d60cc974e5d921
-sha256 console.norm df750846364a87e9b08984f49d32f07cdba8b1f953590a4e208badd5dd6d9cd6
+sha256 console.norm 5eb55ab121910bb6090f18f9384e678048cc28e992989c171e8790977c8a931e
 # tick: the order the devices are ticked in (target TARGET_TICK lines, with
 # "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
 # 2026-11-08 with athrill-target-stm32 0050bb4 + the tick-order log.

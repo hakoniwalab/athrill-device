@@ -13,8 +13,8 @@
  * enabled flag stays set. Lightweight: no bit timing (each step happens at
  * the register access that allows it), no slave mode, no SMBus, no DMA.
  *
- * The target's H7 path ended the CPU batch on every register read, its F7
- * path did not; the H7 instances carry athrill,stm32h7-i2c to keep that.
+ * A register read ends the CPU batch on every board. The target's H7 path
+ * did so, its F7 path did not; the board does not decide that.
  *
  * What changed with the move: the bus and base come from the node, the
  * event interrupt from its interrupts ("event"; "error" is connected and,
@@ -98,9 +98,6 @@ typedef struct {
 	I2cChip *chip;
 	I2cChip chips[CHIPS_MAX];
 	uint32 chip_count;
-	/* athrill,stm32h7-i2c: a register read ends the CPU batch (the target's
-	 * H7 path did, its F7 path did not; kept so that runs do not change) */
-	std_bool end_batch_on_read;
 } Stm32I2c;
 
 static uint64 now(const Stm32I2c *b)
@@ -330,9 +327,10 @@ static sint32 i2c_read(void *instance, uint64 address, uint32 size, uint64 *resu
 	    (size != 1U && size != 2U && size != 4U) || result == NULL) {
 		return -1;
 	}
-	if (b->end_batch_on_read) {
-		b->target_ops->end_batch(b->target);
-	}
+	/* RXDR consumes the received stream and ISR follows the transfer: a
+	 * register read ends the CPU batch so that the next instruction sees the
+	 * effect, on every board (the register's meaning decides, not the SoC). */
+	b->target_ops->end_batch(b->target);
 	offset = ((uint32)address - b->base) & ~3U;
 	shift = 8U * (((uint32)address - b->base) & 3U);
 	switch (offset) {
@@ -448,13 +446,6 @@ static sint32 i2c_create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	b->target_ops = args->target_ops;
 	b->target = args->target;
-	{
-		const void *data;
-		uint32 size;
-		b->end_batch_on_read = (args->node->ops->get_property != NULL &&
-			args->node->ops->get_property(args->node->context,
-				"athrill,stm32h7-i2c", &data, &size) == 0) ? TRUE : FALSE;
-	}
 	*instance = b;
 	return 0;
 }
