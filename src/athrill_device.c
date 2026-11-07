@@ -57,6 +57,7 @@ struct NodeRecord {
 	std_bool created;
 	std_bool spi_bound;
 	std_bool i2c_bound;
+	std_bool i2c_native;	/* bound to an athrill-device controller model */
 	std_bool uart_bound;
 };
 
@@ -333,7 +334,6 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
 NAMED_ADAPTER(stm32_dma_model, "stm32-dma-adapter", "stm32-dma");
 NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter", "stm32f7-spi");
-NAMED_ADAPTER(stm32f7_i2c_model, "stm32f7-i2c-adapter", "stm32f7-i2c");
 NAMED_ADAPTER(stm32f7_uart_model, "stm32f7-uart-adapter", "stm32f7-uart");
 NAMED_ADAPTER(stm32_sdmmc_model, "stm32-sdmmc-adapter", "stm32-sdmmc");
 NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter", "stm32f7-flash");
@@ -425,7 +425,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32_syscfg_compatibles, 2U, &athrill_device_stm32_syscfg_model },
 	{ stm32_dma_compatibles, 1U, &stm32_dma_model },
 	{ stm32f7_spi_compatibles, 2U, &stm32f7_spi_model },
-	{ stm32f7_i2c_compatibles, 1U, &stm32f7_i2c_model },
+	{ stm32f7_i2c_compatibles, 1U, &athrill_device_stm32_i2c_model },
 	{ stm32f7_timer_compatibles, 1U, &athrill_device_stm32_tim_model },
 	{ stm32f7_pwm_compatibles, 1U, &structural_model },
 	{ stm32f7_uart_compatibles, 2U, &stm32f7_uart_model },
@@ -1213,6 +1213,31 @@ static sint32 resource_get_i2c_child(void *context, uint16 address,
 	return -1;
 }
 
+/* The child of a native I2C controller at an address, for the controller. */
+static sint32 resource_get_i2c_peripheral(void *context, uint16 address,
+	const AthrillDeviceI2cPeripheralOps **ops, void **instance)
+{
+	NodeRecord *node = context;
+	uint32 i;
+	if (ops == NULL || instance == NULL) {
+		return -1;
+	}
+	for (i = 0U; i < node->runtime->node_count; i++) {
+		NodeRecord *child = &node->runtime->nodes[i];
+		const fdt32_t *reg;
+		int length;
+		reg = fdt_getprop(node->runtime->dtb, child->offset, "reg", &length);
+		if (child->enabled && child->parent_index == (int)node->preorder &&
+		    child->i2c_native && reg != NULL && length == 4 &&
+		    fdt32_to_cpu(*reg) == address) {
+			*ops = child->model->i2c;
+			*instance = child->instance;
+			return 0;
+		}
+	}
+	return -1;
+}
+
 /* [ADV-UART-002] expose only enabled children bound to this controller */
 static sint32 resource_get_uart_child(void *context, uint32 index,
 	AthrillDeviceUartEndpoint *endpoint)
@@ -1238,7 +1263,7 @@ static const AthrillDeviceResourceOps resource_ops = {
 	sizeof(AthrillDeviceResourceOps), resource_get_interrupt,
 	resource_get_gpio, resource_get_dma, resource_get_spi_child,
 	resource_get_i2c_child, resource_get_uart_child, resource_get_pwm,
-	resource_get_value_source
+	resource_get_value_source, resource_get_i2c_peripheral
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
@@ -1994,6 +2019,33 @@ static int validate_and_create(AthrillDeviceRuntime *runtime)
 /* [ADV-I2C-002] bind the controller's exact enabled I2C child inventory */
 /* [ADV-UART-001] bind each UART child only to its parent controller */
 /* [ADV-UART-002] bind the controller's exact enabled UART child inventory */
+/* A controller that is an athrill-device model: its bus children are bound
+ * to it, not to the target. Not native: the TO BE REMOVED target adapters,
+ * and the athrill,test-*-controller models that test that target bridge. */
+static int native_controller(const NodeRecord *controller)
+{
+	return controller->model != NULL && controller->model->create != adapter_create &&
+	       controller->model != &test_mmio_model;
+}
+
+/* Another child of this native controller already has that address. */
+static int i2c_address_taken(const AthrillDeviceRuntime *runtime,
+	const NodeRecord *controller, uint32 address)
+{
+	uint32 i;
+	for (i = 0U; i < runtime->node_count; i++) {
+		const NodeRecord *child = &runtime->nodes[i];
+		const fdt32_t *reg;
+		int length;
+		reg = fdt_getprop(runtime->dtb, child->offset, "reg", &length);
+		if (child->i2c_native && child->parent_index == (int)controller->preorder &&
+		    reg != NULL && length == 4 && fdt32_to_cpu(*reg) == address) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
 static int bind_bus_children(AthrillDeviceRuntime *runtime)
 {
 	uint32 oi;
@@ -2039,6 +2091,21 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 				return -1;
 			}
 			node->spi_bound = TRUE;
+		} else if (is_i2c_controller(parent) && node->model->i2c != NULL &&
+			   native_controller(parent)) {
+			/* The controller is an athrill-device model: it calls the child
+			 * itself (get_i2c_peripheral); the target is not involved. */
+			if (!abi_header_ok(node->model->i2c->abi_major,
+				node->model->i2c->abi_minor, node->model->i2c->struct_size,
+				sizeof(AthrillDeviceI2cPeripheralOps)) ||
+			    reg == NULL || length != 4 || fdt32_to_cpu(*reg) > 0x7fU ||
+			    i2c_address_taken(runtime, parent, fdt32_to_cpu(*reg))) {
+				error_line("i2c-bind", node->path, "reg", "invalid-child");
+				return -1;
+			}
+			node->i2c_endpoint.value = (uint64)node->preorder + 1U;
+			node->i2c_native = TRUE;
+			node->i2c_bound = TRUE;
 		} else if (is_i2c_controller(parent) && node->model->i2c != NULL) {
 			uint32 address;
 			if (!abi_header_ok(node->model->i2c->abi_major,

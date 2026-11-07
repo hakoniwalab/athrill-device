@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       10U
+#define ATHRILL_DEVICE_ABI_MINOR       11U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -354,6 +354,12 @@ typedef struct AthrillDeviceResourceOps {
 	/* Added in ABI 1.8; typed model-to-model sensor/actuator values. */
 	sint32 (*get_value_source)(void *context, const char *property,
 	                          AthrillDeviceValueSource *source);
+	/* Added in ABI 1.11; for an I2C controller that is an athrill-device
+	 * model: the child at a 7-bit address, called by the controller itself
+	 * (no target bridge). -1 when no enabled child is at that address. */
+	sint32 (*get_i2c_peripheral)(void *context, uint16 address,
+	                             const AthrillDeviceI2cPeripheralOps **ops,
+	                             void **instance);
 } AthrillDeviceResourceOps;
 
 typedef struct {
