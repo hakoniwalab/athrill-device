@@ -99,13 +99,20 @@ runs the bounded `examples/px4-v6c-boot` configuration with
 fixed values live in `pins/smoke.json`, and measured values are written to
 the Receipt.
 
-The Pixhawk 6C fixture is an intentionally clean first boot with no
-`sd.img`. The older migration report's 238,968,545-instruction console oracle
-used an ignored, pre-populated SD image whose seed is not a declared release
-input. A generated blank image follows a third boot path. Keeping the SD image
-absent makes this build Recipe reproducible from the pinned repositories and
-the firmware ELF alone; a later board-verification Recipe can own prepared
-persistent-state fixtures explicitly.
+The Pixhawk 6C smoke always removes its prior smoke directory and invokes the
+pinned target's `examples/px4-sih/make-sd-image.sh` to create `sd.img` inside
+`<work-dir>/smoke/pixhawk6c/`. Its fixed initial content is a 1 GiB FAT32
+filesystem without a partition table, labeled `PX4SD`, with the generator's
+fixed volume serial and label date and no files. The Recipe verifies both the
+initial image hash and the post-smoke image hash, as well as the instruction
+count and console hash. This exercises PX4's SD/parameter startup path without
+depending on an ignored or pre-existing image.
+
+Pixhawk 4 does not depend on a pre-existing image. Its pinned upstream
+`examples/px4-bench/check.sh` deletes `examples/px4-bench/work`, creates a new
+deterministic image with its local `make-sd-image.sh`, clones that seed for
+both benchmark runs, and requires the two resulting SD images, F-RAM images,
+and consoles to be identical.
 
 Installed outputs are below `<work-dir>/install/`:
 

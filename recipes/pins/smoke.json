@@ -15,9 +15,13 @@
       "dtb": "boards/pixhawk6c/pixhawk6c.dtb",
       "hakoniwa_dtb": "boards/pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "clock_limit": 2000000000,
-      "fixture": "clean-first-boot-without-sd-image",
-      "instructions": 186764648,
-      "console_sha256": "2789b56e007245764916a4800f4a5fc75e126b235b578d0518c9b8be891fe9b6"
+      "fixture": "fresh-1-gib-fat32-px4sd",
+      "fixture_content": "FAT32 without a partition table; fixed PX4SD volume label and serial; initially no files",
+      "sd_size": 1073741824,
+      "sd_initial_sha256": "05e9dcc78775c0fda8bec01333266521250925350f7d153c9206dc381e7b6e51",
+      "instructions": 117119458,
+      "console_sha256": "05ebf764d02f797bff2124053f40488ce0ac8657aeb44969cbc9e212c83678a5",
+      "sd_sha256": "98fb22f2dbbbddc90e5573b98fc3e7b3bd8395903b5ed04742ff7cdedf956eb3"
     }
   }
 }

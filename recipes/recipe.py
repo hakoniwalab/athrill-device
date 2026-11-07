@@ -308,6 +308,10 @@ def plan(args: argparse.Namespace) -> int:
     smoke = smoke_pin(args.board)
     print(f"Smoke: {args.board} DT path with {smoke['dtb']}")
     print(f"  firmware SHA-256: {smoke['firmware_sha256']}")
+    if smoke.get("sd_initial_sha256"):
+        print(f"  SD fixture: {smoke['fixture']}")
+        print(f"  initial SD SHA-256: {smoke['sd_initial_sha256']}")
+        print(f"  expected post-smoke SD SHA-256: {smoke['sd_sha256']}")
     return 0
 
 
@@ -458,6 +462,24 @@ def smoke_pixhawk6c(work: Path, firmware: Path, athrill3: Path) -> dict[str, Any
     example = target / "examples" / "px4-v6c-boot"
     for name in ("memory.txt", "device_config.txt", "shell.nsh"):
         shutil.copy2(example / name, smoke / name)
+    sd_image = smoke / "sd.img"
+    sd_generator = target / "examples" / "px4-sih" / "make-sd-image.sh"
+    if not sd_generator.is_file():
+        raise RecipeError(f"Pixhawk 6C SD image generator is missing: {sd_generator}")
+    run_command([sd_generator, sd_image], cwd=smoke)
+    if not sd_image.is_file():
+        raise RecipeError("Pixhawk 6C SD image generator did not produce sd.img")
+    if sd_image.stat().st_size != pin["sd_size"]:
+        raise RecipeError(
+            f"Pixhawk 6C initial SD size mismatch: "
+            f"expected {pin['sd_size']}, got {sd_image.stat().st_size}"
+        )
+    initial_sd_hash = sha256(sd_image)
+    if initial_sd_hash != pin["sd_initial_sha256"]:
+        raise RecipeError(
+            f"Pixhawk 6C initial SD hash mismatch: "
+            f"expected {pin['sd_initial_sha256']}, got {initial_sd_hash}"
+        )
     dtb = REPOSITORY / pin["dtb"]
     with smoke.joinpath("device_config.txt").open("a", encoding="utf-8") as stream:
         stream.write(f"DEVICE_CONFIG_DEVICE_TREE {dtb}\n")
@@ -476,6 +498,7 @@ def smoke_pixhawk6c(work: Path, firmware: Path, athrill3: Path) -> dict[str, Any
     if not console.is_file():
         raise RecipeError("Pixhawk 6C UART console capture was not produced")
     console_hash = sha256(console)
+    sd_hash = sha256(sd_image)
     if instructions != pin["instructions"]:
         raise RecipeError(
             f"Pixhawk 6C instruction count mismatch: expected {pin['instructions']}, got {instructions}"
@@ -483,6 +506,10 @@ def smoke_pixhawk6c(work: Path, firmware: Path, athrill3: Path) -> dict[str, Any
     if console_hash != pin["console_sha256"]:
         raise RecipeError(
             f"Pixhawk 6C console hash mismatch: expected {pin['console_sha256']}, got {console_hash}"
+        )
+    if sd_hash != pin["sd_sha256"]:
+        raise RecipeError(
+            f"Pixhawk 6C SD hash mismatch: expected {pin['sd_sha256']}, got {sd_hash}"
         )
     return {
         "status": "verified",
@@ -494,6 +521,10 @@ def smoke_pixhawk6c(work: Path, firmware: Path, athrill3: Path) -> dict[str, Any
         "expected_instructions": pin["instructions"],
         "console_sha256": console_hash,
         "expected_console_sha256": pin["console_sha256"],
+        "sd_initial_sha256": initial_sd_hash,
+        "expected_sd_initial_sha256": pin["sd_initial_sha256"],
+        "sd_sha256": sd_hash,
+        "expected_sd_sha256": pin["sd_sha256"],
         "firmware_sha256": sha256(firmware),
     }
 
@@ -573,6 +604,12 @@ def write_receipt(path: Path, data: dict[str, Any]) -> None:
     ])
     if data["smoke"].get("fixture"):
         lines.append(f"  fixture: {yaml_string(data['smoke']['fixture'])}")
+    if data["smoke"].get("sd_initial_sha256"):
+        lines.append(
+            f"  sd_initial_sha256: {yaml_string(data['smoke']['sd_initial_sha256'])}"
+        )
+    if data["smoke"].get("sd_sha256"):
+        lines.append(f"  sd_sha256: {yaml_string(data['smoke']['sd_sha256'])}")
     lines.append("artifacts:")
     for artifact in data["artifacts"]:
         lines.extend([

@@ -31,7 +31,7 @@ validation:
         - repository: hakoniwalab/athrill-target-stm32
           path: examples/px4-v6c-boot
           revision: recipes/pins/sources.json
-          result: 186764648 instructions; console SHA-256 2789b56e007245764916a4800f4a5fc75e126b235b578d0518c9b8be891fe9b6
+          result: 117119458 instructions; console SHA-256 05ebf764d02f797bff2124053f40488ce0ac8657aeb44969cbc9e212c83678a5; SD SHA-256 98fb22f2dbbbddc90e5573b98fc3e7b3bd8395903b5ed04742ff7cdedf956eb3
 constraints:
   - simulation-only-build
   - supported-boards-pixhawk4-and-pixhawk6c
@@ -133,6 +133,8 @@ recipe_local_requirements:
         kind: executable
       - path: examples/px4-v6c-boot/run.sh
         kind: executable
+      - path: examples/px4-sih/make-sd-image.sh
+        kind: executable
   hakoniwa-pdu-registry:
     root:
       default_path: work/recipes/athrill-stm32-board-build/sources/hakoniwa-pdu-registry
@@ -184,7 +186,7 @@ connections:
       requires: [hakoniwa-core CMake package, matching PDU C types]
       validation_notes: [This Recipe verifies compile and link; Recipe 2 owns a live PIL flight.]
 data_flow:
-  summary: The build consumes pinned sources and one board firmware ELF; the smoke runs that firmware on the board DTB and records measured output.
+  summary: The build consumes pinned sources and one board firmware ELF; the smoke creates its persistent fixtures in the Recipe workspace, runs that firmware on the board DTB, and records measured output.
   steps:
     - from: PX4 firmware ELF
       to: athrill3
@@ -230,16 +232,16 @@ demo:
   observability:
     success_signals:
       - Pixhawk 4 reports ALL PASS and exactly 2,131,907,110 instructions.
-      - Pixhawk 6C clean first boot reports exactly 186,764,648 instructions and console SHA-256 2789b56e007245764916a4800f4a5fc75e126b235b578d0518c9b8be891fe9b6.
+      - Pixhawk 6C with a freshly generated fixed FAT32 image reports exactly 117,119,458 instructions, console SHA-256 05ebf764d02f797bff2124053f40488ce0ac8657aeb44969cbc9e212c83678a5, and post-smoke SD SHA-256 98fb22f2dbbbddc90e5573b98fc3e7b3bd8395903b5ed04742ff7cdedf956eb3.
     failure_signals:
       - A source revision differs from recipes/pins/sources.json.
-      - The firmware, instruction count, console hash, DTB, Foundation package, or address width differs.
-    fixtures: [PX4 v1.17.0 board ELF supplied as a local path]
+      - The firmware, instruction count, console hash, SD hash, DTB, Foundation package, or address width differs.
+    fixtures: [PX4 v1.17.0 board ELF supplied as a local path, Recipe-generated fixed FAT32 SD image]
     automation: [component-owned recipes/recipe.py]
   verification_checks:
     lifecycle: [No background process remains after either bounded smoke.]
     behavior: [The selected firmware reaches the board-specific measured oracle on the DT path.]
-    logs: [The Receipt records source revisions, options, firmware hash, instruction count, and console hash.]
+    logs: [The Receipt records source revisions, options, firmware hash, instruction count, console hash, and the Pixhawk 6C SD hashes.]
   cleanup:
     expected_behavior: [No process, socket, or shared-memory runtime is left by this build Recipe.]
     verification_checks: [Confirm no athrill3 process remains after smoke.]
@@ -248,7 +250,8 @@ expected_result: >
   One Release/LTO athrill3 serves both boards; the selected board smoke passes
   on its base DTB; the normal 32-bit plugin and optional in-process plugin are
   installed with both base and Hakoniwa DTBs; and the Receipt captures exact
-  revisions, options, firmware hash, instruction count, and console hash.
+  revisions, options, firmware hash, instruction count, console hash, and the
+  Pixhawk 6C SD hashes.
 source_catalogs:
   - component_id: athrill-device
   - component_id: hakoniwa-core-pro

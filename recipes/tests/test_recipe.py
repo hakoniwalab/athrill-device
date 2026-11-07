@@ -43,10 +43,16 @@ class RecipeContractTest(unittest.TestCase):
         self.assertEqual(pixhawk4["instructions"], 2_131_907_110)
         self.assertEqual(pixhawk4["success"], "ALL PASS")
         self.assertRegex(pixhawk4["firmware_sha256"], r"^[0-9a-f]{64}$")
-        self.assertEqual(pixhawk6c["fixture"], "clean-first-boot-without-sd-image")
-        self.assertEqual(pixhawk6c["instructions"], 186_764_648)
+        self.assertEqual(pixhawk6c["fixture"], "fresh-1-gib-fat32-px4sd")
+        self.assertEqual(pixhawk6c["sd_size"], 1_073_741_824)
+        self.assertEqual(pixhawk6c["instructions"], 117_119_458)
         self.assertRegex(pixhawk6c["firmware_sha256"], r"^[0-9a-f]{64}$")
         self.assertRegex(pixhawk6c["console_sha256"], r"^[0-9a-f]{64}$")
+        self.assertRegex(pixhawk6c["sd_initial_sha256"], r"^[0-9a-f]{64}$")
+        self.assertRegex(pixhawk6c["sd_sha256"], r"^[0-9a-f]{64}$")
+
+        manifest = RECIPE.RECIPE_FILE.read_text(encoding="utf-8")
+        self.assertIn("examples/px4-sih/make-sd-image.sh", manifest)
 
     def test_plan_does_not_create_work_directory(self) -> None:
         with tempfile.TemporaryDirectory(prefix="rc-recipe-test.") as temporary:
