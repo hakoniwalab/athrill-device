@@ -1,0 +1,71 @@
+model: timer
+version: 1.0.0
+summary: General/advanced timer as used by PX4 and ArduPilot for PWM outputs, the high-resolution timer tick and capture inputs.
+
+terms:
+  # base
+  - {name: counter_enable,    kind: control, feature: base, meaning: "The counter runs."}
+  - {name: prescaler,         kind: control, feature: base, meaning: "Counter clock = timer clock / (prescaler + 1)."}
+  - {name: auto_reload,       kind: control, feature: base, meaning: "Counter period = auto_reload + 1 counts (up-counting)."}
+  - {name: counter,           kind: status,  feature: base, meaning: "Current count, computed from the clock when read."}
+  - {name: update_event,      kind: status,  feature: base, meaning: "Counter overflow or forced update."}
+  - {name: force_update,      kind: control, feature: base, meaning: "Generates an update now and reloads preloaded registers."}
+  - {name: preload,           kind: control, feature: base, meaning: "auto_reload / compare values take effect at the next update."}
+  - {name: one_pulse,         kind: control, feature: base, meaning: "Counter stops at the next update."}
+  - {name: flag_ack,          kind: ack,     feature: base, meaning: "Clears update/compare/capture flags (write 0 to clear)."}
+  - {name: update_irq_enable, kind: control, feature: base, meaning: "update_event raises irq."}
+  - {name: irq,               kind: event,   feature: base, meaning: "The timer's interrupt line(s) (Devicetree interrupts)."}
+  # compare / pwm
+  - {name: compare_value,     kind: control, feature: pwm, meaning: "Per channel compare value."}
+  - {name: output_mode,       kind: control, feature: pwm, meaning: "Per channel: frozen, PWM mode 1, PWM mode 2, forced (others stored)."}
+  - {name: output_enable,     kind: control, feature: pwm, meaning: "Per channel output enable (and main output enable on advanced timers)."}
+  - {name: output_polarity,   kind: control, feature: pwm, meaning: "Per channel active high/low."}
+  - {name: compare_event,     kind: status,  feature: pwm, meaning: "Per channel compare match."}
+  - {name: compare_irq_enable, kind: control, feature: pwm, meaning: "Per channel compare_event raises irq."}
+  - {name: pulse_output,      kind: event,   feature: pwm, meaning: "Per channel pulse width delivered to the actuator map (athrill,pwm-actuator-map)."}
+  # capture
+  - {name: capture_select,    kind: control, feature: capture, meaning: "Per channel input capture on an edge."}
+  - {name: capture_value,     kind: status,  feature: capture, meaning: "Counter value at the captured edge."}
+  - {name: capture_event,     kind: status,  feature: capture, meaning: "Per channel capture happened."}
+  # dma
+  - {name: update_dma_enable, kind: control, feature: dma, meaning: "update_event raises the update DMA request (DShot)."}
+  - {name: update_dma_request, kind: event,  feature: dma, meaning: "Update DMA request."}
+
+features:
+  base: Up-counting time base with prescaler, auto-reload, update event and interrupt.
+  pwm: Compare channels with PWM output to the actuator map.
+  capture: Input capture (RC input, timing).
+  dma: DMA on update (DShot, burst).
+
+behaviour:
+  - id: ADV-TIM-B001
+    feature: base
+    rule: While counter_enable is on, counter advances by one every (prescaler + 1) timer clocks and returns to 0 after auto_reload, raising update_event; reading counter returns the value at the read clock.
+  - id: ADV-TIM-B002
+    feature: base
+    rule: With preload, written auto_reload and compare values take effect at the next update; force_update applies them at once and sets update_event.
+  - id: ADV-TIM-B003
+    feature: base
+    rule: With one_pulse, counter_enable turns off at the next update.
+  - id: ADV-TIM-B004
+    feature: pwm
+    rule: In PWM mode 1 with output_enable, a channel is active from the counter's restart until counter reaches compare_value; its high time is compare_value x (prescaler+1) / timer clock and its period (auto_reload+1) x (prescaler+1) / timer clock (ADV-PWM-002); PWM mode 2 and output_polarity invert it.
+  - id: ADV-TIM-B005
+    feature: pwm
+    rule: The actuator map receives, for each mapped channel, the pulse width of the last complete period (ADV-PWM-001).
+  - id: ADV-TIM-B006
+    feature: base
+    rule: irq is raised while (update_irq_enable and update_event) or (compare_irq_enable and compare_event) of any channel; flag_ack clears flags.
+  - id: ADV-TIM-B007
+    feature: capture
+    rule: An edge on a capture channel copies counter to capture_value and sets capture_event.
+  - id: ADV-TIM-B008
+    feature: dma
+    rule: update_dma_request is raised at each update_event while update_dma_enable.
+  - id: ADV-TIM-B009
+    feature: base
+    rule: The timer clock is the bus timer clock of the MCU (with the timer clock multiplier of RCC); F7 and H7 differ and the map's constants state it.
+
+timing: Updates and compare events happen at the clock their count is reached; nothing is ticked per count (computed lazily).
+out_of_scope:
+  - down/center-aligned counting, encoder mode, slave/master trigger chains, break and dead-time (stored only), repetition counter except as stored

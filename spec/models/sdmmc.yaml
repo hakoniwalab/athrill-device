@@ -1,0 +1,60 @@
+model: sdmmc
+version: 1.0.0
+summary: SD/MMC host controller with one SD card, as used by PX4 and ArduPilot for parameters, logs and missions (4-bit bus, block transfers by DMA).
+
+terms:
+  # base
+  - {name: power_on,          kind: control, feature: base, meaning: "The card interface is powered."}
+  - {name: clock_enable,      kind: control, feature: base, meaning: "The card clock runs (with divider, bus width: stored, enters timing only)."}
+  - {name: command_index,     kind: control, feature: base, meaning: "Command number to send."}
+  - {name: command_argument,  kind: control, feature: base, meaning: "Command argument."}
+  - {name: response_type,     kind: control, feature: base, meaning: "None, short or long response expected."}
+  - {name: send_command,      kind: control, feature: base, meaning: "Starts the command."}
+  - {name: response,          kind: status,  feature: base, meaning: "Response words of the last command."}
+  - {name: command_sent,      kind: status,  feature: base, meaning: "A command without response has been sent."}
+  - {name: response_received, kind: status,  feature: base, meaning: "A response arrived (CRC ok)."}
+  - {name: command_timeout,   kind: status,  feature: base, meaning: "No response (e.g. no card, unsupported command)."}
+  - {name: data_length,       kind: control, feature: base, meaning: "Bytes in the data transfer."}
+  - {name: block_size,        kind: control, feature: base, meaning: "Block size (512 for SD data)."}
+  - {name: data_direction,    kind: control, feature: base, meaning: "Card to host or host to card."}
+  - {name: data_enable,       kind: control, feature: base, meaning: "Arms or starts the data path."}
+  - {name: data_end,          kind: status,  feature: base, meaning: "data_length bytes transferred."}
+  - {name: data_block_end,    kind: status,  feature: base, meaning: "A block transferred."}
+  - {name: data_timeout,      kind: status,  feature: base, meaning: "Data did not arrive in time."}
+  - {name: flag_ack,          kind: ack,     feature: base, meaning: "Clears the static flags (write 1 to clear)."}
+  - {name: irq_enables,       kind: control, feature: base, meaning: "Per-flag interrupt enables."}
+  - {name: irq,               kind: event,   feature: base, meaning: "Controller interrupt line (Devicetree interrupts)."}
+  # data path variants
+  - {name: fifo_data,         kind: data,    feature: fifo_dma, meaning: "FIFO port read/written by an external DMA stream (dmas)."}
+  - {name: dma_request,       kind: event,   feature: fifo_dma, meaning: "Request to the external DMA stream."}
+  - {name: idma_base,         kind: control, feature: internal_dma, meaning: "Buffer address for the controller's own DMA."}
+  - {name: idma_enable,       kind: control, feature: internal_dma, meaning: "The controller moves data itself."}
+
+features:
+  base: Commands, responses, block data path, flags and interrupt.
+  fifo_dma: Data through a FIFO served by an external DMA stream (STM32F7 SDMMC v1).
+  internal_dma: Data moved by the controller's internal DMA (STM32H7 SDMMC v2).
+
+behaviour:
+  - id: ADV-SDMMC-B001
+    feature: base
+    rule: send_command with power_on and clock_enable delivers command_index and command_argument to the card; the card's answer appears in response and response_received turns on, or command_sent for commands without response, or command_timeout when the card does not answer (ADV-SD-001).
+  - id: ADV-SDMMC-B002
+    feature: base
+    rule: A data transfer moves data_length bytes in blocks of block_size in data_direction, block by block in order; data_block_end turns on after each block and data_end after the last (ADV-SD-002, ADV-SD-003).
+  - id: ADV-SDMMC-B003
+    feature: fifo_dma
+    rule: Data passes through fifo_data; dma_request is raised while the FIFO can take or give a burst, so the external DMA stream moves the data.
+  - id: ADV-SDMMC-B004
+    feature: internal_dma
+    rule: With idma_enable, the controller reads or writes memory at idma_base itself.
+  - id: ADV-SDMMC-B005
+    feature: base
+    rule: irq is raised while a flag is on whose enable in irq_enables is on; flag_ack clears flags.
+  - id: ADV-SDMMC-B006
+    feature: base
+    rule: The card content comes from the host image named in the configuration and persists across runs only through that image.
+
+timing: Command and data completion clocks follow the bus clock and bus width; the timing rules of docs/device-tree-design.md apply.
+out_of_scope:
+  - MMC/eMMC/SDIO cards, UHS speeds and voltage switching, boot mode, read wait, card detect/write protect pins other than as stored

@@ -1,0 +1,65 @@
+model: i2c-controller
+version: 1.0.0
+summary: Master-mode I2C controller as used by PX4 and ArduPilot for magnetometers, barometers and EEPROMs (7-bit addresses, automatic transfer length).
+
+terms:
+  # base
+  - {name: enable,            kind: control, feature: base, meaning: "The controller takes part in transfers."}
+  - {name: target_address,    kind: control, feature: base, meaning: "7-bit address of the child for the next transfer."}
+  - {name: direction,         kind: control, feature: base, meaning: "Write (controller to child) or read (child to controller)."}
+  - {name: byte_count,        kind: control, feature: base, meaning: "Number of data bytes in the transfer (up to the IP limit per chunk)."}
+  - {name: auto_end,          kind: control, feature: base, meaning: "Send STOP automatically after byte_count bytes; otherwise wait for the driver (repeated START or STOP)."}
+  - {name: reload,            kind: control, feature: base, meaning: "More than byte_count bytes follow; a new byte_count is programmed when the chunk ends."}
+  - {name: start,             kind: control, feature: base, meaning: "Begins the transfer with START and the address phase."}
+  - {name: stop,              kind: control, feature: base, meaning: "Sends STOP after the current byte."}
+  - {name: tx_data,           kind: data,    feature: base, meaning: "Next byte to send."}
+  - {name: rx_data,           kind: data,    feature: base, meaning: "Last received byte."}
+  - {name: tx_space,          kind: status,  feature: base, meaning: "tx_data can take the next byte."}
+  - {name: rx_available,      kind: status,  feature: base, meaning: "A received byte can be read."}
+  - {name: transfer_complete, kind: status,  feature: base, meaning: "byte_count bytes done, auto_end off, reload off: the driver must START again or STOP."}
+  - {name: reload_complete,   kind: status,  feature: base, meaning: "byte_count bytes done with reload on."}
+  - {name: stop_detected,     kind: status,  feature: base, meaning: "A STOP has ended the transaction."}
+  - {name: nack,              kind: status,  feature: base, meaning: "The child did not acknowledge the address or a byte."}
+  - {name: busy,              kind: status,  feature: base, meaning: "The bus is between START and STOP."}
+  - {name: status_ack,        kind: ack,     feature: base, meaning: "Clears stop_detected and nack."}
+  - {name: irq_enables,       kind: control, feature: base, meaning: "Per-status interrupt enables (tx_space, rx_available, transfer_complete, stop_detected, nack, errors)."}
+  - {name: irq,               kind: event,   feature: base, meaning: "Event interrupt line (and error line where the IP has two; Devicetree interrupts)."}
+  # dma
+  - {name: tx_dma_enable,     kind: control, feature: dma, meaning: "tx_space raises the transmit DMA request."}
+  - {name: rx_dma_enable,     kind: control, feature: dma, meaning: "rx_available raises the receive DMA request."}
+  - {name: tx_dma_request,    kind: event,   feature: dma, meaning: "dmas entry tx."}
+  - {name: rx_dma_request,    kind: event,   feature: dma, meaning: "dmas entry rx."}
+
+features:
+  base: 7-bit master transfers with automatic length, repeated START, STOP and NACK.
+  dma: DMA requests.
+
+behaviour:
+  - id: ADV-I2C-B001
+    feature: base
+    rule: start with enable on sends START and the address of target_address with direction; the child at that address acknowledges (ADV-I2C-003); with no child there, nack turns on and STOP follows.
+  - id: ADV-I2C-B002
+    feature: base
+    rule: In a write, each byte placed in tx_data while tx_space is on is sent once, in order, to the addressed child; a byte the child does not acknowledge sets nack and ends the transfer with STOP (ADV-I2C-004).
+  - id: ADV-I2C-B003
+    feature: base
+    rule: In a read, each byte from the child becomes readable at rx_data with rx_available on; the controller acknowledges all but the last byte of byte_count (ADV-I2C-005).
+  - id: ADV-I2C-B004
+    feature: base
+    rule: After byte_count bytes, with auto_end STOP is sent and stop_detected turns on; without auto_end and without reload transfer_complete turns on and the bus stays busy; with reload reload_complete turns on and a new byte_count continues the transfer.
+  - id: ADV-I2C-B005
+    feature: base
+    rule: start while transfer_complete is on gives a repeated START without STOP (ADV-I2C-006); stop ends the transaction, busy turns off and stop_detected turns on.
+  - id: ADV-I2C-B006
+    feature: base
+    rule: irq is raised while any status is on whose enable in irq_enables is on.
+  - id: ADV-I2C-B007
+    feature: dma
+    rule: rx_dma_request while rx_dma_enable and rx_available; tx_dma_request while tx_dma_enable and tx_space.
+  - id: ADV-I2C-B008
+    feature: base
+    rule: Each byte, address phase, START and STOP takes the bus time given by the timing register's clock; events are reported at those clocks.
+
+timing: Byte and condition times follow the IP's timing register at the kernel clock; the timing rules of docs/device-tree-design.md apply.
+out_of_scope:
+  - slave mode, 10-bit addressing, SMBus (PEC, alert, timeouts), clock stretching by the child, multi-master arbitration loss, analog/digital filters (stored only)
