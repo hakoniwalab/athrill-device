@@ -151,6 +151,13 @@
 	};
 };
 
+/*
+ * The external I2C buses PX4 v1.17.0 scans on FMUv6C (i2c.cpp: external 1,
+ * 2, 4), with nothing on them; I2C4 below carries the internal chips.
+ */
+&i2c1 { status = "okay"; };
+&i2c2 { status = "okay"; };
+
 /* V6C00 internal barometer and magnetometer are on I2C4. */
 &i2c4 {
 	status = "okay";

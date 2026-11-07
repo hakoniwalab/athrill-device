@@ -100,6 +100,14 @@
 	};
 };
 
+/*
+ * The external I2C buses PX4 v1.17.0 scans on FMUv5 (i2c.cpp: external 4,
+ * 2, 1; internal 3), with nothing on them.
+ */
+&i2c1 { status = "okay"; };
+&i2c2 { status = "okay"; };
+&i2c4 { status = "okay"; };
+
 /* I2C3 internal IST8310 at its default 0x0e address, PX4 rotation 10. */
 &i2c3 {
 	status = "okay";
