@@ -37,6 +37,16 @@ static inline void athrill_device_host_raise(uint32 irq)
 	(void)athrill_device_host()->irq_set(NULL, line, TRUE);
 }
 
+static inline void athrill_device_host_console(uint8 data)
+{
+	(void)athrill_device_host()->console_write(NULL, 0U, data);
+}
+
+static inline void athrill_device_host_end_batch(void)
+{
+	athrill_device_host()->end_batch(NULL);
+}
+
 static inline std_bool athrill_device_host_irq_pending(uint32 irq)
 {
 	AthrillDeviceIrqLine line;
