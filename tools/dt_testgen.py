@@ -1,0 +1,721 @@
+#!/usr/bin/env python3
+"""Generate SPI traceability tests from board DTBs without using libfdt."""
+
+from __future__ import annotations
+
+import argparse
+import dataclasses
+import json
+import re
+import struct
+from pathlib import Path
+from typing import Iterable
+
+
+FDT_MAGIC = 0xD00DFEED
+FDT_BEGIN_NODE = 1
+FDT_END_NODE = 2
+FDT_PROP = 3
+FDT_NOP = 4
+FDT_END = 9
+
+
+@dataclasses.dataclass
+class Node:
+    name: str
+    parent: "Node | None"
+    properties: dict[str, bytes] = dataclasses.field(default_factory=dict)
+    children: list["Node"] = dataclasses.field(default_factory=list)
+
+    @property
+    def path(self) -> str:
+        if self.parent is None:
+            return "/"
+        prefix = self.parent.path.rstrip("/")
+        return prefix + "/" + self.name
+
+
+@dataclasses.dataclass(frozen=True)
+class Specifier:
+    provider_path: str
+    provider_compatible: str
+    cells: tuple[int, ...]
+
+
+@dataclasses.dataclass
+class SpiChild:
+    node: Node
+    chip_select: int
+    cs_gpio: Specifier | None
+
+
+@dataclasses.dataclass
+class SpiController:
+    node: Node
+    children: list[SpiChild]
+    dmas: list[Specifier]
+    dma_names: list[str]
+
+
+def align4(value: int) -> int:
+    return (value + 3) & ~3
+
+
+def c_string(value: str) -> str:
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def c_identifier(value: str) -> str:
+    identifier = re.sub(r"[^A-Za-z0-9_]", "_", value)
+    if not identifier or identifier[0].isdigit():
+        identifier = "n_" + identifier
+    return identifier
+
+
+def strings(value: bytes | None) -> list[str]:
+    if not value:
+        return []
+    if value[-1:] != b"\0":
+        raise ValueError("unterminated Devicetree string list")
+    return [part.decode("utf-8") for part in value[:-1].split(b"\0")]
+
+
+def cells(value: bytes | None) -> list[int]:
+    if value is None or len(value) % 4:
+        raise ValueError("Devicetree cell property has invalid length")
+    return list(struct.unpack(">" + "I" * (len(value) // 4), value))
+
+
+class Fdt:
+    """Small, independent reader for the flattened Devicetree format."""
+
+    def __init__(self, path: Path):
+        data = path.read_bytes()
+        if len(data) < 40:
+            raise ValueError(f"{path}: truncated FDT header")
+        header = struct.unpack_from(">10I", data)
+        (magic, total, struct_off, strings_off, _reserve_off, version,
+         last_compatible, _boot_cpu, strings_size, struct_size) = header
+        if magic != FDT_MAGIC or total > len(data) or version < 17 or last_compatible > 17:
+            raise ValueError(f"{path}: unsupported FDT header")
+        if struct_off + struct_size > total or strings_off + strings_size > total:
+            raise ValueError(f"{path}: FDT block outside total size")
+        self._strings = data[strings_off:strings_off + strings_size]
+        self.root = self._parse_structure(data[struct_off:struct_off + struct_size])
+        self.nodes = list(self._walk(self.root))
+        self.phandles: dict[int, Node] = {}
+        for node in self.nodes:
+            for prop in ("phandle", "linux,phandle"):
+                if prop in node.properties:
+                    values = cells(node.properties[prop])
+                    if len(values) != 1 or values[0] == 0 or values[0] in self.phandles:
+                        raise ValueError(f"{path}: invalid or duplicate {prop} at {node.path}")
+                    self.phandles[values[0]] = node
+
+    def _parse_structure(self, block: bytes) -> Node:
+        offset = 0
+        stack: list[Node] = []
+        root: Node | None = None
+        while offset + 4 <= len(block):
+            token = struct.unpack_from(">I", block, offset)[0]
+            offset += 4
+            if token == FDT_BEGIN_NODE:
+                end = block.find(b"\0", offset)
+                if end < 0:
+                    raise ValueError("unterminated FDT node name")
+                name = block[offset:end].decode("utf-8")
+                offset = align4(end + 1)
+                node = Node(name=name, parent=stack[-1] if stack else None)
+                if stack:
+                    stack[-1].children.append(node)
+                elif root is None:
+                    root = node
+                else:
+                    raise ValueError("multiple FDT roots")
+                stack.append(node)
+            elif token == FDT_END_NODE:
+                if not stack:
+                    raise ValueError("unbalanced FDT_END_NODE")
+                stack.pop()
+            elif token == FDT_PROP:
+                if not stack or offset + 8 > len(block):
+                    raise ValueError("invalid FDT property record")
+                length, name_offset = struct.unpack_from(">II", block, offset)
+                offset += 8
+                end = offset + length
+                if end > len(block):
+                    raise ValueError("FDT property outside structure block")
+                name = self._string_at(name_offset)
+                if name in stack[-1].properties:
+                    raise ValueError(f"duplicate property {name} at {stack[-1].path}")
+                stack[-1].properties[name] = block[offset:end]
+                offset = align4(end)
+            elif token == FDT_NOP:
+                continue
+            elif token == FDT_END:
+                if stack or root is None:
+                    raise ValueError("unbalanced FDT structure")
+                return root
+            else:
+                raise ValueError(f"unknown FDT token {token}")
+        raise ValueError("missing FDT_END")
+
+    def _string_at(self, offset: int) -> str:
+        if offset >= len(self._strings):
+            raise ValueError("FDT string offset outside strings block")
+        end = self._strings.find(b"\0", offset)
+        if end < 0:
+            raise ValueError("unterminated FDT property name")
+        return self._strings[offset:end].decode("ascii")
+
+    @staticmethod
+    def _walk(node: Node) -> Iterable[Node]:
+        yield node
+        for child in node.children:
+            yield from Fdt._walk(child)
+
+
+def enabled(node: Node) -> bool:
+    current: Node | None = node
+    while current is not None:
+        status = strings(current.properties.get("status"))
+        if status and status[0] not in ("okay", "ok"):
+            return False
+        current = current.parent
+    return True
+
+
+def compatible(node: Node) -> list[str]:
+    return strings(node.properties.get("compatible"))
+
+
+def is_spi_controller(node: Node) -> bool:
+    return enabled(node) and any(
+        item.startswith("st,stm32") and "spi" in item for item in compatible(node)
+    )
+
+
+def decode_specifiers(fdt: Fdt, node: Node, property_name: str,
+                      cell_property: str) -> list[Specifier]:
+    raw = node.properties.get(property_name)
+    if raw is None:
+        return []
+    values = cells(raw)
+    result: list[Specifier] = []
+    index = 0
+    while index < len(values):
+        phandle = values[index]
+        index += 1
+        provider = fdt.phandles.get(phandle)
+        if provider is None:
+            raise ValueError(f"{node.path}: {property_name} has unknown phandle {phandle}")
+        count_values = cells(provider.properties.get(cell_property))
+        if len(count_values) != 1:
+            raise ValueError(f"{provider.path}: missing {cell_property}")
+        count = count_values[0]
+        if index + count > len(values):
+            raise ValueError(f"{node.path}: truncated {property_name} specifier")
+        provider_compatible = compatible(provider)
+        result.append(Specifier(
+            provider_path=provider.path,
+            provider_compatible=provider_compatible[0] if provider_compatible else "",
+            cells=tuple(values[index:index + count]),
+        ))
+        index += count
+    return result
+
+
+def find_spi(fdt: Fdt) -> list[SpiController]:
+    result: list[SpiController] = []
+    for node in fdt.nodes:
+        if not is_spi_controller(node):
+            continue
+        gpios = decode_specifiers(fdt, node, "cs-gpios", "#gpio-cells")
+        children: list[SpiChild] = []
+        for child in node.children:
+            if not enabled(child) or "reg" not in child.properties:
+                continue
+            reg = cells(child.properties["reg"])
+            if len(reg) != 1:
+                raise ValueError(f"{child.path}: SPI reg must be one cell")
+            chip_select = reg[0]
+            gpio = gpios[chip_select] if chip_select < len(gpios) else None
+            children.append(SpiChild(child, chip_select, gpio))
+        result.append(SpiController(
+            node=node,
+            children=children,
+            dmas=decode_specifiers(fdt, node, "dmas", "#dma-cells"),
+            dma_names=strings(node.properties.get("dma-names")),
+        ))
+    return result
+
+
+def load_test_specs(path: Path) -> dict[str, str]:
+    """Read the small documented YAML subset without a YAML dependency."""
+    applies_to: str | None = None
+    result: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        match = re.match(r"^  applies_to:\s*(\S+)\s*$", line)
+        if match:
+            applies_to = match.group(1)
+            continue
+        match = re.match(r"^    - id:\s*(ADV-SPI-\d+\.T\d+)\s*$", line)
+        if match:
+            if applies_to is None:
+                raise ValueError(f"{path}: test before applies_to")
+            result[match.group(1)] = applies_to
+    required = {
+        "ADV-SPI-001.T1": "spi-child",
+        "ADV-SPI-002.T1": "spi-controller",
+        "ADV-SPI-006.T1": "spi-controller-with-dmas",
+    }
+    for test_id, target in required.items():
+        if result.get(test_id) != target:
+            raise ValueError(f"{path}: {test_id} must apply to {target}")
+    return result
+
+
+def specifier_json(value: Specifier) -> dict[str, object]:
+    return {
+        "provider_path": value.provider_path,
+        "provider_compatible": value.provider_compatible,
+        "cells": list(value.cells),
+    }
+
+
+def case_name(board: str, path: str, test_id: str) -> str:
+    path_name = path.strip("/").replace("/", "__") or "root"
+    return f"{board}__{path_name}__{test_id}"
+
+
+def gpio_check(binding_index: int, gpio: Specifier | None) -> str:
+    if gpio is None:
+        return f"CHECK(!target.bindings[{binding_index}].has_gpio);"
+    checks = [
+        f"CHECK(target.bindings[{binding_index}].has_gpio);",
+        f"CHECK(strcmp(target.bindings[{binding_index}].gpio_provider, {c_string(gpio.provider_path)}) == 0);",
+        f"CHECK(target.bindings[{binding_index}].gpio_cell_count == {len(gpio.cells)}U);",
+    ]
+    for index, value in enumerate(gpio.cells):
+        checks.append(
+            f"CHECK(target.bindings[{binding_index}].gpio_cells[{index}] == {value}U);"
+        )
+    return "\n\t".join(checks)
+
+
+def generated_cases(board: str, controllers: list[SpiController]) -> list[dict[str, object]]:
+    result: list[dict[str, object]] = []
+    for controller in controllers:
+        inventory_name = case_name(board, controller.node.path, "ADV-SPI-002.T1")
+        result.append({
+            "name": inventory_name,
+            "test_spec_id": "ADV-SPI-002.T1",
+            "item_id": "ADV-SPI-002",
+            "node_path": controller.node.path,
+            "derived_properties": {
+                "child_count": len(controller.children),
+                "reg": [child.chip_select for child in controller.children],
+            },
+            "kind": "inventory",
+            "controller": controller,
+        })
+        for child in controller.children:
+            result.append({
+                "name": case_name(board, child.node.path, "ADV-SPI-001.T1"),
+                "test_spec_id": "ADV-SPI-001.T1",
+                "item_id": "ADV-SPI-001",
+                "node_path": child.node.path,
+                "derived_properties": {
+                    "reg": child.chip_select,
+                    "cs_gpio": specifier_json(child.cs_gpio) if child.cs_gpio else None,
+                },
+                "kind": "child",
+                "controller": controller,
+                "child": child,
+            })
+        if controller.dmas:
+            result.append({
+                "name": case_name(board, controller.node.path, "ADV-SPI-006.T1"),
+                "test_spec_id": "ADV-SPI-006.T1",
+                "item_id": "ADV-SPI-006",
+                "node_path": controller.node.path,
+                "derived_properties": {
+                    "dmas": [specifier_json(dma) for dma in controller.dmas],
+                    "dma-names": controller.dma_names,
+                },
+                "kind": "dma",
+                "controller": controller,
+                "will_fail": True,
+                "known_defect": "SPI controller dmas are not resolved through the public dma_resolve callback",
+            })
+    return result
+
+
+def render_case(case: dict[str, object]) -> str:
+    name = str(case["name"])
+    controller = case["controller"]
+    assert isinstance(controller, SpiController)
+    lines = [f"static int case_{c_identifier(name)}(void)", "{", "\tuint32 index;", "\tCHECK(build_board() == 0);"]
+    if case["kind"] == "child":
+        child = case["child"]
+        assert isinstance(child, SpiChild)
+        lines.extend([
+            "\tindex = find_binding(" + c_string(controller.node.path) +
+            f", {child.chip_select}U);",
+            "\tCHECK(index < target.binding_count);",
+            "\t" + gpio_check(0, child.cs_gpio).replace("target.bindings[0]", "target.bindings[index]"),
+        ])
+    elif case["kind"] == "inventory":
+        lines.append(f"\tCHECK(count_bindings({c_string(controller.node.path)}) == {len(controller.children)}U);")
+        for child in controller.children:
+            lines.append(
+                f"\tCHECK(find_binding({c_string(controller.node.path)}, {child.chip_select}U) < target.binding_count);"
+            )
+    elif case["kind"] == "dma":
+        for dma in controller.dmas:
+            cell_values = ", ".join(f"{value}U" for value in dma.cells) or "0U"
+            lines.extend([
+                f"\t{{ static const uint32 wanted[] = {{{cell_values}}};",
+                f"\t  CHECK(find_dma({c_string(dma.provider_path)}, wanted, {len(dma.cells)}U)); }}",
+            ])
+    else:
+        raise ValueError(f"unknown generated case kind {case['kind']}")
+    lines.extend(["\tdestroy_board();", "\treturn 0;", "}"])
+    return "\n".join(lines)
+
+
+def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
+                  use_plugin: bool) -> str:
+    compatibles = sorted({item for node in fdt.nodes if enabled(node) for item in compatible(node)})
+    compatibility_lines = "\n".join(f"\t{c_string(item)}," for item in compatibles)
+    case_functions = "\n\n".join(render_case(case) for case in cases)
+    dispatch_lines = "\n".join(
+        f"\tif (strcmp(argv[1], {c_string(str(case['name']))}) == 0) return case_{c_identifier(str(case['name']))}();"
+        for case in cases
+    )
+    plugin_code = """
+\tAthrillDevicePluginPath plugin = {"hakoniwa,sensor-device", plugin_path};
+\tif (plugin_path != NULL) {
+\t\toptions.plugins = &plugin;
+\t\toptions.plugin_count = 1U;
+\t}
+""" if use_plugin else "\t(void)plugin_path;\n"
+    return f'''/* Generated by tools/dt_testgen.py; do not edit. */
+#include "athrill_device_if.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define CHECK(condition) do {{ if (!(condition)) {{ \\
+\tfprintf(stderr, "%s:%d: check failed: %s\\n", __FILE__, __LINE__, #condition); \\
+\tdestroy_board(); return 1; }} }} while (0)
+#define MAX_BINDINGS 32U
+#define MAX_DMAS 32U
+
+typedef struct {{
+\tchar controller[192];
+\tuint32 chip_select;
+\tstd_bool has_gpio;
+\tchar gpio_provider[192];
+\tuint32 gpio_cell_count;
+\tuint32 gpio_cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
+}} Binding;
+
+typedef struct {{
+\tchar provider[192];
+\tuint32 cell_count;
+\tuint32 cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
+}} DmaResolution;
+
+typedef struct {{
+\tBinding bindings[MAX_BINDINGS];
+\tuint32 binding_count;
+\tDmaResolution dmas[MAX_DMAS];
+\tuint32 dma_count;
+\tuint64 next_handle;
+}} TestTarget;
+
+static TestTarget target;
+static AthrillDeviceRuntime *runtime;
+static const char *plugin_path;
+
+static void copy_text(char *to, size_t size, const char *from)
+{{
+\tif (from == NULL) from = "";
+\tsnprintf(to, size, "%s", from);
+}}
+
+static sint32 mmio_register(void *context, uint64 address, uint64 size,
+\tconst AthrillDeviceMmioOps *ops, void *instance, AthrillDeviceMmioToken *token)
+{{
+\tTestTarget *value = context;
+\t(void)address; (void)size; (void)ops; (void)instance;
+\ttoken->value = ++value->next_handle;
+\treturn 0;
+}}
+
+static void mmio_unregister(void *context, AthrillDeviceMmioToken token)
+{{ (void)context; (void)token; }}
+
+static sint32 irq_resolve(void *context, const AthrillDeviceSpecifier *spec,
+\tAthrillDeviceIrqLine *line)
+{{ (void)spec; line->value = ++((TestTarget *)context)->next_handle; return 0; }}
+static sint32 irq_set(void *context, AthrillDeviceIrqLine line, std_bool asserted)
+{{ (void)context; (void)line; (void)asserted; return 0; }}
+static std_bool irq_is_active(void *context, AthrillDeviceIrqLine line)
+{{ (void)context; (void)line; return FALSE; }}
+static uint64 time_now(void *context) {{ (void)context; return 0U; }}
+static uint64 time_frequency(void *context) {{ (void)context; return 480000000U; }}
+static sint32 clock_frequency(void *context, AthrillDeviceNodeId node,
+\tconst char *name, uint64 *frequency)
+{{ (void)context; (void)node; (void)name; *frequency = 240000000U; return 0; }}
+static sint32 memory_read(void *context, uint64 address, void *data, uint32 size)
+{{ (void)context; (void)address; memset(data, 0, size); return 0; }}
+static sint32 memory_write(void *context, uint64 address, const void *data, uint32 size)
+{{ (void)context; (void)address; (void)data; (void)size; return 0; }}
+
+static sint32 spi_bind_node(void *context, const AthrillDeviceNode *controller,
+\tuint32 chip_select, const AthrillDeviceSpecifier *gpio,
+\tconst AthrillDeviceSpiPeripheralOps *ops, void *instance,
+\tAthrillDeviceSpiEndpoint *endpoint)
+{{
+\tTestTarget *value = context;
+\tBinding *binding;
+\tuint32 index;
+\t(void)instance;
+\tif (controller == NULL || ops == NULL || value->binding_count >= MAX_BINDINGS) return -1;
+\tbinding = &value->bindings[value->binding_count++];
+\tcopy_text(binding->controller, sizeof(binding->controller), controller->path);
+\tbinding->chip_select = chip_select;
+\tif (gpio != NULL) {{
+\t\tbinding->has_gpio = TRUE;
+\t\tcopy_text(binding->gpio_provider, sizeof(binding->gpio_provider), gpio->provider_path);
+\t\tbinding->gpio_cell_count = gpio->cell_count;
+\t\tfor (index = 0; index < gpio->cell_count; index++) binding->gpio_cells[index] = gpio->cells[index];
+\t}}
+\tendpoint->value = ++value->next_handle;
+\treturn 0;
+}}
+
+static sint32 spi_bind(void *context, AthrillDeviceNodeId controller,
+\tuint32 chip_select, const AthrillDeviceSpecifier *gpio,
+\tconst AthrillDeviceSpiPeripheralOps *ops, void *instance,
+\tAthrillDeviceSpiEndpoint *endpoint)
+{{ (void)context; (void)controller; (void)chip_select; (void)gpio; (void)ops; (void)instance; (void)endpoint; return -1; }}
+static sint32 spi_set_cs(void *context, AthrillDeviceSpiEndpoint endpoint, std_bool asserted)
+{{ (void)context; (void)endpoint; (void)asserted; return 0; }}
+static sint32 spi_exchange(void *context, AthrillDeviceSpiEndpoint endpoint, uint8 mosi, uint8 *miso)
+{{ (void)context; (void)endpoint; *miso = mosi; return 0; }}
+
+static sint32 i2c_bind_node(void *context, const AthrillDeviceNode *controller,
+\tuint16 address, const AthrillDeviceI2cPeripheralOps *ops, void *instance,
+\tAthrillDeviceI2cEndpoint *endpoint)
+{{ (void)controller; (void)address; (void)ops; (void)instance; endpoint->value = ++((TestTarget *)context)->next_handle; return 0; }}
+static sint32 i2c_transfer(void *context, AthrillDeviceI2cEndpoint endpoint,
+\tAthrillDeviceI2cMessage *messages, uint32 count)
+{{ (void)context; (void)endpoint; (void)messages; (void)count; return 0; }}
+static sint32 uart_bind_nodes(void *context, const AthrillDeviceNode *controller,
+\tconst AthrillDeviceNode *peripheral, const AthrillDeviceUartPeripheralOps *ops,
+\tvoid *instance, AthrillDeviceUartEndpoint *endpoint)
+{{ (void)controller; (void)peripheral; (void)ops; (void)instance; endpoint->value = ++((TestTarget *)context)->next_handle; return 0; }}
+static sint32 uart_send(void *context, AthrillDeviceNodeId peripheral, uint8 data)
+{{ (void)context; (void)peripheral; (void)data; return 0; }}
+
+static sint32 gpio_resolve(void *context, const AthrillDeviceSpecifier *spec,
+\tAthrillDeviceGpioLine *line)
+{{ (void)spec; line->value = ++((TestTarget *)context)->next_handle; return 0; }}
+static sint32 gpio_read(void *context, AthrillDeviceGpioLine line, std_bool *level)
+{{ (void)context; (void)line; *level = FALSE; return 0; }}
+static sint32 gpio_drive(void *context, AthrillDeviceGpioLine line, std_bool level)
+{{ (void)context; (void)line; (void)level; return 0; }}
+static sint32 gpio_subscribe(void *context, AthrillDeviceGpioLine line,
+\tAthrillDeviceGpioEdge callback, void *instance)
+{{ (void)context; (void)line; (void)callback; (void)instance; return 0; }}
+static sint32 gpio_outputs(void *context, const AthrillDeviceGpioLine *lines,
+\tuint32 count, uint32 levels)
+{{ (void)context; (void)lines; (void)count; (void)levels; return 0; }}
+
+static sint32 dma_resolve(void *context, const AthrillDeviceSpecifier *spec,
+\tAthrillDeviceDmaChannel *channel)
+{{
+\tTestTarget *value = context;
+\tDmaResolution *resolution;
+\tuint32 index;
+\tif (value->dma_count >= MAX_DMAS) return -1;
+\tresolution = &value->dmas[value->dma_count++];
+\tcopy_text(resolution->provider, sizeof(resolution->provider), spec->provider_path);
+\tresolution->cell_count = spec->cell_count;
+\tfor (index = 0; index < spec->cell_count; index++) resolution->cells[index] = spec->cells[index];
+\tchannel->value = ++value->next_handle;
+\treturn 0;
+}}
+static sint32 dma_request(void *context, AthrillDeviceDmaChannel channel, std_bool asserted)
+{{ (void)context; (void)channel; (void)asserted; return 0; }}
+static sint32 adapter_connect(void *context, const AthrillDeviceNode *node, const char *name)
+{{ (void)context; (void)node; (void)name; return 0; }}
+static sint32 sensor_sample(void *context, AthrillDeviceSensorSample *sample)
+{{ (void)context; memset(sample, 0, sizeof(*sample)); return 0; }}
+static sint32 gps_sample(void *context, AthrillDeviceGpsSample *sample)
+{{ (void)context; memset(sample, 0, sizeof(*sample)); return 0; }}
+static sint32 actuator_output(void *context, const float32 *values, uint32 count)
+{{ (void)context; (void)values; (void)count; return 0; }}
+
+static const AthrillDeviceTargetOps target_ops = {{
+\t.abi_major = ATHRILL_DEVICE_ABI_MAJOR,
+\t.abi_minor = ATHRILL_DEVICE_ABI_MINOR,
+\t.struct_size = sizeof(AthrillDeviceTargetOps),
+\t.mmio_register = mmio_register, .mmio_unregister = mmio_unregister,
+\t.irq_resolve = irq_resolve, .irq_set = irq_set, .irq_is_active = irq_is_active,
+\t.time_now = time_now, .time_frequency_hz = time_frequency,
+\t.clock_frequency_hz = clock_frequency,
+\t.memory_read = memory_read, .memory_write = memory_write,
+\t.spi_bind = spi_bind, .spi_bind_node = spi_bind_node,
+\t.spi_set_chip_select = spi_set_cs, .spi_exchange_byte = spi_exchange,
+\t.i2c_bind_node = i2c_bind_node, .i2c_transfer = i2c_transfer,
+\t.uart_bind_nodes = uart_bind_nodes, .uart_send_from_node = uart_send,
+\t.gpio_resolve = gpio_resolve, .gpio_read = gpio_read, .gpio_drive = gpio_drive,
+\t.gpio_subscribe = gpio_subscribe, .gpio_outputs = gpio_outputs,
+\t.dma_resolve = dma_resolve, .dma_request = dma_request,
+\t.model_adapter_connect = adapter_connect,
+\t.sensor_sample = sensor_sample, .gps_sample = gps_sample,
+\t.actuator_output = actuator_output,
+}};
+
+static const char *const target_compatibles[] = {{
+{compatibility_lines}
+}};
+
+static void destroy_board(void)
+{{
+\tif (runtime != NULL) athrill_device_destroy(runtime);
+\truntime = NULL;
+}}
+
+static int build_board(void)
+{{
+\tAthrillDeviceBuildOptions options;
+\tmemset(&target, 0, sizeof(target));
+\tmemset(&options, 0, sizeof(options));
+\toptions.dtb_path = {c_string(str(dtb.resolve()))};
+\toptions.target_compatibles = target_compatibles;
+\toptions.target_compatible_count = sizeof(target_compatibles) / sizeof(target_compatibles[0]);
+\toptions.maximum_dtb_size = 16U * 1024U * 1024U;
+{plugin_code}
+\treturn athrill_device_build(&options, &target_ops, &target, &runtime);
+}}
+
+static uint32 count_bindings(const char *controller)
+{{
+\tuint32 index, count = 0;
+\tfor (index = 0; index < target.binding_count; index++)
+\t\tif (strcmp(target.bindings[index].controller, controller) == 0) count++;
+\treturn count;
+}}
+
+static uint32 find_binding(const char *controller, uint32 chip_select)
+{{
+\tuint32 index;
+\tfor (index = 0; index < target.binding_count; index++)
+\t\tif (target.bindings[index].chip_select == chip_select &&
+\t\t    strcmp(target.bindings[index].controller, controller) == 0) return index;
+\treturn target.binding_count;
+}}
+
+static int find_dma(const char *provider, const uint32 *wanted, uint32 count)
+{{
+\tuint32 index;
+\tfor (index = 0; index < target.dma_count; index++)
+\t\tif (target.dmas[index].cell_count == count &&
+\t\t    strcmp(target.dmas[index].provider, provider) == 0 &&
+\t\t    memcmp(target.dmas[index].cells, wanted, count * sizeof(*wanted)) == 0) return 1;
+\treturn 0;
+}}
+
+{case_functions}
+
+int main(int argc, char **argv)
+{{
+\tif (argc < 2) {{ fprintf(stderr, "usage: %s CASE [PLUGIN]\\n", argv[0]); return 2; }}
+\tplugin_path = argc > 2 ? argv[2] : NULL;
+{dispatch_lines}
+\tfprintf(stderr, "unknown generated trace case: %s\\n", argv[1]);
+\treturn 2;
+}}
+'''
+
+
+def render_cmake(targets: list[dict[str, object]]) -> str:
+    lines = ["# Generated by tools/dt_testgen.py; do not edit."]
+    for target in targets:
+        executable = str(target["target"])
+        source = str(target["source"])
+        lines.extend([
+            f"add_executable({executable} {json.dumps(source)})",
+            f"target_compile_definitions({executable} PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)",
+            f"target_link_libraries({executable} PRIVATE athrill_device)",
+        ])
+        if target["use_plugin"]:
+            lines.append(f"add_dependencies({executable} athrill_hakoniwa_sensor)")
+        for case in target["cases"]:
+            name = str(case["name"])
+            command = f"add_test(NAME {json.dumps(name)} COMMAND {executable} {json.dumps(name)}"
+            if target["use_plugin"]:
+                command += " $<TARGET_FILE:athrill_hakoniwa_sensor>"
+            command += ")"
+            lines.extend([
+                command,
+                f"set_tests_properties({json.dumps(name)} PROPERTIES LABELS \"traceability;spi\")",
+            ])
+            if case.get("will_fail"):
+                lines.append(f"set_tests_properties({json.dumps(name)} PROPERTIES WILL_FAIL TRUE)")
+    return "\n".join(lines) + "\n"
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--spec", required=True, type=Path)
+    parser.add_argument("--out", required=True, type=Path)
+    parser.add_argument("dtbs", nargs="+", type=Path)
+    args = parser.parse_args()
+    load_test_specs(args.spec)
+    args.out.mkdir(parents=True, exist_ok=True)
+    trace_map: dict[str, object] = {"schema_version": 1, "generated_tests": []}
+    targets: list[dict[str, object]] = []
+    for dtb in sorted(args.dtbs):
+        fdt = Fdt(dtb)
+        controllers = find_spi(fdt)
+        relative = dtb.as_posix().split("/boards/", 1)[-1]
+        board = relative.replace("/", "__").removesuffix(".dtb")
+        cases = generated_cases(board, controllers)
+        use_plugin = "hakoniwa" in dtb.stem
+        source = args.out / f"{c_identifier(board)}.c"
+        source.write_text(render_source(dtb, fdt, cases, use_plugin), encoding="utf-8")
+        target = "trace_spi_" + c_identifier(board)
+        targets.append({
+            "target": target,
+            "source": str(source.resolve()),
+            "use_plugin": use_plugin,
+            "cases": cases,
+        })
+        for case in cases:
+            trace_map["generated_tests"].append({
+                "name": case["name"],
+                "test_spec_id": case["test_spec_id"],
+                "item_id": case["item_id"],
+                "board": relative,
+                "node_path": case["node_path"],
+                "derived_properties": case["derived_properties"],
+                "source_file": str(source.resolve()),
+                "will_fail": bool(case.get("will_fail", False)),
+                "known_defect": case.get("known_defect"),
+            })
+    (args.out / "trace-map.json").write_text(
+        json.dumps(trace_map, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    (args.out / "trace-tests.cmake").write_text(render_cmake(targets), encoding="utf-8")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
