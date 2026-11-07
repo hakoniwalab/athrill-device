@@ -1450,7 +1450,10 @@ static TestTarget target;
 static AthrillDeviceRuntime *runtime;
 static const char *plugin_path;
 static const char *const board_dtb_path = {c_string(str(dtb.resolve()))};
-static const char *const pwm_trace_path = {c_string(str(pwm_trace_path.resolve()))};
+/* Each case runs in its own process, in parallel with the board's other
+ * cases: each writes its own PWM trace (<base>.<pid>), removed at exit. */
+static const char *const pwm_trace_base = {c_string(str(pwm_trace_path.resolve()))};
+static char pwm_trace_path[1024];
 static char *captured_stderr;
 
 static void copy_text(char *to, size_t size, const char *from)
@@ -2234,6 +2237,11 @@ static uint32 count_selected_bindings(void)
 \treturn count;
 }}
 
+static void remove_pwm_trace(void)
+{{
+\t(void)remove(pwm_trace_path);
+}}
+
 static int trace_contains(const char *needle)
 {{
 \tFILE *stream = fopen(pwm_trace_path, "r");
@@ -2251,6 +2259,8 @@ int main(int argc, char **argv)
 {{
 \tif (argc < 2) {{ fprintf(stderr, "usage: %s CASE [PLUGIN]\\n", argv[0]); return 2; }}
 \tplugin_path = argc > 2 ? argv[2] : NULL;
+\t(void)snprintf(pwm_trace_path, sizeof(pwm_trace_path), "%s.%ld", pwm_trace_base, (long)getpid());
+\tif (atexit(remove_pwm_trace) != 0) return 2;
 {dispatch_lines}
 \tfprintf(stderr, "unknown generated trace case: %s\\n", argv[1]);
 \treturn 2;

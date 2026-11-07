@@ -120,7 +120,10 @@ static TestTarget target;
 static AthrillDeviceRuntime *runtime;
 static const char *plugin_path;
 static const char *const board_dtb_path = ATHRILL_DEVICE_SOURCE_DIR "/boards/pixhawk4/pixhawk4-hakoniwa.dtb";
-static const char *const pwm_trace_path = ATHRILL_TRACE_BUILD_DIR "/pixhawk4__pixhawk4_hakoniwa__pwm.trace";
+/* Each case runs in its own process, in parallel with the board's other
+ * cases: each writes its own PWM trace (<base>.<pid>), removed at exit. */
+static const char *const pwm_trace_base = ATHRILL_TRACE_BUILD_DIR "/pixhawk4__pixhawk4_hakoniwa__pwm.trace";
+static char pwm_trace_path[1024];
 static char *captured_stderr;
 
 static void copy_text(char *to, size_t size, const char *from)
@@ -948,6 +951,11 @@ static uint32 count_selected_bindings(void)
 	for (index = 0U; index < target.binding_count; index++)
 		if (target.bindings[index].selected) count++;
 	return count;
+}
+
+static void remove_pwm_trace(void)
+{
+	(void)remove(pwm_trace_path);
 }
 
 static int trace_contains(const char *needle)
@@ -1814,6 +1822,8 @@ int main(int argc, char **argv)
 {
 	if (argc < 2) { fprintf(stderr, "usage: %s CASE [PLUGIN]\n", argv[0]); return 2; }
 	plugin_path = argc > 2 ? argv[2] : NULL;
+	(void)snprintf(pwm_trace_path, sizeof(pwm_trace_path), "%s.%ld", pwm_trace_base, (long)getpid());
+	if (atexit(remove_pwm_trace) != 0) return 2;
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__spi@40003800__ADV-SPI-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__spi_40003800__ADV_SPI_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__spi@40003800__fram@0__ADV-SPI-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__spi_40003800__fram_0__ADV_SPI_001_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__ADV-SPI-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__spi_40013000__ADV_SPI_002_T1();
