@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "boards": {
+    "pixhawk4": {
+      "firmware": "px4_fmu-v5_default.elf",
+      "firmware_sha256": "f8a78a13f3a545305cce45eeef677e4d436325ee6a6065b1753c387283f3d05e",
+      "dtb": "boards/pixhawk4/pixhawk4.dtb",
+      "hakoniwa_dtb": "boards/pixhawk4/pixhawk4-hakoniwa.dtb",
+      "instructions": 2131907110,
+      "success": "ALL PASS"
+    },
+    "pixhawk6c": {
+      "firmware": "px4_fmu-v6c_default.elf",
+      "firmware_sha256": "8719b2ea764d3185bbf4fbda7d7031763b03eac700d2fe355967eea57c4ffe78",
+      "dtb": "boards/pixhawk6c/pixhawk6c.dtb",
+      "hakoniwa_dtb": "boards/pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "clock_limit": 2000000000,
+      "fixture": "clean-first-boot-without-sd-image",
+      "instructions": 186764648,
+      "console_sha256": "2789b56e007245764916a4800f4a5fc75e126b235b578d0518c9b8be891fe9b6"
+    }
+  }
+}

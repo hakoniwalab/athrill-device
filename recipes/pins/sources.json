@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "sources": {
+    "athrill-device": {
+      "repository": "https://github.com/hakoniwalab/athrill-device.git",
+      "revision": "current-checkout",
+      "required": "recipes/athrill-stm32-board-build.yaml"
+    },
+    "athrill": {
+      "repository": "https://github.com/toppers/athrill.git",
+      "revision": "2b9b49f21a9f8ad5e63d396f013ad86d341b29e6",
+      "required": "cmake/AthrillCore.cmake"
+    },
+    "athrill-arm-common": {
+      "repository": "https://github.com/hakoniwalab/athrill-arm-common.git",
+      "revision": "60d8098cfcbbda5489c74843c15d3d2742e6c3bb",
+      "required": "include/arm_common/arm_pseudo_dp.h"
+    },
+    "athrill-target-stm32": {
+      "repository": "https://github.com/hakoniwalab/athrill-target-stm32.git",
+      "revision": "b0525dfb79c5801f02687a993471168def23b9a0",
+      "required": "examples/px4-bench/check.sh"
+    },
+    "hakoniwa-pdu-registry": {
+      "repository": "https://github.com/hakoniwalab/hakoniwa-pdu-registry.git",
+      "revision": "c40ad51fe410b7692fdffcd0c8c94dbf0ea6adb5",
+      "required": "pdu/types/hako_mavlink_msgs/pdu_ctype_HakoHilSensor.h"
+    }
+  }
+}
