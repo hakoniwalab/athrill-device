@@ -13,6 +13,7 @@ struct AthrillUartProtocol {
 	std_bool open;
 };
 
+/* [ADV-UART-003] derive one character time and round it up to a whole clock */
 static sint32 calculate_frame_ticks(const AthrillUartTiming *timing,
 	uint64 *ticks)
 {
@@ -97,6 +98,9 @@ sint32 athrill_uart_close(AthrillUartProtocol *protocol, uint64 time)
 	return athrill_channel_close(protocol->channel, time);
 }
 
+/* [ADV-UART-003] complete each character after its calculated frame time */
+/* [ADV-UART-004] serialize characters independently in request order */
+/* [ADV-UART-005] keep separate ready times and queues for both directions */
 static sint32 send(AthrillUartProtocol *protocol,
 	AthrillChannelDirection direction, uint8 data, uint64 requested_time,
 	uint64 *completion_time)
