@@ -10,6 +10,7 @@
  *   PX4-Autopilot boards/px4/fmu-v5/src/timer_config.cpp
  *   PX4-Autopilot boards/px4/fmu-v5/init/rc.board_sensors
  *   PX4-Autopilot boards/px4/fmu-v5/default.px4board
+ *   PX4-Autopilot boards/px4/fmu-v5/nuttx-config/nsh/defconfig
  *   PX4-Autopilot boards/px4/fmu-v5/nuttx-config/include/board.h
  *   PX4-Autopilot boards/px4/fmu-v5/src/board_config.h
  *   PX4-Autopilot src/drivers/uavcan/uavcan_drivers/stm32/driver/src/uc_stm32_clock.cpp
@@ -132,6 +133,18 @@
 };
 
 /* GPS1 is /dev/ttyS0 (USART1): PX4 fmu-v5/default.px4board and board.h. */
+/*
+ * The other USART/UARTs PX4 v1.17.0 enables on FMUv5 (nuttx-config/nsh/
+ * defconfig: USART2, USART3, UART4, USART6, UART7 (the console), UART8),
+ * with nothing on them.
+ */
+&usart2 { status = "okay"; };
+&usart3 { status = "okay"; };
+&uart4 { status = "okay"; };
+&usart6 { status = "okay"; };
+&uart7 { status = "okay"; };
+&uart8 { status = "okay"; };
+
 &usart1 {
 	status = "okay";
 	current-speed = <57600>;
