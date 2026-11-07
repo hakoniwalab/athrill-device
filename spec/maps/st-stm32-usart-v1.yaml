@@ -375,7 +375,7 @@ registers:
         width: 1
   ISR:
     offset: '0x1C'
-    reset: '0x000000C0'
+    reset: '0x020000C0'
     fields:
       PE:
         lsb: 0
@@ -436,6 +436,9 @@ registers:
         width: 1
       TEACK:
         lsb: 21
+        width: 1
+      TCBGT:
+        lsb: 25
         width: 1
   ICR:
     offset: '0x20'
