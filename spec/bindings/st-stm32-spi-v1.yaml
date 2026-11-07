@@ -4,7 +4,7 @@ compatible:
 - st,stm32-spi
 manual: RM0410 Rev 5 section 35 (SPI/I2S), STM32F76xxx/F77xxx
 model: spi-controller
-model_version: 1.0.0
+model_version: 1.1.0
 features:
 - base
 - dma

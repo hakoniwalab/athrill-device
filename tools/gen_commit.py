@@ -65,7 +65,7 @@ def portable_json(value, build_dir: Path):
 
 
 def generate() -> dict[str, str]:
-    specs = sorted((ROOT / "spec").glob("*.yaml"))
+    specs = sorted(p for p in (ROOT / "spec").glob("*.yaml") if not p.name.startswith("svd-"))
     dtbs = sorted((ROOT / "boards").rglob("*.dtb"))
     with tempfile.TemporaryDirectory() as tmp:
         build_dir = Path(tmp)

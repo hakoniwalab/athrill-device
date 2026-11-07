@@ -14,3 +14,38 @@
 - [sd](items-sd.md)
 - [spi](items-spi.md)
 - [uart](items-uart.md)
+
+## Behaviour model specifications
+
+- [barometer](model-chips-barometer.md)
+- [fram](model-chips-fram.md)
+- [gnss](model-chips-gnss.md)
+- [imu](model-chips-imu.md)
+- [magnetometer](model-chips-magnetometer.md)
+- [sensor-source](model-chips-sensor-source.md)
+- [dma-controller](model-dma-controller.md)
+- [gpio-exti](model-gpio-exti.md)
+- [i2c-controller](model-i2c-controller.md)
+- [sdmmc](model-sdmmc.md)
+- [spi-controller](model-spi-controller.md)
+- [timer](model-timer.md)
+- [uart](model-uart.md)
+
+## Generated maps (bindings + patched ST SVD)
+
+- [st-stm32-spi-v1__f7_gen](map-st-stm32-spi-v1__f7_gen.md)
+- [st-stm32-spi-v2__h7_gen](map-st-stm32-spi-v2__h7_gen.md)
+
+## Maps
+
+- [st-stm32-dma-v1](map-st-stm32-dma-v1.md)
+- [st-stm32-dmamux](map-st-stm32-dmamux.md)
+- [st-stm32-exti-v1](map-st-stm32-exti-v1.md)
+- [st-stm32-exti-v2](map-st-stm32-exti-v2.md)
+- [st-stm32-gpio](map-st-stm32-gpio.md)
+- [st-stm32-i2c-v2](map-st-stm32-i2c-v2.md)
+- [st-stm32-sdmmc-v1](map-st-stm32-sdmmc-v1.md)
+- [st-stm32-sdmmc-v2](map-st-stm32-sdmmc-v2.md)
+- [st-stm32-timer](map-st-stm32-timer.md)
+- [st-stm32-usart-v1](map-st-stm32-usart-v1.md)
+- [st-stm32-usart-v2](map-st-stm32-usart-v2.md)

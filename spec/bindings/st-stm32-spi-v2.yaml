@@ -3,7 +3,7 @@ compatible:
 - st,stm32h7-spi
 manual: RM0433 Rev 8 section 50 (SPI/I2S), STM32H742/743/753/750
 model: spi-controller
-model_version: 1.0.0
+model_version: 1.1.0
 features:
 - base
 - dma
