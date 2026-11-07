@@ -1,0 +1,77 @@
+- id: ADV-UART-001
+  statement: Each enabled child of a UART controller is attached to that controller and to no other.
+  source:
+    devicetree: "Devicetree Specification v0.4 sections 2.2.1 and 2.3.4; Zephyr serial device binding (serial bus child node)"
+    manual: "RM0410 section 34.4; RM0433 section 48.4"
+  scope: Firmware drivers open a device (GPS, telemetry) on the serial port the board wires it to.
+  verification: generated
+  applies_to: uart-child
+  tests:
+    - id: ADV-UART-001.T1
+      stimulus: Build the board and observe the public UART binding of this enabled child.
+      expect: The child is bound to exactly the parent controller independently decoded from the DTB.
+
+- id: ADV-UART-002
+  statement: An enabled UART controller exposes exactly the enabled children declared beneath it, at most one.
+  source:
+    devicetree: "Devicetree Specification v0.4 section 2.3.4 (status); Zephyr serial binding allows one attached device per port"
+    manual: "RM0410 section 34.4; RM0433 section 48.4"
+  scope: A serial port without a declared device carries no device; a declared device is not duplicated.
+  verification: generated
+  applies_to: uart-controller
+  tests:
+    - id: ADV-UART-002.T1
+      stimulus: Build the board and collect all public UART child bindings for this controller.
+      expect: Their number equals the enabled child nodes independently decoded from the DTB (0 or 1).
+
+- id: ADV-UART-003
+  statement: One character occupies start bit + data bits + parity bit (if enabled) + stop bits, and completes at the clock that many bit times after it starts, rounded up to a whole clock.
+  source:
+    devicetree: "none (line format is programmed by the firmware)"
+    manual: "RM0410 sections 34.5.2 and 34.5.4; RM0433 sections 48.5.3 and 48.5.7"
+  scope: Drivers pace transmission and timeouts by character time; completion at the modelled clock keeps RTOS timing.
+  verification: unit
+  applies_to: uart-protocol
+  tests:
+    - id: ADV-UART-003.T1
+      stimulus: Configure 8N1 and 7E2 at a known clock and baud rate; transmit one character from an idle line.
+      expect: Completion clock = start + ceil((1 + data + parity + stop) x clock / baud); 8N1 at 1 MHz / 100 kbaud = 100 clocks, 7E2 = 110 clocks.
+
+- id: ADV-UART-004
+  statement: Characters sent toward the child arrive once each, in order, and each starts no earlier than the end of the previous one.
+  source:
+    devicetree: "none"
+    manual: "RM0410 section 34.5.2 (transmitter, TDR to shift register); RM0433 section 48.5.3"
+  scope: GPS and MAVLink parsers depend on byte order and on no overlap of characters on one line.
+  verification: unit
+  applies_to: uart-protocol
+  tests:
+    - id: ADV-UART-004.T1
+      stimulus: Send two characters toward the child, the second requested before the first completes.
+      expect: The child receives both in order; the second completes one character time after the first.
+
+- id: ADV-UART-005
+  statement: The receive and transmit directions are independent; traffic in one direction does not delay or reorder the other.
+  source:
+    devicetree: "none"
+    manual: "RM0410 section 34.5 (full-duplex USART); RM0433 section 48.5"
+  scope: Firmware sends commands to the GPS while it streams data back.
+  verification: unit
+  applies_to: uart-protocol
+  tests:
+    - id: ADV-UART-005.T1
+      stimulus: Send characters toward the child and from the child over the same interval.
+      expect: Each direction completes at its own character times and in its own order.
+
+- id: ADV-UART-006
+  statement: A UART controller with dmas resolves each tuple as one DMA request resource in dmas order and keeps the matching dma-names direction.
+  source:
+    devicetree: "Devicetree Specification v0.4 DMA binding (dmas, dma-names); Zephyr STM32 UART binding"
+    manual: "RM0410 section 8.3.4 (DMA request mapping); RM0433 sections 15.3.5 and 17.3 (DMAMUX request lines)"
+  scope: Console and GPS drivers that use DMA receive and transmit through the request lines the board declares.
+  verification: generated
+  applies_to: uart-controller-with-dmas
+  tests:
+    - id: ADV-UART-006.T1
+      stimulus: Build the board and observe the public DMA resolution for this controller.
+      expect: One resolution per dmas tuple, in dmas order, each paired with the dma-names entry at the same index.
