@@ -1,0 +1,60 @@
+# Corrections to the pinned ST SVD files (spec/svd-sources.yaml).
+# The ST SVD is the canonical source of register definitions. Where it disagrees with the
+# reference manual, the manual wins and the correction is recorded here, one entry per
+# difference, with the manual page as evidence. Tools apply these patches on top of the
+# SVD; nothing else may override the SVD.
+#
+# Entry: soc, peripheral (SVD name; applies to instances derived from it as well),
+# register, and one of: reset / field {name, lsb, width} / add_field {name, lsb, width};
+# evidence: manual, section, page; found: how and when it was found.
+# Reference only (not a source): stm32-rs patched SVDs, https://github.com/stm32-rs/stm32-rs
+patches:
+  - soc: "st,stm32f7"
+    peripheral: TIM1
+    register: ARR
+    reset: "0x0000FFFF"
+    svd_has: "0x00000000"
+    evidence: {manual: RM0410 Rev 5, section: "25.4.14 TIMx_ARR (x = 1, 8)", page: 935}
+    found: "SVD vs hand-written map vs manual, 2026-11-07"
+  - soc: "st,stm32h7"
+    peripheral: TIM1
+    register: ARR
+    reset: "0x0000FFFF"
+    svd_has: "0x00000000"
+    evidence: {manual: RM0433 Rev 9, section: "38.4.14 TIMx_ARR (x = 1, 8)", page: 1609}
+    found: "SVD vs hand-written map vs manual, 2026-11-07"
+  - soc: "st,stm32f7"
+    peripheral: TIM2
+    register: ARR
+    reset: "0xFFFFFFFF"
+    svd_has: "0x00000000"
+    evidence: {manual: RM0410 Rev 5, section: "26.4.14 TIMx_ARR (x = 2 to 5)", page: 1017}
+    found: "manual check, 2026-11-07"
+  - soc: "st,stm32h7"
+    peripheral: TIM2
+    register: ARR
+    reset: "0xFFFFFFFF"
+    svd_has: "0x00000000"
+    evidence: {manual: RM0433 Rev 9, section: "39.4.14 TIMx_ARR (x = 2 to 5)", page: 1697}
+    found: "manual check, 2026-11-07"
+  - soc: "st,stm32f7"
+    peripheral: SPI1
+    register: I2SPR
+    reset: "0x00000002"
+    svd_has: "0x0000000A"
+    evidence: {manual: RM0410 Rev 5, section: "35.9.9 SPIx_I2SPR", page: 1356}
+    found: "SVD vs hand-written map vs manual, 2026-11-07"
+  - soc: "st,stm32f7"
+    peripheral: USART1
+    register: ISR
+    reset: "0x020000C0"
+    svd_has: "0x000000C0"
+    evidence: {manual: RM0410 Rev 5, section: "34.8.8 USART_ISR (TCBGT set at reset)"}
+    found: "manual check, 2026-11-07 (SVD and hand-written map agreed and were both wrong)"
+  - soc: "st,stm32h7"
+    peripheral: SDMMC1
+    register: RESPCMDR
+    reset: "0x00000000"
+    svd_has: "0xA3C5DD01"
+    evidence: {manual: RM0433 Rev 9, section: "55.10.5 SDMMC_RESPCMDR"}
+    found: "SVD vs hand-written map vs manual, 2026-11-07"
