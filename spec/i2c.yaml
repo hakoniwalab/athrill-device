@@ -1,0 +1,80 @@
+- id: ADV-I2C-001
+  statement: Each enabled I2C child is bound only at the 7-bit bus address in its reg property.
+  source:
+    devicetree: "Devicetree Specification v0.4 section 2.3.6; Zephyr I2C bus binding and i2c-device reg"
+    manual: "RM0410 sections 33.4.3 and 33.4.9; RM0433 sections 47.4.3 and 47.4.9; MS5611-01BA03 section 5; IST8310 datasheet I2C slave address table"
+  scope: Firmware drivers address one declared sensor at a time by its board-selected 7-bit I2C address.
+  verification: generated
+  applies_to: i2c-child
+  tests:
+    - id: ADV-I2C-001.T1
+      stimulus: Build the board and observe the public I2C binding for this enabled child.
+      expect: The child is bound to its parent controller at exactly the reg address independently decoded from the DTB.
+
+- id: ADV-I2C-002
+  statement: An enabled I2C controller exposes exactly the enabled child addresses declared beneath that controller in the Devicetree.
+  source:
+    devicetree: "Devicetree Specification v0.4 sections 2.2.1 and 2.3.6; Zephyr I2C bus binding, child reg, and status"
+    manual: "RM0410 section 33.4.9; RM0433 section 47.4.9"
+  scope: Firmware bus enumeration sees the board's declared I2C devices without aliases, omissions, or extra devices.
+  verification: generated
+  applies_to: i2c-controller
+  tests:
+    - id: ADV-I2C-002.T1
+      stimulus: Build the board and collect all public I2C child bindings for this controller.
+      expect: Their count and addresses equal the enabled child nodes and reg values independently decoded from the DTB.
+
+- id: ADV-I2C-003
+  statement: A START addresses only the child at the requested 7-bit address, reports that child's address ACK or NACK, and sets the requested transfer direction.
+  source:
+    devicetree: "Zephyr I2C child reg supplies the target address"
+    manual: "RM0410 sections 33.4.3 and 33.4.9; RM0433 sections 47.4.3 and 47.4.9; NXP UM10204 sections 3.1.6 and 3.1.10"
+  scope: Firmware probes distinguish present devices from other addresses and select read or write transfers.
+  verification: unit
+  applies_to: i2c-protocol
+  tests:
+    - id: ADV-I2C-003.T1
+      stimulus: Send START to an unmatched address, then to the child's address while it returns NACK, and finally to that address while it returns ACK for a read.
+      expect: The unmatched child is not called, NACK remains unaddressed, and ACK addresses only that child in the requested read direction.
+
+- id: ADV-I2C-004
+  statement: In a controller-write transfer, bytes reach the addressed child once and in order, each child ACK or NACK is returned to the controller, and completion uses the supplied virtual clock.
+  source:
+    devicetree: "I2C child attached below its controller"
+    manual: "RM0410 sections 33.4.7 and 33.4.9; RM0433 sections 47.4.7 and 47.4.9; NXP UM10204 sections 3.1.6 and 3.1.10"
+  scope: Firmware register writes depend on ordered bytes, per-byte acknowledgement, and deterministic completion ordering.
+  verification: unit
+  applies_to: i2c-protocol
+  tests:
+    - id: ADV-I2C-004.T1
+      stimulus: Address one child for write and send two distinct bytes at distinct virtual completion clocks, with the child ACKing one and NACKing the other.
+      expect: The child receives both bytes once in order, the controller sees the corresponding ACK and NACK, and completion records the second supplied clock.
+
+- id: ADV-I2C-005
+  statement: In a controller-read transfer, bytes returned by the addressed child reach the controller once and in order, with the controller's ACK or NACK and supplied virtual clock delivered for each byte.
+  source:
+    devicetree: "I2C child attached below its controller"
+    manual: "RM0410 sections 33.4.7 and 33.4.9; RM0433 sections 47.4.7 and 47.4.9; NXP UM10204 sections 3.1.6 and 3.1.10"
+  scope: Firmware register reads depend on ordered bytes and a final controller NACK before STOP or repeated START.
+  verification: unit
+  applies_to: i2c-protocol
+  tests:
+    - id: ADV-I2C-005.T1
+      stimulus: Address one child for read and request two bytes, ACKing the first and NACKing the second at distinct virtual completion clocks.
+      expect: The controller receives both child bytes once in order and the child observes the ACK, NACK, and supplied clocks in the same order.
+
+- id: ADV-I2C-006
+  statement: A repeated START begins a new addressed transfer without an intervening STOP, while STOP ends the current transaction and rejects further data until another acknowledged START.
+  source:
+    devicetree: "I2C controller and child attachment define the addressed transaction endpoints"
+    manual: "RM0410 sections 33.4.3 and 33.4.9; RM0433 sections 47.4.3 and 47.4.9; NXP UM10204 sections 3.1.4 and 3.1.10"
+  scope: Firmware combined register reads rely on write-then-repeated-START-read framing, and transaction state must not leak past STOP.
+  verification: unit
+  applies_to: i2c-protocol
+  tests:
+    - id: ADV-I2C-006.T1
+      stimulus: START a write transfer and issue a read START before STOP.
+      expect: The second START is reported as repeated, changes direction to read, and no STOP occurs between the two starts.
+    - id: ADV-I2C-006.T2
+      stimulus: STOP an addressed transfer, then attempt a data byte and another STOP without a new START.
+      expect: The child receives one STOP at the supplied clock, transaction state clears, and both post-STOP operations are rejected.
