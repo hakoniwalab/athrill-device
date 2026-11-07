@@ -17,7 +17,7 @@ typedef uint32_t uint32;
 typedef uint64_t uint64;
 typedef int32_t sint32;
 typedef float float32;
-typedef uint8 std_bool;
+typedef int std_bool; /* same size as Athrill std_types.h */
 #ifndef TRUE
 #define TRUE ((std_bool)1U)
 #endif
