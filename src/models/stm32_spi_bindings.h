@@ -7,7 +7,7 @@
 #ifndef STM32_SPI_BINDINGS_H
 #define STM32_SPI_BINDINGS_H
 
-#include "std_types.h"
+#include "athrill_device_if.h"
 
 typedef enum { STM32_BIND_OFFSET, STM32_BIND_MASK, STM32_BIND_SHIFT } Stm32BindKind;
 

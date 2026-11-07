@@ -58,6 +58,7 @@ struct NodeRecord {
 	std_bool spi_bound;
 	std_bool i2c_bound;
 	std_bool i2c_native;	/* bound to an athrill-device controller model */
+	std_bool spi_native;
 	std_bool uart_bound;
 };
 
@@ -66,6 +67,13 @@ struct PluginRecord {
 	const AthrillDevicePlugin *plugin;
 	const char *configured_compatible;
 };
+
+typedef struct {
+	AthrillDeviceGpioLine line;
+	AthrillDeviceGpioEdge callback;
+	void *instance;
+	std_bool level;	/* last published level; FALSE until the first change */
+} GpioWatch;
 
 struct AthrillDeviceRuntime {
 	uint8 *dtb;
@@ -81,6 +89,9 @@ struct AthrillDeviceRuntime {
 	uint32 tick_order_count;
 	PluginRecord *plugins;
 	uint32 plugin_count;
+	/* model-to-model GPIO (watch_gpio / publish_gpio_outputs) */
+	GpioWatch *gpio_watches;
+	uint32 gpio_watch_count;
 };
 
 static void error_line(const char *code, const char *path,
@@ -333,7 +344,6 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
 NAMED_ADAPTER(stm32_dma_model, "stm32-dma-adapter", "stm32-dma");
-NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter", "stm32f7-spi");
 NAMED_ADAPTER(stm32f7_uart_model, "stm32f7-uart-adapter", "stm32f7-uart");
 NAMED_ADAPTER(stm32_sdmmc_model, "stm32-sdmmc-adapter", "stm32-sdmmc");
 NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter", "stm32f7-flash");
@@ -348,7 +358,6 @@ NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-s
 NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
 NAMED_ADAPTER(stm32h7_rcc_model, "stm32h7-rcc-adapter", "stm32h7-rcc");
 NAMED_ADAPTER(stm32h7_pwr_model, "stm32h7-pwr-adapter", "stm32h7-pwr");
-NAMED_ADAPTER(stm32h7_spi_model, "stm32h7-spi-adapter", "stm32h7-spi");
 NAMED_ADAPTER(stm32h7_boot_register_model, "stm32h7-boot-register-adapter",
 	"stm32h7-boot-register");
 
@@ -424,7 +433,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_exti_compatibles, 1U, &athrill_device_stm32_exti_model },
 	{ stm32_syscfg_compatibles, 2U, &athrill_device_stm32_syscfg_model },
 	{ stm32_dma_compatibles, 1U, &stm32_dma_model },
-	{ stm32f7_spi_compatibles, 2U, &stm32f7_spi_model },
+	{ stm32f7_spi_compatibles, 2U, &athrill_device_stm32_spi_model },
 	{ stm32f7_i2c_compatibles, 1U, &athrill_device_stm32_i2c_model },
 	{ stm32f7_timer_compatibles, 1U, &athrill_device_stm32_tim_model },
 	{ stm32f7_pwm_compatibles, 1U, &structural_model },
@@ -448,7 +457,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32h7_soc_compatibles, 2U, &stm32h7_soc_model },
 	{ stm32h7_rcc_compatibles, 1U, &stm32h7_rcc_model },
 	{ stm32h7_pwr_compatibles, 1U, &stm32h7_pwr_model },
-	{ stm32h7_spi_compatibles, 1U, &stm32h7_spi_model },
+	{ stm32h7_spi_compatibles, 1U, &athrill_device_stm32h7_spi_model },
 	{ stm32h7_dmamux_compatibles, 1U, &athrill_device_stm32_dmamux_model },
 	{ stm32h7_boot_register_compatibles, 6U, &stm32h7_boot_register_model },
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
@@ -1238,6 +1247,77 @@ static sint32 resource_get_i2c_peripheral(void *context, uint16 address,
 	return -1;
 }
 
+/* The child of a native SPI controller at a chip select, for the controller. */
+static sint32 resource_get_spi_peripheral(void *context, uint32 chip_select,
+	const AthrillDeviceSpiPeripheralOps **ops, void **instance)
+{
+	NodeRecord *node = context;
+	uint32 i;
+	if (ops == NULL || instance == NULL) {
+		return -1;
+	}
+	for (i = 0U; i < node->runtime->node_count; i++) {
+		NodeRecord *child = &node->runtime->nodes[i];
+		const fdt32_t *reg;
+		int length;
+		reg = fdt_getprop(node->runtime->dtb, child->offset, "reg", &length);
+		if (child->enabled && child->parent_index == (int)node->preorder &&
+		    child->spi_native && reg != NULL && length == 4 &&
+		    fdt32_to_cpu(*reg) == chip_select) {
+			*ops = child->model->spi;
+			*instance = child->instance;
+			return 0;
+		}
+	}
+	return -1;
+}
+
+static sint32 resource_watch_gpio(void *context, AthrillDeviceGpioLine line,
+	AthrillDeviceGpioEdge callback, void *instance)
+{
+	NodeRecord *node = context;
+	AthrillDeviceRuntime *runtime = node->runtime;
+	GpioWatch *grown;
+	if (callback == NULL) {
+		return -1;
+	}
+	grown = realloc(runtime->gpio_watches,
+		(runtime->gpio_watch_count + 1U) * sizeof(*grown));
+	if (grown == NULL) {
+		return -1;
+	}
+	runtime->gpio_watches = grown;
+	grown[runtime->gpio_watch_count].line = line;
+	grown[runtime->gpio_watch_count].callback = callback;
+	grown[runtime->gpio_watch_count].instance = instance;
+	grown[runtime->gpio_watch_count].level = FALSE;
+	runtime->gpio_watch_count++;
+	return 0;
+}
+
+static sint32 resource_publish_gpio_outputs(void *context,
+	const AthrillDeviceGpioLine *lines, uint32 count, uint32 levels)
+{
+	NodeRecord *node = context;
+	AthrillDeviceRuntime *runtime = node->runtime;
+	uint32 i, w;
+	if (lines == NULL || count == 0U || count > 32U) {
+		return -1;
+	}
+	for (i = 0U; i < count; i++) {
+		std_bool level = ((levels >> i) & 1U) != 0U;
+		for (w = 0U; w < runtime->gpio_watch_count; w++) {
+			GpioWatch *watch = &runtime->gpio_watches[w];
+			if (watch->line.value == lines[i].value && watch->level != level) {
+				watch->level = level;
+				watch->callback(watch->instance, level);
+			}
+		}
+	}
+	return runtime->target_ops->gpio_outputs != NULL ?
+		runtime->target_ops->gpio_outputs(runtime->target, lines, count, levels) : 0;
+}
+
 /* [ADV-UART-002] expose only enabled children bound to this controller */
 static sint32 resource_get_uart_child(void *context, uint32 index,
 	AthrillDeviceUartEndpoint *endpoint)
@@ -1263,7 +1343,9 @@ static const AthrillDeviceResourceOps resource_ops = {
 	sizeof(AthrillDeviceResourceOps), resource_get_interrupt,
 	resource_get_gpio, resource_get_dma, resource_get_spi_child,
 	resource_get_i2c_child, resource_get_uart_child, resource_get_pwm,
-	resource_get_value_source, resource_get_i2c_peripheral
+	resource_get_value_source, resource_get_i2c_peripheral,
+	resource_get_spi_peripheral, resource_watch_gpio,
+	resource_publish_gpio_outputs
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
@@ -2059,7 +2141,37 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 		}
 		parent = &runtime->nodes[node->parent_index];
 		reg = fdt_getprop(runtime->dtb, node->offset, "reg", &length);
-		if (is_spi_controller(parent) && node->model->spi != NULL) {
+		if (is_spi_controller(parent) && node->model->spi != NULL &&
+		    native_controller(parent)) {
+			/* The controller is an athrill-device model: it calls the child
+			 * itself (get_spi_peripheral) and watches its cs-gpios line. */
+			AthrillDeviceSpecifier gpio;
+			if (!abi_header_ok(node->model->spi->abi_major,
+				node->model->spi->abi_minor, node->model->spi->struct_size,
+				sizeof(AthrillDeviceSpiPeripheralOps)) ||
+			    reg == NULL || length != 4 ||
+			    decode_specifier(parent, "cs-gpios", "#gpio-cells",
+				fdt32_to_cpu(*reg), &gpio) != 0) {
+				error_line("spi-bind", node->path, "cs-gpios", "missing-index");
+				return -1;
+			}
+			node->spi_endpoint.value = (uint64)node->preorder + 1U;
+			node->spi_native = TRUE;
+			node->spi_bound = TRUE;
+			{
+				uint32 c;
+				fprintf(stderr, "DEVICE_SPI_CHILD controller=");
+				fprint_escaped(stderr, parent->path);
+				fprintf(stderr, " child=");
+				fprint_escaped(stderr, node->path);
+				fprintf(stderr, " chip_select=%u cs=", (unsigned)fdt32_to_cpu(*reg));
+				fprint_escaped(stderr, gpio.provider_path != NULL ? gpio.provider_path : "-");
+				for (c = 0U; c < gpio.cell_count; c++) {
+					fprintf(stderr, "%s%u", c == 0U ? " cells=" : ",", (unsigned)gpio.cells[c]);
+				}
+				fputc('\n', stderr);
+			}
+		} else if (is_spi_controller(parent) && node->model->spi != NULL) {
 			AthrillDeviceSpecifier gpio, *gpio_ptr = NULL;
 			uint32 chip_select;
 			if (!abi_header_ok(node->model->spi->abi_major,
@@ -2343,6 +2455,9 @@ sint32 athrill_device_reset(AthrillDeviceRuntime *runtime)
 	if (runtime == NULL) {
 		return -1;
 	}
+	for (i = 0U; i < runtime->gpio_watch_count; i++) {
+		runtime->gpio_watches[i].level = FALSE;
+	}
 	for (i = 0U; i < runtime->order_count; i++) {
 		NodeRecord *node = &runtime->nodes[runtime->order[i]];
 		if (node->created && node->model->reset != NULL && node->model->reset(node->instance) != 0) {
@@ -2425,6 +2540,7 @@ void athrill_device_destroy(AthrillDeviceRuntime *runtime)
 			free(runtime->nodes[i].path);
 		}
 	free(runtime->plugins);
+	free(runtime->gpio_watches);
 	free(runtime->order);
 	free(runtime->tick_order);
 	free(runtime->nodes);

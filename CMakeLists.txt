@@ -28,6 +28,10 @@ add_library(athrill_device STATIC
   src/models/stm32_exti.c
   src/models/stm32_dmamux.c
   src/models/stm32_i2c.c
+  src/models/stm32_spi.c
+  src/models/stm32_spi_bindings.c
+  src/models/stm32_spi_bus.c
+  src/models/stm32h7_spi.c
   src/models/stm32_tim.c
   src/models/ublox_m8.c
   src/sha256.c
@@ -38,6 +42,15 @@ target_include_directories(athrill_device
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE src third_party/libfdt)
+# Values the SVD does not hold (#32 rule 3), one header per model in
+# targets/stm32/config; replace them with your own headers through
+# ATHRILL_STM32_CONFIG_DIR (searched first).
+set(ATHRILL_STM32_CONFIG_DIR "" CACHE PATH "Directory with user model configuration headers (stm32_*_config.h)")
+if(ATHRILL_STM32_CONFIG_DIR)
+  get_filename_component(_athrill_stm32_config "${ATHRILL_STM32_CONFIG_DIR}" ABSOLUTE)
+  target_include_directories(athrill_device PRIVATE "${_athrill_stm32_config}")
+endif()
+target_include_directories(athrill_device PRIVATE targets/stm32/config)
 # Bindings (spec/bindings/*_gen.yaml) are read at start-up with libyaml.
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-0.1)
@@ -148,6 +161,16 @@ if(BUILD_TESTING)
   target_include_directories(test_stm32_i2c PRIVATE src/models)
   target_link_libraries(test_stm32_i2c PRIVATE athrill_device)
   add_test(NAME stm32-i2c COMMAND test_stm32_i2c)
+
+  add_executable(test_stm32_spi tests/test_stm32_spi.c)
+  target_compile_definitions(test_stm32_spi PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_stm32_spi PRIVATE src/models)
+  target_link_libraries(test_stm32_spi PRIVATE athrill_device)
+  add_test(NAME stm32-spi COMMAND test_stm32_spi)
+  # H7 SPI behaviour the model does not implement yet (RM0433 TSIZE, CFG
+  # write protection, FIFO threshold, DMA requests): documented, WILL_FAIL.
+  add_test(NAME stm32h7-spi-spec-gaps COMMAND test_stm32_spi spec-gaps)
+  set_tests_properties(stm32h7-spi-spec-gaps PROPERTIES WILL_FAIL TRUE)
 
   add_executable(test_channel tests/test_channel.c)
   target_compile_definitions(test_channel PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
