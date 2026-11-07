@@ -5,7 +5,10 @@ UART, UART TCP, I2C, DMA, DMAMUX, SDMMC F7/H7, SD card), moved here unchanged
 (hakoniwalab/athrill-device#13, step 3). Their history is in
 athrill-target-stm32 up to the tag `c-path-final` and main 605fa89.
 
-State (not yet athrill-device models):
+Already athrill-device models (src/models/, step 4): DMAMUX, I2C, SPI F7/H7,
+UART and its TCP links, DMA. What remains here: SDMMC F7/H7 and the SD card.
+
+State of what remains (not yet athrill-device models):
 
 - They reach the host only through `include/athrill_device_host.h` (the
   required interface); they no longer call the Athrill core's time, IRQ,

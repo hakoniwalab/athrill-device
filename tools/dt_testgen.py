@@ -172,7 +172,7 @@ MMIO_MODEL_COMPATIBLES = {
     "st,stm32-gpio", "st,stm32-exti", "st,stm32f7-syscfg",
     "st,stm32h7-syscfg", "st,stm32-timers", "st,stm32-dmamux",
     "st,stm32-i2c-v2", "st,stm32-spi-fifo", "st,stm32-spi", "st,stm32h7-spi",
-    "st,stm32-usart", "st,stm32-uart",
+    "st,stm32-usart", "st,stm32-uart", "st,stm32-dma-v1",
 }
 # I2C controllers that are athrill-device models: their children are bound to
 # the controller, not to the target, so the harness finds them by driving the

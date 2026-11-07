@@ -16,8 +16,15 @@
  * and the USART number and kernel clock divider from the base (H7 instances
  * carry athrill,stm32h7-uart: every USART at D2PCLK = CPU / 4); the console
  * writes through console_write; a register read ends the CPU batch through
- * end_batch (the target's read barrier did it); the DMA and the debugger
- * console input are reached through athrill_device_stm32_bridge.h.
+ * end_batch (the target's read barrier did it); the debugger console input
+ * is reached through athrill_device_stm32_bridge.h.
+ * DMA (step 4-5): the UART raises its "tx" request while CR3 DMAT is set,
+ * the transmitter enabled and TDR empty (TXE), and its "rx" request while
+ * CR3 DMAR is set and RDR full (RXNE) (RM0410 34.5.15), on its dmas tuples
+ * (ABI 1.14 dma_request); the DMA writes TDR and reads RDR on the bus as
+ * the CPU does. DEVICE_CONFIG_STM32_UART_TX_DMA still enables the transmit
+ * request (0: never raised). A character the DMA reads at once keeps the
+ * timing it had when the target's DMA took it without RDR.
  *
  * Copyright 2026 Hakoniwa Laboratory
  * SPDX-License-Identifier: MIT
@@ -113,6 +120,12 @@ struct Uart {
 	std_bool rx_file_at_end;
 	uint64 rx_file_start;
 	std_bool tx_dma_enabled;
+	/* DMA request lines (ABI 1.14) */
+	const AthrillDeviceResourceOps *resources;
+	void *context;
+	std_bool tx_request;	/* the levels last told to the DMA */
+	std_bool rx_request;
+	std_bool advancing;	/* in advance_to: a DMA access does not advance again */
 };
 
 /* USART1..UART8 by base; the kernel clock divider is the clock tree PX4 and
@@ -126,26 +139,8 @@ static const uint32 uart_bases[8] = {
 static const uint32 f7_dividers[8] = { 2U, 4U, 4U, 4U, 4U, 2U, 4U, 4U };
 static const uint32 h7_dividers[8] = { 4U, 4U, 4U, 4U, 4U, 4U, 4U, 4U };
 
-/* TO BE REMOVED with the target's DMA and debugger (athrill_device_stm32_bridge.h). */
-static AthrillDeviceStm32DmaTx dma_tx;
-static AthrillDeviceStm32DmaRx dma_rx;
+/* TO BE REMOVED with the target's debugger (athrill_device_stm32_bridge.h). */
 static Uart *console_uart;
-
-void athrill_device_stm32_dma_bridge(AthrillDeviceStm32DmaTx tx, AthrillDeviceStm32DmaRx rx)
-{
-	dma_tx = tx;
-	dma_rx = rx;
-}
-
-static std_bool stm32_dma_peripheral_tx(uint32 address, uint32 *data)
-{
-	return dma_tx != NULL ? dma_tx(address, data) : FALSE;
-}
-
-static std_bool stm32_dma_peripheral_rx(uint32 address, uint32 data)
-{
-	return dma_rx != NULL ? dma_rx(address, data) : FALSE;
-}
 
 static void write_tdr(Uart *u, uint8 data);
 static sint32 push_input(Uart *u, uint8 data);
@@ -333,16 +328,37 @@ static std_bool next_input(Uart *u, uint8 *data)
 	return TRUE;
 }
 
+/* The DMA requests follow DMAT/TE/TXE and DMAR/RXNE; the DMA is told each
+ * change (it may move a character at once, and so come back here). */
+static void update_requests(Uart *u)
+{
+	std_bool tx = u->tx_dma_enabled && enabled(u, CR1_TE) &&
+		((reg(u, USART_CR3) & CR3_DMAT) != 0U) && !u->tdr_full;
+	std_bool rx = u->rxne && ((reg(u, USART_CR3) & CR3_DMAR) != 0U);
+
+	if (u->resources == NULL || u->resources->dma_request == NULL) {
+		return;
+	}
+	if (rx != u->rx_request) {
+		u->rx_request = rx;
+		(void)u->resources->dma_request(u->context, "rx", rx);
+	}
+	if (tx != u->tx_request) {
+		u->tx_request = tx;
+		(void)u->resources->dma_request(u->context, "tx", tx);
+	}
+}
+
 /* The UART up to clock now. */
 static void advance_to(Uart *u, uint64 now)
 {
 	uint8 data;
-	uint32 dma_data;
 
 	if (now < u->now) {
 		return;
 	}
 	u->now = now;
+	u->advancing = TRUE;
 	/* TDR into the shift register once the frame before is sent */
 	if (u->tdr_full && (now >= u->shift_end)) {
 		u->tdr_full = FALSE;
@@ -353,33 +369,23 @@ static void advance_to(Uart *u, uint64 now)
 		u->tc = TRUE;
 	}
 	/* TXE requests move at most the shift-register byte and one TDR byte. */
-	if (u->tx_dma_enabled && enabled(u, CR1_TE) && ((reg(u, USART_CR3) & CR3_DMAT) != 0U)) {
-		while (!u->tdr_full && stm32_dma_peripheral_tx(u->base + USART_TDR, &dma_data)) {
-			write_tdr(u, (uint8)dma_data);
-		}
-	}
+	update_requests(u);
 	/* end of the input file: look for appended data from time to time */
 	if (u->console && u->rx_file_at_end && (now >= u->rx_next)) {
 		u->rx_file_at_end = FALSE;
 	}
-	/* A DMA request stays asserted while RDR is full, including when its stream is enabled later. */
-	if (u->rxne && ((reg(u, USART_CR3) & CR3_DMAR) != 0U)
-		&& stm32_dma_peripheral_rx(u->base + USART_RDR, u->rdr)) {
-		u->rxne = FALSE;
-	}
+	/* A DMA request stays asserted while RDR is full (a level: the stream
+	 * takes it when it is enabled later). */
+	update_requests(u);
 	if (listening(u) && !u->rxne && (now >= u->rx_next) && input_available(u)) {
 		if (next_input(u, &data)) {
-			/* with DMAR the stream reading RDR takes the character, else it waits in RDR */
-			if (((reg(u, USART_CR3) & CR3_DMAR) != 0U)
-				&& stm32_dma_peripheral_rx(u->base + USART_RDR, data)) {
-				/* no RDR read restarts the line: the next character is a frame after this one arrived */
-				if (u->rx_next < now) {
-					u->rx_next = now;
-				}
-			}
-			else {
-				u->rdr = data;
-				u->rxne = TRUE;
+			/* the character in RDR; with DMAR the stream reading RDR may take it at once */
+			u->rdr = data;
+			u->rxne = TRUE;
+			update_requests(u);
+			if (!u->rxne && (u->rx_next < now)) {
+				/* taken: the next character is a frame after this one arrived */
+				u->rx_next = now;
 			}
 			u->rx_next += frame_clocks(u);
 		}
@@ -387,6 +393,7 @@ static void advance_to(Uart *u, uint64 now)
 			u->rx_next = now + RX_FILE_POLL_CLOCKS;
 		}
 	}
+	u->advancing = FALSE;
 }
 
 static uint32 isr_value(const Uart *u)
@@ -522,8 +529,11 @@ static sint32 uart_read(void *instance, uint64 address, uint32 size, uint64 *res
 	 * instruction must see the effect (the target's read barrier did this). */
 	u->target_ops->end_batch(u->target);
 	offset = ((uint32)address - u->base) & ~3U;
-	advance_to(u, host_clock(u));
+	if (!u->advancing) {
+		advance_to(u, host_clock(u));
+	}
 	*result = read_register(u, offset) >> (8U * (((uint32)address - u->base) & 3U));
+	update_requests(u);
 	return 0;
 }
 
@@ -538,8 +548,11 @@ static sint32 uart_write(void *instance, uint64 address, uint32 size, uint64 val
 	offset = ((uint32)address - u->base) & ~3U;
 	shift = 8U * (((uint32)address - u->base) & 3U);
 	mask = ((size >= 4U) ? 0xFFFFFFFFU : ((1U << (8U * size)) - 1U)) << shift;
-	advance_to(u, host_clock(u));
+	if (!u->advancing) {
+		advance_to(u, host_clock(u));
+	}
 	write_register(u, offset, (uint32)value << shift, mask);
+	update_requests(u);
 	return 0;
 }
 
@@ -681,6 +694,8 @@ static sint32 uart_connect(void *instance, const AthrillDeviceConnectArgs *args)
 	    args->resources->uart_listen(args->context, chip_send, u) != 0) {
 		return -1;
 	}
+	u->resources = args->resources;
+	u->context = args->context;
 	if (args->resources->get_uart_peripheral(args->context, 0U, &u->chip_ops, &u->chip) != 0) {
 		u->chip_ops = NULL;
 		u->chip = NULL;
@@ -717,6 +732,9 @@ static sint32 uart_reset(void *instance)
 	u->input_head = 0U;
 	u->input_count = 0U;
 	u->tx_dma_enabled = host_number(u, "DEVICE_CONFIG_STM32_UART_TX_DMA", 0U) != 0U;
+	u->tx_request = FALSE;
+	u->rx_request = FALSE;
+	u->advancing = FALSE;
 	u->console = (u->number == console) ? TRUE : FALSE;
 	u->rx_file_at_end = FALSE;
 	if (u->console) {

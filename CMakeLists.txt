@@ -27,6 +27,7 @@ add_library(athrill_device STATIC
   src/models/stm32_gpio.c
   src/models/stm32_exti.c
   src/models/stm32_dmamux.c
+  src/models/stm32_dma.c
   src/models/stm32_i2c.c
   src/models/stm32_spi.c
   src/models/stm32_spi_bindings.c
@@ -159,6 +160,11 @@ if(BUILD_TESTING)
   target_include_directories(test_stm32_dmamux PRIVATE src/models)
   target_link_libraries(test_stm32_dmamux PRIVATE athrill_device)
   add_test(NAME stm32-dmamux COMMAND test_stm32_dmamux)
+  add_executable(test_stm32_dma tests/test_stm32_dma.c)
+  target_compile_definitions(test_stm32_dma PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_stm32_dma PRIVATE src/models)
+  target_link_libraries(test_stm32_dma PRIVATE athrill_device)
+  add_test(NAME stm32-dma COMMAND test_stm32_dma)
 
   add_executable(test_stm32_i2c tests/test_stm32_i2c.c)
   target_compile_definitions(test_stm32_i2c PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

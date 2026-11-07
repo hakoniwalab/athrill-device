@@ -51,27 +51,29 @@ static void chip_transmit(void *chip, uint8 data)
 typedef struct { void (*transmit)(void *chip, uint8 data); } Stm32UartChipOps;
 static const Stm32UartChipOps chip_ops = { chip_transmit };
 
-static std_bool stm32_dma_peripheral_rx(uint32 par, uint32 data)
+/* The DMA (ABI 1.14 request lines, as src/models/stm32_dma.c serves them):
+ * while a UART's "rx" request is raised and the stream is enabled
+ * (dma_enabled), the stream reads RDR on the bus; while its "tx" request is
+ * raised and dma_tx_data has characters, it writes TDR. A request is a
+ * level; enabling the stream serves a request already raised. */
+static uint32 dma_par_base(uint32 u);
+static void dma_serve(uint32 u);
+static std_bool rx_level[8], tx_level[8];
+static std_bool serving;
+static sint32 dma_request(void *c, const char *name, std_bool asserted)
 {
-	if (!dma_enabled) {
-		return FALSE;
+	uint32 u = (uint32)(uintptr_t)c;
+	if (strcmp(name, "rx") == 0) {
+		rx_level[u] = asserted;
+	} else if (strcmp(name, "tx") == 0) {
+		tx_level[u] = asserted;
+	} else {
+		return -1;
 	}
-	dma_par = par;
-	if (dma_len < (sizeof(dma_got) - 1U)) {
-		dma_got[dma_len++] = (char)data;
-		dma_got[dma_len] = '\0';
+	if (asserted) {
+		dma_serve(u);
 	}
-	return TRUE;
-}
-
-static std_bool stm32_dma_peripheral_tx(uint32 par, uint32 *data)
-{
-	(void)par;
-	if ((dma_tx_data == NULL) || (dma_tx_data[dma_tx_pos] == '\0')) {
-		return FALSE;
-	}
-	*data = (uint8)dma_tx_data[dma_tx_pos++];
-	return TRUE;
+	return 0;
 }
 
 /* ---- the former global UART API on top of the models (one per USART) ---- */
@@ -214,6 +216,9 @@ static void shim_create(uint32 u)
 	resources.get_interrupt = get_interrupt;
 	resources.get_uart_peripheral = get_uart_peripheral;
 	resources.uart_listen = uart_listen;
+	resources.dma_request = dma_request;
+	rx_level[u] = FALSE;
+	tx_level[u] = FALSE;
 	node.ops = &node_ops;
 	node.path = "/soc/serial";
 	creating = u;
@@ -249,7 +254,6 @@ static void stm32_uart_reset(uint32 console, const char *rx_file, const char *tx
 	shim_console = console;
 	shim_rx_file = rx_file;
 	shim_tx_file = tx_file;
-	athrill_device_stm32_dma_bridge(stm32_dma_peripheral_tx, stm32_dma_peripheral_rx);
 	for (u = 0U; u < 8U; u++) {
 		shim_chip[u] = NULL;
 		shim_create(u);
@@ -356,6 +360,46 @@ static void check_str(int line, const char *what, const char *got, const char *w
 
 /* 54 MHz / 469: 115200 baud; 10 bits of 469 kernel clocks of 4 CPU clocks */
 #define FRAME_115200	(10U * 469U * 4U)
+
+/* The DMA's streams of USART u (see dma_request). */
+static uint32 dma_par_base(uint32 u) { return bases[u]; }
+static void dma_serve(uint32 u)
+{
+	uint64 value = 0U;
+	if (serving) {
+		return;		/* the loop below sees the change */
+	}
+	serving = TRUE;
+	for (;;) {
+		if (rx_level[u] && dma_enabled) {
+			dma_par = dma_par_base(u) + 0x24U;
+			(void)m->mmio->read(uarts[u], dma_par, 4U, &value);
+			if (dma_len < (sizeof(dma_got) - 1U)) {
+				dma_got[dma_len++] = (char)value;
+				dma_got[dma_len] = '\0';
+			}
+			continue;
+		}
+		if (tx_level[u] && (dma_tx_data != NULL) && (dma_tx_data[dma_tx_pos] != '\0')) {
+			(void)m->mmio->write(uarts[u], dma_par_base(u) + 0x28U, 4U,
+				(uint8)dma_tx_data[dma_tx_pos++]);
+			continue;
+		}
+		break;
+	}
+	serving = FALSE;
+}
+/* The RX stream enabled later: it serves a request already raised. */
+static void dma_enable_rx(void)
+{
+	uint32 u;
+	dma_enabled = TRUE;
+	for (u = 0U; u < 8U; u++) {
+		if (rx_level[u]) {
+			dma_serve(u);
+		}
+	}
+}
 
 static void setup_family(const char *rx_file, std_bool h7, uint64 rx_start)
 {
@@ -608,7 +652,7 @@ static void test_receive(void)
 	wr(USART3, CR3, 1U << 6);
 	wr(USART3, CR1, UE | RE);
 	(void)rd(USART3, ISR);
-	dma_enabled = TRUE;
+	dma_enable_rx();
 	(void)tick();
 	CHECK_STR("DMA enabled after RXNE takes pending RDR", dma_got, "p");
 	CHECK_EQ("late DMA clears RXNE", rd(USART3, ISR) & RXNE, 0U);

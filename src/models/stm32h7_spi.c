@@ -14,6 +14,12 @@
  * What changed with the move: the base and the interrupt come from the node,
  * the chips are per controller (stm32_spi_bus.c), and a register read ends
  * the CPU batch through end_batch (the target's read barrier did it).
+ * DMA (step 4-5): the controller raises its "tx" request while CFG1
+ * TXDMAEN is set and SR TXP, its "rx" request while RXDMAEN is set and SR
+ * RXP (RM0433 52.4.14), on its dmas tuples (ABI 1.14 dma_request); the
+ * DMA writes TXDR and reads RXDR on the bus as the CPU does, so the
+ * received bytes pass through the RX FIFO (before, the target's DMA
+ * exchanged outside it).
  *
  * Copyright 2026 Hakoniwa Laboratory
  * SPDX-License-Identifier: MIT
@@ -34,6 +40,7 @@
  * resolved once at the first instance. */
 static uint32 CR1_OFFSET, CFG1_OFFSET, IER_OFFSET, SR_OFFSET, IFCR_OFFSET, TXDR_OFFSET, RXDR_OFFSET;
 static uint32 CR1_SPE, CR1_CSTART, CR1_CSUSP, SR_RXP, SR_TXP, SR_EOT, SR_SUSP, SR_TXC, IER_EOTIE;
+static uint32 CFG1_TXDMAEN, CFG1_RXDMAEN;
 static uint32 spi_regs;				/* register window (bytes) */
 static uint32 reset_values[SPI_WORDS];	/* by word */
 static std_bool bound;
@@ -57,6 +64,8 @@ static void bind_registers(void)
 		BIND_MASK(SR, SUSP),
 		BIND_MASK(SR, TXC),
 		BIND_MASK(IER, EOTIE),
+		BIND_MASK(CFG1, TXDMAEN),
+		BIND_MASK(CFG1, RXDMAEN),
 	};
 	if (bound) {
 		return;
@@ -81,6 +90,10 @@ typedef struct {
 	uint32 fifo_bytes;	/* RX FIFO depth of this SPI */
 	uint32 head;
 	uint32 count;
+	const AthrillDeviceResourceOps *resources;
+	void *context;
+	std_bool tx_request;		/* the levels last told to the DMA */
+	std_bool rx_request;
 } H7SpiType;
 
 static void push(H7SpiType *s, uint8 value)
@@ -117,6 +130,27 @@ static uint32 exchange(H7SpiType *s, uint32 size, uint32 value, std_bool queue)
 		}
 	}
 	return response;
+}
+
+/* The DMA requests follow TXDMAEN/TXP (TXP is always set) and RXDMAEN/RXP;
+ * the DMA is told each change (it may move items, and so come back here). */
+static void update_requests(H7SpiType *s)
+{
+	uint32 cfg1 = s->regs[CFG1_OFFSET / 4U];
+	std_bool tx = (cfg1 & CFG1_TXDMAEN) != 0U;
+	std_bool rx = ((cfg1 & CFG1_RXDMAEN) != 0U) && (s->count != 0U);
+
+	if (s->resources == NULL) {
+		return;
+	}
+	if (rx != s->rx_request) {
+		s->rx_request = rx;
+		(void)s->resources->dma_request(s->context, "rx", rx);
+	}
+	if (tx != s->tx_request) {
+		s->tx_request = tx;
+		(void)s->resources->dma_request(s->context, "tx", tx);
+	}
 }
 
 static uint32 spi_read_value(H7SpiType *s, uint32 addr, uint32 size)
@@ -185,6 +219,7 @@ static sint32 spi_read(void *instance, uint64 address, uint32 size, uint64 *resu
 	 * must see the effect (the target's read barrier did this for SPI). */
 	s->bus.target_ops->end_batch(s->bus.target);
 	*result = spi_read_value(s, (uint32)address, size);
+	update_requests(s);
 	return 0;
 }
 
@@ -196,6 +231,7 @@ static sint32 spi_write(void *instance, uint64 address, uint32 size, uint64 valu
 		return -1;
 	}
 	spi_write_value(s, (uint32)address, size, (uint32)value);
+	update_requests(s);
 	return 0;
 }
 
@@ -203,21 +239,6 @@ static const AthrillDeviceMmioOps spi_mmio = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceMmioOps), spi_read, spi_write
 };
-
-/* TO BE REMOVED with the target's DMA (athrill_device_spi_dma.h): an exchange
- * outside the RX FIFO, the received data going to the DMA's RX stream. */
-std_bool stm32_spi_h7_dma(void *instance, uint32 address, uint32 tx_size, uint32 value,
-	uint32 rx_size, uint32 *rx_address, uint32 *response)
-{
-	H7SpiType *s = instance;
-	(void)rx_size;
-	if (((address - s->base) & ~3U) != TXDR_OFFSET) {
-		return FALSE;
-	}
-	*rx_address = s->base + RXDR_OFFSET;
-	*response = exchange(s, tx_size, value, FALSE);
-	return TRUE;
-}
 
 static sint32 spi_validate(const AthrillDeviceNode *node, char *error, uint32 error_size)
 {
@@ -264,7 +285,6 @@ static sint32 spi_create(const AthrillDeviceCreateArgs *args, void **instance)
 	s->fifo_bytes = fifo_bytes[i];
 	s->bus.target_ops = args->target_ops;
 	s->bus.target = args->target;
-	stm32_spi_dma_register(s, s->base, 1U);
 	*instance = s;
 	return 0;
 }
@@ -272,7 +292,6 @@ static sint32 spi_create(const AthrillDeviceCreateArgs *args, void **instance)
 static void spi_destroy(void *instance)
 {
 	H7SpiType *s = instance;
-	stm32_spi_dma_unregister(s);
 	stm32_spi_bus_destroy(&s->bus);
 	free(s);
 }
@@ -285,6 +304,8 @@ static sint32 spi_connect(void *instance, const AthrillDeviceConnectArgs *args)
 	    args->resources->get_interrupt(args->context, NULL, 0U, &s->irq) != 0) {
 		return -1;
 	}
+	s->resources = args->resources;
+	s->context = args->context;
 	return stm32_spi_bus_connect(&s->bus, args);
 }
 
@@ -297,6 +318,8 @@ static sint32 spi_reset(void *instance)
 	}
 	s->head = 0U;
 	s->count = 0U;
+	s->tx_request = FALSE;
+	s->rx_request = FALSE;
 	stm32_spi_bus_reset(&s->bus);
 	return 0;
 }

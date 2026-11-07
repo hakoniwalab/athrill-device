@@ -3,7 +3,7 @@
  * RM0410 35.8.
  */
 #include "stm32_sdmmc.h"
-#include "stm32_dma.h"
+#include "athrill_device_stm32_sdmmc_dma.h"	/* TO BE REMOVED at step 4-6 */
 #include "athrill_protocol_sd.h"
 #include "athrill_device_host.h"
 #include <stdlib.h>
@@ -194,7 +194,7 @@ static void try_start(void)
 		return;
 	}
 	if ((dctrl & DCTRL_DMAEN) != 0U) {
-		if (!stm32_dma_peripheral_ready(SDMMC_BASE + R_FIFO, read)) {
+		if (!athrill_device_stm32_dma_ready(SDMMC_BASE + R_FIFO, read)) {
 			return;		/* the stream is enabled after DMAEN */
 		}
 	}
@@ -214,7 +214,7 @@ static void finish(void)
 		data = (uint8 *)calloc(len + 4U, 1U);
 		(void)athrill_sd_read(sd.protocol, data, len);
 		if ((dctrl & DCTRL_DMAEN) != 0U) {
-			(void)stm32_dma_peripheral_block_rx(SDMMC_BASE + R_FIFO, data, len);
+			(void)athrill_device_stm32_dma_block_rx(SDMMC_BASE + R_FIFO, data, len);
 			free(data);
 		}
 		else {
@@ -225,7 +225,7 @@ static void finish(void)
 	}
 	else if ((dctrl & DCTRL_DMAEN) != 0U) {
 		data = (uint8 *)calloc(len + 4U, 1U);
-		(void)stm32_dma_peripheral_block_tx(SDMMC_BASE + R_FIFO, data, len);
+		(void)athrill_device_stm32_dma_block_tx(SDMMC_BASE + R_FIFO, data, len);
 		(void)athrill_sd_write(sd.protocol, data, len);
 		free(data);
 	}
