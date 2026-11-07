@@ -1,0 +1,77 @@
+- id: ADV-SPI-001
+  statement: Each enabled SPI child is selected only by the chip-select index in its reg property, using the cs-gpios entry at that index when the controller supplies cs-gpios.
+  source:
+    devicetree: "Devicetree Specification v0.4 section 2.3.6; Zephyr spi-device.yaml reg; controller cs-gpios"
+    manual: "RM0410 sections 35.5.3 and 35.5.5; RM0433 sections 50.4.5 and 50.4.7"
+  scope: Firmware drivers address one independent sensor or memory device at a time on a shared SPI bus.
+  verification: generated
+  applies_to: spi-child
+  tests:
+    - id: ADV-SPI-001.T1
+      stimulus: Build the board and observe the public SPI binding for this enabled child.
+      expect: The child is bound to its parent controller at the reg chip-select index and to the corresponding cs-gpios specifier, if present.
+
+- id: ADV-SPI-002
+  statement: An enabled SPI controller exposes exactly the enabled child chip-select addresses declared beneath that controller in the Devicetree.
+  source:
+    devicetree: "Devicetree Specification v0.4 sections 2.2.1 and 2.3.6; Zephyr spi-device.yaml reg and status"
+    manual: "RM0410 section 35.5.3; RM0433 section 50.4.5"
+  scope: Firmware bus enumeration sees the board's declared SPI devices without aliases, omissions, or extra devices.
+  verification: generated
+  applies_to: spi-controller
+  tests:
+    - id: ADV-SPI-002.T1
+      stimulus: Build the board and collect all public SPI child bindings for this controller.
+      expect: Their count and chip-select values equal the enabled child nodes and reg values in the DTB.
+
+- id: ADV-SPI-003
+  statement: Each byte exchange sends the controller byte to the selected child and returns that child's simultaneously exchanged byte to the controller in the same transfer order.
+  source:
+    devicetree: "Zephyr spi-device.yaml; SPI child attached below its controller"
+    manual: "RM0410 section 35.5.2; RM0433 section 50.4.4"
+  scope: Firmware register transactions depend on ordered, full-duplex byte exchange rather than independent transmit and receive streams.
+  verification: unit
+  applies_to: spi-protocol
+  tests:
+    - id: ADV-SPI-003.T1
+      stimulus: Select one child and exchange a known byte while the child returns a distinct response byte.
+      expect: The child observes the transmitted byte once and the controller receives the response from that same exchange.
+
+- id: ADV-SPI-004
+  statement: A chip-select assertion starts one SPI frame, exchanges are accepted only while selected, and deassertion ends that frame before another selection starts.
+  source:
+    devicetree: "controller cs-gpios and child reg; Zephyr spi-device.yaml"
+    manual: "RM0410 sections 35.5.3 and 35.5.5; RM0433 sections 50.4.5 and 50.4.7"
+  scope: Firmware chip drivers rely on command and data bytes remaining in one chip-select-delimited transaction.
+  verification: unit
+  applies_to: spi-protocol
+  tests:
+    - id: ADV-SPI-004.T1
+      stimulus: Attempt exchange before selection, then select the addressed child, exchange one byte, deselect it, and attempt another exchange.
+      expect: Only the exchange between select and deselect succeeds and the child observes select, byte, and deselect in that order.
+
+- id: ADV-SPI-005
+  statement: A completed SPI byte is reported at the controller-supplied virtual completion clock without reordering the child exchange.
+  source:
+    devicetree: "SPI controller node and child attachment"
+    manual: "RM0410 section 35.5.9; RM0433 section 50.4.11"
+  scope: RTOS drivers depend on deterministic transfer completion ordering and time, not cycle-accurate internal shift-register timing.
+  verification: unit
+  applies_to: spi-protocol
+  tests:
+    - id: ADV-SPI-005.T1
+      stimulus: Exchange one byte with a chosen virtual completion clock and inspect the transfer completion state and child event time.
+      expect: Both completion state and the child exchange record the chosen clock after exactly one completed byte.
+
+- id: ADV-SPI-006
+  statement: An SPI controller with dmas resolves each tuple as one DMA request resource in dmas order and preserves the corresponding dma-names direction.
+  source:
+    devicetree: "controller dmas and dma-names; provider #dma-cells; Zephyr st,stm32-spi binding"
+    manual: "RM0410 section 35.5.9 Communication using DMA; RM0433 section 50.4.14"
+  scope: Firmware SPI drivers use the declared transmit and receive DMA request lines for buffered transfers.
+  verification: generated
+  applies_to: spi-controller-with-dmas
+  tests:
+    - id: ADV-SPI-006.T1
+      stimulus: Build the board and observe public DMA resolution for every dmas tuple on this SPI controller.
+      expect: The resolved provider and cells, tuple order, and dma-names entries equal the independently decoded DTB properties.
