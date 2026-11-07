@@ -196,8 +196,15 @@ if(BUILD_TESTING)
   target_include_directories(test_plugin_bad PRIVATE include)
   set_target_properties(test_plugin_bad PROPERTIES PREFIX "")
 
+  add_library(test_plugin_old_minor MODULE tests/test_plugin.c)
+  target_compile_definitions(test_plugin_old_minor PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES TEST_PLUGIN_OLD_MINOR)
+  target_include_directories(test_plugin_old_minor PRIVATE include)
+  set_target_properties(test_plugin_old_minor PROPERTIES PREFIX "")
+
   add_test(NAME device-tree-framework
-    COMMAND test_device_tree $<TARGET_FILE:test_plugin_good> $<TARGET_FILE:test_plugin_bad>)
+    COMMAND test_device_tree $<TARGET_FILE:test_plugin_good> $<TARGET_FILE:test_plugin_bad>
+      $<TARGET_FILE:test_plugin_old_minor>)
   add_test(NAME channel-engine COMMAND test_channel)
   add_test(NAME protocol-spi COMMAND test_spi_protocol)
   add_test(NAME protocol-i2c COMMAND test_i2c_protocol)

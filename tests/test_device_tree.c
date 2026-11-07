@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: MIT */
+#include <stddef.h>
 #include "athrill_device_if.h"
 #include "athrill_protocol_i2c.h"
 #include "athrill_protocol_spi.h"
@@ -619,7 +620,7 @@ int main(int argc, char **argv)
 		"overflow-ranges.dtb", "truncated.dtb", "bad-string-offset.dtb",
 	};
 	uint32 i;
-	TEST_CHECK(argc == 3);
+	TEST_CHECK(argc == 4);
 
 	memset(&target, 0, sizeof(target));
 	path(dtb, sizeof(dtb), "valid.dtb");
@@ -928,6 +929,11 @@ int main(int argc, char **argv)
 	runtime = NULL;
 	plugins[0].library_path = argv[2];
 	TEST_CHECK(build(dtb, plugins, 1U, &target_ops, &target, &runtime) != 0);
+	/* [#52] a plugin built against an older minor, its tables unchanged */
+	plugins[0].library_path = argv[3];
+	TEST_CHECK(build(dtb, plugins, 1U, &target_ops, &target, &runtime) == 0);
+	athrill_device_destroy(runtime);
+	runtime = NULL;
 	plugins[0].compatible = "athrill,test-mmio";
 	plugins[0].library_path = argv[1];
 	path(dtb, sizeof(dtb), "valid.dtb");
@@ -943,6 +949,17 @@ int main(int argc, char **argv)
 	bad_ops = target_ops;
 	bad_ops.struct_size = sizeof(AthrillDeviceTargetOps) - 1U;
 	TEST_CHECK(build(dtb, NULL, 0U, &bad_ops, &target, &runtime) != 0);
+	/* [#52] a target table without the 1.10 fields is still refused; with
+	 * them, an older minor number is accepted */
+	path(dtb, sizeof(dtb), "valid.dtb");
+	bad_ops = target_ops;
+	bad_ops.abi_minor = 9U;
+	bad_ops.struct_size = (uint32)offsetof(AthrillDeviceTargetOps, console_write);
+	TEST_CHECK(build(dtb, NULL, 0U, &bad_ops, &target, &runtime) != 0);
+	bad_ops.struct_size = sizeof(AthrillDeviceTargetOps);
+	TEST_CHECK(build(dtb, NULL, 0U, &bad_ops, &target, &runtime) == 0);
+	athrill_device_destroy(runtime);
+	runtime = NULL;
 	puts("device tree framework tests passed");
 	return 0;
 }
