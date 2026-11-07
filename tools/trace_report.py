@@ -276,6 +276,25 @@ def report(args: argparse.Namespace) -> str:
             "does not define `dmas` or `dma-names`; those properties require the "
             "applicable platform/binding documentation. The specification was not changed."
         )
+    if "ADV-SD-001" in items:
+        specification_findings.extend([
+            "ADV-SD-001/004: RM0410 section 35 is the wrong citation for the "
+            "current RM0410 Rev 5; SDMMC is section 39. RM0433 section 55 is correct "
+            "for current RM0433 Rev 8. The specification was not changed.",
+            "ADV-SD-001/002/003: the SD Physical Layer Simplified Specification "
+            "citation omits a document version, so section numbers are not stable or "
+            "unambiguous across the published revisions.",
+            "ADV-SD-004: the host-image clause is untestable as written: no host-value "
+            "key or image contract is specified, and T1 only requires observing the DT "
+            "parent/card binding. Generated tests cover that stated T1 expectation via "
+            "the public model-adapter callback; they do not claim image-backing coverage.",
+            "ADV-SD-001.T1: the existing tagged unit test covers CMD0 and CMD2 only, "
+            "not the full CMD0/CMD8/ACMD41/CMD2/CMD3 sequence or all R1/R2/R3/R6/R7 forms.",
+            "ADV-SD-002.T1: existing tagged read and write tests use separate fixtures "
+            "and addresses, so they do not perform the specified CMD24-then-CMD17 round trip.",
+            "ADV-SD-003.T1: existing tagged multi-block tests do not issue CMD12 and do "
+            "not execute the specified combined write/stop/read/stop sequence.",
+        ])
     output.extend(["", "## Specification review findings", ""])
     output.extend(f"- {finding}" for finding in specification_findings)
     if not specification_findings:
@@ -339,6 +358,17 @@ def report(args: argparse.Namespace) -> str:
                 f"| {value['board']} | {value.get('dma_controllers', 0)} | "
                 f"{value.get('dma_references', 0)} |"
             )
+
+    if any("sd_cards" in value for value in board_coverage):
+        output.extend([
+            "",
+            "## SD applicability by board DTB",
+            "",
+            "| Board DTB | SD card nodes |",
+            "|---|---:|",
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            output.append(f"| {value['board']} | {value.get('sd_cards', 0)} |")
 
     output.extend([
         "",

@@ -95,6 +95,7 @@ static void fill_blocks(uint8 *data)
 
 static void test_command_response_is_returned_unchanged(void)
 {
+	/* [ADV-SD-001.T1] command response type and fields */
 	Card card = {0};
 	AthrillSdProtocol *protocol = create_protocol(&card);
 	AthrillSdResponse response;
@@ -116,6 +117,7 @@ static void test_command_response_is_returned_unchanged(void)
 
 static void test_single_block_read_uses_cmd17(void)
 {
+	/* [ADV-SD-002.T1] single-block 512-byte read */
 	Card card = {0};
 	AthrillSdProtocol *protocol = create_protocol(&card);
 	AthrillSdResponse response;
@@ -135,6 +137,7 @@ static void test_single_block_read_uses_cmd17(void)
 
 static void test_single_block_write_uses_cmd24(void)
 {
+	/* [ADV-SD-002.T1] single-block 512-byte write */
 	Card card = {0};
 	AthrillSdProtocol *protocol = create_protocol(&card);
 	AthrillSdResponse response;
@@ -153,6 +156,7 @@ static void test_single_block_write_uses_cmd24(void)
 
 static void test_multi_block_read_preserves_block_order(void)
 {
+	/* [ADV-SD-003.T1] ordered two-block read */
 	Card card = {0};
 	AthrillSdProtocol *protocol = create_protocol(&card);
 	AthrillSdResponse response;
@@ -171,6 +175,7 @@ static void test_multi_block_read_preserves_block_order(void)
 
 static void test_multi_block_write_preserves_block_order(void)
 {
+	/* [ADV-SD-003.T1] ordered two-block write */
 	Card card = {0};
 	AthrillSdProtocol *protocol = create_protocol(&card);
 	AthrillSdResponse response;

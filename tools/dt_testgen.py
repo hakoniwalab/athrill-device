@@ -98,6 +98,12 @@ class DmaController:
 
 
 @dataclasses.dataclass(frozen=True)
+class SdCard:
+    node: Node
+    controller: Node
+
+
+@dataclasses.dataclass(frozen=True)
 class MmioWindow:
     address: int
     size: int
@@ -489,6 +495,17 @@ def find_dma_controllers(fdt: Fdt) -> list[DmaController]:
     return [DmaController(node, references[node.path]) for node in providers]
 
 
+def find_sd_cards(fdt: Fdt) -> list[SdCard]:
+    result = []
+    for node in fdt.nodes:
+        if not enabled(node) or "zephyr,sdmmc-disk" not in compatible(node):
+            continue
+        if node.parent is None or "st,stm32-sdmmc" not in compatible(node.parent):
+            raise ValueError(f"{node.path}: SD card is not below an STM32 SDMMC controller")
+        result.append(SdCard(node, node.parent))
+    return result
+
+
 def load_test_specs(paths: list[Path]) -> dict[str, str]:
     """Read the small documented YAML subset without a YAML dependency."""
     result: dict[str, str] = {}
@@ -521,6 +538,7 @@ def load_test_specs(paths: list[Path]) -> dict[str, str]:
         "ADV-DT-004.T1": "dt-irq-node",
         "ADV-DT-005.T1": "dt-board",
         "ADV-DMA-005.T1": "dma-controller",
+        "ADV-SD-004.T1": "sd-card",
     }
     for test_id, target in required.items():
         if result.get(test_id) != target:
@@ -769,6 +787,16 @@ def generated_dma_cases(board: str, controllers: list[DmaController]) -> list[di
     return result
 
 
+def generated_sd_cases(board: str, cards: list[SdCard]) -> list[dict[str, object]]:
+    return [{
+        "name": case_name(board, card.node.path, "ADV-SD-004.T1"),
+        "test_spec_id": "ADV-SD-004.T1", "item_id": "ADV-SD-004",
+        "node_path": card.node.path,
+        "derived_properties": {"controller": card.controller.path},
+        "kind": "sd-card", "area": "sd", "card": card,
+    } for card in cards]
+
+
 def c_windows(values: list[MmioWindow]) -> str:
     return ", ".join(f"{{{value.address}ULL, {value.size}ULL}}" for value in values)
 
@@ -921,6 +949,13 @@ def render_case(case: dict[str, object]) -> str:
                 f"\t  CHECK(find_dma({c_string(dma.provider_path)}, wanted, {len(dma.cells)}U,",
                 f"\t                 {reference.index}U, {c_string(reference.name)})); }}",
             ])
+    elif case["kind"] == "sd-card":
+        card = case["card"]
+        assert isinstance(card, SdCard)
+        lines.extend([
+            f"\tCHECK(find_adapter({c_string(card.controller.path)}, \"stm32-sdmmc\"));",
+            f"\tCHECK(find_adapter({c_string(card.node.path)}, \"sdcard\"));",
+        ])
     else:
         raise ValueError(f"unknown generated case kind {case['kind']}")
     lines.extend(["\tdestroy_board();", "\treturn 0;", "}"])
@@ -960,6 +995,7 @@ def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
 #define MAX_DMAS 32U
 #define MAX_MMIO 64U
 #define MAX_IRQS 128U
+#define MAX_ADAPTERS 64U
 
 typedef struct {{
 \tchar controller[192];
@@ -996,6 +1032,7 @@ typedef struct {{
 \tuint32 cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
 }} IrqResolution;
 typedef struct {{ char *out; char *err; }} Capture;
+typedef struct {{ char node[192]; char name[64]; }} AdapterConnection;
 
 typedef struct {{
 \tBinding bindings[MAX_BINDINGS];
@@ -1010,6 +1047,8 @@ typedef struct {{
 \tuint32 mmio_count;
 \tIrqResolution irqs[MAX_IRQS];
 \tuint32 irq_count;
+\tAdapterConnection adapters[MAX_ADAPTERS];
+\tuint32 adapter_count;
 \tuint64 next_handle;
 }} TestTarget;
 
@@ -1171,7 +1210,15 @@ static sint32 dma_resolve(void *context, const AthrillDeviceSpecifier *spec,
 static sint32 dma_request(void *context, AthrillDeviceDmaChannel channel, std_bool asserted)
 {{ (void)context; (void)channel; (void)asserted; return 0; }}
 static sint32 adapter_connect(void *context, const AthrillDeviceNode *node, const char *name)
-{{ (void)context; (void)node; (void)name; return 0; }}
+{{
+\tTestTarget *value = context;
+\tAdapterConnection *connection;
+\tif (node == NULL || name == NULL || value->adapter_count >= MAX_ADAPTERS) return -1;
+\tconnection = &value->adapters[value->adapter_count++];
+\tcopy_text(connection->node, sizeof(connection->node), node->path);
+\tcopy_text(connection->name, sizeof(connection->name), name);
+\treturn 0;
+}}
 static sint32 sensor_sample(void *context, AthrillDeviceSensorSample *sample)
 {{ (void)context; memset(sample, 0, sizeof(*sample)); return 0; }}
 static sint32 gps_sample(void *context, AthrillDeviceGpsSample *sample)
@@ -1404,6 +1451,15 @@ static uint32 count_dma_provider(const char *provider)
 \treturn count;
 }}
 
+static int find_adapter(const char *node, const char *name)
+{{
+\tuint32 index;
+\tfor (index = 0U; index < target.adapter_count; index++)
+\t\tif (strcmp(target.adapters[index].node, node) == 0 &&
+\t\t    strcmp(target.adapters[index].name, name) == 0) return 1;
+\treturn 0;
+}}
+
 {case_functions}
 
 int main(int argc, char **argv)
@@ -1464,6 +1520,7 @@ def main() -> int:
         i2c_controllers = find_i2c(fdt)
         uart_controllers = find_uart(fdt)
         dma_controllers = find_dma_controllers(fdt)
+        sd_cards = find_sd_cards(fdt)
         relative = dtb.as_posix().split("/boards/", 1)[-1]
         board = relative.replace("/", "__").removesuffix(".dtb")
         negative_path = args.out / f"{c_identifier(board)}__unknown-compatible.dtb"
@@ -1472,7 +1529,8 @@ def main() -> int:
                  generated_i2c_cases(board, i2c_controllers) +
                  generated_uart_cases(board, uart_controllers) +
                  generated_dt_cases(board, fdt, negative_path, negative_node) +
-                 generated_dma_cases(board, dma_controllers))
+                 generated_dma_cases(board, dma_controllers) +
+                 generated_sd_cases(board, sd_cards))
         dt_instances = [node for node in fdt.nodes if is_model_instance(node)]
         dt_mmio_nodes = [node for node in fdt.nodes
                          if enabled(node) and MMIO_MODEL_COMPATIBLES.intersection(compatible(node))
@@ -1490,6 +1548,7 @@ def main() -> int:
             "dt_boards": 1,
             "dma_controllers": len(dma_controllers),
             "dma_references": sum(len(value.references) for value in dma_controllers),
+            "sd_cards": len(sd_cards),
         })
         use_plugin = "hakoniwa" in dtb.stem
         source = args.out / f"{c_identifier(board)}.c"
