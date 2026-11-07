@@ -97,6 +97,7 @@ static void destroy_child(I2cChild *child)
 	athrill_channel_destroy(child->channel);
 }
 
+/* [ADV-I2C-003.T1] */
 static void test_address_match_controls_ack(void)
 {
 	TestChip chip = {0};
@@ -109,9 +110,16 @@ static void test_address_match_controls_ack(void)
 	TEST_CHECK(!athrill_i2c_is_addressed(child.protocol));
 	TEST_CHECK(chip.start_count == 1U);
 	TEST_CHECK(athrill_i2c_stop(child.protocol, 3U) == 0);
+	chip.nack_address = FALSE;
+	TEST_CHECK(athrill_i2c_start(child.protocol, 0x42U, TRUE, 4U) == 1);
+	TEST_CHECK(athrill_i2c_is_addressed(child.protocol));
+	TEST_CHECK(athrill_i2c_is_reading(child.protocol));
+	TEST_CHECK(chip.start_count == 2U);
+	TEST_CHECK(athrill_i2c_stop(child.protocol, 5U) == 0);
 	destroy_child(&child);
 }
 
+/* [ADV-I2C-004.T1] */
 static void test_write_delivers_bytes_and_slave_ack(void)
 {
 	TestChip chip = {0};
@@ -133,6 +141,7 @@ static void test_write_delivers_bytes_and_slave_ack(void)
 	destroy_child(&child);
 }
 
+/* [ADV-I2C-005.T1] */
 static void test_read_delivers_bytes_and_master_ack(void)
 {
 	TestChip chip = {0};
@@ -151,6 +160,7 @@ static void test_read_delivers_bytes_and_master_ack(void)
 	destroy_child(&child);
 }
 
+/* [ADV-I2C-006.T1] */
 static void test_repeated_start_changes_direction_without_stop(void)
 {
 	TestChip chip = {0};
@@ -168,6 +178,7 @@ static void test_repeated_start_changes_direction_without_stop(void)
 	destroy_child(&child);
 }
 
+/* [ADV-I2C-006.T2] */
 static void test_stop_ends_transaction(void)
 {
 	TestChip chip = {0};
