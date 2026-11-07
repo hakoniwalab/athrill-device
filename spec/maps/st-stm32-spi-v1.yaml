@@ -1,36 +1,294 @@
 ip: st-stm32-spi-v1
-compatible: ["st,stm32-spi-fifo", "st,stm32-spi"]
-manual: "RM0410 Rev 5 section 35 (SPI/I2S), STM32F76xxx/F77xxx"
+compatible:
+- st,stm32-spi-fifo
+- st,stm32-spi
+manual: RM0410 Rev 5 section 35 (SPI/I2S), STM32F76xxx/F77xxx
 model: spi-controller
 model_version: 1.0.0
-features: [base, dma]
+features:
+- base
+- dma
 bindings:
-  enable:           {reg: CR1, field: SPE,     access: rw}
-  master:           {reg: CR1, field: MSTR,    access: rw}
-  clock_mode:       {reg: CR1, field: [CPOL, CPHA], access: rw}
-  bit_order:        {reg: CR1, field: LSBFIRST, access: rw}
-  frame_size:       {reg: CR2, field: DS,      access: rw, note: "DS = bits - 1"}
-  baud_divider:     {reg: CR1, field: BR,      access: rw, note: "divider = 2^(BR+1)"}
-  tx_data:          {reg: DR,  access: fifo, note: "write side of DR"}
-  rx_data:          {reg: DR,  access: fifo, note: "read side of DR"}
-  tx_space:         {reg: SR,  field: TXE,     access: ro}
-  rx_available:     {reg: SR,  field: RXNE,    access: ro, note: "with FRXTH: one 8-bit frame or 16 bits available"}
-  busy:             {reg: SR,  field: BSY,     access: ro}
-  overrun:          {reg: SR,  field: OVR,     access: ro}
-  overrun_ack:      {sequence: "read DR then read SR", access: rc}
-  tx_irq_enable:    {reg: CR2, field: TXEIE,   access: rw}
-  rx_irq_enable:    {reg: CR2, field: RXNEIE,  access: rw}
-  error_irq_enable: {reg: CR2, field: ERRIE,   access: rw}
-  irq:              {devicetree: interrupts}
-  tx_dma_enable:    {reg: CR2, field: TXDMAEN, access: rw}
-  rx_dma_enable:    {reg: CR2, field: RXDMAEN, access: rw}
-  tx_dma_request:   {devicetree: "dmas, dma-names = tx"}
-  rx_dma_request:   {devicetree: "dmas, dma-names = rx"}
+  enable:
+    reg: CR1
+    field: SPE
+    access: rw
+  master:
+    reg: CR1
+    field: MSTR
+    access: rw
+  clock_mode:
+    reg: CR1
+    field:
+    - CPOL
+    - CPHA
+    access: rw
+  bit_order:
+    reg: CR1
+    field: LSBFIRST
+    access: rw
+  frame_size:
+    reg: CR2
+    field: DS
+    access: rw
+    note: DS = bits - 1
+  baud_divider:
+    reg: CR1
+    field: BR
+    access: rw
+    note: divider = 2^(BR+1)
+  tx_data:
+    reg: DR
+    access: fifo
+    note: write side of DR
+  rx_data:
+    reg: DR
+    access: fifo
+    note: read side of DR
+  tx_space:
+    reg: SR
+    field: TXE
+    access: ro
+  rx_available:
+    reg: SR
+    field: RXNE
+    access: ro
+    note: 'with FRXTH: one 8-bit frame or 16 bits available'
+  busy:
+    reg: SR
+    field: BSY
+    access: ro
+  overrun:
+    reg: SR
+    field: OVR
+    access: ro
+  overrun_ack:
+    sequence: read DR then read SR
+    access: rc
+  tx_irq_enable:
+    reg: CR2
+    field: TXEIE
+    access: rw
+  rx_irq_enable:
+    reg: CR2
+    field: RXNEIE
+    access: rw
+  error_irq_enable:
+    reg: CR2
+    field: ERRIE
+    access: rw
+  irq:
+    devicetree: interrupts
+  tx_dma_enable:
+    reg: CR2
+    field: TXDMAEN
+    access: rw
+  rx_dma_enable:
+    reg: CR2
+    field: RXDMAEN
+    access: rw
+  tx_dma_request:
+    devicetree: dmas, dma-names = tx
+  rx_dma_request:
+    devicetree: dmas, dma-names = rx
 constants:
   fifo_depth_bytes: 4
 unmodelled:
-  - {reg: CR1, fields: [CPHA_effect, BIDIMODE, BIDIOE, CRCEN, CRCNEXT, CRCL, RXONLY, SSM, SSI], answer: "stored and read back"}
-  - {reg: CR2, fields: [SSOE, NSSP, FRF, FRXTH, LDMA_RX, LDMA_TX], answer: "stored and read back"}
-  - {reg: SR,  fields: [CRCERR, MODF, FRE, FRLVL, FTLVL], answer: "reset value except FRLVL/FTLVL as the existing model reports"}
-  - {reg: CRCPR, answer: "stored and read back"}
-  - {reg: [RXCRCR, TXCRCR, I2SCFGR, I2SPR], answer: "reset value"}
+- reg: CR1
+  fields:
+  - CPHA_effect
+  - BIDIMODE
+  - BIDIOE
+  - CRCEN
+  - CRCNEXT
+  - CRCL
+  - RXONLY
+  - SSM
+  - SSI
+  answer: stored and read back
+- reg: CR2
+  fields:
+  - SSOE
+  - NSSP
+  - FRF
+  - FRXTH
+  - LDMA_RX
+  - LDMA_TX
+  answer: stored and read back
+- reg: SR
+  fields:
+  - CRCERR
+  - MODF
+  - FRE
+  - FRLVL
+  - FTLVL
+  answer: reset value except FRLVL/FTLVL as the existing model reports
+- reg: CRCPR
+  answer: stored and read back
+- reg:
+  - RXCRCR
+  - TXCRCR
+  - I2SCFGR
+  - I2SPR
+  answer: reset value
+registers_source: RM0410 Rev 5 section 35.9 (SPI registers), hand-written; to be checked against the SVD-generated map (#31)
+registers:
+  CR1:
+    offset: '0x00'
+    reset: '0x00000000'
+    fields:
+      CPHA:
+        lsb: 0
+        width: 1
+      CPOL:
+        lsb: 1
+        width: 1
+      MSTR:
+        lsb: 2
+        width: 1
+      BR:
+        lsb: 3
+        width: 3
+      SPE:
+        lsb: 6
+        width: 1
+      LSBFIRST:
+        lsb: 7
+        width: 1
+      SSI:
+        lsb: 8
+        width: 1
+      SSM:
+        lsb: 9
+        width: 1
+      RXONLY:
+        lsb: 10
+        width: 1
+      CRCL:
+        lsb: 11
+        width: 1
+      CRCNEXT:
+        lsb: 12
+        width: 1
+      CRCEN:
+        lsb: 13
+        width: 1
+      BIDIOE:
+        lsb: 14
+        width: 1
+      BIDIMODE:
+        lsb: 15
+        width: 1
+  CR2:
+    offset: '0x04'
+    reset: '0x00000700'
+    fields:
+      RXDMAEN:
+        lsb: 0
+        width: 1
+      TXDMAEN:
+        lsb: 1
+        width: 1
+      SSOE:
+        lsb: 2
+        width: 1
+      NSSP:
+        lsb: 3
+        width: 1
+      FRF:
+        lsb: 4
+        width: 1
+      ERRIE:
+        lsb: 5
+        width: 1
+      RXNEIE:
+        lsb: 6
+        width: 1
+      TXEIE:
+        lsb: 7
+        width: 1
+      DS:
+        lsb: 8
+        width: 4
+      FRXTH:
+        lsb: 12
+        width: 1
+      LDMA_RX:
+        lsb: 13
+        width: 1
+      LDMA_TX:
+        lsb: 14
+        width: 1
+  SR:
+    offset: '0x08'
+    reset: '0x00000002'
+    fields:
+      RXNE:
+        lsb: 0
+        width: 1
+      TXE:
+        lsb: 1
+        width: 1
+      CHSIDE:
+        lsb: 2
+        width: 1
+      UDR:
+        lsb: 3
+        width: 1
+      CRCERR:
+        lsb: 4
+        width: 1
+      MODF:
+        lsb: 5
+        width: 1
+      OVR:
+        lsb: 6
+        width: 1
+      BSY:
+        lsb: 7
+        width: 1
+      FRE:
+        lsb: 8
+        width: 1
+      FRLVL:
+        lsb: 9
+        width: 2
+      FTLVL:
+        lsb: 11
+        width: 2
+  DR:
+    offset: '0x0C'
+    reset: '0x00000000'
+    fields:
+      DR:
+        lsb: 0
+        width: 16
+  CRCPR:
+    offset: '0x10'
+    reset: '0x00000007'
+    fields:
+      CRCPOLY:
+        lsb: 0
+        width: 16
+  RXCRCR:
+    offset: '0x14'
+    reset: '0x00000000'
+    fields:
+      RXCRC:
+        lsb: 0
+        width: 16
+  TXCRCR:
+    offset: '0x18'
+    reset: '0x00000000'
+    fields:
+      TXCRC:
+        lsb: 0
+        width: 16
+  I2SCFGR:
+    offset: '0x1C'
+    reset: '0x00000000'
+    fields: {}
+  I2SPR:
+    offset: '0x20'
+    reset: '0x00000002'
+    fields: {}
