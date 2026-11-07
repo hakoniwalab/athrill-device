@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       9U
+#define ATHRILL_DEVICE_ABI_MINOR       10U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -321,6 +321,15 @@ typedef struct AthrillDeviceTargetOps {
 	/* TO BE REMOVED: bridge to the SPI chip selects in the target */
 	sint32 (*gpio_outputs)(void *target, const AthrillDeviceGpioLine *lines,
 	                      uint32 count, uint32 levels);
+	/* Added in ABI 1.10. */
+	/* REQUIRED: one byte of firmware console output to the host's console
+	 * (Athrill's debugger serial); channel 0 is the console. */
+	sint32 (*console_write)(void *target, uint32 channel, uint8 data);
+	/* REQUIRED (host hook): end the CPU's current batch of instructions now.
+	 * A model calls it on an access whose effect the next instruction must
+	 * see at once, e.g. a data register that consumes a stream or a register
+	 * that changes the machine state. */
+	void (*end_batch)(void *target);
 } AthrillDeviceTargetOps;
 
 typedef struct AthrillDeviceResourceOps {

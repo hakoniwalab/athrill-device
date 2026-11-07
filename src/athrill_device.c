@@ -112,9 +112,10 @@ static int abi_header_ok(uint32 major, uint32 minor, uint32 size,
 
 static int target_abi_header_ok(uint32 major, uint32 minor, uint32 size)
 {
-	/* ABI 1.9 only appends input metadata to AthrillDeviceSpecifier. */
+	/* ABI 1.10 appends console_write and end_batch to AthrillDeviceTargetOps:
+	 * the size check refuses a target table without them. */
 	return major == ATHRILL_DEVICE_ABI_MAJOR &&
-	       minor >= ATHRILL_DEVICE_ABI_MINOR - 1U &&
+	       minor >= ATHRILL_DEVICE_ABI_MINOR &&
 	       size >= sizeof(AthrillDeviceTargetOps);
 }
 
