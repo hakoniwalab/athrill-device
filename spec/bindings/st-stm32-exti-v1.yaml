@@ -1,0 +1,46 @@
+ip: st-stm32-exti-v1
+compatible:
+- st,stm32-exti
+manual: RM0410 Rev 5 section 11.9 (EXTI registers), 7.2.4-7.2.7 (SYSCFG EXTICR)
+model: gpio-exti
+model_version: 1.0.0
+features:
+- exti
+svd:
+  st,stm32f7: EXTI
+bindings:
+  line_source:
+    reg: EXTICR{r}
+    field: EXTI{n}
+    svd_peripheral: SYSCFG
+    access: rw
+    note: SYSCFG EXTICR1-4, 4 bits per line 0-15
+  rising_trigger:
+    reg: RTSR
+    field: TR{n}
+    access: rw
+  falling_trigger:
+    reg: FTSR
+    field: TR{n}
+    access: rw
+  line_irq_enable:
+    reg: IMR
+    field: MR{n}
+    access: rw
+  software_trigger:
+    reg: SWIER
+    field: SWIER{n}
+    access: w1s
+  pending:
+    reg: PR
+    field: PR{n}
+    access: ro
+  pending_ack:
+    reg: PR
+    field: PR{n}
+    access: w1c
+  line_irq:
+    devicetree: interrupts (EXTI0..4, EXTI9_5, EXTI15_10)
+unmodelled:
+- reg: EMR
+  answer: stored

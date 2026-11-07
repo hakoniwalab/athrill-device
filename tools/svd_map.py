@@ -115,6 +115,10 @@ class Svd:
                                  f"0x{reg['reset']:08X}, not {patch['svd_has']}: the SVD changed, review the patch")
             if "reset" in patch:
                 reg["reset"] = int(str(patch["reset"]), 0)
+            for f in patch.get("add_fields", []):
+                if f["name"] in reg["fields"]:
+                    raise SystemExit(f"svd-patches: {patch['peripheral']}.{patch['register']}.{f['name']} is now in the SVD: review the patch")
+                reg["fields"][f["name"]] = {"lsb": f["lsb"], "width": f["width"], "access": reg["access"]}
             for key in ("field", "add_field"):
                 if key in patch:
                     f = patch[key]

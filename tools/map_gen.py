@@ -48,6 +48,35 @@ def model_terms(model: str) -> dict[str, dict]:
     raise SystemExit(f"model {model}: no spec/models file")
 
 
+def pattern(name: str):
+    import re
+    keys = re.findall(r"\{(\w+)\}", name)
+    rx = re.escape(name)
+    for k in keys:
+        rx = rx.replace(re.escape("{" + k + "}"), f"(?P<{k}>\\d+)", 1)
+    return re.compile("^" + rx + "$"), keys
+
+
+def substitute(name: str, vars_: dict) -> str:
+    for k, v in (vars_ or {}).items():
+        name = name.replace("{" + k + "}", str(v))
+    return name
+
+
+def expand(name: str, table: dict, aliases: dict) -> list[tuple[str, dict]]:
+    """Resolve a name, possibly with {var} placeholders, against SVD names."""
+    if "{" not in name:
+        real = aliases.get(name, name)
+        return [(real, {})] if real in table else []
+    rx, keys = pattern(name)
+    out = []
+    for candidate in table:
+        m = rx.match(candidate)
+        if m:
+            out.append((candidate, {k: int(m.group(k)) for k in keys}))
+    return sorted(out, key=lambda kv: tuple(kv[1].values()))
+
+
 def access_conflict(kind: str, svd_access: str) -> bool:
     if kind in WRITE_KINDS and svd_access == "read-only":
         return True
@@ -64,37 +93,58 @@ def resolve(binding_path: Path, soc: str, svd: svd_map.Svd, src: dict) -> dict:
     errors: list[str] = []
     resolved: dict[str, dict] = {}
     for term, spec in b["bindings"].items():
-        if any(k in spec for k in NON_REGISTER):
+        if any(k in spec for k in NON_REGISTER) or "reg" not in spec:
             resolved[term] = dict(spec)
             continue
         reg_names = spec["reg"] if isinstance(spec["reg"], list) else [spec["reg"]]
         fields = spec.get("field")
+        if isinstance(fields, dict):
+            if soc not in fields:
+                resolved[term] = {"not_applicable": soc, **{k: v for k, v in spec.items() if k not in ("reg", "field")}}
+                continue
+            fields = fields.get(soc)
         out_regs = []
+        other = spec.get("svd_peripheral")
+        table = svd.registers(other) if other else regs
         for rn in reg_names:
-            svd_rn = aliases.get(rn, rn)
-            reg = regs.get(svd_rn)
-            if reg is None:
+            matches = expand(rn, table, aliases)
+            if not matches:
                 errors.append(f"{term}: register {rn} not in SVD {peripheral}")
                 continue
-            entry = {"reg": rn, "offset": f"0x{reg['offset']:02X}", "size": reg["size"]}
-            if fields is not None:
-                flist = fields if isinstance(fields, list) else [fields]
-                fout = []
-                for fn in flist:
-                    f = reg["fields"].get(fn)
-                    if f is None:
-                        if len(reg_names) > 1:
+            for svd_rn, vars_ in matches:
+                reg = table[svd_rn]
+                entry = {"reg": svd_rn, "offset": f"0x{reg['offset']:02X}", "size": reg["size"]}
+                if other:
+                    entry["peripheral"] = other
+                if vars_:
+                    entry["index"] = vars_
+                if fields is not None:
+                    flist = fields if isinstance(fields, list) else [fields]
+                    fout = []
+                    for fpat in flist:
+                        fmatches = expand(substitute(fpat, vars_), reg["fields"], {})
+                        if not fmatches:
+                            if len(reg_names) > 1 or len(matches) > 1 and "{" in fpat:
+                                continue
+                            errors.append(f"{term}: field {svd_rn}.{substitute(fpat, vars_)} not in SVD {peripheral}")
                             continue
-                        errors.append(f"{term}: field {rn}.{fn} not in SVD {peripheral}")
+                        for fn, fvars in fmatches:
+                            f = reg["fields"][fn]
+                            if access_conflict(spec.get("access", "rw"), f["access"]):
+                                errors.append(f"{term}: access {spec.get('access')} but SVD {svd_rn}.{fn} is {f['access']}")
+                            item = {"field": fn, "lsb": f["lsb"], "width": f["width"], "svd_access": f["access"]}
+                            if fvars:
+                                item["index"] = fvars
+                            fout.append(item)
+                    if not fout:
                         continue
-                    if access_conflict(spec.get("access", "rw"), f["access"]):
-                        errors.append(f"{term}: access {spec.get('access')} but SVD {rn}.{fn} is {f['access']}")
-                    fout.append({"field": fn, "lsb": f["lsb"], "width": f["width"], "svd_access": f["access"]})
-                entry["fields"] = fout
-            elif access_conflict(spec.get("access", "rw"), reg["access"]):
-                errors.append(f"{term}: access {spec.get('access')} but SVD {rn} is {reg['access']}")
-            out_regs.append(entry)
-        resolved[term] = {k: v for k, v in spec.items() if k not in ("reg", "field")}
+                    entry["fields"] = fout
+                elif access_conflict(spec.get("access", "rw"), reg["access"]):
+                    errors.append(f"{term}: access {spec.get('access')} but SVD {svd_rn} is {reg['access']}")
+                out_regs.append(entry)
+        if fields is not None and not out_regs and not any(e.startswith(term + ":") for e in errors):
+            errors.append(f"{term}: no field {fields} in {reg_names} of SVD {peripheral}")
+        resolved[term] = {k: v for k, v in spec.items() if k not in ("reg", "field", "svd_peripheral")}
         resolved[term]["registers"] = out_regs
     terms = model_terms(b["model"])
     for name, t in terms.items():
@@ -106,12 +156,13 @@ def resolve(binding_path: Path, soc: str, svd: svd_map.Svd, src: dict) -> dict:
     if errors:
         raise SystemExit(f"{binding_path.relative_to(ROOT)} [{soc}]:\n  " + "\n  ".join(errors))
     bound = {(r["reg"], f["field"]) for v in resolved.values() for r in v.get("registers", []) for f in r.get("fields", [])}
+    bound |= {(r["reg"], None) for v in resolved.values() for r in v.get("registers", []) if not r.get("fields")}
     gen_regs = {}
     for rn, r in sorted(regs.items(), key=lambda kv: kv[1]["offset"]):
         gen_regs[rn] = {
             "offset": f"0x{r['offset']:02X}", "size": r["size"], "reset": f"0x{r['reset']:08X}", "access": r["access"],
             "fields": {fn: {"lsb": f["lsb"], "width": f["width"], "access": f["access"],
-                            "bound": (rn, fn) in bound or (next((k for k, v in aliases.items() if v == rn), rn), fn) in bound}
+                            "bound": (rn, fn) in bound or (rn, None) in bound}
                        for fn, f in sorted(r["fields"].items(), key=lambda kv: kv[1]["lsb"])},
         }
     svd_info = src["svd"][soc]
@@ -149,7 +200,7 @@ def amap(data: dict, binding: str) -> str:
         lines.append(f"reg {name} {r['offset']} {r['size']} {r['reset']} 0x{stored & 0xFFFFFFFF:08X}")
     for term, b in data["bindings"].items():
         if "registers" not in b:
-            kind = next(k for k in ("devicetree", "derived", "sequence") if k in b)
+            kind = next((k for k in ("devicetree", "derived", "sequence", "not_applicable") if k in b), "unbound")
             lines.append(f"term {term} {kind}")
             continue
         for r in b["registers"]:

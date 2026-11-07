@@ -1,0 +1,166 @@
+ip: st-stm32-sdmmc-v2
+compatible:
+- st,stm32-sdmmc
+manual: RM0433 Rev 8 section 55 (SDMMC)
+model: sdmmc
+model_version: 1.0.0
+features:
+- base
+- internal_dma
+svd:
+  st,stm32h7: SDMMC1
+notes:
+- note: SDMMC v2 starts the data path with the command (CMDR.CMDTRANS) rather than DCTRL.DTEN; clock runs while powered (no
+    CLKEN).
+bindings:
+  power_on:
+    reg: POWER
+    field: PWRCTRL
+    access: rw
+  clock_enable:
+    reg: CLKCR
+    field: CLKDIV
+    access: rw
+    note: v2 has no CLKEN; clock runs while powered
+  command_index:
+    reg: CMDR
+    field: CMDINDEX
+    access: rw
+  command_argument:
+    reg: ARGR
+    access: rw
+  response_type:
+    reg: CMDR
+    field: WAITRESP
+    access: rw
+  send_command:
+    reg: CMDR
+    field: CPSMEN
+    access: rw
+  response:
+    reg:
+    - RESP1R
+    - RESP2R
+    - RESP3R
+    - RESP4R
+    access: ro
+  command_sent:
+    reg: STAR
+    field: CMDSENT
+    access: ro
+  response_received:
+    reg: STAR
+    field: CMDREND
+    access: ro
+  command_timeout:
+    reg: STAR
+    field: CTIMEOUT
+    access: ro
+  data_length:
+    reg: DLENR
+    field: DATALENGTH
+    access: rw
+  block_size:
+    reg: DCTRL
+    field: DBLOCKSIZE
+    access: rw
+  data_direction:
+    reg: DCTRL
+    field: DTDIR
+    access: rw
+  data_enable:
+    reg: CMDR
+    field: CMDTRANS
+    access: rw
+  data_end:
+    reg: STAR
+    field: DATAEND
+    access: ro
+  data_block_end:
+    reg: STAR
+    field: DBCKEND
+    access: ro
+  data_timeout:
+    reg: STAR
+    field: DTIMEOUT
+    access: ro
+  flag_ack:
+    reg: ICR
+    field:
+    - CCRCFAILC
+    - DCRCFAILC
+    - CTIMEOUTC
+    - DTIMEOUTC
+    - TXUNDERRC
+    - RXOVERRC
+    - CMDRENDC
+    - CMDSENTC
+    - DATAENDC
+    - DHOLDC
+    - DBCKENDC
+    - DABORTC
+    - BUSYD0ENDC
+    - SDIOITC
+    - ACKFAILC
+    - ACKTIMEOUTC
+    - VSWENDC
+    - CKSTOPC
+    - IDMATEC
+    - IDMABTCC
+    access: w1c
+  irq_enables:
+    reg: MASKR
+    field:
+    - CCRCFAILIE
+    - DCRCFAILIE
+    - CTIMEOUTIE
+    - DTIMEOUTIE
+    - TXUNDERRIE
+    - RXOVERRIE
+    - CMDRENDIE
+    - CMDSENTIE
+    - DATAENDIE
+    - DHOLDIE
+    - DBCKENDIE
+    - DABORTIE
+    - TXFIFOHEIE
+    - RXFIFOHFIE
+    - RXFIFOFIE
+    - TXFIFOEIE
+    - BUSYD0ENDIE
+    - SDIOITIE
+    - ACKFAILIE
+    - ACKTIMEOUTIE
+    - VSWENDIE
+    - CKSTOPIE
+    - IDMABTCIE
+    access: rw
+  irq:
+    devicetree: interrupts
+  idma_base:
+    reg:
+    - IDMABASE0R
+    - IDMABASE1R
+    access: rw
+  idma_enable:
+    reg: IDMACTRLR
+    field: IDMAEN
+    access: rw
+unmodelled:
+- reg:
+  - POWER
+  - CLKCR
+  fields:
+  - VSWITCH*
+  - DIRPOL
+  - PWRSAV
+  - NEGEDGE
+  - HWFC_EN
+  - DDR
+  - BUSSPEED
+  - SELCLKRX
+  answer: stored
+- reg:
+  - ACKTIMER
+  - DTIMER
+  answer: stored

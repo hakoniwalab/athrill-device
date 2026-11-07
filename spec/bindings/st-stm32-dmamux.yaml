@@ -1,0 +1,32 @@
+ip: st-stm32-dmamux
+compatible:
+- st,stm32-dmamux
+manual: RM0433 Rev 8 section 17.6 (DMAMUX registers)
+model: dma-controller
+model_version: 1.0.0
+features:
+- mux
+svd:
+  st,stm32h7: DMAMUX1
+bindings:
+  mux_request_id:
+    reg: DMAMUX_C{c}CR
+    field: DMAREQ_ID
+    access: rw
+unmodelled:
+- reg:
+  - CSR
+  - CFR
+  - RGxCR
+  - RGSR
+  - RGCFR
+  answer: reset value / stored
+- reg: CxCR
+  fields:
+  - SOIE
+  - EGE
+  - SE
+  - SPOL
+  - NBREQ
+  - SYNC_ID
+  answer: stored

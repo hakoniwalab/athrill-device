@@ -1,0 +1,147 @@
+ip: st-stm32-i2c-v2
+compatible:
+- st,stm32-i2c-v2
+manual: RM0410 Rev 5 section 33 (I2C); RM0433 Rev 8 section 47 (I2C). Same register layout on F7 and H7.
+model: i2c-controller
+model_version: 1.0.0
+features:
+- base
+- dma
+svd:
+  st,stm32f7: I2C1
+  st,stm32h7: I2C1
+bindings:
+  enable:
+    reg: CR1
+    field: PE
+    access: rw
+  target_address:
+    reg: CR2
+    field:
+      st,stm32f7: SADD
+      st,stm32h7: SADD{n}
+    access: rw
+    note: 7-bit address in SADD[7:1]; the H7 SVD splits SADD into single bits SADD0..SADD9 (concatenated in bit order)
+  direction:
+    reg: CR2
+    field: RD_WRN
+    access: rw
+  byte_count:
+    reg: CR2
+    field: NBYTES
+    access: rw
+  auto_end:
+    reg: CR2
+    field: AUTOEND
+    access: rw
+  reload:
+    reg: CR2
+    field: RELOAD
+    access: rw
+  start:
+    reg: CR2
+    field: START
+    access: w1s
+  stop:
+    reg: CR2
+    field: STOP
+    access: w1s
+  tx_data:
+    reg: TXDR
+    access: fifo
+  rx_data:
+    reg: RXDR
+    access: fifo
+  tx_space:
+    reg: ISR
+    field: TXIS
+    access: ro
+  rx_available:
+    reg: ISR
+    field: RXNE
+    access: ro
+  transfer_complete:
+    reg: ISR
+    field: TC
+    access: ro
+  reload_complete:
+    reg: ISR
+    field: TCR
+    access: ro
+  stop_detected:
+    reg: ISR
+    field: STOPF
+    access: ro
+  nack:
+    reg: ISR
+    field: NACKF
+    access: ro
+  busy:
+    reg: ISR
+    field: BUSY
+    access: ro
+  status_ack:
+    reg: ICR
+    field:
+    - STOPCF
+    - NACKCF
+    access: w1c
+  irq_enables:
+    reg: CR1
+    field:
+    - TXIE
+    - RXIE
+    - TCIE
+    - STOPIE
+    - NACKIE
+    - ERRIE
+    access: rw
+  irq:
+    devicetree: interrupts (event, error)
+  tx_dma_enable:
+    reg: CR1
+    field: TXDMAEN
+    access: rw
+  rx_dma_enable:
+    reg: CR1
+    field: RXDMAEN
+    access: rw
+  tx_dma_request:
+    devicetree: dmas, dma-names = tx
+  rx_dma_request:
+    devicetree: dmas, dma-names = rx
+constants:
+  max_nbytes: 255
+unmodelled:
+- reg:
+  - OAR1
+  - OAR2
+  - TIMEOUTR
+  - PECR
+  answer: stored and read back
+- reg: CR1
+  fields:
+  - DNF
+  - ANFOFF
+  - SBC
+  - NOSTRETCH
+  - GCEN
+  - SMBHEN
+  - SMBDEN
+  - ALERTEN
+  - PECEN
+  - ADDRIE
+  answer: stored
+- reg: ISR
+  fields:
+  - TXE
+  - ADDR
+  - BERR
+  - ARLO
+  - OVR
+  - PECERR
+  - TIMEOUT
+  - ALERT
+  - DIR
+  - ADDCODE
+  answer: TXE follows TXIS; others reset value

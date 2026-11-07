@@ -468,7 +468,7 @@ registers:
         lsb: 0
         width: 16
         access: read-write
-        bound: false
+        bound: true
   CRCPR:
     offset: '0x10'
     size: 32

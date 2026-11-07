@@ -751,7 +751,7 @@ registers:
         lsb: 0
         width: 32
         access: write-only
-        bound: false
+        bound: true
   RXDR:
     offset: '0x30'
     size: 32
@@ -762,7 +762,7 @@ registers:
         lsb: 0
         width: 32
         access: read-only
-        bound: false
+        bound: true
   CRCPOLY:
     offset: '0x40'
     size: 32

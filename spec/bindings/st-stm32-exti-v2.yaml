@@ -1,0 +1,58 @@
+ip: st-stm32-exti-v2
+compatible:
+- st,stm32-exti
+- st,stm32h7-exti
+manual: 'RM0433 Rev 8 section 20.6 (EXTI registers: configuration part and CPU part C1), 12.3 (SYSCFG EXTICR)'
+model: gpio-exti
+model_version: 1.0.0
+features:
+- exti
+svd:
+  st,stm32h7: EXTI
+notes:
+- note: 'RM0433 names the CPU registers C1IMR1/C1EMR1/C1PR1 (CMSIS: EXTI_Core / EXTI_D1 *IMR1). Lines 0-15 are the GPIO lines.'
+bindings:
+  line_source:
+    reg: EXTICR{r}
+    field: EXTI{n}
+    svd_peripheral: SYSCFG
+    access: rw
+    note: SYSCFG EXTICR1-4, 4 bits per line 0-15
+  rising_trigger:
+    reg: RTSR1
+    field: TR{n}
+    access: rw
+  falling_trigger:
+    reg: FTSR1
+    field: TR{n}
+    access: rw
+  line_irq_enable:
+    reg: CPUIMR1
+    field: MR{n}
+    access: rw
+  software_trigger:
+    reg: SWIER1
+    field: SWIER{n}
+    access: w1s
+  pending:
+    reg: CPUPR1
+    field: PR{n}
+    access: ro
+  pending_ack:
+    reg: CPUPR1
+    field: PR{n}
+    access: w1c
+  line_irq:
+    devicetree: interrupts (EXTI0..4, EXTI9_5, EXTI15_10)
+unmodelled:
+- reg:
+  - D3PMR1
+  - D3PCR1L
+  - D3PCR1H
+  - RTSR2/3
+  - FTSR2/3
+  - SWIER2/3
+  - CPUIMR2/3
+  - CPUEMR1-3
+  - CPUPR2/3
+  answer: stored / reset value

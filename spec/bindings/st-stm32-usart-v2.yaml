@@ -1,0 +1,176 @@
+ip: st-stm32-usart-v2
+compatible:
+- st,stm32-usart
+- st,stm32-uart
+manual: RM0433 Rev 8 section 48 (USART/UART), STM32H742/743/753/750
+model: uart
+model_version: 1.0.0
+features:
+- base
+- dma
+- fifo
+- inversion
+svd:
+  st,stm32h7: USART1
+notes:
+- note_selection: Zephyr uses the same compatible for F7 and H7 USARTs; the IP version is selected by the SoC compatible of
+    the root node.
+- register_notes:
+  - ISR resets to 0x000000C0 with the FIFO disabled (the state after reset); with FIFOEN=1 it reads 0x008000C0 (TXFE) (RM0433
+    48.8.9/48.8.10).
+bindings:
+  enable:
+    reg: CR1
+    field: UE
+    access: rw
+  tx_enable:
+    reg: CR1
+    field: TE
+    access: rw
+  rx_enable:
+    reg: CR1
+    field: RE
+    access: rw
+  word_length:
+    reg: CR1
+    field:
+    - M1
+    - M0
+    access: rw
+    note: M1:M0 = 00 8 bits, 01 9 bits, 10 7 bits (incl. parity)
+  parity:
+    reg: CR1
+    field:
+    - PCE
+    - PS
+    access: rw
+  stop_bits:
+    reg: CR2
+    field: STOP
+    access: rw
+  baud_divider:
+    reg: BRR
+    field:
+    - BRR_0_3
+    - BRR_4_15
+    access: rw
+    note: the SVD splits BRR into two fields; concatenated in bit order
+  oversampling:
+    reg: CR1
+    field: OVER8
+    access: rw
+  tx_data:
+    reg: TDR
+    access: fifo
+  rx_data:
+    reg: RDR
+    access: fifo
+  tx_space:
+    reg: ISR
+    field: TXE
+    access: ro
+    note: RM0433 names it TXFNF (FIFO mode); the SVD keeps the non-FIFO name
+  tx_complete:
+    reg: ISR
+    field: TC
+    access: ro
+  rx_available:
+    reg: ISR
+    field: RXNE
+    access: ro
+    note: RM0433 names it RXFNE (FIFO mode); the SVD keeps the non-FIFO name
+  idle_line:
+    reg: ISR
+    field: IDLE
+    access: ro
+  overrun:
+    reg: ISR
+    field: ORE
+    access: ro
+  framing_error:
+    reg: ISR
+    field: FE
+    access: ro
+  parity_error:
+    reg: ISR
+    field: PE
+    access: ro
+  status_ack:
+    reg: ICR
+    field:
+    - IDLECF
+    - ORECF
+    - FECF
+    - PECF
+    - TCCF
+    access: w1c
+  tx_irq_enable:
+    reg: CR1
+    field: TXEIE
+    access: rw
+    note: RM0433 names it TXFNFIE (FIFO mode); the SVD keeps the non-FIFO name
+  tc_irq_enable:
+    reg: CR1
+    field: TCIE
+    access: rw
+  rx_irq_enable:
+    reg: CR1
+    field: RXNEIE
+    access: rw
+    note: RM0433 names it RXFNEIE (FIFO mode); the SVD keeps the non-FIFO name
+  idle_irq_enable:
+    reg: CR1
+    field: IDLEIE
+    access: rw
+  irq:
+    devicetree: interrupts
+  tx_dma_enable:
+    reg: CR3
+    field: DMAT
+    access: rw
+  rx_dma_enable:
+    reg: CR3
+    field: DMAR
+    access: rw
+  tx_dma_request:
+    devicetree: dmas, dma-names = tx
+  rx_dma_request:
+    devicetree: dmas, dma-names = rx
+  rx_invert:
+    reg: CR2
+    field: RXINV
+    access: rw
+  tx_invert:
+    reg: CR2
+    field: TXINV
+    access: rw
+  swap_pins:
+    reg: CR2
+    field: SWAP
+    access: rw
+  fifo_enable:
+    reg: CR1
+    field: FIFOEN
+    access: rw
+  rx_fifo_full:
+    reg: ISR
+    field: RXFF
+    access: ro
+  tx_fifo_empty:
+    reg: ISR
+    field: TXFE
+    access: ro
+constants:
+  fifo_depth: 16
+unmodelled:
+- reg:
+  - CR2
+  - CR3
+  fields:
+  - clock, LIN, smartcard, IrDA, RS-485, auto baud rate, flow control
+  answer: stored and read back
+- reg:
+  - GTPR
+  - RTOR
+  - RQR
+  answer: stored (RQR flush requests act on the FIFOs)

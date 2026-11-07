@@ -1,0 +1,155 @@
+ip: st-stm32-timer
+compatible:
+- st,stm32-timers
+- st,stm32-pwm
+manual: RM0410 Rev 5 sections 23-24 (TIM1/8, TIM2-5); RM0433 Rev 8 sections 38-39 (TIM1/8, TIM2-5). Same base layout on F7
+  and H7.
+model: timer
+model_version: 1.0.0
+features:
+- base
+- pwm
+- capture
+- dma
+svd:
+  st,stm32f7: TIM1
+  st,stm32h7: TIM1
+notes:
+- register_notes:
+  - SMS is 4 bits split over [2:0] and [16]; OCxM is 4 bits split over [6:4]/[14:12] and [16]/[24] (OCxM_3); TS[4:3] at [21:20]
+    exists on H7 only.
+  - CCRx, ARR, CNT are 32 bits on TIM2/TIM5 and 16 bits on the other timers (CMSIS states 16).
+  - RCR.REP is 8 bits on most timers, 16 on TIM1/TIM8 (H7 CMSIS states 8); DMAR access width 16 or 32.
+  - RCR.REP is 8 bits on TIM1/TIM8 here (16 bits only on some advanced timers of other families).
+- wide_instances:
+    TIM2: CNT, ARR, CCR1-4 are 32 bits; ARR resets to 0xFFFFFFFF (RM0410 26.4.15, RM0433 39.4.15)
+    TIM5: same as TIM2
+bindings:
+  counter_enable:
+    reg: CR1
+    field: CEN
+    access: rw
+  prescaler:
+    reg: PSC
+    field: PSC
+    access: rw
+  auto_reload:
+    reg: ARR
+    field: ARR
+    access: rw
+    note: 16 bits except TIM2/TIM5 (32)
+  counter:
+    reg: CNT
+    field: CNT
+    access: rw
+  update_event:
+    reg: SR
+    field: UIF
+    access: ro
+  force_update:
+    reg: EGR
+    field: UG
+    access: w1s
+  preload:
+    reg:
+    - CR1
+    - CCMR1_Output
+    - CCMR2_Output
+    field:
+    - ARPE
+    - OC{n}PE
+    access: rw
+  one_pulse:
+    reg: CR1
+    field: OPM
+    access: rw
+  flag_ack:
+    reg: SR
+    field:
+    - UIF
+    - CC{n}IF
+    - COMIF
+    - TIF
+    - BIF
+    access: w0c
+    note: write 0 to clear
+  update_irq_enable:
+    reg: DIER
+    field: UIE
+    access: rw
+  irq:
+    devicetree: interrupts
+  compare_value:
+    reg: CCR{n}
+    access: rw
+  output_mode:
+    reg:
+    - CCMR1_Output
+    - CCMR2_Output
+    field:
+    - OC{n}M
+    - OC{n}M_3
+    access: rw
+  output_enable:
+    reg:
+    - CCER
+    - BDTR
+    field:
+    - CC{n}E
+    - MOE
+    access: rw
+    note: MOE on advanced timers (TIM1/8)
+  output_polarity:
+    reg: CCER
+    field: CC{n}P
+    access: rw
+  compare_event:
+    reg: SR
+    field: CC{n}IF
+    access: ro
+  compare_irq_enable:
+    reg: DIER
+    field: CC{n}IE
+    access: rw
+  pulse_output:
+    devicetree: athrill,pwm-actuator-map pwms
+  capture_select:
+    reg:
+    - CCMR1_Input
+    - CCMR2_Input
+    field: CC{n}S
+    access: rw
+  capture_value:
+    reg: CCR{n}
+    access: ro
+  capture_event:
+    reg: SR
+    field: CC{n}IF
+    access: ro
+  update_dma_enable:
+    reg: DIER
+    field: UDE
+    access: rw
+  update_dma_request:
+    devicetree: dmas
+constants:
+  timer_clock: 'F7: APBx timer clock (x2 when APB prescaler != 1); H7: from RCC TIMPRE and D2PPREx; the existing models state
+    the board values'
+unmodelled:
+- reg:
+  - CR2
+  - SMCR
+  - RCR
+  - BDTR
+  - DCR
+  - DMAR
+  answer: stored (BDTR.MOE used)
+- reg:
+  - CCMR3
+  - CCR5
+  - CCR6
+  - AF1
+  - AF2
+  - TISEL
+  - OR
+  answer: stored / reset value (offsets 0x50-0x68 differ F7/H7)

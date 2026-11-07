@@ -13,72 +13,11 @@ svd:
     path: CMSIS/SVD/STM32F765.svd
     sha256: caf5a96613babd9621bc106f12198b45e683c180f8842f4ddf317f2a7381cc90
     licence: Apache-2.0 (Copyright STMicroelectronics)
-checks:
-- map: spec/maps/st-stm32-usart-v1.yaml
-  soc: st,stm32f7
-  peripheral: USART1
-- map: spec/maps/st-stm32-usart-v2.yaml
-  soc: st,stm32h7
-  peripheral: USART1
-- map: spec/maps/st-stm32-i2c-v2.yaml
-  soc: st,stm32f7
-  peripheral: I2C1
-- map: spec/maps/st-stm32-i2c-v2.yaml
-  soc: st,stm32h7
-  peripheral: I2C1
-- map: spec/maps/st-stm32-gpio.yaml
-  soc: st,stm32f7
-  peripheral: GPIOC
-  aliases:
-    AFR: AFRL
-- map: spec/maps/st-stm32-gpio.yaml
-  soc: st,stm32h7
-  peripheral: GPIOC
-  aliases:
-    AFR: AFRL
-- map: spec/maps/st-stm32-dma-v1.yaml
-  soc: st,stm32f7
-  peripheral: DMA1
-  blocks:
-    stream: S{i}{r}
-- map: spec/maps/st-stm32-dma-v1.yaml
-  soc: st,stm32h7
-  peripheral: DMA1
-  blocks:
-    stream: S{i}{r}
-- map: spec/maps/st-stm32-dmamux.yaml
-  soc: st,stm32h7
-  peripheral: DMAMUX1
-  blocks:
-    channel: DMAMUX_C{i}{r}
-- map: spec/maps/st-stm32-timer.yaml
-  soc: st,stm32f7
-  peripheral: TIM1
-  aliases:
-    CCMR1: CCMR1_Output
-    CCMR2: CCMR2_Output
-- map: spec/maps/st-stm32-timer.yaml
-  soc: st,stm32h7
-  peripheral: TIM1
-  aliases:
-    CCMR1: CCMR1_Output
-    CCMR2: CCMR2_Output
-- map: spec/maps/st-stm32-exti-v1.yaml
-  soc: st,stm32f7
-  peripheral: EXTI
-- map: spec/maps/st-stm32-exti-v2.yaml
-  soc: st,stm32h7
-  peripheral: EXTI
-- map: spec/maps/st-stm32-sdmmc-v1.yaml
-  soc: st,stm32f7
-  peripheral: SDMMC1
-- map: spec/maps/st-stm32-sdmmc-v2.yaml
-  soc: st,stm32h7
-  peripheral: SDMMC1
+checks: []
 reference_manuals:
   st,stm32f7: RM0410 Rev 5
   st,stm32h7: RM0433 Rev 9
   note: 'Reset values checked against the manuals'' register descriptions (2026-11-07): 179 of 199 mapped registers found
     by text search; the rest checked by hand where they matter.'
 patches: spec/svd-patches.yaml (the SVD is canonical; corrections only there, each with manual evidence)
-note_checks: Hand-written maps still to be converted to spec/bindings + generated maps. SPI is generated (tools/map_gen.py).
+note: All maps are generated from spec/bindings by tools/map_gen.py; checks list kept for future hand-written maps.
