@@ -44,6 +44,7 @@ void athrill_spi_protocol_destroy(AthrillSpiProtocol *protocol)
 	free(protocol);
 }
 
+/* [ADV-SPI-004] start one frame only when the addressed child is selected */
 sint32 athrill_spi_select(AthrillSpiProtocol *protocol, uint32 chip_select,
 	uint64 time)
 {
@@ -65,6 +66,8 @@ sint32 athrill_spi_select(AthrillSpiProtocol *protocol, uint32 chip_select,
 	return result;
 }
 
+/* [ADV-SPI-003] perform one ordered full-duplex byte exchange */
+/* [ADV-SPI-005] report that byte at the supplied completion clock */
 sint32 athrill_spi_exchange(AthrillSpiProtocol *protocol, uint8 transmitted,
 	uint8 *received, uint64 completion_time)
 {
@@ -92,6 +95,7 @@ sint32 athrill_spi_exchange(AthrillSpiProtocol *protocol, uint8 transmitted,
 	return 0;
 }
 
+/* [ADV-SPI-004] end the selected child's frame before another can start */
 sint32 athrill_spi_deselect(AthrillSpiProtocol *protocol, uint64 time)
 {
 	if (protocol == NULL || !protocol->selected) {

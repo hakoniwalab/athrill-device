@@ -1043,6 +1043,7 @@ static sint32 resource_get_gpio(void *context, const char *property,
 		&spec, line);
 }
 
+/* [ADV-SPI-006] decode a named DMA tuple through the public target resolver */
 static sint32 resource_get_dma(void *context, const char *name, uint32 index,
 	AthrillDeviceDmaChannel *channel)
 {
@@ -1112,6 +1113,7 @@ static sint32 resource_get_value_source(void *context, const char *property,
 	return 0;
 }
 
+/* [ADV-SPI-002] expose only enabled children successfully bound to this controller */
 static sint32 resource_get_spi_child(void *context, uint32 index,
 	AthrillDeviceSpiEndpoint *endpoint)
 {
@@ -1884,6 +1886,8 @@ static int validate_and_create(AthrillDeviceRuntime *runtime)
 	return 0;
 }
 
+/* [ADV-SPI-001] bind each SPI child at its reg and matching cs-gpios index */
+/* [ADV-SPI-002] bind the controller's exact enabled SPI child inventory */
 static int bind_bus_children(AthrillDeviceRuntime *runtime)
 {
 	uint32 oi;
@@ -1975,6 +1979,42 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 	return 0;
 }
 
+/* [ADV-SPI-006] resolve every SPI DMA tuple in order with its dma-names entry */
+static int resolve_spi_controller_dmas(NodeRecord *node)
+{
+	const char *names;
+	int names_length, names_at = 0;
+	uint32 count, index;
+
+	if (!is_spi_controller(node)) {
+		return 0;
+	}
+	if (specifier_count(node, "dmas", "#dma-cells", &count) != 0) {
+		return -1;
+	}
+	if (count == 0U) {
+		return 0;
+	}
+	names = fdt_getprop(node->runtime->dtb, node->offset, "dma-names",
+		&names_length);
+	if (names != NULL && (!string_property_valid(names, names_length) ||
+	    string_list_count(names, names_length) != count)) {
+		return -1;
+	}
+	for (index = 0U; index < count; index++) {
+		AthrillDeviceDmaChannel channel;
+		const char *name = names != NULL ? names + names_at : NULL;
+
+		if (resource_get_dma(node, name, index, &channel) != 0) {
+			return -1;
+		}
+		if (names != NULL) {
+			names_at += (int)strlen(name) + 1;
+		}
+	}
+	return 0;
+}
+
 static int register_and_connect(AthrillDeviceRuntime *runtime)
 {
 	uint32 oi, wi;
@@ -1996,6 +2036,11 @@ static int register_and_connect(AthrillDeviceRuntime *runtime)
 	}
 	for (oi = 0U; oi < runtime->order_count; oi++) {
 		NodeRecord *node = &runtime->nodes[runtime->order[oi]];
+		if (resolve_spi_controller_dmas(node) != 0) {
+			error_line("spi-dma-resolve", node->path, "dmas",
+				"target-rejected");
+			return -1;
+		}
 		if (node->model->connect != NULL) {
 			AthrillDeviceConnectArgs args = {&resource_ops, node};
 			if (node->model->connect(node->instance, &args) != 0) {

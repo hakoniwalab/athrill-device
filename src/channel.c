@@ -155,6 +155,7 @@ void athrill_channel_destroy(AthrillChannel *channel)
 	free(channel);
 }
 
+/* [ADV-SPI-001] match an SPI channel only to its configured chip select */
 std_bool athrill_channel_matches(const AthrillChannel *channel,
 	const AthrillChannelSelection *selection)
 {
@@ -170,6 +171,7 @@ std_bool athrill_channel_matches(const AthrillChannel *channel,
 		selection->value == channel->config.selection.value;
 }
 
+/* [ADV-SPI-004] open a single chip-select-delimited frame */
 sint32 athrill_channel_open(AthrillChannel *channel,
 	const AthrillChannelSelection *selection, uint64 time)
 {
@@ -193,6 +195,7 @@ sint32 athrill_channel_open(AthrillChannel *channel,
 	return 1;
 }
 
+/* [ADV-SPI-004] close the active frame before the next selection */
 sint32 athrill_channel_close(AthrillChannel *channel, uint64 time)
 {
 	if (channel == NULL || !channel->open) {
@@ -208,6 +211,7 @@ sint32 athrill_channel_close(AthrillChannel *channel, uint64 time)
 	return 0;
 }
 
+/* [ADV-SPI-003] preserve byte order entering each side of an exchange */
 sint32 athrill_channel_push(AthrillChannel *channel,
 	AthrillChannelDirection direction, uint64 item, uint64 time)
 {
@@ -237,6 +241,7 @@ sint32 athrill_channel_push(AthrillChannel *channel,
 	return 0;
 }
 
+/* [ADV-SPI-003] preserve byte order leaving each side of an exchange */
 sint32 athrill_channel_pop(AthrillChannel *channel,
 	AthrillChannelDirection direction, uint64 *item, uint64 time)
 {
@@ -326,6 +331,7 @@ sint32 athrill_channel_set_count(AthrillChannel *channel, uint64 count,
 	return 0;
 }
 
+/* [ADV-SPI-005] record completion at the controller-supplied clock */
 sint32 athrill_channel_report_completion(AthrillChannel *channel,
 	uint64 time)
 {
