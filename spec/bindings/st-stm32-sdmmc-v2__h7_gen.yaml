@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-sdmmc-v2.yaml, the pinned ST SVD (STM32H743.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-sdmmc-v2
 compatible:
 - st,stm32-sdmmc
@@ -41,6 +42,8 @@ svd_source:
 bindings:
   power_on:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: POWER
       offset: '0x00'
@@ -53,6 +56,8 @@ bindings:
   clock_enable:
     access: rw
     note: v2 has no CLKEN; clock runs while powered
+    encoding:
+      kind: identity
     registers:
     - reg: CLKCR
       offset: '0x04'
@@ -64,6 +69,8 @@ bindings:
         svd_access: read-write
   command_index:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CMDR
       offset: '0x0C'
@@ -75,12 +82,16 @@ bindings:
         svd_access: read-write
   command_argument:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: ARGR
       offset: '0x08'
       size: 32
   response_type:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CMDR
       offset: '0x0C'
@@ -92,6 +103,8 @@ bindings:
         svd_access: read-write
   send_command:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CMDR
       offset: '0x0C'
@@ -103,6 +116,8 @@ bindings:
         svd_access: read-write
   response:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: RESP1R
       offset: '0x14'
@@ -118,6 +133,8 @@ bindings:
       size: 32
   command_sent:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: STAR
       offset: '0x34'
@@ -129,6 +146,8 @@ bindings:
         svd_access: read-only
   response_received:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: STAR
       offset: '0x34'
@@ -140,6 +159,8 @@ bindings:
         svd_access: read-only
   command_timeout:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: STAR
       offset: '0x34'
@@ -151,6 +172,8 @@ bindings:
         svd_access: read-only
   data_length:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: DLENR
       offset: '0x28'
@@ -162,6 +185,8 @@ bindings:
         svd_access: read-write
   block_size:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: DCTRL
       offset: '0x2C'
@@ -173,6 +198,8 @@ bindings:
         svd_access: read-write
   data_direction:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: DCTRL
       offset: '0x2C'
@@ -184,6 +211,8 @@ bindings:
         svd_access: read-write
   data_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CMDR
       offset: '0x0C'
@@ -195,6 +224,8 @@ bindings:
         svd_access: read-write
   data_end:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: STAR
       offset: '0x34'
@@ -206,6 +237,8 @@ bindings:
         svd_access: read-only
   data_block_end:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: STAR
       offset: '0x34'
@@ -217,6 +250,8 @@ bindings:
         svd_access: read-only
   data_timeout:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: STAR
       offset: '0x34'
@@ -228,6 +263,8 @@ bindings:
         svd_access: read-only
   flag_ack:
     access: w1c
+    encoding:
+      kind: identity
     registers:
     - reg: ICR
       offset: '0x38'
@@ -315,6 +352,8 @@ bindings:
         svd_access: read-write
   irq_enables:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: MASKR
       offset: '0x3C'
@@ -416,6 +455,8 @@ bindings:
     devicetree: interrupts
   idma_base:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: IDMABASE0R
       offset: '0x58'
@@ -425,6 +466,8 @@ bindings:
       size: 32
   idma_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: IDMACTRLR
       offset: '0x50'

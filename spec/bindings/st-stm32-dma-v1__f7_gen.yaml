@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-dma-v1.yaml, the pinned ST SVD (STM32F765.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-dma-v1
 compatible:
 - st,stm32-dma-v1
@@ -23,6 +24,8 @@ svd_source:
 bindings:
   stream_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -106,6 +109,8 @@ bindings:
         svd_access: read-write
   direction:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -190,6 +195,8 @@ bindings:
   request_select:
     access: rw
     note: F7 only (CHSEL); H7 routes requests through DMAMUX (mux_request_id)
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -273,6 +280,8 @@ bindings:
         svd_access: read-write
   peripheral_address:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0PAR
       offset: '0x18'
@@ -356,6 +365,8 @@ bindings:
         svd_access: read-write
   memory_address:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0M0AR
       offset: '0x1C'
@@ -439,6 +450,8 @@ bindings:
         s: 7
   item_count:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0NDTR
       offset: '0x14'
@@ -522,6 +535,8 @@ bindings:
         svd_access: read-write
   peripheral_width:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -605,6 +620,8 @@ bindings:
         svd_access: read-write
   memory_width:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -688,6 +705,8 @@ bindings:
         svd_access: read-write
   peripheral_increment:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -771,6 +790,8 @@ bindings:
         svd_access: read-write
   memory_increment:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -854,6 +875,8 @@ bindings:
         svd_access: read-write
   circular:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -937,6 +960,8 @@ bindings:
         svd_access: read-write
   half_transfer:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: LISR
       offset: '0x00'
@@ -996,6 +1021,8 @@ bindings:
           s: 7
   transfer_complete:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: LISR
       offset: '0x00'
@@ -1055,6 +1082,8 @@ bindings:
           s: 7
   transfer_error:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: LISR
       offset: '0x00'
@@ -1114,6 +1143,8 @@ bindings:
           s: 7
   flag_ack:
     access: w1c
+    encoding:
+      kind: identity
     registers:
     - reg: LIFCR
       offset: '0x08'
@@ -1365,6 +1396,8 @@ bindings:
           s: 7
   ht_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -1448,6 +1481,8 @@ bindings:
         svd_access: read-write
   tc_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -1531,6 +1566,8 @@ bindings:
         svd_access: read-write
   te_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -1616,6 +1653,8 @@ bindings:
     devicetree: interrupts (one per stream)
   fifo_mode:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0FCR
       offset: '0x24'
@@ -1731,6 +1770,8 @@ bindings:
         svd_access: read-write
   double_buffer:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'
@@ -1814,6 +1855,8 @@ bindings:
         svd_access: read-write
   current_target:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: S0CR
       offset: '0x10'

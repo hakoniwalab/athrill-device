@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-spi-v1.yaml, the pinned ST SVD (STM32F765.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-spi-v1
 compatible:
 - st,stm32-spi-fifo
@@ -61,6 +62,8 @@ svd_source:
 bindings:
   enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -72,6 +75,8 @@ bindings:
         svd_access: read-write
   master:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -83,6 +88,8 @@ bindings:
         svd_access: read-write
   clock_mode:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -98,6 +105,8 @@ bindings:
         svd_access: read-write
   bit_order:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -110,6 +119,8 @@ bindings:
   frame_size:
     access: rw
     note: DS = bits - 1
+    encoding:
+      kind: minus_one
     registers:
     - reg: CR2
       offset: '0x04'
@@ -122,6 +133,8 @@ bindings:
   baud_divider:
     access: rw
     note: divider = 2^(BR+1)
+    encoding:
+      kind: pow2_plus_one
     registers:
     - reg: CR1
       offset: '0x00'
@@ -134,6 +147,8 @@ bindings:
   tx_data:
     access: fifo
     note: write side of DR
+    encoding:
+      kind: identity
     registers:
     - reg: DR
       offset: '0x0C'
@@ -141,12 +156,16 @@ bindings:
   rx_data:
     access: fifo
     note: read side of DR
+    encoding:
+      kind: identity
     registers:
     - reg: DR
       offset: '0x0C'
       size: 32
   tx_space:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x08'
@@ -159,6 +178,8 @@ bindings:
   rx_available:
     access: ro
     note: 'with FRXTH: one 8-bit frame or 16 bits available'
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x08'
@@ -170,6 +191,8 @@ bindings:
         svd_access: read-only
   busy:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x08'
@@ -181,6 +204,8 @@ bindings:
         svd_access: read-only
   overrun:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x08'
@@ -195,6 +220,8 @@ bindings:
     access: rc
   tx_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -206,6 +233,8 @@ bindings:
         svd_access: read-write
   rx_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -217,6 +246,8 @@ bindings:
         svd_access: read-write
   error_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -230,6 +261,8 @@ bindings:
     devicetree: interrupts
   tx_dma_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -241,6 +274,8 @@ bindings:
         svd_access: read-write
   rx_dma_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'

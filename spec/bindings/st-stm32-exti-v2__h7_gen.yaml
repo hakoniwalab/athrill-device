@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-exti-v2.yaml, the pinned ST SVD (STM32H743.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-exti-v2
 compatible:
 - st,stm32-exti
@@ -34,6 +35,8 @@ bindings:
   line_source:
     access: rw
     note: SYSCFG EXTICR1-4, 4 bits per line 0-15
+    encoding:
+      kind: identity
     registers:
     - reg: EXTICR1
       offset: '0x08'
@@ -161,6 +164,8 @@ bindings:
           n: 15
   rising_trigger:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: RTSR1
       offset: '0x00'
@@ -300,6 +305,8 @@ bindings:
           n: 21
   falling_trigger:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: FTSR1
       offset: '0x04'
@@ -439,6 +446,8 @@ bindings:
           n: 21
   line_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CPUIMR1
       offset: '0x80'
@@ -638,6 +647,8 @@ bindings:
           n: 31
   software_trigger:
     access: w1s
+    encoding:
+      kind: identity
     registers:
     - reg: SWIER1
       offset: '0x08'
@@ -777,6 +788,8 @@ bindings:
           n: 21
   pending:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: CPUPR1
       offset: '0x88'
@@ -916,6 +929,8 @@ bindings:
           n: 21
   pending_ack:
     access: w1c
+    encoding:
+      kind: identity
     registers:
     - reg: CPUPR1
       offset: '0x88'
@@ -2932,3 +2947,512 @@ registers:
         width: 1
         access: read-only
         bound: false
+other_peripherals:
+  SYSCFG:
+    PMCR:
+      offset: '0x04'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        I2C1FMP:
+          lsb: 0
+          width: 1
+          access: read-write
+          bound: false
+        I2C2FMP:
+          lsb: 1
+          width: 1
+          access: read-write
+          bound: false
+        I2C3FMP:
+          lsb: 2
+          width: 1
+          access: read-write
+          bound: false
+        I2C4FMP:
+          lsb: 3
+          width: 1
+          access: read-write
+          bound: false
+        PB6FMP:
+          lsb: 4
+          width: 1
+          access: read-write
+          bound: false
+        PB7FMP:
+          lsb: 5
+          width: 1
+          access: read-write
+          bound: false
+        PB8FMP:
+          lsb: 6
+          width: 1
+          access: read-write
+          bound: false
+        PB9FMP:
+          lsb: 7
+          width: 1
+          access: read-write
+          bound: false
+        BOOSTE:
+          lsb: 8
+          width: 1
+          access: read-write
+          bound: false
+        BOOSTVDDSEL:
+          lsb: 9
+          width: 1
+          access: read-write
+          bound: false
+        EPIS:
+          lsb: 21
+          width: 3
+          access: read-write
+          bound: false
+        PA0SO:
+          lsb: 24
+          width: 1
+          access: read-write
+          bound: false
+        PA1SO:
+          lsb: 25
+          width: 1
+          access: read-write
+          bound: false
+        PC2SO:
+          lsb: 26
+          width: 1
+          access: read-write
+          bound: false
+        PC3SO:
+          lsb: 27
+          width: 1
+          access: read-write
+          bound: false
+    EXTICR1:
+      offset: '0x08'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        EXTI0:
+          lsb: 0
+          width: 4
+          access: read-write
+          bound: true
+        EXTI1:
+          lsb: 4
+          width: 4
+          access: read-write
+          bound: true
+        EXTI2:
+          lsb: 8
+          width: 4
+          access: read-write
+          bound: true
+        EXTI3:
+          lsb: 12
+          width: 4
+          access: read-write
+          bound: true
+    EXTICR2:
+      offset: '0x0C'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        EXTI4:
+          lsb: 0
+          width: 4
+          access: read-write
+          bound: true
+        EXTI5:
+          lsb: 4
+          width: 4
+          access: read-write
+          bound: true
+        EXTI6:
+          lsb: 8
+          width: 4
+          access: read-write
+          bound: true
+        EXTI7:
+          lsb: 12
+          width: 4
+          access: read-write
+          bound: true
+    EXTICR3:
+      offset: '0x10'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        EXTI8:
+          lsb: 0
+          width: 4
+          access: read-write
+          bound: true
+        EXTI9:
+          lsb: 4
+          width: 4
+          access: read-write
+          bound: true
+        EXTI10:
+          lsb: 8
+          width: 4
+          access: read-write
+          bound: true
+        EXTI11:
+          lsb: 12
+          width: 4
+          access: read-write
+          bound: true
+    EXTICR4:
+      offset: '0x14'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        EXTI12:
+          lsb: 0
+          width: 4
+          access: read-write
+          bound: true
+        EXTI13:
+          lsb: 4
+          width: 4
+          access: read-write
+          bound: true
+        EXTI14:
+          lsb: 8
+          width: 4
+          access: read-write
+          bound: true
+        EXTI15:
+          lsb: 12
+          width: 4
+          access: read-write
+          bound: true
+    CCCSR:
+      offset: '0x20'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        EN:
+          lsb: 0
+          width: 1
+          access: read-write
+          bound: false
+        CS:
+          lsb: 1
+          width: 1
+          access: read-write
+          bound: false
+        READY:
+          lsb: 8
+          width: 1
+          access: read-write
+          bound: false
+        HSLV:
+          lsb: 16
+          width: 1
+          access: read-write
+          bound: false
+    CCVR:
+      offset: '0x24'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        NCV:
+          lsb: 0
+          width: 4
+          access: read-only
+          bound: false
+        PCV:
+          lsb: 4
+          width: 4
+          access: read-only
+          bound: false
+    CCCR:
+      offset: '0x28'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        NCC:
+          lsb: 0
+          width: 4
+          access: read-write
+          bound: false
+        PCC:
+          lsb: 4
+          width: 4
+          access: read-write
+          bound: false
+    PWRCR:
+      offset: '0x2C'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        ODEN:
+          lsb: 0
+          width: 4
+          access: read-write
+          bound: false
+    PKGR:
+      offset: '0x124'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        PKG:
+          lsb: 0
+          width: 4
+          access: read-only
+          bound: false
+    UR0:
+      offset: '0x300'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        BKS:
+          lsb: 0
+          width: 1
+          access: read-only
+          bound: false
+        RDP:
+          lsb: 16
+          width: 8
+          access: read-only
+          bound: false
+    UR2:
+      offset: '0x308'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        BORH:
+          lsb: 0
+          width: 2
+          access: read-write
+          bound: false
+        BOOT_ADD0:
+          lsb: 16
+          width: 16
+          access: read-write
+          bound: false
+    UR3:
+      offset: '0x30C'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        BOOT_ADD1:
+          lsb: 16
+          width: 16
+          access: read-write
+          bound: false
+    UR4:
+      offset: '0x310'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        MEPAD_1:
+          lsb: 16
+          width: 1
+          access: read-only
+          bound: false
+    UR5:
+      offset: '0x314'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        MESAD_1:
+          lsb: 0
+          width: 1
+          access: read-only
+          bound: false
+        WRPN_1:
+          lsb: 16
+          width: 8
+          access: read-only
+          bound: false
+    UR6:
+      offset: '0x318'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        PA_BEG_1:
+          lsb: 0
+          width: 12
+          access: read-only
+          bound: false
+        PA_END_1:
+          lsb: 16
+          width: 12
+          access: read-only
+          bound: false
+    UR7:
+      offset: '0x31C'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        SA_BEG_1:
+          lsb: 0
+          width: 12
+          access: read-only
+          bound: false
+        SA_END_1:
+          lsb: 16
+          width: 12
+          access: read-only
+          bound: false
+    UR8:
+      offset: '0x320'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        MEPAD_2:
+          lsb: 0
+          width: 1
+          access: read-only
+          bound: false
+        MESAD_2:
+          lsb: 16
+          width: 1
+          access: read-only
+          bound: false
+    UR9:
+      offset: '0x324'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        WRPN_2:
+          lsb: 0
+          width: 8
+          access: read-only
+          bound: false
+        PA_BEG_2:
+          lsb: 16
+          width: 12
+          access: read-only
+          bound: false
+    UR10:
+      offset: '0x328'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        PA_END_2:
+          lsb: 0
+          width: 12
+          access: read-only
+          bound: false
+        SA_BEG_2:
+          lsb: 16
+          width: 12
+          access: read-only
+          bound: false
+    UR11:
+      offset: '0x32C'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        SA_END_2:
+          lsb: 0
+          width: 12
+          access: read-only
+          bound: false
+        IWDG1M:
+          lsb: 16
+          width: 1
+          access: read-only
+          bound: false
+    UR12:
+      offset: '0x330'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        SECURE:
+          lsb: 16
+          width: 1
+          access: read-only
+          bound: false
+    UR13:
+      offset: '0x334'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        SDRS:
+          lsb: 0
+          width: 2
+          access: read-only
+          bound: false
+        D1SBRST:
+          lsb: 16
+          width: 1
+          access: read-only
+          bound: false
+    UR14:
+      offset: '0x338'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        D1STPRST:
+          lsb: 0
+          width: 1
+          access: read-write
+          bound: false
+    UR15:
+      offset: '0x33C'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        FZIWDGSTB:
+          lsb: 16
+          width: 1
+          access: read-only
+          bound: false
+    UR16:
+      offset: '0x340'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        FZIWDGSTP:
+          lsb: 0
+          width: 1
+          access: read-only
+          bound: false
+        PKP:
+          lsb: 16
+          width: 1
+          access: read-only
+          bound: false
+    UR17:
+      offset: '0x344'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        IO_HSLV:
+          lsb: 0
+          width: 1
+          access: read-only
+          bound: false

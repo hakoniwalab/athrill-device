@@ -1,278 +1,84 @@
 /*
- * Bindings loader (see bindings.h). Reads the generated YAML with libyaml.
+ * Bindings: selection by compatible/SoC, format dispatch and accessors.
+ * The format readers fill the storage (src/bindings_v1.c for format 1).
  * Copyright 2026 Hakoniwa Laboratory
  * SPDX-License-Identifier: MIT
  */
-#include "athrill_bindings.h"
+#include "bindings_internal.h"
 
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <yaml.h>
 
 #ifndef ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR
 #define ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR "spec/bindings"
 #endif
 
-#define MAX_LOADED   32U
-#define MAX_REGS     64U
-#define MAX_TERMS    64U
-#define MAX_LIST     16U
-
-#define MAX_FIELDS_PER_REG 40U
-
-typedef struct {
-	char name[24];
-	uint8 lsb;
-	uint8 width;
-} LoadedField;
-
-typedef struct {
-	char name[40];
-	AthrillBindAccess access;
-	uint16 reg;
-	uint8 field_count;
-	AthrillBindField fields[ATHRILL_BINDINGS_MAX_FIELDS];
-} LoadedTerm;
-
-struct AthrillBindings {
-	char path[512];
-	char ip[64];
-	char compatibles[MAX_LIST][64];
-	uint32 compatible_count;
-	char features[MAX_LIST][32];
-	uint32 feature_count;
-	char constant_names[MAX_LIST][40];
-	uint32 constant_values[MAX_LIST];
-	uint32 constant_count;
-	AthrillBindRegister registers[MAX_REGS];
-	LoadedField fields[MAX_REGS][MAX_FIELDS_PER_REG];
-	uint32 field_count[MAX_REGS];
-	uint32 register_count;
-	LoadedTerm terms[MAX_TERMS];
-	uint32 term_count;
-};
+#define MAX_LOADED 64U
 
 static AthrillBindings *loaded[MAX_LOADED];
 static uint32 loaded_count;
+static std_bool loaded_done;
+static char load_error[512];
 
-static const char *scalar(yaml_document_t *doc, yaml_node_t *node)
-{
-	(void)doc;
-	return (node != NULL && node->type == YAML_SCALAR_NODE) ? (const char *)node->data.scalar.value : NULL;
-}
+static const struct {
+	uint32 format;
+	AthrillBindingsReader read;
+} readers[] = {
+	{ 1U, athrill_bindings_v1_read },
+};
 
-static yaml_node_t *get(yaml_document_t *doc, yaml_node_t *map, const char *key)
+void *bind_grow(void *array, uint32 count, size_t size)
 {
-	yaml_node_pair_t *pair;
-	if (map == NULL || map->type != YAML_MAPPING_NODE) {
-		return NULL;
-	}
-	for (pair = map->data.mapping.pairs.start; pair < map->data.mapping.pairs.top; pair++) {
-		const char *k = scalar(doc, yaml_document_get_node(doc, pair->key));
-		if (k != NULL && strcmp(k, key) == 0) {
-			return yaml_document_get_node(doc, pair->value);
+	/* grow in steps of 64 elements */
+	if ((count % 64U) == 0U) {
+		void *p = realloc(array, (count + 64U) * size);
+		if (p == NULL) {
+			fprintf(stderr, "bindings: out of memory\n");
+			exit(1);
 		}
+		return p;
 	}
-	return NULL;
+	return array;
 }
 
-static uint32 to_u32(const char *text)
+void athrill_bindings_free(AthrillBindings *b)
 {
-	return text != NULL ? (uint32)strtoul(text, NULL, 0) : 0U;
-}
-
-static AthrillBindAccess access_of(const char *text)
-{
-	static const struct { const char *name; AthrillBindAccess access; } table[] = {
-		{ "rw", ATHRILL_BIND_RW }, { "ro", ATHRILL_BIND_RO }, { "wo", ATHRILL_BIND_WO },
-		{ "w1c", ATHRILL_BIND_W1C }, { "w1s", ATHRILL_BIND_W1S }, { "w0c", ATHRILL_BIND_W0C },
-		{ "rs", ATHRILL_BIND_RS }, { "rc", ATHRILL_BIND_RC }, { "fifo", ATHRILL_BIND_FIFO },
-	};
-	uint32 i;
-	for (i = 0U; text != NULL && i < sizeof(table) / sizeof(table[0]); i++) {
-		if (strcmp(text, table[i].name) == 0) {
-			return table[i].access;
-		}
-	}
-	return ATHRILL_BIND_RW;
-}
-
-static void string_list(yaml_document_t *doc, yaml_node_t *seq, char out[][64], uint32 *count, uint32 max, size_t width)
-{
-	yaml_node_item_t *item;
-	*count = 0U;
-	if (seq == NULL || seq->type != YAML_SEQUENCE_NODE) {
+	if (b == NULL) {
 		return;
 	}
-	for (item = seq->data.sequence.items.start; item < seq->data.sequence.items.top && *count < max; item++) {
-		const char *s = scalar(doc, yaml_document_get_node(doc, *item));
-		if (s != NULL) {
-			(void)snprintf((char *)out + (*count) * width, width, "%s", s);
-			(*count)++;
-		}
-	}
+	free(b->peripherals);
+	free(b->instance_names);
+	free(b->instance_peripheral);
+	free(b->registers);
+	free(b->fields);
+	free(b->places);
+	free(b->place_fields);
+	free(b->terms);
+	free(b);
 }
 
-static uint16 register_index(const AthrillBindings *b, const char *name)
+/* The format number is the first key of every generated file. */
+static uint32 file_format(const char *path)
 {
-	uint32 i;
-	for (i = 0U; name != NULL && i < b->register_count; i++) {
-		if (strcmp(b->registers[i].name, name) == 0) {
-			return (uint16)i;
-		}
-	}
-	return ATHRILL_BINDINGS_NO_REG;
-}
-
-static std_bool writable(const char *access)
-{
-	return access != NULL && (strcmp(access, "read-write") == 0 || strcmp(access, "write-only") == 0 ||
-		strcmp(access, "writeOnce") == 0 || strcmp(access, "read-writeOnce") == 0);
-}
-
-static sint32 parse(AthrillBindings *b, yaml_document_t *doc)
-{
-	yaml_node_t *root = yaml_document_get_root_node(doc);
-	yaml_node_t *node;
-	yaml_node_pair_t *pair;
-	const char *s;
-
-	if (root == NULL || root->type != YAML_MAPPING_NODE) {
-		return -1;
-	}
-	s = scalar(doc, get(doc, root, "ip"));
-	(void)snprintf(b->ip, sizeof(b->ip), "%s", s != NULL ? s : "");
-	string_list(doc, get(doc, root, "compatible"), b->compatibles, &b->compatible_count, MAX_LIST, 64U);
-	{
-		char tmp[MAX_LIST][64];
-		uint32 i;
-		string_list(doc, get(doc, root, "features"), tmp, &b->feature_count, MAX_LIST, 64U);
-		for (i = 0U; i < b->feature_count; i++) {
-			(void)snprintf(b->features[i], sizeof(b->features[i]), "%s", tmp[i]);
-		}
-	}
-	node = get(doc, root, "constants");
-	if (node != NULL && node->type == YAML_MAPPING_NODE) {
-		for (pair = node->data.mapping.pairs.start; pair < node->data.mapping.pairs.top && b->constant_count < MAX_LIST; pair++) {
-			const char *k = scalar(doc, yaml_document_get_node(doc, pair->key));
-			const char *v = scalar(doc, yaml_document_get_node(doc, pair->value));
-			if (k != NULL && v != NULL && (v[0] >= '0' && v[0] <= '9')) {
-				(void)snprintf(b->constant_names[b->constant_count], 40U, "%s", k);
-				b->constant_values[b->constant_count++] = to_u32(v);
-			}
-		}
-	}
-	node = get(doc, root, "registers");
-	if (node == NULL || node->type != YAML_MAPPING_NODE) {
-		return -1;
-	}
-	for (pair = node->data.mapping.pairs.start; pair < node->data.mapping.pairs.top && b->register_count < MAX_REGS; pair++) {
-		yaml_node_t *reg = yaml_document_get_node(doc, pair->value);
-		yaml_node_t *fields = get(doc, reg, "fields");
-		AthrillBindRegister *r = &b->registers[b->register_count];
-		yaml_node_pair_t *fp;
-		(void)snprintf(r->name, sizeof(r->name), "%s", scalar(doc, yaml_document_get_node(doc, pair->key)));
-		r->offset = to_u32(scalar(doc, get(doc, reg, "offset")));
-		r->size = to_u32(scalar(doc, get(doc, reg, "size")));
-		r->reset = to_u32(scalar(doc, get(doc, reg, "reset")));
-		r->stored_mask = 0U;
-		if (fields != NULL && fields->type == YAML_MAPPING_NODE) {
-			for (fp = fields->data.mapping.pairs.start; fp < fields->data.mapping.pairs.top; fp++) {
-				yaml_node_t *f = yaml_document_get_node(doc, fp->value);
-				uint32 lsb = to_u32(scalar(doc, get(doc, f, "lsb")));
-				uint32 width = to_u32(scalar(doc, get(doc, f, "width")));
-				uint32 n = b->field_count[b->register_count];
-				if (n < MAX_FIELDS_PER_REG) {
-					(void)snprintf(b->fields[b->register_count][n].name, 24U, "%s",
-						scalar(doc, yaml_document_get_node(doc, fp->key)));
-					b->fields[b->register_count][n].lsb = (uint8)lsb;
-					b->fields[b->register_count][n].width = (uint8)width;
-					b->field_count[b->register_count] = n + 1U;
-				}
-				if (writable(scalar(doc, get(doc, f, "access")))) {
-					r->stored_mask |= (width >= 32U ? 0xffffffffU : ((1U << width) - 1U)) << lsb;
-				}
-			}
-		}
-		b->register_count++;
-	}
-	node = get(doc, root, "bindings");
-	if (node == NULL || node->type != YAML_MAPPING_NODE) {
-		return -1;
-	}
-	for (pair = node->data.mapping.pairs.start; pair < node->data.mapping.pairs.top && b->term_count < MAX_TERMS; pair++) {
-		yaml_node_t *term = yaml_document_get_node(doc, pair->value);
-		yaml_node_t *regs = get(doc, term, "registers");
-		LoadedTerm *t = &b->terms[b->term_count];
-		memset(t, 0, sizeof(*t));
-		(void)snprintf(t->name, sizeof(t->name), "%s", scalar(doc, yaml_document_get_node(doc, pair->key)));
-		t->reg = ATHRILL_BINDINGS_NO_REG;
-		if (get(doc, term, "devicetree") != NULL) {
-			t->access = ATHRILL_BIND_DEVICETREE;
-		} else if (get(doc, term, "derived") != NULL) {
-			t->access = ATHRILL_BIND_DERIVED;
-		} else if (get(doc, term, "sequence") != NULL) {
-			t->access = ATHRILL_BIND_SEQUENCE;
-		} else if (get(doc, term, "not_applicable") != NULL) {
-			t->access = ATHRILL_BIND_NOT_APPLICABLE;
-		} else {
-			t->access = access_of(scalar(doc, get(doc, term, "access")));
-		}
-		if (regs != NULL && regs->type == YAML_SEQUENCE_NODE && regs->data.sequence.items.top > regs->data.sequence.items.start) {
-			/* A term bound to one register (the models use the first entry; repeated
-			 * per-instance entries such as DMA streams are resolved by those models). */
-			yaml_node_t *first = yaml_document_get_node(doc, *regs->data.sequence.items.start);
-			yaml_node_t *fields = get(doc, first, "fields");
-			t->reg = register_index(b, scalar(doc, get(doc, first, "reg")));
-			if (fields != NULL && fields->type == YAML_SEQUENCE_NODE) {
-				yaml_node_item_t *item;
-				for (item = fields->data.sequence.items.start; item < fields->data.sequence.items.top &&
-				     t->field_count < ATHRILL_BINDINGS_MAX_FIELDS; item++) {
-					yaml_node_t *f = yaml_document_get_node(doc, *item);
-					t->fields[t->field_count].lsb = (uint8)to_u32(scalar(doc, get(doc, f, "lsb")));
-					t->fields[t->field_count].width = (uint8)to_u32(scalar(doc, get(doc, f, "width")));
-					t->field_count++;
-				}
-			}
-		}
-		b->term_count++;
-	}
-	return 0;
-}
-
-static AthrillBindings *load(const char *path)
-{
-	FILE *fp = fopen(path, "rb");
-	yaml_parser_t parser;
-	yaml_document_t doc;
-	AthrillBindings *b;
+	FILE *fp = fopen(path, "r");
+	char line[256];
+	uint32 format = 0U;
 	if (fp == NULL) {
-		return NULL;
+		return 0U;
 	}
-	b = calloc(1U, sizeof(*b));
-	if (b == NULL || !yaml_parser_initialize(&parser)) {
-		free(b);
-		fclose(fp);
-		return NULL;
+	while (fgets(line, sizeof(line), fp) != NULL) {
+		if (strncmp(line, "bindings_format:", 16U) == 0) {
+			format = (uint32)strtoul(line + 16, NULL, 10);
+			break;
+		}
+		if (line[0] != '#' && line[0] != '\n') {
+			break;
+		}
 	}
-	yaml_parser_set_input_file(&parser, fp);
-	if (!yaml_parser_load(&parser, &doc)) {
-		yaml_parser_delete(&parser);
-		free(b);
-		fclose(fp);
-		return NULL;
-	}
-	(void)snprintf(b->path, sizeof(b->path), "%s", path);
-	if (parse(b, &doc) != 0) {
-		free(b);
-		b = NULL;
-	}
-	yaml_document_delete(&doc);
-	yaml_parser_delete(&parser);
 	fclose(fp);
-	return b;
+	return format;
 }
 
 static void load_all(void)
@@ -280,37 +86,60 @@ static void load_all(void)
 	const char *dir = getenv("ATHRILL_DEVICE_BINDINGS_DIR");
 	DIR *d;
 	struct dirent *e;
-	if (loaded_count != 0U) {
+	if (loaded_done) {
 		return;
 	}
+	loaded_done = TRUE;
 	if (dir == NULL || dir[0] == '\0') {
 		dir = ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR;
 	}
 	d = opendir(dir);
 	if (d == NULL) {
+		(void)snprintf(load_error, sizeof(load_error), "bindings directory %s not found", dir);
 		return;
 	}
-	while ((e = readdir(d)) != NULL && loaded_count < MAX_LOADED) {
+	while ((e = readdir(d)) != NULL) {
 		size_t n = strlen(e->d_name);
 		char path[600];
+		uint32 format, i;
+		AthrillBindings *b = NULL;
 		if (n < 9U || strcmp(e->d_name + n - 9U, "_gen.yaml") != 0) {
 			continue;
 		}
 		(void)snprintf(path, sizeof(path), "%s/%s", dir, e->d_name);
-		loaded[loaded_count] = load(path);
-		if (loaded[loaded_count] != NULL) {
-			loaded_count++;
+		format = file_format(path);
+		for (i = 0U; i < sizeof(readers) / sizeof(readers[0]); i++) {
+			if (readers[i].format == format) {
+				break;
+			}
 		}
+		if (i == sizeof(readers) / sizeof(readers[0])) {
+			fprintf(stderr, "bindings: %s: bindings_format %u is not supported by this build\n", path, format);
+			exit(1);
+		}
+		if (readers[i].read(path, &b, load_error, sizeof(load_error)) != 0) {
+			fprintf(stderr, "bindings: %s: %s\n", path, load_error);
+			exit(1);
+		}
+		if (loaded_count == MAX_LOADED) {
+			fprintf(stderr, "bindings: more than %u files\n", MAX_LOADED);
+			exit(1);
+		}
+		loaded[loaded_count++] = b;
 	}
 	closedir(d);
 }
 
-const AthrillBindings *athrill_bindings_for(const char *compatible, char *error, uint32 error_size)
+const AthrillBindings *athrill_bindings_for(const char *compatible, const char *soc,
+                                            char *error, uint32 error_size)
 {
 	const AthrillBindings *found = NULL;
 	uint32 i, j, matches = 0U;
 	load_all();
 	for (i = 0U; compatible != NULL && i < loaded_count; i++) {
+		if (soc != NULL && strcmp(loaded[i]->soc, soc) != 0) {
+			continue;
+		}
 		for (j = 0U; j < loaded[i]->compatible_count; j++) {
 			if (strcmp(loaded[i]->compatibles[j], compatible) == 0) {
 				found = loaded[i];
@@ -320,29 +149,34 @@ const AthrillBindings *athrill_bindings_for(const char *compatible, char *error,
 		}
 	}
 	if (matches != 1U && error != NULL && error_size != 0U) {
-		(void)snprintf(error, error_size, matches == 0U ? "no bindings for %s (dir %s)" :
-			"%s matches several bindings; selection by SoC is not implemented yet",
+		(void)snprintf(error, error_size, "%s: %s%s%s",
 			compatible != NULL ? compatible : "(null)",
-			getenv("ATHRILL_DEVICE_BINDINGS_DIR") != NULL ? getenv("ATHRILL_DEVICE_BINDINGS_DIR") :
-			ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR);
+			matches == 0U ? "no bindings" : "several bindings; give the SoC",
+			soc != NULL ? " for " : "", soc != NULL ? soc : "");
+		if (load_error[0] != '\0') {
+			(void)snprintf(error + strlen(error), error_size - (uint32)strlen(error), " (%s)", load_error);
+		}
 	}
 	return matches == 1U ? found : NULL;
 }
 
+uint32 athrill_bindings_format(const AthrillBindings *b) { return b->format; }
 const char *athrill_bindings_ip(const AthrillBindings *b) { return b->ip; }
+const char *athrill_bindings_soc(const AthrillBindings *b) { return b->soc; }
+const char *athrill_bindings_model(const AthrillBindings *b) { return b->model; }
 
-uint32 athrill_bindings_has_feature(const AthrillBindings *b, const char *feature)
+std_bool athrill_bindings_has_feature(const AthrillBindings *b, const char *feature)
 {
 	uint32 i;
 	for (i = 0U; i < b->feature_count; i++) {
 		if (strcmp(b->features[i], feature) == 0) {
-			return 1U;
+			return TRUE;
 		}
 	}
-	return 0U;
+	return FALSE;
 }
 
-uint32 athrill_bindings_constant(const AthrillBindings *b, const char *name, uint32 fallback)
+uint64 athrill_bindings_constant(const AthrillBindings *b, const char *name, uint64 fallback)
 {
 	uint32 i;
 	for (i = 0U; i < b->constant_count; i++) {
@@ -353,6 +187,24 @@ uint32 athrill_bindings_constant(const AthrillBindings *b, const char *name, uin
 	return fallback;
 }
 
+uint32 athrill_bindings_peripheral_count(const AthrillBindings *b) { return b->peripheral_count; }
+
+const char *athrill_bindings_peripheral(const AthrillBindings *b, uint32 index)
+{
+	return index < b->peripheral_count ? b->peripherals[index] : NULL;
+}
+
+uint32 athrill_bindings_instance(const AthrillBindings *b, const char *instance)
+{
+	uint32 i;
+	for (i = 0U; i < b->instance_count; i++) {
+		if (strcmp(b->instance_names[i], instance) == 0) {
+			return b->instance_peripheral[i];
+		}
+	}
+	return 0U;
+}
+
 uint32 athrill_bindings_register_count(const AthrillBindings *b) { return b->register_count; }
 
 const AthrillBindRegister *athrill_bindings_register(const AthrillBindings *b, uint32 index)
@@ -360,68 +212,106 @@ const AthrillBindRegister *athrill_bindings_register(const AthrillBindings *b, u
 	return index < b->register_count ? &b->registers[index] : NULL;
 }
 
-void athrill_bindings_resolve(const AthrillBindings *b, const char *const *names, uint32 count, AthrillBindTerm *out)
+const AthrillBindField *athrill_bindings_field(const AthrillBindings *b, uint32 index)
 {
-	uint32 i, j, k;
-	for (i = 0U; i < count; i++) {
-		memset(&out[i], 0, sizeof(out[i]));
-		out[i].access = ATHRILL_BIND_NONE;
-		out[i].reg = ATHRILL_BINDINGS_NO_REG;
-		for (j = 0U; j < b->term_count; j++) {
-			if (strcmp(b->terms[j].name, names[i]) != 0) {
-				continue;
-			}
-			out[i].access = b->terms[j].access;
-			out[i].reg = b->terms[j].reg;
-			out[i].field_count = b->terms[j].field_count;
-			for (k = 0U; k < b->terms[j].field_count; k++) {
-				uint32 w = b->terms[j].fields[k].width;
-				out[i].fields[k] = b->terms[j].fields[k];
-				out[i].mask |= (w >= 32U ? 0xffffffffU : ((1U << w) - 1U)) << b->terms[j].fields[k].lsb;
-			}
-			break;
-		}
-	}
+	return index < b->field_count ? &b->fields[index] : NULL;
 }
 
-void athrill_bindings_word_index(const AthrillBindings *b, uint16 *word_index, uint32 words)
+uint32 athrill_bindings_term_count(const AthrillBindings *b) { return b->term_count; }
+
+const AthrillBindTerm *athrill_bindings_term(const AthrillBindings *b, uint32 index)
 {
-	uint32 i;
-	for (i = 0U; i < words; i++) {
-		word_index[i] = ATHRILL_BINDINGS_NO_REG;
-	}
-	for (i = 0U; i < b->register_count; i++) {
-		uint32 w = b->registers[i].offset / 4U;
-		if (w < words) {
-			word_index[w] = (uint16)i;
-		}
-	}
+	return index < b->term_count ? &b->terms[index] : NULL;
 }
 
-sint32 athrill_bindings_find(const AthrillBindings *b, const char *reg, const char *field,
-                             uint32 *offset, uint32 *lsb, uint32 *width)
+const AthrillBindTerm *athrill_bindings_term_named(const AthrillBindings *b, const char *name)
 {
-	uint16 r = register_index(b, reg);
 	uint32 i;
-	if (r == ATHRILL_BINDINGS_NO_REG) {
+	for (i = 0U; i < b->term_count; i++) {
+		if (strcmp(b->terms[i].name, name) == 0) {
+			return &b->terms[i];
+		}
+	}
+	return NULL;
+}
+
+const AthrillBindPlace *athrill_bindings_place(const AthrillBindings *b, uint32 index)
+{
+	return index < b->place_count ? &b->places[index] : NULL;
+}
+
+uint32 athrill_bindings_place_field(const AthrillBindings *b, const AthrillBindPlace *place, uint32 i)
+{
+	return b->place_fields[place->field_first + i];
+}
+
+static uint32 peripheral_index(const AthrillBindings *b, const char *peripheral)
+{
+	uint32 i;
+	if (peripheral == NULL) {
+		return 0U;
+	}
+	for (i = 0U; i < b->peripheral_count; i++) {
+		if (strcmp(b->peripherals[i], peripheral) == 0) {
+			return i;
+		}
+	}
+	return ATHRILL_BIND_NONE;
+}
+
+sint32 athrill_bindings_find(const AthrillBindings *b, const char *peripheral, const char *reg,
+                             const char *field, uint32 *offset, uint32 *lsb, uint32 *width)
+{
+	uint32 p = peripheral_index(b, peripheral);
+	uint32 r, f;
+	if (p == ATHRILL_BIND_NONE || reg == NULL) {
 		return -1;
 	}
-	if (offset != NULL) {
-		*offset = b->registers[r].offset;
-	}
-	if (field == NULL) {
-		return 0;
-	}
-	for (i = 0U; i < b->field_count[r]; i++) {
-		if (strcmp(b->fields[r][i].name, field) == 0) {
-			if (lsb != NULL) {
-				*lsb = b->fields[r][i].lsb;
-			}
-			if (width != NULL) {
-				*width = b->fields[r][i].width;
-			}
+	for (r = 0U; r < b->register_count; r++) {
+		const AthrillBindRegister *rr = &b->registers[r];
+		if (rr->peripheral != p || strcmp(rr->name, reg) != 0) {
+			continue;
+		}
+		if (offset != NULL) {
+			*offset = rr->offset;
+		}
+		if (field == NULL) {
 			return 0;
 		}
+		for (f = rr->field_first; f < rr->field_first + rr->field_count; f++) {
+			if (strcmp(b->fields[f].name, field) == 0) {
+				if (lsb != NULL) {
+					*lsb = b->fields[f].lsb;
+				}
+				if (width != NULL) {
+					*width = b->fields[f].width;
+				}
+				return 0;
+			}
+		}
+		return -1;
 	}
 	return -1;
+}
+
+uint32 athrill_bindings_places_by_index(const AthrillBindings *b, const AthrillBindTerm *term,
+                                        const char *index_name, const AthrillBindPlace **out,
+                                        uint32 max)
+{
+	uint32 i, k, top = 0U;
+	for (i = 0U; i < max; i++) {
+		out[i] = NULL;
+	}
+	for (i = term->place_first; i < term->place_first + term->place_count; i++) {
+		const AthrillBindPlace *p = &b->places[i];
+		for (k = 0U; k < p->index_count; k++) {
+			if (strcmp(p->index_name[k], index_name) == 0 && p->index_value[k] < max) {
+				out[p->index_value[k]] = p;
+				if (p->index_value[k] + 1U > top) {
+					top = p->index_value[k] + 1U;
+				}
+			}
+		}
+	}
+	return top;
 }

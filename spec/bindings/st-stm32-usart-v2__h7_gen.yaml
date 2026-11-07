@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-usart-v2.yaml, the pinned ST SVD (STM32H743.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-usart-v2
 compatible:
 - st,stm32-usart
@@ -42,6 +43,8 @@ svd_source:
 bindings:
   enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -53,6 +56,8 @@ bindings:
         svd_access: read-write
   tx_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -64,6 +69,8 @@ bindings:
         svd_access: read-write
   rx_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -76,6 +83,8 @@ bindings:
   word_length:
     access: rw
     note: M1:M0 = 00 8 bits, 01 9 bits, 10 7 bits (incl. parity)
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -91,6 +100,8 @@ bindings:
         svd_access: read-write
   parity:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -106,6 +117,8 @@ bindings:
         svd_access: read-write
   stop_bits:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -118,6 +131,8 @@ bindings:
   baud_divider:
     access: rw
     note: the SVD splits BRR into two fields; concatenated in bit order
+    encoding:
+      kind: identity
     registers:
     - reg: BRR
       offset: '0x0C'
@@ -133,6 +148,8 @@ bindings:
         svd_access: read-write
   oversampling:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -144,12 +161,16 @@ bindings:
         svd_access: read-write
   tx_data:
     access: fifo
+    encoding:
+      kind: identity
     registers:
     - reg: TDR
       offset: '0x28'
       size: 32
   rx_data:
     access: fifo
+    encoding:
+      kind: identity
     registers:
     - reg: RDR
       offset: '0x24'
@@ -157,6 +178,8 @@ bindings:
   tx_space:
     access: ro
     note: RM0433 names it TXFNF (FIFO mode); the SVD keeps the non-FIFO name
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x1C'
@@ -168,6 +191,8 @@ bindings:
         svd_access: read-only
   tx_complete:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x1C'
@@ -180,6 +205,8 @@ bindings:
   rx_available:
     access: ro
     note: RM0433 names it RXFNE (FIFO mode); the SVD keeps the non-FIFO name
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x1C'
@@ -191,6 +218,8 @@ bindings:
         svd_access: read-only
   idle_line:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x1C'
@@ -202,6 +231,8 @@ bindings:
         svd_access: read-only
   overrun:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x1C'
@@ -213,6 +244,8 @@ bindings:
         svd_access: read-only
   framing_error:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x1C'
@@ -224,6 +257,8 @@ bindings:
         svd_access: read-only
   parity_error:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x1C'
@@ -235,6 +270,8 @@ bindings:
         svd_access: read-only
   status_ack:
     access: w1c
+    encoding:
+      kind: identity
     registers:
     - reg: ICR
       offset: '0x20'
@@ -263,6 +300,8 @@ bindings:
   tx_irq_enable:
     access: rw
     note: RM0433 names it TXFNFIE (FIFO mode); the SVD keeps the non-FIFO name
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -274,6 +313,8 @@ bindings:
         svd_access: read-write
   tc_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -286,6 +327,8 @@ bindings:
   rx_irq_enable:
     access: rw
     note: RM0433 names it RXFNEIE (FIFO mode); the SVD keeps the non-FIFO name
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -297,6 +340,8 @@ bindings:
         svd_access: read-write
   idle_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -310,6 +355,8 @@ bindings:
     devicetree: interrupts
   tx_dma_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR3
       offset: '0x08'
@@ -321,6 +368,8 @@ bindings:
         svd_access: read-write
   rx_dma_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR3
       offset: '0x08'
@@ -336,6 +385,8 @@ bindings:
     devicetree: dmas, dma-names = rx
   rx_invert:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -347,6 +398,8 @@ bindings:
         svd_access: read-write
   tx_invert:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -358,6 +411,8 @@ bindings:
         svd_access: read-write
   swap_pins:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -369,6 +424,8 @@ bindings:
         svd_access: read-write
   fifo_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -380,6 +437,8 @@ bindings:
         svd_access: read-write
   rx_fifo_full:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x1C'
@@ -391,6 +450,8 @@ bindings:
         svd_access: read-only
   tx_fifo_empty:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x1C'

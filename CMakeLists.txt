@@ -23,6 +23,7 @@ add_library(athrill_device STATIC
   src/models/ms5611.c
   src/models/pwm_actuator.c
   src/bindings.c
+  src/bindings_v1.c
   src/models/stm32_gpio.c
   src/models/stm32_exti.c
   src/models/stm32_tim.c
@@ -128,6 +129,11 @@ if(BUILD_TESTING)
   target_compile_definitions(test_bindings PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_link_libraries(test_bindings PRIVATE athrill_device)
   add_test(NAME bindings COMMAND test_bindings)
+  add_executable(test_bindings_conformance tests/test_bindings_conformance.c)
+  target_compile_definitions(test_bindings_conformance PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
+    ATHRILL_TEST_BINDINGS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/spec/bindings")
+  target_link_libraries(test_bindings_conformance PRIVATE athrill_device PkgConfig::YAML)
+  add_test(NAME bindings-conformance COMMAND test_bindings_conformance)
 
   add_executable(test_channel tests/test_channel.c)
   target_compile_definitions(test_channel PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

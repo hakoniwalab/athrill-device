@@ -37,11 +37,15 @@ bindings:
     field: DSIZE
     access: rw
     note: DSIZE = bits - 1
+    encoding:
+      kind: minus_one
   baud_divider:
     reg: CFG1
     field: MBR
     access: rw
     note: divider = 2^(MBR+1)
+    encoding:
+      kind: pow2_plus_one
   tx_data:
     reg: TXDR
     access: fifo
