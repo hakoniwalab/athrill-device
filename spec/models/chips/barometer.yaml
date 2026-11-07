@@ -1,0 +1,32 @@
+model: barometer
+version: 1.0.0
+summary: Command-based pressure sensor with calibration PROM (MS5611 on SPI or I2C). Values come from the common sensor source.
+
+terms:
+  - {name: reset,          kind: control, feature: base, meaning: "Reset command; reloads the PROM."}
+  - {name: prom,           kind: data,    feature: base, meaning: "Calibration words C1..C6 and the CRC word (PROM read commands)."}
+  - {name: convert_pressure,    kind: control, feature: base, meaning: "Starts a D1 conversion at an oversampling ratio."}
+  - {name: convert_temperature, kind: control, feature: base, meaning: "Starts a D2 conversion at an oversampling ratio."}
+  - {name: adc_read,       kind: data,    feature: base, meaning: "24-bit result of the last completed conversion (0 if none)."}
+  - {name: conversion_time, kind: status, feature: base, meaning: "Datasheet conversion time per oversampling ratio."}
+
+features:
+  base: PROM, conversions, ADC read.
+
+behaviour:
+  - id: ADV-BARO-B001
+    feature: base
+    rule: After reset the PROM holds fixed calibration words whose CRC-4 (AN520) is valid (ADV-CHIP-MS5611-001).
+  - id: ADV-BARO-B002
+    feature: base
+    rule: A pressure p and temperature T from the sensor source read, through D1 and D2, as raw values that the datasheet's first-order compensation with the PROM coefficients turns back into p and T within one count (the model inverts the compensation).
+  - id: ADV-BARO-B003
+    feature: base
+    rule: adc_read returns the result of the last conversion only after its conversion_time has passed; read earlier (or without a conversion) it returns 0, as the datasheet states.
+  - id: ADV-BARO-B004
+    feature: base
+    rule: The same commands work on SPI and on I2C (bus binding from the Devicetree).
+
+timing: Conversions complete conversion_time after the command in model time.
+out_of_scope:
+  - second-order temperature compensation effects, noise (from the source values)

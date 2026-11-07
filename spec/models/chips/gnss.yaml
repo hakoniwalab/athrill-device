@@ -1,0 +1,33 @@
+model: gnss
+version: 1.0.0
+summary: u-blox M8-class GNSS receiver on a UART, as configured and read by PX4 and ArduPilot (UBX protocol). Position, velocity and time come from the common sensor source.
+
+terms:
+  - {name: baud_rate,       kind: control, feature: base, meaning: "Current port baud rate; starts at the Devicetree initial-baudrate, changed by UBX-CFG-PRT / CFG-VALSET."}
+  - {name: protocol_out,    kind: control, feature: base, meaning: "Enabled output protocols (UBX; NMEA output stored, not produced)."}
+  - {name: message_rates,   kind: control, feature: base, meaning: "Per-message output rate (CFG-MSG / CFG-VALSET), e.g. NAV-PVT."}
+  - {name: measure_rate,    kind: control, feature: base, meaning: "Navigation rate (CFG-RATE), default from Devicetree fix-rate."}
+  - {name: ack,             kind: event,   feature: base, meaning: "UBX-ACK-ACK / ACK-NAK answers to configuration messages."}
+  - {name: version_info,    kind: data,    feature: base, meaning: "UBX-MON-VER answer (protocol version 18.00 as PX4 expects for M8)."}
+  - {name: nav_solution,    kind: data,    feature: base, meaning: "UBX-NAV-PVT (and other enabled NAV messages) built from the source."}
+
+features:
+  base: UBX configuration, acknowledgements, version, navigation output.
+
+behaviour:
+  - id: ADV-GNSS-B001
+    feature: base
+    rule: Characters are accepted and sent at baud_rate only; after a port configuration with a new rate is acknowledged, the receiver switches to it as the u-blox protocol specification states.
+  - id: ADV-GNSS-B002
+    feature: base
+    rule: Every well-formed UBX configuration message gets ACK-ACK (or ACK-NAK for unsupported ones) with correct checksum; malformed messages are ignored.
+  - id: ADV-GNSS-B003
+    feature: base
+    rule: Each enabled navigation message is sent at measure_rate x its message rate, built from the source sample at that time, with the u-blox field scaling (e.g. lat/lon 1e-7 deg, height mm, velocity mm/s, fix type, satellites, accuracies) and a valid checksum.
+  - id: ADV-GNSS-B004
+    feature: base
+    rule: MON-VER answers with the version strings the drivers check.
+
+timing: Output is scheduled in model time at measure_rate; transmission takes the UART character times.
+out_of_scope:
+  - NMEA output, RTCM input, raw measurements, power-save modes, multi-band signal details

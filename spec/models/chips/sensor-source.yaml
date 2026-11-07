@@ -1,0 +1,34 @@
+model: sensor-source
+version: 1.0.0
+summary: The value source chips read from (hakoniwa,sensor-device with the Hakoniwa Drone aircraft, or the bench source), and the actuator sink the PWM map writes to.
+
+terms:
+  - {name: sample,          kind: data,    feature: base, meaning: "Accelerometer, gyroscope, magnetometer, barometer, GNSS values at a model time."}
+  - {name: sample_period,   kind: control, feature: base, meaning: "Period of the aircraft's sensor samples (from the airframe/link configuration)."}
+  - {name: actuators,       kind: data,    feature: base, meaning: "Normalised actuator values from the PWM map."}
+  - {name: lockstep,        kind: control, feature: base, meaning: "Strict exchange: each sensor sample is answered by an actuator set."}
+  - {name: tick_order,      kind: control, feature: base, meaning: "Consumers tick before the value source (athrill,tick-before-value-source)."}
+
+features:
+  base: Sample delivery, actuator return, ordering.
+
+behaviour:
+  - id: ADV-SRC-B001
+    feature: base
+    rule: Every chip reading the source at model time t gets the sample whose time is the latest at or before t; all chips see the same sample for the same t.
+  - id: ADV-SRC-B002
+    feature: base
+    rule: At the same clock, chip consumers read the value latched before the source advances (tick_order), so the C-built and Devicetree-built boards see identical values.
+  - id: ADV-SRC-B003
+    feature: base
+    rule: With lockstep, the source advances to the next sample only after the actuator set for the current one is returned; one bootstrap sample starts the exchange; no wall-clock timeout.
+  - id: ADV-SRC-B004
+    feature: base
+    rule: Actuators returned are the PWM map's pulse widths of the last complete period, normalised as the airframe expects.
+  - id: ADV-SRC-B005
+    feature: base
+    rule: GNSS samples are delivered before IMU samples of the same time (HIL_GPS before HIL_SENSOR), so runs are reproducible.
+
+timing: Samples follow sample_period in model time; the timing rules of docs/device-tree-design.md apply.
+out_of_scope:
+  - physics and sensor noise (Hakoniwa Drone), transport details (shared memory, in-process link)
