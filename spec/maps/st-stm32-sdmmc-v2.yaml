@@ -1,0 +1,577 @@
+ip: st-stm32-sdmmc-v2
+compatible:
+- st,stm32-sdmmc
+soc: st,stm32h7
+manual: RM0433 Rev 8 section 55 (SDMMC)
+model: sdmmc
+model_version: 1.0.0
+features:
+- base
+- internal_dma
+bindings:
+  power_on:
+    reg: POWER
+    field: PWRCTRL
+    access: rw
+  clock_enable:
+    reg: CLKCR
+    field: CLKDIV
+    access: rw
+    note: v2 has no CLKEN; clock runs while powered
+  command_index:
+    reg: CMDR
+    field: CMDINDEX
+    access: rw
+  command_argument:
+    reg: ARGR
+    access: rw
+  response_type:
+    reg: CMDR
+    field: WAITRESP
+    access: rw
+  send_command:
+    reg: CMDR
+    field: CPSMEN
+    access: rw
+  response:
+    reg:
+    - RESP1R
+    - RESP2R
+    - RESP3R
+    - RESP4R
+    access: ro
+  command_sent:
+    reg: STAR
+    field: CMDSENT
+    access: ro
+  response_received:
+    reg: STAR
+    field: CMDREND
+    access: ro
+  command_timeout:
+    reg: STAR
+    field: CTIMEOUT
+    access: ro
+  data_length:
+    reg: DLENR
+    field: DATALENGTH
+    access: rw
+  block_size:
+    reg: DCTRL
+    field: DBLOCKSIZE
+    access: rw
+  data_direction:
+    reg: DCTRL
+    field: DTDIR
+    access: rw
+  data_enable:
+    reg: CMDR
+    field: CMDTRANS
+    access: rw
+  data_end:
+    reg: STAR
+    field: DATAEND
+    access: ro
+  data_block_end:
+    reg: STAR
+    field: DBCKEND
+    access: ro
+  data_timeout:
+    reg: STAR
+    field: DTIMEOUT
+    access: ro
+  flag_ack:
+    reg: ICR
+    field: '*C'
+    access: w1c
+  irq_enables:
+    reg: MASKR
+    field: '*IE'
+    access: rw
+  irq:
+    devicetree: interrupts
+  idma_base:
+    reg:
+    - IDMABASE0R
+    - IDMABASE1R
+    access: rw
+  idma_enable:
+    reg: IDMACTRLR
+    field: IDMAEN
+    access: rw
+note: SDMMC v2 starts the data path with the command (CMDR.CMDTRANS) rather than DCTRL.DTEN; clock runs while powered (no
+  CLKEN).
+unmodelled:
+- reg:
+  - POWER
+  - CLKCR
+  fields:
+  - VSWITCH*
+  - DIRPOL
+  - PWRSAV
+  - NEGEDGE
+  - HWFC_EN
+  - DDR
+  - BUSSPEED
+  - SELCLKRX
+  answer: stored
+- reg:
+  - ACKTIMER
+  - DTIMER
+  answer: stored
+registers_source: RM0433 Rev 8 section 55.10 (SDMMC registers), hand-written
+registers:
+  POWER:
+    offset: '0x00'
+    reset: '0x00000000'
+    fields:
+      PWRCTRL:
+        lsb: 0
+        width: 2
+      VSWITCH:
+        lsb: 2
+        width: 1
+      VSWITCHEN:
+        lsb: 3
+        width: 1
+      DIRPOL:
+        lsb: 4
+        width: 1
+  CLKCR:
+    offset: '0x04'
+    reset: '0x00000000'
+    fields:
+      CLKDIV:
+        lsb: 0
+        width: 10
+      PWRSAV:
+        lsb: 12
+        width: 1
+      WIDBUS:
+        lsb: 14
+        width: 2
+      NEGEDGE:
+        lsb: 16
+        width: 1
+      HWFC_EN:
+        lsb: 17
+        width: 1
+      DDR:
+        lsb: 18
+        width: 1
+      BUSSPEED:
+        lsb: 19
+        width: 1
+      SELCLKRX:
+        lsb: 20
+        width: 2
+  ARGR:
+    offset: '0x08'
+    reset: '0x00000000'
+    fields:
+      CMDARG:
+        lsb: 0
+        width: 32
+  CMDR:
+    offset: '0x0C'
+    reset: '0x00000000'
+    fields:
+      CMDINDEX:
+        lsb: 0
+        width: 6
+      CMDTRANS:
+        lsb: 6
+        width: 1
+      CMDSTOP:
+        lsb: 7
+        width: 1
+      WAITRESP:
+        lsb: 8
+        width: 2
+      WAITINT:
+        lsb: 10
+        width: 1
+      WAITPEND:
+        lsb: 11
+        width: 1
+      CPSMEN:
+        lsb: 12
+        width: 1
+      DTHOLD:
+        lsb: 13
+        width: 1
+      BOOTMODE:
+        lsb: 14
+        width: 1
+      BOOTEN:
+        lsb: 15
+        width: 1
+      CMDSUSPEND:
+        lsb: 16
+        width: 1
+  RESPCMDR:
+    offset: '0x10'
+    reset: '0x00000000'
+    fields:
+      RESPCMD:
+        lsb: 0
+        width: 6
+  RESP1R:
+    offset: '0x14'
+    reset: '0x00000000'
+    fields:
+      CARDSTATUS1:
+        lsb: 0
+        width: 32
+  RESP2R:
+    offset: '0x18'
+    reset: '0x00000000'
+    fields:
+      CARDSTATUS2:
+        lsb: 0
+        width: 32
+  RESP3R:
+    offset: '0x1C'
+    reset: '0x00000000'
+    fields:
+      CARDSTATUS3:
+        lsb: 0
+        width: 32
+  RESP4R:
+    offset: '0x20'
+    reset: '0x00000000'
+    fields:
+      CARDSTATUS4:
+        lsb: 0
+        width: 32
+  DTIMER:
+    offset: '0x24'
+    reset: '0x00000000'
+    fields:
+      DATATIME:
+        lsb: 0
+        width: 32
+  DLENR:
+    offset: '0x28'
+    reset: '0x00000000'
+    fields:
+      DATALENGTH:
+        lsb: 0
+        width: 25
+  DCTRL:
+    offset: '0x2C'
+    reset: '0x00000000'
+    fields:
+      DTEN:
+        lsb: 0
+        width: 1
+      DTDIR:
+        lsb: 1
+        width: 1
+      DTMODE:
+        lsb: 2
+        width: 2
+      DBLOCKSIZE:
+        lsb: 4
+        width: 4
+      RWSTART:
+        lsb: 8
+        width: 1
+      RWSTOP:
+        lsb: 9
+        width: 1
+      RWMOD:
+        lsb: 10
+        width: 1
+      SDIOEN:
+        lsb: 11
+        width: 1
+      BOOTACKEN:
+        lsb: 12
+        width: 1
+      FIFORST:
+        lsb: 13
+        width: 1
+  DCNTR:
+    offset: '0x30'
+    reset: '0x00000000'
+    fields:
+      DATACOUNT:
+        lsb: 0
+        width: 25
+  STAR:
+    offset: '0x34'
+    reset: '0x00000000'
+    fields:
+      CCRCFAIL:
+        lsb: 0
+        width: 1
+      DCRCFAIL:
+        lsb: 1
+        width: 1
+      CTIMEOUT:
+        lsb: 2
+        width: 1
+      DTIMEOUT:
+        lsb: 3
+        width: 1
+      TXUNDERR:
+        lsb: 4
+        width: 1
+      RXOVERR:
+        lsb: 5
+        width: 1
+      CMDREND:
+        lsb: 6
+        width: 1
+      CMDSENT:
+        lsb: 7
+        width: 1
+      DATAEND:
+        lsb: 8
+        width: 1
+      DHOLD:
+        lsb: 9
+        width: 1
+      DBCKEND:
+        lsb: 10
+        width: 1
+      DABORT:
+        lsb: 11
+        width: 1
+      DPSMACT:
+        lsb: 12
+        width: 1
+      CPSMACT:
+        lsb: 13
+        width: 1
+      TXFIFOHE:
+        lsb: 14
+        width: 1
+      RXFIFOHF:
+        lsb: 15
+        width: 1
+      TXFIFOF:
+        lsb: 16
+        width: 1
+      RXFIFOF:
+        lsb: 17
+        width: 1
+      TXFIFOE:
+        lsb: 18
+        width: 1
+      RXFIFOE:
+        lsb: 19
+        width: 1
+      BUSYD0:
+        lsb: 20
+        width: 1
+      BUSYD0END:
+        lsb: 21
+        width: 1
+      SDIOIT:
+        lsb: 22
+        width: 1
+      ACKFAIL:
+        lsb: 23
+        width: 1
+      ACKTIMEOUT:
+        lsb: 24
+        width: 1
+      VSWEND:
+        lsb: 25
+        width: 1
+      CKSTOP:
+        lsb: 26
+        width: 1
+      IDMATE:
+        lsb: 27
+        width: 1
+      IDMABTC:
+        lsb: 28
+        width: 1
+  ICR:
+    offset: '0x38'
+    reset: '0x00000000'
+    fields:
+      CCRCFAILC:
+        lsb: 0
+        width: 1
+      DCRCFAILC:
+        lsb: 1
+        width: 1
+      CTIMEOUTC:
+        lsb: 2
+        width: 1
+      DTIMEOUTC:
+        lsb: 3
+        width: 1
+      TXUNDERRC:
+        lsb: 4
+        width: 1
+      RXOVERRC:
+        lsb: 5
+        width: 1
+      CMDRENDC:
+        lsb: 6
+        width: 1
+      CMDSENTC:
+        lsb: 7
+        width: 1
+      DATAENDC:
+        lsb: 8
+        width: 1
+      DHOLDC:
+        lsb: 9
+        width: 1
+      DBCKENDC:
+        lsb: 10
+        width: 1
+      DABORTC:
+        lsb: 11
+        width: 1
+      BUSYD0ENDC:
+        lsb: 21
+        width: 1
+      SDIOITC:
+        lsb: 22
+        width: 1
+      ACKFAILC:
+        lsb: 23
+        width: 1
+      ACKTIMEOUTC:
+        lsb: 24
+        width: 1
+      VSWENDC:
+        lsb: 25
+        width: 1
+      CKSTOPC:
+        lsb: 26
+        width: 1
+      IDMATEC:
+        lsb: 27
+        width: 1
+      IDMABTCC:
+        lsb: 28
+        width: 1
+  MASKR:
+    offset: '0x3C'
+    reset: '0x00000000'
+    fields:
+      CCRCFAILIE:
+        lsb: 0
+        width: 1
+      DCRCFAILIE:
+        lsb: 1
+        width: 1
+      CTIMEOUTIE:
+        lsb: 2
+        width: 1
+      DTIMEOUTIE:
+        lsb: 3
+        width: 1
+      TXUNDERRIE:
+        lsb: 4
+        width: 1
+      RXOVERRIE:
+        lsb: 5
+        width: 1
+      CMDRENDIE:
+        lsb: 6
+        width: 1
+      CMDSENTIE:
+        lsb: 7
+        width: 1
+      DATAENDIE:
+        lsb: 8
+        width: 1
+      DHOLDIE:
+        lsb: 9
+        width: 1
+      DBCKENDIE:
+        lsb: 10
+        width: 1
+      DABORTIE:
+        lsb: 11
+        width: 1
+      TXFIFOHEIE:
+        lsb: 14
+        width: 1
+      RXFIFOHFIE:
+        lsb: 15
+        width: 1
+      RXFIFOFIE:
+        lsb: 17
+        width: 1
+      TXFIFOEIE:
+        lsb: 18
+        width: 1
+      BUSYD0ENDIE:
+        lsb: 21
+        width: 1
+      SDIOITIE:
+        lsb: 22
+        width: 1
+      ACKFAILIE:
+        lsb: 23
+        width: 1
+      ACKTIMEOUTIE:
+        lsb: 24
+        width: 1
+      VSWENDIE:
+        lsb: 25
+        width: 1
+      CKSTOPIE:
+        lsb: 26
+        width: 1
+      IDMABTCIE:
+        lsb: 28
+        width: 1
+  ACKTIMER:
+    offset: '0x40'
+    reset: '0x00000000'
+    fields:
+      ACKTIME:
+        lsb: 0
+        width: 25
+  IDMACTRLR:
+    offset: '0x50'
+    reset: '0x00000000'
+    fields:
+      IDMAEN:
+        lsb: 0
+        width: 1
+      IDMABMODE:
+        lsb: 1
+        width: 1
+      IDMABACT:
+        lsb: 2
+        width: 1
+  IDMABSIZER:
+    offset: '0x54'
+    reset: '0x00000000'
+    fields:
+      IDMABNDT:
+        lsb: 5
+        width: 8
+  IDMABASE0R:
+    offset: '0x58'
+    reset: '0x00000000'
+    fields:
+      IDMABASE0:
+        lsb: 0
+        width: 32
+  IDMABASE1R:
+    offset: '0x5C'
+    reset: '0x00000000'
+    fields:
+      IDMABASE1:
+        lsb: 0
+        width: 32
+  FIFOR:
+    offset: '0x80'
+    reset: '0x00000000'
+    fields:
+      FIFODATA:
+        lsb: 0
+        width: 32

@@ -1,0 +1,601 @@
+ip: st-stm32-exti-v2
+compatible:
+- st,stm32-exti
+- st,stm32h7-exti
+soc: st,stm32h7
+manual: 'RM0433 Rev 8 section 20.6 (EXTI registers: configuration part and CPU part C1), 12.3 (SYSCFG EXTICR)'
+model: gpio-exti
+model_version: 1.0.0
+features:
+- exti
+bindings:
+  line_source:
+    reg: SYSCFG.EXTICRx
+    field: EXTIn
+    access: rw
+  rising_trigger:
+    reg: RTSR1
+    field: TRn
+    access: rw
+  falling_trigger:
+    reg: FTSR1
+    field: TRn
+    access: rw
+  line_irq_enable:
+    reg: CPUIMR1
+    field: MRn
+    access: rw
+  software_trigger:
+    reg: SWIER1
+    field: SWIERn
+    access: w1s
+  pending:
+    reg: CPUPR1
+    field: PRn
+    access: ro
+  pending_ack:
+    reg: CPUPR1
+    field: PRn
+    access: w1c
+  line_irq:
+    devicetree: interrupts (EXTI0..4, EXTI9_5, EXTI15_10)
+note: 'RM0433 names the CPU registers C1IMR1/C1EMR1/C1PR1 (CMSIS: EXTI_Core / EXTI_D1 *IMR1). Lines 0-15 are the GPIO lines.'
+unmodelled:
+- reg:
+  - D3PMR1
+  - D3PCR1L
+  - D3PCR1H
+  - RTSR2/3
+  - FTSR2/3
+  - SWIER2/3
+  - CPUIMR2/3
+  - CPUEMR1-3
+  - CPUPR2/3
+  answer: stored / reset value
+registers_source: RM0433 Rev 8 sections 20.6 and 12.3, hand-written
+registers:
+  RTSR1:
+    offset: '0x00'
+    reset: '0x00000000'
+    fields:
+      TR0:
+        lsb: 0
+        width: 1
+      TR1:
+        lsb: 1
+        width: 1
+      TR2:
+        lsb: 2
+        width: 1
+      TR3:
+        lsb: 3
+        width: 1
+      TR4:
+        lsb: 4
+        width: 1
+      TR5:
+        lsb: 5
+        width: 1
+      TR6:
+        lsb: 6
+        width: 1
+      TR7:
+        lsb: 7
+        width: 1
+      TR8:
+        lsb: 8
+        width: 1
+      TR9:
+        lsb: 9
+        width: 1
+      TR10:
+        lsb: 10
+        width: 1
+      TR11:
+        lsb: 11
+        width: 1
+      TR12:
+        lsb: 12
+        width: 1
+      TR13:
+        lsb: 13
+        width: 1
+      TR14:
+        lsb: 14
+        width: 1
+      TR15:
+        lsb: 15
+        width: 1
+      TR16:
+        lsb: 16
+        width: 1
+      TR17:
+        lsb: 17
+        width: 1
+      TR18:
+        lsb: 18
+        width: 1
+      TR19:
+        lsb: 19
+        width: 1
+      TR20:
+        lsb: 20
+        width: 1
+      TR21:
+        lsb: 21
+        width: 1
+  FTSR1:
+    offset: '0x04'
+    reset: '0x00000000'
+    fields:
+      TR0:
+        lsb: 0
+        width: 1
+      TR1:
+        lsb: 1
+        width: 1
+      TR2:
+        lsb: 2
+        width: 1
+      TR3:
+        lsb: 3
+        width: 1
+      TR4:
+        lsb: 4
+        width: 1
+      TR5:
+        lsb: 5
+        width: 1
+      TR6:
+        lsb: 6
+        width: 1
+      TR7:
+        lsb: 7
+        width: 1
+      TR8:
+        lsb: 8
+        width: 1
+      TR9:
+        lsb: 9
+        width: 1
+      TR10:
+        lsb: 10
+        width: 1
+      TR11:
+        lsb: 11
+        width: 1
+      TR12:
+        lsb: 12
+        width: 1
+      TR13:
+        lsb: 13
+        width: 1
+      TR14:
+        lsb: 14
+        width: 1
+      TR15:
+        lsb: 15
+        width: 1
+      TR16:
+        lsb: 16
+        width: 1
+      TR17:
+        lsb: 17
+        width: 1
+      TR18:
+        lsb: 18
+        width: 1
+      TR19:
+        lsb: 19
+        width: 1
+      TR20:
+        lsb: 20
+        width: 1
+      TR21:
+        lsb: 21
+        width: 1
+  SWIER1:
+    offset: '0x08'
+    reset: '0x00000000'
+    fields:
+      SWIER0:
+        lsb: 0
+        width: 1
+      SWIER1:
+        lsb: 1
+        width: 1
+      SWIER2:
+        lsb: 2
+        width: 1
+      SWIER3:
+        lsb: 3
+        width: 1
+      SWIER4:
+        lsb: 4
+        width: 1
+      SWIER5:
+        lsb: 5
+        width: 1
+      SWIER6:
+        lsb: 6
+        width: 1
+      SWIER7:
+        lsb: 7
+        width: 1
+      SWIER8:
+        lsb: 8
+        width: 1
+      SWIER9:
+        lsb: 9
+        width: 1
+      SWIER10:
+        lsb: 10
+        width: 1
+      SWIER11:
+        lsb: 11
+        width: 1
+      SWIER12:
+        lsb: 12
+        width: 1
+      SWIER13:
+        lsb: 13
+        width: 1
+      SWIER14:
+        lsb: 14
+        width: 1
+      SWIER15:
+        lsb: 15
+        width: 1
+      SWIER16:
+        lsb: 16
+        width: 1
+      SWIER17:
+        lsb: 17
+        width: 1
+      SWIER18:
+        lsb: 18
+        width: 1
+      SWIER19:
+        lsb: 19
+        width: 1
+      SWIER20:
+        lsb: 20
+        width: 1
+      SWIER21:
+        lsb: 21
+        width: 1
+  CPUIMR1:
+    offset: '0x80'
+    reset: '0x00000000'
+    fields:
+      IM0:
+        lsb: 0
+        width: 1
+      IM1:
+        lsb: 1
+        width: 1
+      IM2:
+        lsb: 2
+        width: 1
+      IM3:
+        lsb: 3
+        width: 1
+      IM4:
+        lsb: 4
+        width: 1
+      IM5:
+        lsb: 5
+        width: 1
+      IM6:
+        lsb: 6
+        width: 1
+      IM7:
+        lsb: 7
+        width: 1
+      IM8:
+        lsb: 8
+        width: 1
+      IM9:
+        lsb: 9
+        width: 1
+      IM10:
+        lsb: 10
+        width: 1
+      IM11:
+        lsb: 11
+        width: 1
+      IM12:
+        lsb: 12
+        width: 1
+      IM13:
+        lsb: 13
+        width: 1
+      IM14:
+        lsb: 14
+        width: 1
+      IM15:
+        lsb: 15
+        width: 1
+      IM16:
+        lsb: 16
+        width: 1
+      IM17:
+        lsb: 17
+        width: 1
+      IM18:
+        lsb: 18
+        width: 1
+      IM19:
+        lsb: 19
+        width: 1
+      IM20:
+        lsb: 20
+        width: 1
+      IM21:
+        lsb: 21
+        width: 1
+      IM22:
+        lsb: 22
+        width: 1
+      IM23:
+        lsb: 23
+        width: 1
+      IM24:
+        lsb: 24
+        width: 1
+      IM25:
+        lsb: 25
+        width: 1
+      IM26:
+        lsb: 26
+        width: 1
+      IM27:
+        lsb: 27
+        width: 1
+      IM28:
+        lsb: 28
+        width: 1
+      IM29:
+        lsb: 29
+        width: 1
+      IM30:
+        lsb: 30
+        width: 1
+      IM31:
+        lsb: 31
+        width: 1
+  CPUEMR1:
+    offset: '0x84'
+    reset: '0x00000000'
+    fields:
+      EM0:
+        lsb: 0
+        width: 1
+      EM1:
+        lsb: 1
+        width: 1
+      EM2:
+        lsb: 2
+        width: 1
+      EM3:
+        lsb: 3
+        width: 1
+      EM4:
+        lsb: 4
+        width: 1
+      EM5:
+        lsb: 5
+        width: 1
+      EM6:
+        lsb: 6
+        width: 1
+      EM7:
+        lsb: 7
+        width: 1
+      EM8:
+        lsb: 8
+        width: 1
+      EM9:
+        lsb: 9
+        width: 1
+      EM10:
+        lsb: 10
+        width: 1
+      EM11:
+        lsb: 11
+        width: 1
+      EM12:
+        lsb: 12
+        width: 1
+      EM13:
+        lsb: 13
+        width: 1
+      EM14:
+        lsb: 14
+        width: 1
+      EM15:
+        lsb: 15
+        width: 1
+      EM16:
+        lsb: 16
+        width: 1
+      EM17:
+        lsb: 17
+        width: 1
+      EM18:
+        lsb: 18
+        width: 1
+      EM19:
+        lsb: 19
+        width: 1
+      EM20:
+        lsb: 20
+        width: 1
+      EM21:
+        lsb: 21
+        width: 1
+      EM22:
+        lsb: 22
+        width: 1
+      EM23:
+        lsb: 23
+        width: 1
+      EM24:
+        lsb: 24
+        width: 1
+      EM25:
+        lsb: 25
+        width: 1
+      EM26:
+        lsb: 26
+        width: 1
+      EM27:
+        lsb: 27
+        width: 1
+      EM28:
+        lsb: 28
+        width: 1
+      EM29:
+        lsb: 29
+        width: 1
+      EM30:
+        lsb: 30
+        width: 1
+      EM31:
+        lsb: 31
+        width: 1
+  CPUPR1:
+    offset: '0x88'
+    reset: '0x00000000'
+    fields:
+      PR0:
+        lsb: 0
+        width: 1
+      PR1:
+        lsb: 1
+        width: 1
+      PR2:
+        lsb: 2
+        width: 1
+      PR3:
+        lsb: 3
+        width: 1
+      PR4:
+        lsb: 4
+        width: 1
+      PR5:
+        lsb: 5
+        width: 1
+      PR6:
+        lsb: 6
+        width: 1
+      PR7:
+        lsb: 7
+        width: 1
+      PR8:
+        lsb: 8
+        width: 1
+      PR9:
+        lsb: 9
+        width: 1
+      PR10:
+        lsb: 10
+        width: 1
+      PR11:
+        lsb: 11
+        width: 1
+      PR12:
+        lsb: 12
+        width: 1
+      PR13:
+        lsb: 13
+        width: 1
+      PR14:
+        lsb: 14
+        width: 1
+      PR15:
+        lsb: 15
+        width: 1
+      PR16:
+        lsb: 16
+        width: 1
+      PR17:
+        lsb: 17
+        width: 1
+      PR18:
+        lsb: 18
+        width: 1
+      PR19:
+        lsb: 19
+        width: 1
+      PR20:
+        lsb: 20
+        width: 1
+      PR21:
+        lsb: 21
+        width: 1
+syscfg_registers:
+  EXTICR1:
+    offset: '0x08'
+    reset: '0x00000000'
+    fields:
+      EXTI0:
+        lsb: 0
+        width: 4
+      EXTI1:
+        lsb: 4
+        width: 4
+      EXTI2:
+        lsb: 8
+        width: 4
+      EXTI3:
+        lsb: 12
+        width: 4
+  EXTICR2:
+    offset: '0x0C'
+    reset: '0x00000000'
+    fields:
+      EXTI4:
+        lsb: 0
+        width: 4
+      EXTI5:
+        lsb: 4
+        width: 4
+      EXTI6:
+        lsb: 8
+        width: 4
+      EXTI7:
+        lsb: 12
+        width: 4
+  EXTICR3:
+    offset: '0x10'
+    reset: '0x00000000'
+    fields:
+      EXTI8:
+        lsb: 0
+        width: 4
+      EXTI9:
+        lsb: 4
+        width: 4
+      EXTI10:
+        lsb: 8
+        width: 4
+      EXTI11:
+        lsb: 12
+        width: 4
+  EXTICR4:
+    offset: '0x14'
+    reset: '0x00000000'
+    fields:
+      EXTI12:
+        lsb: 0
+        width: 4
+      EXTI13:
+        lsb: 4
+        width: 4
+      EXTI14:
+        lsb: 8
+        width: 4
+      EXTI15:
+        lsb: 12
+        width: 4
