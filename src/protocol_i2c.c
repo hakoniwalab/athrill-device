@@ -46,6 +46,8 @@ void athrill_i2c_protocol_destroy(AthrillI2cProtocol *protocol)
 	free(protocol);
 }
 
+/* [ADV-I2C-003] address only the matching child and return its ACK and direction */
+/* [ADV-I2C-006] preserve the open transaction across a repeated START */
 sint32 athrill_i2c_start(AthrillI2cProtocol *protocol, uint16 address,
 	std_bool read, uint64 time)
 {
@@ -73,6 +75,7 @@ sint32 athrill_i2c_start(AthrillI2cProtocol *protocol, uint16 address,
 	return protocol->addressed ? 1 : 0;
 }
 
+/* [ADV-I2C-004] deliver ordered writes, child ACKs, and completion clocks */
 sint32 athrill_i2c_write(AthrillI2cProtocol *protocol, uint8 data,
 	std_bool *ack, uint64 completion_time)
 {
@@ -93,6 +96,7 @@ sint32 athrill_i2c_write(AthrillI2cProtocol *protocol, uint8 data,
 		completion_time);
 }
 
+/* [ADV-I2C-005] deliver ordered reads with controller ACKs and completion clocks */
 sint32 athrill_i2c_read(AthrillI2cProtocol *protocol, uint8 *data,
 	std_bool master_ack, uint64 completion_time)
 {
@@ -116,6 +120,7 @@ sint32 athrill_i2c_read(AthrillI2cProtocol *protocol, uint8 *data,
 	return 0;
 }
 
+/* [ADV-I2C-006] end the transaction and clear addressed transfer state */
 sint32 athrill_i2c_stop(AthrillI2cProtocol *protocol, uint64 time)
 {
 	if (protocol == NULL || !protocol->bus_open) {
