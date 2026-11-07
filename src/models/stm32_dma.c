@@ -26,6 +26,8 @@
  *   changes during a move is served by the same loop, not by recursion).
  *   At most SERVICE_LIMIT items per call: a request a peripheral never
  *   lowers on a circular stream would otherwise not end.
+ * - SxNDTR, SxPAR, SxM0AR and SxM1AR writes are ignored while EN=1
+ *   (RM0410 8.5.6-8.5.8; RM0433 15.5.6-15.5.8).
  *
  * TO BE REMOVED at step 4-6 (hakoniwalab/athrill-device#13): the block
  * transfers the target's F7 SDMMC still calls (athrill_device_stm32_sdmmc_dma.h).
@@ -463,6 +465,12 @@ static sint32 dma_write(void *instance, uint64 address, uint32 size, uint64 inpu
 		uint32 r = ((offset - DMA_STREAM0) % DMA_STREAM_SIZE) / 4U;
 		uint32 was = d->stream[s][SxCR];
 
+		/* The transfer registers are write-protected while the stream is enabled. */
+		if (((was & CR_EN) != 0U) &&
+		    ((r == SxNDTR) || (r == SxPAR) || (r == SxM0AR) ||
+		     (r == SxM1AR))) {
+			return 0;
+		}
 		d->stream[s][r] = (d->stream[s][r] & ~mask) | value;
 		if (r == SxNDTR) {
 			d->stream[s][r] &= 0xFFFFU;
