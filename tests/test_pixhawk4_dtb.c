@@ -133,11 +133,19 @@ int main(void)
 	expect_boolean(blob, "/pwm-actuator-map",
 		"athrill,tick-before-value-source", 1);
 	expect_value_source(blob, "/soc/spi@40013000/imu@0", sensor_phandle);
+	expect_boolean(blob, "/soc/spi@40013000/imu@0",
+		"athrill,tick-before-value-source", 1);
 	expect_value_source(blob, "/soc/i2c@40005c00/magnetometer@e",
 		sensor_phandle);
+	expect_boolean(blob, "/soc/i2c@40005c00/magnetometer@e",
+		"athrill,tick-before-value-source", 1);
 	expect_value_source(blob, "/soc/spi@40013400/pressure@0",
 		sensor_phandle);
+	expect_boolean(blob, "/soc/spi@40013400/pressure@0",
+		"athrill,tick-before-value-source", 1);
 	expect_value_source(blob, "/soc/serial@40011000/gnss", sensor_phandle);
+	expect_boolean(blob, "/soc/serial@40011000/gnss",
+		"athrill,tick-before-value-source", 1);
 	free(blob);
 	puts("Pixhawk 4 base and Hakoniwa DT wiring is valid");
 	return 0;

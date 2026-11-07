@@ -21,9 +21,10 @@ sensor values merely because a C-board configuration still uses EXDEV.
 
 The Hakoniwa variant enables the node and makes the sensor chips reference it
 with `value-source`; the ordered PWM model returns actuator values through the
-same typed edge. Its `athrill,tick-before-value-source` marker makes the PWM
-sink update that source before the aircraft advances at the same virtual
-clock. The base `pixhawk4.dtb` keeps the node disabled and has no
+same typed edge. Their `athrill,tick-before-value-source` markers preserve the
+legacy cycle boundary: sensor consumers first observe the previously latched
+aircraft sample, PWM then updates the sink, and only then does the aircraft
+advance at that virtual clock. The base `pixhawk4.dtb` keeps the node disabled and has no
 such edges, so SIH and bench runs need no plugin. Host-only link, channel,
 airframe, and trace settings remain in `device_config.txt`.
 

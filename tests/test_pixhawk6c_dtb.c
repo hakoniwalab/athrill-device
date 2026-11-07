@@ -310,13 +310,13 @@ static void check_common(const void *blob, int hakoniwa)
 	expect_status(blob, "/sensor-device", hakoniwa ? "okay" : "disabled");
 	for (i = 0U; i < sizeof(value_paths) / sizeof(value_paths[0]); i++) {
 		expect_value_source(blob, value_paths[i], sensor_phandle, hakoniwa);
-	}
-	if (hakoniwa) {
-		expect_boolean(blob, "/pwm-actuator-map",
-			"athrill,tick-before-value-source");
-	} else {
-		TEST_CHECK(fdt_getprop(blob, node(blob, "/pwm-actuator-map"),
-			"athrill,tick-before-value-source", NULL) == NULL);
+		if (hakoniwa) {
+			expect_boolean(blob, value_paths[i],
+				"athrill,tick-before-value-source");
+		} else {
+			TEST_CHECK(fdt_getprop(blob, node(blob, value_paths[i]),
+				"athrill,tick-before-value-source", NULL) == NULL);
+		}
 	}
 }
 
