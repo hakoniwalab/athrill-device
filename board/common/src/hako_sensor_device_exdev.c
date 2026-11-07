@@ -1,7 +1,7 @@
 /*
  * Athrill EXDEV glue of the Hakoniwa sensor device.
  *
- * memory.txt:  DEV, 0x20000000, <path to libhako_sensor_device>
+ * memory.txt:  DEV, 0x60000000, <path to libhako_sensor_device>
  *
  * Device configuration (athrill3 -d):
  *   HAKO_SENSOR_DEVICE_IRQ               PLIC source of the data-ready interrupt (default 5)
@@ -385,7 +385,28 @@ static void devinit(MpuAddressRegionType *region, AthrillExDevOperationType *ops
 	char *text;
 	uint32 value;
 
-	(void)region;
+	/*
+	 * AthrillAddrType is embedded in MpuAddressRegionType and in every EXDEV
+	 * memory callback.  A library built for the wrong address width can still
+	 * pass dlopen/dlsym and run supply_clock(), but it decodes region->start at
+	 * the wrong offset.  The aircraft then advances and produces GPS while the
+	 * guest silently reads the wrong register offsets.  The loader sets this
+	 * region size from header.memory_size, so it is an early, width-independent
+	 * ABI sentinel before any sample link is started.
+	 */
+	if ((region == NULL) ||
+	    ((uint64)region->size != (uint64)HAKO_SENSOR_DEVICE_SIZE)) {
+		fprintf(stderr,
+			"ERROR: hako_sensor_device: EXDEV ABI mismatch: plugin was built "
+			"with ATHRILL_ADDRESS_WIDTH=%d; decoded loader region size "
+			"0x%" PRIx64 " (expected 0x%x). Rebuild with the loading "
+			"athrill3 bus width (32 for athrill-target-stm32).\n",
+			ATHRILL_ADDRESS_WIDTH,
+			region == NULL ? UINT64_C(0) : (uint64)region->size,
+			HAKO_SENSOR_DEVICE_SIZE);
+		(void)fflush(stderr);
+		exit(EXIT_FAILURE);
+	}
 	athrill = ops;
 	hako_sensor_device_reset(&device);
 	if (ops->param.get_devcfg_string("HAKO_SENSOR_DEVICE_TRACE_PATH", &text) == STD_E_OK) {

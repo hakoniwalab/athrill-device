@@ -87,9 +87,11 @@ cmake --build build-stm32 -j
 The result is `build-stm32/libhako_sensor_device.dylib` (`.so` on Linux).
 Other locations of the PDU types can be given with `-DHAKO_PDU_REGISTRY_DIR=...`.
 During the EXDEV migration window the same library exports both the model
-plugin ABI and the legacy `athrill_ex_device` ABI. Set
+plugin ABI and the legacy `athrill_ex_device` ABI. You must set
 `ATHRILL_ADDRESS_WIDTH` to the bus width of the loading Athrill target (32
-for STM32, 64 for the current RISC-V target).
+for STM32, 64 for the current RISC-V target); there is no cross-target
+default. The EXDEV entry also rejects a width mismatch at load time, before
+starting Hakoniwa or supplying sensor samples.
 
 The macOS in-process prototype is an opt-in second target. It links the v5 release binaries; because that archive
 omits some transitive public C++ headers, it also needs a matching v5 source tree for headers only:

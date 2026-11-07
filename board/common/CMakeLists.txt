@@ -21,9 +21,15 @@ set(ATHRILL_SRC_DIR "${ATHRILL_SOURCE_DIR}/src")
 if(NOT EXISTS "${ATHRILL_SRC_DIR}/inc/athrill_exdev.h")
   message(FATAL_ERROR "Athrill EXDEV headers not found under ${ATHRILL_SOURCE_DIR}")
 endif()
-set(ATHRILL_ADDRESS_WIDTH 64 CACHE STRING
-    "Address width of the athrill3 that loads the EXDEV library (32 or 64)")
+set(ATHRILL_ADDRESS_WIDTH "" CACHE STRING
+    "Required address width of the athrill3 that loads the EXDEV library (32 or 64)")
 set_property(CACHE ATHRILL_ADDRESS_WIDTH PROPERTY STRINGS 32 64)
+if(NOT ATHRILL_ADDRESS_WIDTH STREQUAL "32" AND
+   NOT ATHRILL_ADDRESS_WIDTH STREQUAL "64")
+  message(FATAL_ERROR
+    "Set ATHRILL_ADDRESS_WIDTH to the loading athrill3 bus width "
+    "(32 for athrill-target-stm32, 64 for athrill-target-riscv)")
+endif()
 
 function(configure_hako_dual_abi_target target)
   target_link_libraries(${target} PRIVATE hako_sensor_device_core)
