@@ -167,6 +167,7 @@ static void test_request_line_routes_only_matching_request(void)
 	destroy_dma(&fixture);
 }
 
+/* [ADV-DMA-001.T1] exact ordered memory-to-peripheral item count */
 static void test_each_request_transfers_one_item_and_decrements_count(void)
 {
 	Endpoints endpoints = {0};
@@ -192,6 +193,7 @@ static void test_each_request_transfers_one_item_and_decrements_count(void)
 	destroy_dma(&fixture);
 }
 
+/* [ADV-DMA-004.T1] RM0410/RM0433 little-endian memory-to-peripheral packing */
 static void test_channel_packs_memory_bytes_for_peripheral_width(void)
 {
 	Endpoints endpoints = {0};
@@ -213,6 +215,8 @@ static void test_channel_packs_memory_bytes_for_peripheral_width(void)
 	destroy_dma(&fixture);
 }
 
+/* [ADV-DMA-001.T1] exact ordered peripheral-to-memory item count */
+/* [ADV-DMA-004.T1] RM0410/RM0433 little-endian peripheral-to-memory packing */
 static void test_channel_packs_peripheral_bytes_for_memory_width(void)
 {
 	Endpoints endpoints = {0};
@@ -239,6 +243,7 @@ static void test_channel_packs_peripheral_bytes_for_memory_width(void)
 	destroy_dma(&fixture);
 }
 
+/* [ADV-DMA-002.T1] half and complete events occur at their item clocks */
 static void test_half_and_complete_events_use_completion_clock(void)
 {
 	Endpoints endpoints = {0};
@@ -257,6 +262,7 @@ static void test_half_and_complete_events_use_completion_clock(void)
 	destroy_dma(&fixture);
 }
 
+/* [ADV-DMA-003.T1] circular count and address reload */
 static void test_circular_transfer_restarts_at_initial_address(void)
 {
 	Endpoints endpoints = {0};

@@ -268,6 +268,19 @@ def report(args: argparse.Namespace) -> str:
     if not gaps:
         output.append("- None.")
 
+    specification_findings = []
+    if "ADV-DMA-005" in items:
+        specification_findings.append(
+            "ADV-DMA-005: `Devicetree Specification v0.4 DMA binding` is not a "
+            "valid base-specification citation. The base Devicetree specification "
+            "does not define `dmas` or `dma-names`; those properties require the "
+            "applicable platform/binding documentation. The specification was not changed."
+        )
+    output.extend(["", "## Specification review findings", ""])
+    output.extend(f"- {finding}" for finding in specification_findings)
+    if not specification_findings:
+        output.append("- None.")
+
     counts = Counter(entry["board"] for entry in generated)
     area_columns = sorted(generated_areas)
     output.extend([
@@ -311,6 +324,20 @@ def report(args: argparse.Namespace) -> str:
                 f"| {value['board']} | {value.get('dt_negative_nodes', 0)} | "
                 f"{value.get('dt_nodes', 0)} | {value.get('dt_mmio_nodes', 0)} | "
                 f"{value.get('dt_irq_nodes', 0)} | {value.get('dt_boards', 0)} |"
+            )
+
+    if any("dma_controllers" in value for value in board_coverage):
+        output.extend([
+            "",
+            "## DMA applicability by board DTB",
+            "",
+            "| Board DTB | DMA controllers | Consumer dmas references |",
+            "|---|---:|---:|",
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            output.append(
+                f"| {value['board']} | {value.get('dma_controllers', 0)} | "
+                f"{value.get('dma_references', 0)} |"
             )
 
     output.extend([

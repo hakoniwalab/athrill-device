@@ -84,6 +84,20 @@ class UartController:
 
 
 @dataclasses.dataclass(frozen=True)
+class DmaReference:
+    consumer_path: str
+    specifier: Specifier
+    index: int
+    name: str
+
+
+@dataclasses.dataclass
+class DmaController:
+    node: Node
+    references: list[DmaReference]
+
+
+@dataclasses.dataclass(frozen=True)
 class MmioWindow:
     address: int
     size: int
@@ -459,6 +473,22 @@ def find_uart(fdt: Fdt) -> list[UartController]:
     return result
 
 
+def find_dma_controllers(fdt: Fdt) -> list[DmaController]:
+    providers = [node for node in fdt.nodes
+                 if enabled(node) and "#dma-cells" in node.properties]
+    references: dict[str, list[DmaReference]] = {node.path: [] for node in providers}
+    for consumer in fdt.nodes:
+        if not enabled(consumer) or "dmas" not in consumer.properties:
+            continue
+        specifiers = decode_specifiers(fdt, consumer, "dmas", "#dma-cells")
+        names = strings(consumer.properties.get("dma-names"))
+        for index, specifier in enumerate(specifiers):
+            if specifier.provider_path in references:
+                references[specifier.provider_path].append(DmaReference(
+                    consumer.path, specifier, index, dma_name_at(names, index)))
+    return [DmaController(node, references[node.path]) for node in providers]
+
+
 def load_test_specs(paths: list[Path]) -> dict[str, str]:
     """Read the small documented YAML subset without a YAML dependency."""
     result: dict[str, str] = {}
@@ -490,6 +520,7 @@ def load_test_specs(paths: list[Path]) -> dict[str, str]:
         "ADV-DT-003.T1": "dt-mmio-node",
         "ADV-DT-004.T1": "dt-irq-node",
         "ADV-DT-005.T1": "dt-board",
+        "ADV-DMA-005.T1": "dma-controller",
     }
     for test_id, target in required.items():
         if result.get(test_id) != target:
@@ -720,6 +751,24 @@ def generated_dt_cases(board: str, fdt: Fdt, negative_path: Path,
     return result
 
 
+def generated_dma_cases(board: str, controllers: list[DmaController]) -> list[dict[str, object]]:
+    result = []
+    for controller in controllers:
+        result.append({
+            "name": case_name(board, controller.node.path, "ADV-DMA-005.T1"),
+            "test_spec_id": "ADV-DMA-005.T1", "item_id": "ADV-DMA-005",
+            "node_path": controller.node.path,
+            "derived_properties": {
+                "references": [{"consumer_path": ref.consumer_path,
+                                "provider": specifier_json(ref.specifier),
+                                "index": ref.index, "name": ref.name}
+                               for ref in controller.references],
+            },
+            "kind": "dma-controller", "area": "dma", "controller": controller,
+        })
+    return result
+
+
 def c_windows(values: list[MmioWindow]) -> str:
     return ", ".join(f"{{{value.address}ULL, {value.size}ULL}}" for value in values)
 
@@ -858,6 +907,20 @@ def render_case(case: dict[str, object]) -> str:
             "\tCHECK(strstr(first.err, \"DEVICE_MODEL path=\") != NULL);",
             "\tfree_capture(&first); free_capture(&second);",
         ])
+    elif case["kind"] == "dma-controller":
+        assert isinstance(controller, DmaController)
+        lines.extend([
+            f"\tCHECK(count_model_path(captured_stderr, {c_string(controller.node.path)}) == 1U);",
+            f"\tCHECK(count_dma_provider({c_string(controller.node.path)}) == {len(controller.references)}U);",
+        ])
+        for reference in controller.references:
+            dma = reference.specifier
+            cell_values = ", ".join(f"{value}U" for value in dma.cells) or "0U"
+            lines.extend([
+                f"\t{{ static const uint32 wanted[] = {{{cell_values}}};",
+                f"\t  CHECK(find_dma({c_string(dma.provider_path)}, wanted, {len(dma.cells)}U,",
+                f"\t                 {reference.index}U, {c_string(reference.name)})); }}",
+            ])
     else:
         raise ValueError(f"unknown generated case kind {case['kind']}")
     lines.extend(["\tdestroy_board();", "\treturn 0;", "}"])
@@ -1333,6 +1396,14 @@ static int find_dma(const char *provider, const uint32 *wanted, uint32 count,
 \treturn 0;
 }}
 
+static uint32 count_dma_provider(const char *provider)
+{{
+\tuint32 index, count = 0U;
+\tfor (index = 0U; index < target.dma_count; index++)
+\t\tif (strcmp(target.dmas[index].provider, provider) == 0) count++;
+\treturn count;
+}}
+
 {case_functions}
 
 int main(int argc, char **argv)
@@ -1392,6 +1463,7 @@ def main() -> int:
         spi_controllers = find_spi(fdt)
         i2c_controllers = find_i2c(fdt)
         uart_controllers = find_uart(fdt)
+        dma_controllers = find_dma_controllers(fdt)
         relative = dtb.as_posix().split("/boards/", 1)[-1]
         board = relative.replace("/", "__").removesuffix(".dtb")
         negative_path = args.out / f"{c_identifier(board)}__unknown-compatible.dtb"
@@ -1399,7 +1471,8 @@ def main() -> int:
         cases = (generated_spi_cases(board, spi_controllers) +
                  generated_i2c_cases(board, i2c_controllers) +
                  generated_uart_cases(board, uart_controllers) +
-                 generated_dt_cases(board, fdt, negative_path, negative_node))
+                 generated_dt_cases(board, fdt, negative_path, negative_node) +
+                 generated_dma_cases(board, dma_controllers))
         dt_instances = [node for node in fdt.nodes if is_model_instance(node)]
         dt_mmio_nodes = [node for node in fdt.nodes
                          if enabled(node) and MMIO_MODEL_COMPATIBLES.intersection(compatible(node))
@@ -1415,6 +1488,8 @@ def main() -> int:
             "dt_mmio_nodes": len(dt_mmio_nodes),
             "dt_irq_nodes": len(dt_irq_nodes),
             "dt_boards": 1,
+            "dma_controllers": len(dma_controllers),
+            "dma_references": sum(len(value.references) for value in dma_controllers),
         })
         use_plugin = "hakoniwa" in dtb.stem
         source = args.out / f"{c_identifier(board)}.c"
