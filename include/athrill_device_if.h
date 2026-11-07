@@ -29,7 +29,7 @@ typedef uint8 std_bool;
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       8U
+#define ATHRILL_DEVICE_ABI_MINOR       9U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -84,6 +84,9 @@ typedef struct {
 	const char *provider_compatible;
 	uint32 cell_count;
 	uint32 cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
+	/* Added in ABI 1.9; DMA consumer tuple metadata (name is "" if absent). */
+	uint32 index;
+	const char *name;
 } AthrillDeviceSpecifier;
 
 typedef struct AthrillDeviceNodeOps {

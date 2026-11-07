@@ -50,6 +50,8 @@ struct NodeRecord {
 	AthrillDeviceSpiEndpoint spi_endpoint;
 	AthrillDeviceI2cEndpoint i2c_endpoint;
 	AthrillDeviceUartEndpoint uart_endpoint;
+	AthrillDeviceDmaChannel *dma_channels;
+	uint32 dma_channel_count;
 	std_bool enabled;
 	std_bool structural;
 	std_bool created;
@@ -106,6 +108,14 @@ static int abi_header_ok(uint32 major, uint32 minor, uint32 size,
 {
 	return major == ATHRILL_DEVICE_ABI_MAJOR &&
 	       minor >= ATHRILL_DEVICE_ABI_MINOR && size >= needed;
+}
+
+static int target_abi_header_ok(uint32 major, uint32 minor, uint32 size)
+{
+	/* ABI 1.9 only appends input metadata to AthrillDeviceSpecifier. */
+	return major == ATHRILL_DEVICE_ABI_MAJOR &&
+	       minor >= ATHRILL_DEVICE_ABI_MINOR - 1U &&
+	       size >= sizeof(AthrillDeviceTargetOps);
 }
 
 static sint32 noop_create(const AthrillDeviceCreateArgs *args, void **instance)
@@ -974,6 +984,36 @@ static int string_list_index(NodeRecord *node, const char *property,
 	return -1;
 }
 
+static int decode_dma_specifier(NodeRecord *node, uint32 index,
+	AthrillDeviceSpecifier *spec)
+{
+	const char *names;
+	int length, at;
+	uint32 current = 0U;
+
+	if (decode_specifier(node, "dmas", "#dma-cells", index, spec) != 0) {
+		return -1;
+	}
+	spec->index = index;
+	spec->name = "";
+	names = fdt_getprop(node->runtime->dtb, node->offset, "dma-names",
+		&length);
+	if (names == NULL) {
+		return 0;
+	}
+	if (!string_property_valid(names, length)) {
+		return -1;
+	}
+	for (at = 0; at < length; at += (int)strlen(names + at) + 1) {
+		if (current == index) {
+			spec->name = names + at;
+			return 0;
+		}
+		current++;
+	}
+	return -1;
+}
+
 static int inherited_phandle_provider(NodeRecord *node, const char *property)
 {
 	AthrillDeviceRuntime *runtime = node->runtime;
@@ -1052,9 +1092,13 @@ static sint32 resource_get_dma(void *context, const char *name, uint32 index,
 	AthrillDeviceSpecifier spec;
 	uint32 wanted;
 	if (channel == NULL || string_list_index(node, "dma-names", name, index,
-		&wanted) != 0 || decode_specifier(node, "dmas", "#dma-cells", wanted,
-		&spec) != 0 || node->runtime->target_ops->dma_resolve == NULL) {
+		&wanted) != 0 || decode_dma_specifier(node, wanted, &spec) != 0 ||
+	    node->runtime->target_ops->dma_resolve == NULL) {
 		return -1;
+	}
+	if (wanted < node->dma_channel_count) {
+		*channel = node->dma_channels[wanted];
+		return 0;
 	}
 	return node->runtime->target_ops->dma_resolve(node->runtime->target,
 		&spec, channel);
@@ -1988,20 +2032,21 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 
 /* [ADV-SPI-006] resolve every SPI DMA tuple in order with its dma-names entry */
 /* [ADV-UART-006] resolve every UART DMA tuple in order with its dma-names entry */
-static int resolve_bus_controller_dmas(NodeRecord *node)
+static int resolve_node_dmas(NodeRecord *node)
 {
 	const char *names;
 	int names_length, names_at = 0;
 	uint32 count, index;
 
-	if (!is_spi_controller(node) && !is_uart_controller(node)) {
-		return 0;
-	}
 	if (specifier_count(node, "dmas", "#dma-cells", &count) != 0) {
 		return -1;
 	}
 	if (count == 0U) {
 		return 0;
+	}
+	node->dma_channels = calloc(count, sizeof(*node->dma_channels));
+	if (node->dma_channels == NULL) {
+		return -1;
 	}
 	names = fdt_getprop(node->runtime->dtb, node->offset, "dma-names",
 		&names_length);
@@ -2010,12 +2055,13 @@ static int resolve_bus_controller_dmas(NodeRecord *node)
 		return -1;
 	}
 	for (index = 0U; index < count; index++) {
-		AthrillDeviceDmaChannel channel;
 		const char *name = names != NULL ? names + names_at : NULL;
 
-		if (resource_get_dma(node, name, index, &channel) != 0) {
+		if (resource_get_dma(node, name, index,
+			&node->dma_channels[index]) != 0) {
 			return -1;
 		}
+		node->dma_channel_count++;
 		if (names != NULL) {
 			names_at += (int)strlen(name) + 1;
 		}
@@ -2044,9 +2090,10 @@ static int register_and_connect(AthrillDeviceRuntime *runtime)
 	}
 	for (oi = 0U; oi < runtime->order_count; oi++) {
 		NodeRecord *node = &runtime->nodes[runtime->order[oi]];
-		if (resolve_bus_controller_dmas(node) != 0) {
+		if (resolve_node_dmas(node) != 0) {
 			error_line(is_uart_controller(node) ? "uart-dma-resolve" :
-				"spi-dma-resolve", node->path, "dmas",
+				is_spi_controller(node) ? "spi-dma-resolve" : "dma-resolve",
+				node->path, "dmas",
 				"target-rejected");
 			return -1;
 		}
@@ -2101,8 +2148,8 @@ sint32 athrill_device_build(const AthrillDeviceBuildOptions *options,
 	}
 	*result = NULL;
 	if (options == NULL || target_ops == NULL ||
-	    !abi_header_ok(target_ops->abi_major, target_ops->abi_minor, target_ops->struct_size,
-	                   sizeof(AthrillDeviceTargetOps))) {
+	    !target_abi_header_ok(target_ops->abi_major, target_ops->abi_minor,
+	                          target_ops->struct_size)) {
 		error_line("target-abi", "/", "target-ops", "unsupported");
 		return -1;
 	}
@@ -2232,6 +2279,7 @@ void athrill_device_destroy(AthrillDeviceRuntime *runtime)
 			}
 	if (runtime->nodes != NULL)
 		for (i = 0U; i < runtime->node_count; i++) {
+			free(runtime->nodes[i].dma_channels);
 			free(runtime->nodes[i].dependencies);
 			free(runtime->nodes[i].path);
 		}

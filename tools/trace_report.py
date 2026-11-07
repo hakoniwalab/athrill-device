@@ -290,7 +290,7 @@ def report(args: argparse.Namespace) -> str:
         "",
         "## Testability note",
         "",
-        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. The implementation currently resolves controller DMA tuples only for SPI, so a future applicable UART case is retained as `WILL_FAIL` with that known defect. The public `dma_resolve` callback exposes provider/cells and call order but not the corresponding `dma-names` string: tuple count and order are testable, but the name-to-direction pairing is not independently observable through the current public target API. The specification was left unchanged.",
+        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. Whenever a SPI or UART DMA case is applicable, the generated target independently decodes the DTB and checks the provider/cells together with the ABI 1.9 tuple index and same-index `dma-names` entry. Applicable UART cases are ordinary passing tests rather than expected failures. The specification was left unchanged.",
         "",
         "## Third-area cost",
         "",
