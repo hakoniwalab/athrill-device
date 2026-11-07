@@ -635,7 +635,7 @@ def find_gpio_chip_selects(fdt: Fdt, controllers: list[SpiController]) -> list[G
 CHIP_TESTS = {
     "invensense,icm42688": ("ADV-CHIP-ICM42688-001", "spi-register", 0x75, 0x47),
     "invensense,icm20689": ("ADV-CHIP-ICM20689-001", "spi-register", 0x75, 0x98),
-    "bosch,bma280": ("ADV-CHIP-BMI055A-001", "spi-register-dummy", 0x00, 0xFA),
+    "bosch,bma280": ("ADV-CHIP-BMI055A-001", "spi-register", 0x00, 0xFA),
     "bosch,bmg160": ("ADV-CHIP-BMI055G-001", "spi-register", 0x00, 0x0F),
     "isentek,ist8310": ("ADV-CHIP-IST8310-001", "i2c-register", 0x00, 0x10),
     "meas,ms5611": ("ADV-CHIP-MS5611-001", "ms5611-prom", None, None),

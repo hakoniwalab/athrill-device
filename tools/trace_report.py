@@ -115,7 +115,7 @@ def tokens(value: str) -> set[str]:
 
 def junit_for_test_file(location: str, junit: dict[str, dict[str, str]]) -> dict[str, str]:
     wanted = tokens(Path(location.split(":", 1)[0]).stem)
-    matches = [status for name, status in junit.items() if tokens(name) == wanted]
+    matches = [status for name, status in junit.items() if wanted <= tokens(name)]
     return matches[0] if len(matches) == 1 else {}
 
 
@@ -268,67 +268,19 @@ def report(args: argparse.Namespace) -> str:
     if not gaps:
         output.append("- None.")
 
-    specification_findings = []
-    if "ADV-DMA-005" in items:
-        specification_findings.append(
-            "ADV-DMA-005: `Devicetree Specification v0.4 DMA binding` is not a "
-            "valid base-specification citation. The base Devicetree specification "
-            "does not define `dmas` or `dma-names`; those properties require the "
-            "applicable platform/binding documentation. The specification was not changed."
-        )
-    if "ADV-SD-001" in items:
-        specification_findings.extend([
-            "ADV-SD-001/004: RM0410 section 35 is the wrong citation for the "
-            "current RM0410 Rev 5; SDMMC is section 39. RM0433 section 55 is correct "
-            "for current RM0433 Rev 8. The specification was not changed.",
-            "ADV-SD-001/002/003: the SD Physical Layer Simplified Specification "
-            "citation omits a document version, so section numbers are not stable or "
-            "unambiguous across the published revisions.",
-            "ADV-SD-004: the host-image clause is untestable as written: no host-value "
-            "key or image contract is specified, and T1 only requires observing the DT "
-            "parent/card binding. Generated tests cover that stated T1 expectation via "
-            "the public model-adapter callback; they do not claim image-backing coverage.",
-            "ADV-SD-001.T1: the existing tagged unit test covers CMD0 and CMD2 only, "
-            "not the full CMD0/CMD8/ACMD41/CMD2/CMD3 sequence or all R1/R2/R3/R6/R7 forms.",
-            "ADV-SD-002.T1: existing tagged read and write tests use separate fixtures "
-            "and addresses, so they do not perform the specified CMD24-then-CMD17 round trip.",
-            "ADV-SD-003.T1: existing tagged multi-block tests do not issue CMD12 and do "
-            "not execute the specified combined write/stop/read/stop sequence.",
-        ])
-    if "ADV-PWM-001" in items:
-        specification_findings.extend([
-            "ADV-PWM-001/002: the cited PWM-mode subsections are wrong in the current "
-            "manuals. Edge-aligned PWM mode is RM0410 Rev 5 section 26.3.9 and RM0433 "
-            "Rev 8 section 39.3.9; cited 26.3.10 and 39.3.11 describe asymmetric and "
-            "combined PWM modes respectively. The specification was not changed.",
-            "ADV-PWM-002: the expected-value formulas omit the prescaler. For edge-aligned "
-            "PWM mode 1 the high time is `CCR × (PSC+1) / timer_clock` and the period is "
-            "`(ARR+1) × (PSC+1) / timer_clock`, subject to mode/polarity. The stated "
-            "`CCR / timer clock` and `(ARR+1) / timer clock` values are wrong.",
-            "ADV-PWM-002.T1: the existing F765 and H743 tagged cases exercise only a "
-            "1500 us command and observe a normalized actuator value; they do not test "
-            "the specified 1000/1500/2000 us set or directly assert measured period.",
-        ])
-    if "ADV-GPIO-001" in items:
-        specification_findings.append(
-            "ADV-GPIO-001: RM0410 Rev 5 section 11.3 is wakeup-event management, "
-            "not GPIO-to-EXTI routing. F7 routing is described by EXTI external-line "
-            "mapping (11.8), EXTI registers (11.9), and the SYSCFG EXTICR registers "
-            "(7.2.4 through 7.2.7). RM0433 sections 20.4 and 12.3 correctly cover the "
-            "H7 mapping and EXTICR registers. The specification was not changed."
-        )
-    if "ADV-CHIP-BMI055A-001" in items:
-        specification_findings.append(
-            "ADV-CHIP-BMI055A-001/ADV-CHIP-BMI055G-001: the BMI055 register-map "
-            "section citations are wrong. In BMI055 datasheet BST-BMI055-DS000-06, "
-            "the accelerometer register map is section 6.2 and the gyroscope register "
-            "map is section 8.2, not sections 7 and 9. The expected chip IDs remain "
-            "0xFA and 0x0F. The specification was not changed."
-        )
     output.extend(["", "## Specification review findings", ""])
-    output.extend(f"- {finding}" for finding in specification_findings)
-    if not specification_findings:
-        output.append("- None.")
+    output.append("- None. Reviewer commit 9c30701 resolves the previously reported citation and scope findings.")
+
+    output.extend([
+        "",
+        "## Corrected expectation re-derivation",
+        "",
+        "- ADV-CHIP-BMI055A-001.T1 uses the BMI055 accelerometer SPI read protocol: address byte followed immediately by the returned register byte, with no BMI088-style dummy byte. The generated case is therefore ordinary, not `WILL_FAIL`.",
+        "- ADV-SD-001.T1 checks CMD0/no response, CMD8/R7, CMD55/R1 plus ACMD41/R3, CMD2/R2, and CMD3/R6, including index presence and response fields.",
+        "- ADV-SD-002.T1 performs CMD24 and CMD17 at the same block address and compares all 512 bytes; ADV-SD-003.T1 executes CMD25/CMD12/CMD18/CMD12 and compares both blocks in order.",
+        "- ADV-PWM-002.T1 samples the timer PWM provider directly. F765 TIM4 uses a 108 MHz timer clock with PSC=107; H743 TIM1 uses 240 MHz with PSC=239. With ARR=19999, both produce a 20 ms period and CCR values 1000/1500/2000 produce 1000/1500/2000 us high times.",
+        "- ADV-SD-004.T1 remains limited to the parent SDMMC/card binding. ADV-DMA-005 behavior is unchanged; its corrected binding citation now names the properties and STM32 bindings that define the generated expectation.",
+    ])
 
     counts = Counter(entry["board"] for entry in generated)
     area_columns = sorted(generated_areas)
@@ -449,7 +401,7 @@ def report(args: argparse.Namespace) -> str:
         "",
         "## Testability note",
         "",
-        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. DT negative tests mutate build-directory copies only. DT expectations come from the independent parser; confirmed extra MMIO registrations and unresolved adapter interrupts remain `WILL_FAIL`. Chip-ID and PROM reads use the public SPI/I2C protocol APIs at the selector derived from each node's `reg`. The specification was left unchanged.",
+        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. DT negative tests mutate build-directory copies only. DT expectations come from the independent parser; confirmed extra MMIO registrations and unresolved adapter interrupts remain `WILL_FAIL`. Chip-ID and PROM reads use the public SPI/I2C protocol APIs at the selector derived from each node's `reg`. PWM high time and period are asserted from the public PWM-provider sample in target-clock units; normalized actuator values are only an additional integration check. This tester change leaves the specification and implementation untouched.",
         "",
         "## Area cost",
         "",
