@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate SPI traceability tests from board DTBs without using libfdt."""
+"""Generate bus traceability tests from board DTBs without using libfdt."""
 
 from __future__ import annotations
 
@@ -55,6 +55,18 @@ class SpiController:
     children: list[SpiChild]
     dmas: list[Specifier]
     dma_names: list[str]
+
+
+@dataclasses.dataclass
+class I2cChild:
+    node: Node
+    address: int
+
+
+@dataclasses.dataclass
+class I2cController:
+    node: Node
+    children: list[I2cChild]
 
 
 def align4(value: int) -> int:
@@ -195,6 +207,12 @@ def is_spi_controller(node: Node) -> bool:
     )
 
 
+def is_i2c_controller(node: Node) -> bool:
+    return enabled(node) and any(
+        item.startswith("st,stm32") and "i2c" in item for item in compatible(node)
+    )
+
+
 def decode_specifiers(fdt: Fdt, node: Node, property_name: str,
                       cell_property: str) -> list[Specifier]:
     raw = node.properties.get(property_name)
@@ -250,28 +268,50 @@ def find_spi(fdt: Fdt) -> list[SpiController]:
     return result
 
 
-def load_test_specs(path: Path) -> dict[str, str]:
-    """Read the small documented YAML subset without a YAML dependency."""
-    applies_to: str | None = None
-    result: dict[str, str] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        match = re.match(r"^  applies_to:\s*(\S+)\s*$", line)
-        if match:
-            applies_to = match.group(1)
+def find_i2c(fdt: Fdt) -> list[I2cController]:
+    result: list[I2cController] = []
+    for node in fdt.nodes:
+        if not is_i2c_controller(node):
             continue
-        match = re.match(r"^    - id:\s*(ADV-SPI-\d+\.T\d+)\s*$", line)
-        if match:
-            if applies_to is None:
-                raise ValueError(f"{path}: test before applies_to")
-            result[match.group(1)] = applies_to
+        children: list[I2cChild] = []
+        for child in node.children:
+            if not enabled(child) or "reg" not in child.properties:
+                continue
+            reg = cells(child.properties["reg"])
+            if len(reg) != 1 or reg[0] > 0x7f:
+                raise ValueError(f"{child.path}: I2C reg must be one 7-bit address cell")
+            children.append(I2cChild(child, reg[0]))
+        result.append(I2cController(node=node, children=children))
+    return result
+
+
+def load_test_specs(paths: list[Path]) -> dict[str, str]:
+    """Read the small documented YAML subset without a YAML dependency."""
+    result: dict[str, str] = {}
+    for path in paths:
+        applies_to: str | None = None
+        for line in path.read_text(encoding="utf-8").splitlines():
+            match = re.match(r"^  applies_to:\s*(\S+)\s*$", line)
+            if match:
+                applies_to = match.group(1)
+                continue
+            match = re.match(r"^    - id:\s*(ADV-[A-Z0-9-]+-\d+\.T\d+)\s*$", line)
+            if match:
+                if applies_to is None:
+                    raise ValueError(f"{path}: test before applies_to")
+                if match.group(1) in result:
+                    raise ValueError(f"{path}: duplicate test specification {match.group(1)}")
+                result[match.group(1)] = applies_to
     required = {
         "ADV-SPI-001.T1": "spi-child",
         "ADV-SPI-002.T1": "spi-controller",
         "ADV-SPI-006.T1": "spi-controller-with-dmas",
+        "ADV-I2C-001.T1": "i2c-child",
+        "ADV-I2C-002.T1": "i2c-controller",
     }
     for test_id, target in required.items():
         if result.get(test_id) != target:
-            raise ValueError(f"{path}: {test_id} must apply to {target}")
+            raise ValueError(f"spec set: {test_id} must apply to {target}")
     return result
 
 
@@ -303,7 +343,7 @@ def gpio_check(binding_index: int, gpio: Specifier | None) -> str:
     return "\n\t".join(checks)
 
 
-def generated_cases(board: str, controllers: list[SpiController]) -> list[dict[str, object]]:
+def generated_spi_cases(board: str, controllers: list[SpiController]) -> list[dict[str, object]]:
     result: list[dict[str, object]] = []
     for controller in controllers:
         inventory_name = case_name(board, controller.node.path, "ADV-SPI-002.T1")
@@ -317,6 +357,7 @@ def generated_cases(board: str, controllers: list[SpiController]) -> list[dict[s
                 "reg": [child.chip_select for child in controller.children],
             },
             "kind": "inventory",
+            "area": "spi",
             "controller": controller,
         })
         for child in controller.children:
@@ -330,6 +371,7 @@ def generated_cases(board: str, controllers: list[SpiController]) -> list[dict[s
                     "cs_gpio": specifier_json(child.cs_gpio) if child.cs_gpio else None,
                 },
                 "kind": "child",
+                "area": "spi",
                 "controller": controller,
                 "child": child,
             })
@@ -344,7 +386,39 @@ def generated_cases(board: str, controllers: list[SpiController]) -> list[dict[s
                     "dma-names": controller.dma_names,
                 },
                 "kind": "dma",
+                "area": "spi",
                 "controller": controller,
+            })
+    return result
+
+
+def generated_i2c_cases(board: str, controllers: list[I2cController]) -> list[dict[str, object]]:
+    result: list[dict[str, object]] = []
+    for controller in controllers:
+        result.append({
+            "name": case_name(board, controller.node.path, "ADV-I2C-002.T1"),
+            "test_spec_id": "ADV-I2C-002.T1",
+            "item_id": "ADV-I2C-002",
+            "node_path": controller.node.path,
+            "derived_properties": {
+                "child_count": len(controller.children),
+                "reg": [child.address for child in controller.children],
+            },
+            "kind": "i2c-inventory",
+            "area": "i2c",
+            "controller": controller,
+        })
+        for child in controller.children:
+            result.append({
+                "name": case_name(board, child.node.path, "ADV-I2C-001.T1"),
+                "test_spec_id": "ADV-I2C-001.T1",
+                "item_id": "ADV-I2C-001",
+                "node_path": child.node.path,
+                "derived_properties": {"reg": child.address},
+                "kind": "i2c-child",
+                "area": "i2c",
+                "controller": controller,
+                "child": child,
             })
     return result
 
@@ -352,9 +426,9 @@ def generated_cases(board: str, controllers: list[SpiController]) -> list[dict[s
 def render_case(case: dict[str, object]) -> str:
     name = str(case["name"])
     controller = case["controller"]
-    assert isinstance(controller, SpiController)
     lines = [f"static int case_{c_identifier(name)}(void)", "{", "\tuint32 index;", "\tCHECK(build_board() == 0);"]
     if case["kind"] == "child":
+        assert isinstance(controller, SpiController)
         child = case["child"]
         assert isinstance(child, SpiChild)
         lines.extend([
@@ -364,18 +438,38 @@ def render_case(case: dict[str, object]) -> str:
             "\t" + gpio_check(0, child.cs_gpio).replace("target.bindings[0]", "target.bindings[index]"),
         ])
     elif case["kind"] == "inventory":
+        assert isinstance(controller, SpiController)
         lines.append(f"\tCHECK(count_bindings({c_string(controller.node.path)}) == {len(controller.children)}U);")
         for child in controller.children:
             lines.append(
                 f"\tCHECK(find_binding({c_string(controller.node.path)}, {child.chip_select}U) < target.binding_count);"
             )
     elif case["kind"] == "dma":
+        assert isinstance(controller, SpiController)
         for dma in controller.dmas:
             cell_values = ", ".join(f"{value}U" for value in dma.cells) or "0U"
             lines.extend([
                 f"\t{{ static const uint32 wanted[] = {{{cell_values}}};",
                 f"\t  CHECK(find_dma({c_string(dma.provider_path)}, wanted, {len(dma.cells)}U)); }}",
             ])
+    elif case["kind"] == "i2c-child":
+        assert isinstance(controller, I2cController)
+        child = case["child"]
+        assert isinstance(child, I2cChild)
+        lines.extend([
+            "\tindex = find_i2c_binding(" + c_string(controller.node.path) +
+            f", {child.address}U);",
+            "\tCHECK(index < target.i2c_binding_count);",
+        ])
+    elif case["kind"] == "i2c-inventory":
+        assert isinstance(controller, I2cController)
+        lines.append(
+            f"\tCHECK(count_i2c_bindings({c_string(controller.node.path)}) == {len(controller.children)}U);"
+        )
+        for child in controller.children:
+            lines.append(
+                f"\tCHECK(find_i2c_binding({c_string(controller.node.path)}, {child.address}U) < target.i2c_binding_count);"
+            )
     else:
         raise ValueError(f"unknown generated case kind {case['kind']}")
     lines.extend(["\tdestroy_board();", "\treturn 0;", "}"])
@@ -409,6 +503,7 @@ def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
 \tfprintf(stderr, "%s:%d: check failed: %s\\n", __FILE__, __LINE__, #condition); \\
 \tdestroy_board(); return 1; }} }} while (0)
 #define MAX_BINDINGS 32U
+#define MAX_I2C_BINDINGS 32U
 #define MAX_DMAS 32U
 
 typedef struct {{
@@ -421,6 +516,11 @@ typedef struct {{
 }} Binding;
 
 typedef struct {{
+\tchar controller[192];
+\tuint16 address;
+}} I2cBinding;
+
+typedef struct {{
 \tchar provider[192];
 \tuint32 cell_count;
 \tuint32 cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
@@ -429,6 +529,8 @@ typedef struct {{
 typedef struct {{
 \tBinding bindings[MAX_BINDINGS];
 \tuint32 binding_count;
+\tI2cBinding i2c_bindings[MAX_I2C_BINDINGS];
+\tuint32 i2c_binding_count;
 \tDmaResolution dmas[MAX_DMAS];
 \tuint32 dma_count;
 \tuint64 next_handle;
@@ -509,7 +611,18 @@ static sint32 spi_exchange(void *context, AthrillDeviceSpiEndpoint endpoint, uin
 static sint32 i2c_bind_node(void *context, const AthrillDeviceNode *controller,
 \tuint16 address, const AthrillDeviceI2cPeripheralOps *ops, void *instance,
 \tAthrillDeviceI2cEndpoint *endpoint)
-{{ (void)controller; (void)address; (void)ops; (void)instance; endpoint->value = ++((TestTarget *)context)->next_handle; return 0; }}
+{{
+\tTestTarget *value = context;
+\tI2cBinding *binding;
+\t(void)instance;
+\tif (controller == NULL || ops == NULL ||
+\t    value->i2c_binding_count >= MAX_I2C_BINDINGS) return -1;
+\tbinding = &value->i2c_bindings[value->i2c_binding_count++];
+\tcopy_text(binding->controller, sizeof(binding->controller), controller->path);
+\tbinding->address = address;
+\tendpoint->value = ++value->next_handle;
+\treturn 0;
+}}
 static sint32 i2c_transfer(void *context, AthrillDeviceI2cEndpoint endpoint,
 \tAthrillDeviceI2cMessage *messages, uint32 count)
 {{ (void)context; (void)endpoint; (void)messages; (void)count; return 0; }}
@@ -620,6 +733,23 @@ static uint32 find_binding(const char *controller, uint32 chip_select)
 \treturn target.binding_count;
 }}
 
+static uint32 count_i2c_bindings(const char *controller)
+{{
+\tuint32 index, count = 0;
+\tfor (index = 0; index < target.i2c_binding_count; index++)
+\t\tif (strcmp(target.i2c_bindings[index].controller, controller) == 0) count++;
+\treturn count;
+}}
+
+static uint32 find_i2c_binding(const char *controller, uint16 address)
+{{
+\tuint32 index;
+\tfor (index = 0; index < target.i2c_binding_count; index++)
+\t\tif (target.i2c_bindings[index].address == address &&
+\t\t    strcmp(target.i2c_bindings[index].controller, controller) == 0) return index;
+\treturn target.i2c_binding_count;
+}}
+
 static int find_dma(const char *provider, const uint32 *wanted, uint32 count)
 {{
 \tuint32 index;
@@ -663,7 +793,7 @@ def render_cmake(targets: list[dict[str, object]]) -> str:
             command += ")"
             lines.extend([
                 command,
-                f"set_tests_properties({json.dumps(name)} PROPERTIES LABELS \"traceability;spi\")",
+                f"set_tests_properties({json.dumps(name)} PROPERTIES LABELS \"traceability;{case['area']}\")",
             ])
             if case.get("will_fail"):
                 lines.append(f"set_tests_properties({json.dumps(name)} PROPERTIES WILL_FAIL TRUE)")
@@ -672,7 +802,7 @@ def render_cmake(targets: list[dict[str, object]]) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--spec", required=True, type=Path)
+    parser.add_argument("--spec", action="append", required=True, type=Path)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("dtbs", nargs="+", type=Path)
     args = parser.parse_args()
@@ -682,14 +812,16 @@ def main() -> int:
     targets: list[dict[str, object]] = []
     for dtb in sorted(args.dtbs):
         fdt = Fdt(dtb)
-        controllers = find_spi(fdt)
+        spi_controllers = find_spi(fdt)
+        i2c_controllers = find_i2c(fdt)
         relative = dtb.as_posix().split("/boards/", 1)[-1]
         board = relative.replace("/", "__").removesuffix(".dtb")
-        cases = generated_cases(board, controllers)
+        cases = (generated_spi_cases(board, spi_controllers) +
+                 generated_i2c_cases(board, i2c_controllers))
         use_plugin = "hakoniwa" in dtb.stem
         source = args.out / f"{c_identifier(board)}.c"
         source.write_text(render_source(dtb, fdt, cases, use_plugin), encoding="utf-8")
-        target = "trace_spi_" + c_identifier(board)
+        target = "trace_bus_" + c_identifier(board)
         targets.append({
             "target": target,
             "source": str(source.resolve()),

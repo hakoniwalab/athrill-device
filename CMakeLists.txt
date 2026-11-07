@@ -56,15 +56,17 @@ if(BUILD_TESTING)
   set(TRACE_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/traceability")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/spi.yaml"
+    "${CMAKE_CURRENT_SOURCE_DIR}/spec/i2c.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py")
   execute_process(
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py"
             --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/spi.yaml"
+            --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/i2c.yaml"
             --out "${TRACE_GENERATED_DIR}" ${TRACE_BOARD_DTBS}
     RESULT_VARIABLE TRACE_TESTGEN_RESULT
     ERROR_VARIABLE TRACE_TESTGEN_ERROR)
   if(NOT TRACE_TESTGEN_RESULT EQUAL 0)
-    message(FATAL_ERROR "SPI trace test generation failed: ${TRACE_TESTGEN_ERROR}")
+    message(FATAL_ERROR "bus trace test generation failed: ${TRACE_TESTGEN_ERROR}")
   endif()
   include("${TRACE_GENERATED_DIR}/trace-tests.cmake")
 
