@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       13U
+#define ATHRILL_DEVICE_ABI_MINOR       14U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -157,6 +157,33 @@ typedef struct AthrillDeviceUartPeripheralOps {
 } AthrillDeviceUartPeripheralOps;
 
 typedef void (*AthrillDeviceGpioEdge)(void *instance, std_bool level);
+
+/*
+ * Added in ABI 1.14; DMA request lines between models.
+ *
+ * A request line is one tuple of a requester's dmas: the requester (a
+ * peripheral, or a request router such as a DMAMUX passing a request on),
+ * the tuple's index in its dmas, and the tuple's cells in the provider's
+ * #dma-cells format. A router passes on the cells its master reads: the
+ * stream (or channel) first, then the request selection (0 when the
+ * router has made the selection).
+ */
+typedef struct {
+	AthrillDeviceNodeId requester;
+	uint32 index;
+	uint32 cell_count;
+	uint32 cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
+} AthrillDeviceDmaRequestLine;
+
+typedef struct AthrillDeviceDmaProviderOps {
+	uint32 abi_major;
+	uint32 abi_minor;
+	uint32 struct_size;
+	/* The line is now asserted (TRUE) or not. A request is a level: the
+	 * provider is told each change, and a line stays as it was last told. */
+	sint32 (*request)(void *instance, const AthrillDeviceDmaRequestLine *line,
+	                  std_bool asserted);
+} AthrillDeviceDmaProviderOps;
 
 typedef struct {
 	float32 acceleration[3];
@@ -386,6 +413,22 @@ typedef struct AthrillDeviceResourceOps {
 	                      sint32 (*receive)(void *instance, uint8 data),
 	                      void *instance);
 	sint32 (*uart_send)(void *context, uint8 data);
+	/* Added in ABI 1.14; DMA request lines between models.
+	 * dma_provide: a DMA controller or request router model (a node with
+	 * #dma-cells) takes the lines of the dmas tuples that name it; called
+	 * from connect. dma_request: for a requester, set its request named
+	 * name to asserted on every dmas tuple of that name (a request reaches
+	 * each stream its tuples name); a tuple whose provider is not a model
+	 * goes to the target's dma_request. -1 when no tuple has that name.
+	 * get_dma_master: for a request router, the index-th entry of its
+	 * dma-masters and that master's dma-requests (its stream count). */
+	sint32 (*dma_provide)(void *context, const AthrillDeviceDmaProviderOps *ops,
+	                      void *instance);
+	sint32 (*dma_request)(void *context, const char *name, std_bool asserted);
+	sint32 (*get_dma_master)(void *context, uint32 index,
+	                         const AthrillDeviceDmaProviderOps **ops,
+	                         void **instance, AthrillDeviceNodeId *master,
+	                         uint32 *request_count);
 } AthrillDeviceResourceOps;
 
 typedef struct {

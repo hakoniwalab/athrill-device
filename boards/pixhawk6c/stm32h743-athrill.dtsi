@@ -51,3 +51,13 @@
 &usart6 { athrill,stm32h7-uart; };
 &uart7 { athrill,stm32h7-uart; };
 &uart8 { athrill,stm32h7-uart; };
+
+/*
+ * The DMA controllers each DMAMUX feeds (RM0433: DMAMUX1 channels 0-7 drive
+ * DMA1 streams 0-7, channels 8-15 DMA2 streams 0-7; DMAMUX2 drives BDMA).
+ * Zephyr's STM32 DMAMUX driver ties them by dma-offset; this is the Linux
+ * st,stm32-dmamux dma-masters property, read by the DMAMUX model to pass
+ * each channel's request to its stream.
+ */
+&dmamux1 { dma-masters = <&dma1>, <&dma2>; };
+&dmamux2 { dma-masters = <&bdma1>; };

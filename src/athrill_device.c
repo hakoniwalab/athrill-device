@@ -63,6 +63,9 @@ struct NodeRecord {
 	/* a native UART controller: the receiver of its children's bytes */
 	sint32 (*uart_receive)(void *instance, uint8 data);
 	void *uart_receive_instance;
+	/* ABI 1.14: the DMA provider model of a node with #dma-cells */
+	const AthrillDeviceDmaProviderOps *dma_provider;
+	void *dma_provider_instance;
 	std_bool uart_bound;
 };
 
@@ -1372,6 +1375,119 @@ static sint32 resource_uart_send(void *context, uint8 data)
 			node->public_node.id, data) : -1;
 }
 
+static int specifier_count(NodeRecord *node, const char *property,
+	const char *cell_property, uint32 *result);
+static int native_controller(const NodeRecord *controller);
+
+/* ABI 1.14: a DMA controller or request router model takes its lines. */
+static sint32 resource_dma_provide(void *context,
+	const AthrillDeviceDmaProviderOps *ops, void *instance)
+{
+	NodeRecord *node = context;
+	if (ops == NULL || !abi_header_ok(ops->abi_major, ops->abi_minor,
+	    ops->struct_size, sizeof(AthrillDeviceDmaProviderOps)) ||
+	    ops->request == NULL ||
+	    fdt_getprop(node->runtime->dtb, node->offset, "#dma-cells", NULL) == NULL ||
+	    node->dma_provider != NULL) {
+		return -1;
+	}
+	node->dma_provider = ops;
+	node->dma_provider_instance = instance;
+	return 0;
+}
+
+/* ABI 1.14: a requester's request named name, on every dmas tuple of that
+ * name: to the provider model, else to the target. */
+static sint32 resource_dma_request(void *context, const char *name,
+	std_bool asserted)
+{
+	NodeRecord *node = context;
+	AthrillDeviceRuntime *runtime = node->runtime;
+	AthrillDeviceSpecifier spec;
+	AthrillDeviceDmaRequestLine line;
+	uint32 count, index, matched = 0U, i;
+	sint32 result = 0;
+	if (name == NULL || name[0] == 0 ||
+	    specifier_count(node, "dmas", "#dma-cells", &count) != 0) {
+		return -1;
+	}
+	for (index = 0U; index < count; index++) {
+		NodeRecord *provider;
+		if (decode_dma_specifier(node, index, &spec) != 0) {
+			return -1;
+		}
+		if (strcmp(spec.name, name) != 0) {
+			continue;
+		}
+		matched++;
+		if (spec.provider == 0U || spec.provider > runtime->node_count) {
+			return -1;
+		}
+		provider = &runtime->nodes[spec.provider - 1U];
+		if (provider->dma_provider != NULL) {
+			memset(&line, 0, sizeof(line));
+			line.requester = node->public_node.id;
+			line.index = index;
+			line.cell_count = spec.cell_count;
+			for (i = 0U; i < spec.cell_count && i < ATHRILL_DEVICE_MAX_SPEC_CELLS; i++) {
+				line.cells[i] = spec.cells[i];
+			}
+			if (provider->dma_provider->request(provider->dma_provider_instance,
+			    &line, asserted) != 0) {
+				result = -1;
+			}
+		} else if (runtime->target_ops->dma_request != NULL &&
+		           index < node->dma_channel_count) {
+			if (runtime->target_ops->dma_request(runtime->target,
+			    node->dma_channels[index], asserted) != 0) {
+				result = -1;
+			}
+		}
+	}
+	return matched != 0U ? result : -1;
+}
+
+/* ABI 1.14: for a request router, its index-th dma-masters entry. */
+static sint32 resource_get_dma_master(void *context, uint32 index,
+	const AthrillDeviceDmaProviderOps **ops, void **instance,
+	AthrillDeviceNodeId *master, uint32 *request_count)
+{
+	NodeRecord *node = context;
+	AthrillDeviceRuntime *runtime = node->runtime;
+	const fdt32_t *masters, *requests;
+	int length, found;
+	NodeRecord *record;
+	if (ops == NULL || instance == NULL) {
+		return -1;
+	}
+	masters = fdt_getprop(runtime->dtb, node->offset, "dma-masters", &length);
+	if (masters == NULL || length <= 0 || length % 4 != 0 ||
+	    index >= (uint32)length / 4U) {
+		return -1;
+	}
+	found = node_index_by_phandle(runtime, fdt32_to_cpu(masters[index]));
+	if (found < 0) {
+		return -1;
+	}
+	record = &runtime->nodes[found];
+	if (!record->enabled || record->dma_provider == NULL) {
+		return -1;
+	}
+	requests = fdt_getprop(runtime->dtb, record->offset, "dma-requests", &length);
+	if (request_count != NULL) {
+		if (requests == NULL || length != 4) {
+			return -1;
+		}
+		*request_count = fdt32_to_cpu(*requests);
+	}
+	if (master != NULL) {
+		*master = record->public_node.id;
+	}
+	*ops = record->dma_provider;
+	*instance = record->dma_provider_instance;
+	return 0;
+}
+
 /* [ADV-UART-002] expose only enabled children bound to this controller */
 static sint32 resource_get_uart_child(void *context, uint32 index,
 	AthrillDeviceUartEndpoint *endpoint)
@@ -1400,7 +1516,8 @@ static const AthrillDeviceResourceOps resource_ops = {
 	resource_get_value_source, resource_get_i2c_peripheral,
 	resource_get_spi_peripheral, resource_watch_gpio,
 	resource_publish_gpio_outputs, resource_get_uart_peripheral,
-	resource_uart_listen, resource_uart_send
+	resource_uart_listen, resource_uart_send, resource_dma_provide,
+	resource_dma_request, resource_get_dma_master
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
@@ -2366,8 +2483,17 @@ static int resolve_node_dmas(NodeRecord *node)
 	 * would give every later tuple of a name the first one's channel.
 	 * decode_dma_specifier still reports each tuple's own name. */
 	for (index = 0U; index < count; index++) {
+		AthrillDeviceSpecifier spec;
+		if (decode_dma_specifier(node, index, &spec) != 0) {
+			return -1;
+		}
+		/* ABI 1.14: a tuple whose provider is an athrill-device model is
+		 * that model's request line (dma_request); the target need not
+		 * know it. */
 		if (resource_get_dma(node, NULL, index,
-			&node->dma_channels[index]) != 0) {
+			&node->dma_channels[index]) != 0 &&
+		    !(spec.provider != 0U && spec.provider <= node->runtime->node_count &&
+		      native_controller(&node->runtime->nodes[spec.provider - 1U]))) {
 			return -1;
 		}
 		node->dma_channel_count++;
