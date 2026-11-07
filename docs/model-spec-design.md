@@ -99,8 +99,11 @@ investigating a difference; they are not a source.
 The bindings interface is one C interface for every model and every IP
 version (`include/athrill_bindings.h`). Differences between IP versions and
 between models are values in its structures, never different structures:
-a 16-bit data register and a 32-bit one are both an `AthrillBindRegister`
-with `size` 16 or 32.
+register width is the value `size` (8, 16, 32 or 64 bits), field width the
+value `width`. The STM32 SVDs declare every register 32 bits wide (the F7 SPI
+`DR` is a 32-bit register with a 16-bit field); other targets have 64-bit
+registers (RISC-V CLINT `mtime`/`mtimecmp` on the RV64 target), so values,
+reset values and masks are 64-bit in the interface.
 
 Format and code are versioned together: the generated YAML carries
 `bindings_format: 1`; `src/bindings.c` dispatches on it to `src/bindings_v1.c`,
@@ -136,15 +139,17 @@ encodings (`DS` = bits - 1, `BR` = divider 2^(BR+1)).
 ```c
 typedef struct {            /* one SVD field */
 	char   name[24];
-	uint8  lsb, width;
+	uint8  lsb, width;                /* 0..63 */
 	AthrillBindSvdAccess access;      /* read-write, read-only, write-only, ... (patched SVD) */
 } AthrillBindField;
 
 typedef struct {            /* one SVD register of one peripheral */
 	char   name[24];
 	uint16 peripheral;                /* index into AthrillBindings.peripherals */
-	uint32 offset, size, reset;       /* size in bits: 16 or 32 is a value, not a type */
-	uint32 stored_mask;               /* bits of writable fields */
+	uint32 offset;
+	uint8  size;                      /* bits: 8, 16, 32 or 64 -- a value, not a type */
+	uint64 reset;
+	uint64 stored_mask;               /* bits of writable fields */
 	uint16 field_first, field_count;  /* slice of AthrillBindings.fields */
 } AthrillBindRegister;
 
