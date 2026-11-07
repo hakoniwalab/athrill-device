@@ -412,7 +412,7 @@ registers:
         width: 1
   ISR:
     offset: '0x1C'
-    reset: disputed
+    reset: '0x000000C0'
     fields:
       PE:
         lsb: 0
@@ -564,3 +564,6 @@ registers:
         width: 4
 note_selection: Zephyr uses the same compatible for F7 and H7 USARTs; the IP version is selected by the SoC compatible of
   the root node.
+register_notes:
+- ISR resets to 0x000000C0 with the FIFO disabled (the state after reset); with FIFOEN=1 it reads 0x008000C0 (TXFE) (RM0433
+  48.8.9/48.8.10).

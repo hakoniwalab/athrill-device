@@ -499,7 +499,7 @@ registers:
         width: 16
   ARR:
     offset: '0x2C'
-    reset: disputed
+    reset: '0x0000FFFF'
     fields:
       ARR:
         lsb: 0
@@ -603,5 +603,5 @@ register_notes:
 - RCR.REP is 8 bits on most timers, 16 on TIM1/TIM8 (H7 CMSIS states 8); DMAR access width 16 or 32.
 - RCR.REP is 8 bits on TIM1/TIM8 here (16 bits only on some advanced timers of other families).
 wide_instances:
-  TIM2: 'CNT, ARR, CCR1-4 are 32 bits (SVD: *_H at 16:16 and *_L at 0:16)'
+  TIM2: CNT, ARR, CCR1-4 are 32 bits; ARR resets to 0xFFFFFFFF (RM0410 26.4.15, RM0433 39.4.15)
   TIM5: same as TIM2

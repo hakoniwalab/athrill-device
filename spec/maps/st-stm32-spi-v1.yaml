@@ -290,5 +290,5 @@ registers:
     fields: {}
   I2SPR:
     offset: '0x20'
-    reset: disputed
+    reset: '0x00000002'
     fields: {}
