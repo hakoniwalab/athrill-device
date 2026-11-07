@@ -1108,11 +1108,14 @@ static int case_pixhawk4__pixhawk4_hakoniwa__root__ADV_DT_002_T1(void)
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 48U);
+	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 53U);
 	CHECK(count_model_path(captured_stderr, "/") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/timers@40000000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000800") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000800/pwm") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/timers@40000c00") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/timers@40001000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40001800") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40001800/pwm") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40003800") == 1U);
@@ -1121,6 +1124,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005c00/magnetometer@e") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40010000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40010000/pwm") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/timers@40010400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/serial@40011000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/serial@40011000/gnss") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/sdmmc@40012c00") == 1U);
@@ -1130,6 +1134,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40013400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40013400/pressure@0") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/interrupt-controller@40013c00") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/timers@40014000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/pin-controller@40020000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/pin-controller@40020000/gpio@40020000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/pin-controller@40020000/gpio@40020400") == 1U);
@@ -1155,8 +1160,19 @@ static int case_pixhawk4__pixhawk4_hakoniwa__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/memory-placeholder@90000000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/memory@20000000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/memory@20020000") == 1U);
-	CHECK(count_model_path(captured_stderr, "/pwm-actuator-map") == 1U);
 	CHECK(count_model_path(captured_stderr, "/sensor-device") == 1U);
+	CHECK(count_model_path(captured_stderr, "/pwm-actuator-map") == 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000000__ADV_DT_003_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
+	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
 	return 0;
 }
@@ -1165,7 +1181,29 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000800__ADV_DT_003_T1
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
+	  CHECK(mmio_pairwise_disjoint()); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000c00__ADV_DT_003_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
+	  CHECK(mmio_pairwise_disjoint()); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40001000__ADV_DT_003_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1176,7 +1214,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40001800__ADV_DT_003_T1
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1187,7 +1225,18 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40010000__ADV_DT_003_T1
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
+	  CHECK(mmio_pairwise_disjoint()); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40010400__ADV_DT_003_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1198,7 +1247,18 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__interrupt_controller_40013c00_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
+	  CHECK(mmio_pairwise_disjoint()); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40014000__ADV_DT_003_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1209,7 +1269,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1220,7 +1280,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1231,7 +1291,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1242,7 +1302,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1253,7 +1313,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1264,7 +1324,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1275,7 +1335,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1286,7 +1346,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1297,7 +1357,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1308,7 +1368,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1319,7 +1379,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
 	destroy_board();
@@ -1330,9 +1390,19 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__system_config_40013800__ADV_DT
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	{ static const ExpectedWindow expected[] = {{1073743872ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
+	{ static const ExpectedWindow expected[] = {{1073741824ULL, 1024ULL}, {1073743872ULL, 1024ULL}, {1073744896ULL, 1024ULL}, {1073745920ULL, 1024ULL}, {1073747968ULL, 1024ULL}, {1073807360ULL, 1024ULL}, {1073808384ULL, 1024ULL}, {1073822720ULL, 1024ULL}, {1073823744ULL, 1024ULL}, {1073872896ULL, 1024ULL}, {1073873920ULL, 1024ULL}, {1073874944ULL, 1024ULL}, {1073875968ULL, 1024ULL}, {1073876992ULL, 1024ULL}, {1073878016ULL, 1024ULL}, {1073879040ULL, 1024ULL}, {1073880064ULL, 1024ULL}, {1073881088ULL, 1024ULL}, {1073882112ULL, 1024ULL}, {1073883136ULL, 1024ULL}, {1073821696ULL, 1024ULL}};
 	  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));
 	  CHECK(mmio_pairwise_disjoint()); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000000__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {28U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	destroy_board();
 	return 0;
 }
@@ -1342,6 +1412,26 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000800__ADV_DT_004_T1
 	uint32 index;
 	CHECK(build_board() == 0);
 	{ static const uint32 wanted[] = {30U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000c00__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {50U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40001000__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {54U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	destroy_board();
 	return 0;
@@ -1390,6 +1480,22 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40010000__ADV_DT_004_T1
 	{ static const uint32 wanted[] = {26U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	{ static const uint32 wanted[] = {27U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40010400__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {43U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	{ static const uint32 wanted[] = {44U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	{ static const uint32 wanted[] = {45U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	{ static const uint32 wanted[] = {46U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	destroy_board();
 	return 0;
@@ -1452,6 +1558,16 @@ static int case_pixhawk4__pixhawk4_hakoniwa__soc__interrupt_controller_40013c00_
 	{ static const uint32 wanted[] = {23U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	{ static const uint32 wanted[] = {40U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40014000__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {24U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	destroy_board();
 	return 0;
@@ -1711,10 +1827,15 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__serial@40011000__gnss__ADV-UART-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__serial_40011000__gnss__ADV_UART_001_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__ADV-DT-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__ADV_DT_001_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__root__ADV-DT-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__root__ADV_DT_002_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40000000__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000000__ADV_DT_003_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40000800__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000800__ADV_DT_003_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40000c00__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000c00__ADV_DT_003_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40001000__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40001000__ADV_DT_003_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40001800__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40001800__ADV_DT_003_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40010000__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40010000__ADV_DT_003_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40010400__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40010400__ADV_DT_003_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__interrupt-controller@40013c00__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__interrupt_controller_40013c00__ADV_DT_003_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40014000__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40014000__ADV_DT_003_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__pin-controller@40020000__gpio@40020000__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_40020000__ADV_DT_003_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__pin-controller@40020000__gpio@40020400__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_40020400__ADV_DT_003_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__pin-controller@40020000__gpio@40020800__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_40020800__ADV_DT_003_T1();
@@ -1727,16 +1848,21 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__pin-controller@40020000__gpio@40022400__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_40022400__ADV_DT_003_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__pin-controller@40020000__gpio@40022800__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__pin_controller_40020000__gpio_40022800__ADV_DT_003_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__system-config@40013800__ADV-DT-003.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__system_config_40013800__ADV_DT_003_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40000000__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40000800__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000800__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40000c00__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40000c00__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40001000__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40001000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40001800__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40001800__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__spi@40003800__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__spi_40003800__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__i2c@40005c00__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__i2c_40005c00__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40010000__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40010000__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40010400__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40010400__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__serial@40011000__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__serial_40011000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__sdmmc@40012c00__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__sdmmc_40012c00__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__spi_40013000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013400__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__spi_40013400__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__interrupt-controller@40013c00__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__interrupt_controller_40013c00__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__timers@40014000__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__timers_40014000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__flash-controller@40023c00__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__flash_controller_40023c00__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__soc__dma@40026400__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__soc__dma_40026400__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa__root__ADV-DT-005.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa__root__ADV_DT_005_T1();

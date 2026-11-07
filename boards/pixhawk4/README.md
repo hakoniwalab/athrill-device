@@ -14,8 +14,8 @@ Hakoniwa node, and adds the `value-source` edges used by Hakoniwa and PIL.
 The checked-in blobs have SHA-256:
 
 ```text
-3d2c99abf10f26a1167ab7437278e180e075b6a3e2d8b3c5cfe42c7b59371342  pixhawk4.dtb
-bf0fd50b30d870c30faf93b2e272895c0d764c0cb7b1532a7961510847a8380e  pixhawk4-hakoniwa.dtb
+415fd560601878647c5960440a8e4a9e50f4de4b454c9b8d83ddd7b55eef081d  pixhawk4.dtb
+5f2c2f8f3f3e0fb83ca0f4e9fa19bc34c9d9cd26c99aa1a77175dc66b66e2b06  pixhawk4-hakoniwa.dtb
 ```
 
 It was made with GNU cpp and dtc 1.7.x from a Linux container, from the

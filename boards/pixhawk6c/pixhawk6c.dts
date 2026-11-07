@@ -16,6 +16,8 @@
  *   boards/px4/fmu-v6c/default.px4board
  *   boards/px4/fmu-v6c/nuttx-config/include/board.h
  *   boards/px4/fmu-v6c/nuttx-config/include/board_dma_map.h
+ *   boards/px4/fmu-v6c/src/board_config.h
+ *   src/drivers/uavcan/uavcan_drivers/stm32h7/driver/src/uc_stm32h7_clock.cpp
  */
 
 /dts-v1/;
@@ -207,3 +209,12 @@
 &timers15 { status = "okay"; };
 &timers16 { status = "okay"; };
 &timers17 { status = "okay"; };
+
+/*
+ * The other timers PX4 v1.17.0 drives on FMUv6C (board_config.h,
+ * uc_stm32h7_clock.cpp): TIM2 is the UAVCAN clock, TIM3 the tone alarm
+ * (TONE_ALARM_TIMER 3) and TIM8 the HRT (HRT_TIMER 8).
+ */
+&timers2 { status = "okay"; };
+&timers3 { status = "okay"; };
+&timers8 { status = "okay"; };
