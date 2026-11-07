@@ -76,6 +76,7 @@ static void destroy_child(SpiChild *child)
 	athrill_channel_destroy(child->channel);
 }
 
+/* [ADV-SPI-004.T1] */
 static void test_chip_select_delimits_frames(void)
 {
 	TestChip chip = {.response_xor = 0xffU};
@@ -102,6 +103,7 @@ static void test_chip_select_delimits_frames(void)
 	destroy_child(&child);
 }
 
+/* [ADV-SPI-003.T1] */
 static void test_exchange_is_full_duplex_one_byte_at_a_time(void)
 {
 	TestChip chip = {.response_xor = 0xa5U};
@@ -119,6 +121,7 @@ static void test_exchange_is_full_duplex_one_byte_at_a_time(void)
 	destroy_child(&child);
 }
 
+/* [ADV-SPI-005.T1] */
 static void test_completion_is_reported_at_controller_clock(void)
 {
 	TestChip chip = {.response_xor = 0xffU};
@@ -136,6 +139,7 @@ static void test_completion_is_reported_at_controller_clock(void)
 	destroy_child(&child);
 }
 
+/* [ADV-SPI-003.T1] */
 static void test_one_bus_routes_exchange_to_selected_child(void)
 {
 	TestChip chips[2] = {
