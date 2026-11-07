@@ -23,9 +23,10 @@ sha256 sd.img dc35488e318a92d58e16840ae7dacbc79b30a84b3e353be6b6fe76f4d59884d8
 # Re-recorded 2026-11-08 when the I2C controllers became athrill-device
 # models (#13 step 4-2) and the external I2C buses were added: the
 # order alone changed; every other value above is unchanged.
+# Tick order re-recorded 2026-11-08 when the USART/UARTs became athrill-device
+# models (#13 step 4-4; the TCP links tick with their UART): the order alone
+# changed.
 tick arm_m_scs
-tick stm32_uart_tcp
-tick stm32_uart
 tick stm32_sdmmc
 tick stm32h7_sdmmc
 tick /soc/i2c@40005400
@@ -48,8 +49,15 @@ tick /soc/timers@40000000
 tick /soc/timers@40000400
 tick /soc/timers@40000800
 tick /soc/timers@40000c00
+tick /soc/serial@40004400
+tick /soc/serial@40004800
+tick /soc/serial@40005000
+tick /soc/serial@40007800
+tick /soc/serial@40007c00
 tick /soc/timers@40010000
 tick /soc/timers@40010400
+tick /soc/serial@40011000
+tick /soc/serial@40011400
 tick /soc/timers@40014000
 tick /soc/timers@40014400
 tick /soc/timers@40014800

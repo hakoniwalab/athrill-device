@@ -32,6 +32,8 @@ add_library(athrill_device STATIC
   src/models/stm32_spi_bindings.c
   src/models/stm32_spi_bus.c
   src/models/stm32h7_spi.c
+  src/models/stm32_uart.c
+  src/models/stm32_uart_tcp.c
   src/models/stm32_tim.c
   src/models/ublox_m8.c
   src/sha256.c
@@ -58,7 +60,8 @@ set(ATHRILL_DEVICE_BINDINGS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/spec/bindings" CACH
   "Default directory of the generated bindings (override at run time with ATHRILL_DEVICE_BINDINGS_DIR)")
 target_compile_definitions(athrill_device PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
   ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR="${ATHRILL_DEVICE_BINDINGS_DIR}")
-target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m PkgConfig::YAML)
+find_package(Threads REQUIRED)
+target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m PkgConfig::YAML Threads::Threads)
 
 # Dependency-free reference plugin used by board/boot checks.  Production
 # Hakoniwa and in-process variants are built from board/common and use the
@@ -171,6 +174,14 @@ if(BUILD_TESTING)
   # write protection, FIFO threshold, DMA requests): documented, WILL_FAIL.
   add_test(NAME stm32h7-spi-spec-gaps COMMAND test_stm32_spi spec-gaps)
   set_tests_properties(stm32h7-spi-spec-gaps PROPERTIES WILL_FAIL TRUE)
+
+  add_executable(test_stm32_uart tests/test_stm32_uart.c)
+  target_compile_definitions(test_stm32_uart PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_stm32_uart PRIVATE src/models)
+  target_link_libraries(test_stm32_uart PRIVATE athrill_device)
+  add_test(NAME stm32-uart COMMAND test_stm32_uart)
+  add_test(NAME stm32-uart-spec-gaps COMMAND test_stm32_uart spec-gaps)
+  set_tests_properties(stm32-uart-spec-gaps PROPERTIES WILL_FAIL TRUE)
 
   add_executable(test_channel tests/test_channel.c)
   target_compile_definitions(test_channel PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

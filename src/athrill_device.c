@@ -59,6 +59,10 @@ struct NodeRecord {
 	std_bool i2c_bound;
 	std_bool i2c_native;	/* bound to an athrill-device controller model */
 	std_bool spi_native;
+	std_bool uart_native;
+	/* a native UART controller: the receiver of its children's bytes */
+	sint32 (*uart_receive)(void *instance, uint8 data);
+	void *uart_receive_instance;
 	std_bool uart_bound;
 };
 
@@ -344,7 +348,6 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
 NAMED_ADAPTER(stm32_dma_model, "stm32-dma-adapter", "stm32-dma");
-NAMED_ADAPTER(stm32f7_uart_model, "stm32f7-uart-adapter", "stm32f7-uart");
 NAMED_ADAPTER(stm32_sdmmc_model, "stm32-sdmmc-adapter", "stm32-sdmmc");
 NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter", "stm32f7-flash");
 NAMED_ADAPTER(stm32f7_rtc_model, "stm32f7-rtc-adapter", "stm32f7-rtc");
@@ -437,7 +440,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_i2c_compatibles, 1U, &athrill_device_stm32_i2c_model },
 	{ stm32f7_timer_compatibles, 1U, &athrill_device_stm32_tim_model },
 	{ stm32f7_pwm_compatibles, 1U, &structural_model },
-	{ stm32f7_uart_compatibles, 2U, &stm32f7_uart_model },
+	{ stm32f7_uart_compatibles, 2U, &athrill_device_stm32_uart_model },
 	{ stm32_sdmmc_compatibles, 1U, &stm32_sdmmc_model },
 	{ stm32f7_flash_compatibles, 3U, &stm32f7_flash_model },
 	{ stm32f7_rtc_compatibles, 1U, &stm32f7_rtc_model },
@@ -1318,6 +1321,57 @@ static sint32 resource_publish_gpio_outputs(void *context,
 		runtime->target_ops->gpio_outputs(runtime->target, lines, count, levels) : 0;
 }
 
+/* The index-th child of a native UART controller, for the controller. */
+static sint32 resource_get_uart_peripheral(void *context, uint32 index,
+	const AthrillDeviceUartPeripheralOps **ops, void **instance)
+{
+	NodeRecord *node = context;
+	uint32 i, current = 0U;
+	if (ops == NULL || instance == NULL) {
+		return -1;
+	}
+	for (i = 0U; i < node->runtime->node_count; i++) {
+		NodeRecord *child = &node->runtime->nodes[i];
+		if (child->enabled && child->parent_index == (int)node->preorder &&
+		    child->uart_native) {
+			if (current == index) {
+				*ops = child->model->uart;
+				*instance = child->instance;
+				return 0;
+			}
+			current++;
+		}
+	}
+	return -1;
+}
+
+static sint32 resource_uart_listen(void *context,
+	sint32 (*receive)(void *instance, uint8 data), void *instance)
+{
+	NodeRecord *node = context;
+	if (receive == NULL) {
+		return -1;
+	}
+	node->uart_receive = receive;
+	node->uart_receive_instance = instance;
+	return 0;
+}
+
+/* A UART child's byte to its controller: the controller model, or the target. */
+static sint32 resource_uart_send(void *context, uint8 data)
+{
+	NodeRecord *node = context;
+	NodeRecord *parent;
+	if (node->uart_native && node->parent_index >= 0) {
+		parent = &node->runtime->nodes[node->parent_index];
+		return parent->uart_receive != NULL ?
+			parent->uart_receive(parent->uart_receive_instance, data) : -1;
+	}
+	return node->runtime->target_ops->uart_send_from_node != NULL ?
+		node->runtime->target_ops->uart_send_from_node(node->runtime->target,
+			node->public_node.id, data) : -1;
+}
+
 /* [ADV-UART-002] expose only enabled children bound to this controller */
 static sint32 resource_get_uart_child(void *context, uint32 index,
 	AthrillDeviceUartEndpoint *endpoint)
@@ -1345,7 +1399,8 @@ static const AthrillDeviceResourceOps resource_ops = {
 	resource_get_i2c_child, resource_get_uart_child, resource_get_pwm,
 	resource_get_value_source, resource_get_i2c_peripheral,
 	resource_get_spi_peripheral, resource_watch_gpio,
-	resource_publish_gpio_outputs
+	resource_publish_gpio_outputs, resource_get_uart_peripheral,
+	resource_uart_listen, resource_uart_send
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
@@ -2242,6 +2297,24 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 				return -1;
 			}
 			node->i2c_bound = TRUE;
+		} else if (is_uart_controller(parent) && node->model->uart != NULL &&
+			   native_controller(parent)) {
+			/* The controller is an athrill-device model: it calls the child
+			 * (get_uart_peripheral) and the child sends through uart_send. */
+			if (!abi_header_ok(node->model->uart->abi_major,
+				node->model->uart->abi_minor, node->model->uart->struct_size,
+				sizeof(AthrillDeviceUartPeripheralOps))) {
+				error_line("uart-bind", node->path, "-", "invalid-child");
+				return -1;
+			}
+			node->uart_endpoint.value = (uint64)node->preorder + 1U;
+			node->uart_native = TRUE;
+			node->uart_bound = TRUE;
+			fprintf(stderr, "DEVICE_UART_CHILD controller=");
+			fprint_escaped(stderr, parent->path);
+			fprintf(stderr, " child=");
+			fprint_escaped(stderr, node->path);
+			fputc('\n', stderr);
 		} else if (is_uart_controller(parent) && node->model->uart != NULL) {
 			if (!abi_header_ok(node->model->uart->abi_major,
 				node->model->uart->abi_minor, node->model->uart->struct_size,

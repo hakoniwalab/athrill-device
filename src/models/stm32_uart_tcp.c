@@ -1,12 +1,11 @@
 /*
- * UART lines over TCP (see stm32_uart_tcp.h). The ring has one producer
- * (the link's thread) and one consumer (the device tick), synchronised with
- * C11 atomics.
+ * See stm32_uart_tcp.h. The ring has one producer (the link's thread) and one
+ * consumer (the UART's tick), synchronised with C11 atomics.
+ * Copyright 2026 Hakoniwa Laboratory
+ * SPDX-License-Identifier: MIT
  */
 #include "stm32_uart_tcp.h"
-#include "stm32_uart.h"
-#include "athrill_device_host.h"
-#include "std_errno.h"
+
 #include <arpa/inet.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -22,7 +21,7 @@
 #define RING_SIZE	65536U	/* power of two */
 #define TX_SIZE		4096U
 
-typedef struct {
+struct UartTcp {
 	uint32 number;		/* UART 1 to 8 */
 	uint32 port;
 	int listen_fd;
@@ -33,10 +32,11 @@ typedef struct {
 	atomic_uint rx_tail;	/* next byte to fill (producer) */
 	uint8 tx[TX_SIZE];
 	uint32 tx_count;
-} UartTcpType;
+	std_bool open;
+};
+typedef struct UartTcp UartTcpType;
 
 static UartTcpType links[UART_COUNT];
-static std_bool opened;
 
 static void set_client(UartTcpType *l, int fd)
 {
@@ -138,9 +138,9 @@ static void flush(UartTcpType *l)
 	l->tx_count = 0U;
 }
 
-static void transmit(void *chip, uint8 data)
+void stm32_uart_tcp_transmit(UartTcp *link, uint8 data)
 {
-	UartTcpType *l = (UartTcpType *)chip;
+	UartTcpType *l = link;
 
 	if (l->tx_count == TX_SIZE) {
 		flush(l);
@@ -149,69 +149,45 @@ static void transmit(void *chip, uint8 data)
 	l->tx_count++;
 }
 
-static const Stm32UartChipOps tcp_ops = { transmit };
 
-static void open_links(void)
+
+UartTcp *stm32_uart_tcp_open(uint32 number, uint32 port)
 {
-	uint32 i;
-	char key[64];
-	const char *text = NULL;
-
-	for (i = 0U; i < UART_COUNT; i++) {
-		UartTcpType *l = &links[i];
-
-		l->number = i + 1U;
+	UartTcpType *l;
+	if (number == 0U || number > UART_COUNT || port == 0U) {
+		return NULL;
+	}
+	l = &links[number - 1U];
+	if (l->open) {
+		return (l->port == port) ? l : NULL;
+	}
+	l->open = TRUE;
+	l->number = number;
+	l->port = port;
+	l->listen_fd = -1;
+	l->client_fd = -1;
+	(void)pthread_mutex_init(&l->client_mutex, NULL);
+	atomic_init(&l->rx_head, 0U);
+	atomic_init(&l->rx_tail, 0U);
+	l->tx_count = 0U;
+	if (!listen_on(l)) {
 		l->port = 0U;
-		l->listen_fd = -1;
-		l->client_fd = -1;
-		(void)pthread_mutex_init(&l->client_mutex, NULL);
-		atomic_init(&l->rx_head, 0U);
-		atomic_init(&l->rx_tail, 0U);
-		l->tx_count = 0U;
-		(void)snprintf(key, sizeof(key), "DEVICE_CONFIG_STM32_UART%u_TCP_PORT", l->number);
-		if (athrill_device_host()->host_value(NULL, key, &text) == 0) {
-			l->port = (uint32)strtoul(text, NULL, 10);
-		}
-		if ((l->port == 0U) || !listen_on(l)) {
-			l->port = 0U;
-		}
+		return NULL;
 	}
+	return l;
 }
 
-void stm32_uart_tcp_attach(void)
+void stm32_uart_tcp_poll(UartTcp *link, sint32 (*send)(void *context, uint8 data), void *context)
 {
-	uint32 i;
-
-	if (!opened) {
-		open_links();
-		opened = TRUE;
-	}
-	for (i = 0U; i < UART_COUNT; i++) {
-		if (links[i].port != 0U) {
-			stm32_uart_attach(links[i].number, &tcp_ops, &links[i]);
+	UartTcpType *l = link;
+	uint32 head;
+	head = atomic_load_explicit(&l->rx_head, memory_order_relaxed);
+	while (head != atomic_load_explicit(&l->rx_tail, memory_order_acquire)) {
+		if (send(context, l->rx_ring[head & (RING_SIZE - 1U)]) != 0) {
+			break;	/* the UART's queue is full: the rest waits in the ring */
 		}
+		head++;
 	}
-}
-
-void stm32_uart_tcp_tick(void)
-{
-	uint32 i;
-
-	for (i = 0U; i < UART_COUNT; i++) {
-		UartTcpType *l = &links[i];
-		uint32 head;
-
-		if (l->port == 0U) {
-			continue;
-		}
-		head = atomic_load_explicit(&l->rx_head, memory_order_relaxed);
-		while (head != atomic_load_explicit(&l->rx_tail, memory_order_acquire)) {
-			if (stm32_uart_chip_send(l->number, l->rx_ring[head & (RING_SIZE - 1U)]) != STD_E_OK) {
-				break;	/* the UART's queue is full: the rest waits in the ring */
-			}
-			head++;
-		}
-		atomic_store_explicit(&l->rx_head, head, memory_order_release);
-		flush(l);
-	}
+	atomic_store_explicit(&l->rx_head, head, memory_order_release);
+	flush(l);
 }

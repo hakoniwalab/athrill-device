@@ -54,6 +54,8 @@ typedef struct {
 	uint32 measurement_period_ms;
 	uint64 measurements;
 	uint64 next_clock;
+	const AthrillDeviceResourceOps *resources;	/* uart_send */
+	void *resource_context;
 } UbloxM8;
 
 static void put16(uint8 *data, uint32 value)
@@ -68,11 +70,11 @@ static void put32(uint8 *data, uint32 value)
 	put16(data + 2, value >> 16);
 }
 
+/* To the UART controller, through the runtime (a controller model, or the
+ * target's uart_send_from_node as before). */
 static void send_byte(const UbloxM8 *gps, uint8 data)
 {
-	if (gps->target_ops->uart_send_from_node != NULL) {
-		(void)gps->target_ops->uart_send_from_node(gps->target, gps->node, data);
-	}
+	(void)gps->resources->uart_send(gps->resource_context, data);
 }
 
 static void send_frame(const UbloxM8 *gps, uint8 message_class, uint8 id,
@@ -311,7 +313,11 @@ static sint32 reset(void *instance)
 	const AthrillDeviceNode *node_description = gps->node_description;
 	AthrillDeviceValueSource source = gps->source;
 	uint64 cpu_hz = gps->cpu_hz;
+	const AthrillDeviceResourceOps *resources = gps->resources;
+	void *resource_context = gps->resource_context;
 	memset(gps, 0, sizeof(*gps));
+	gps->resources = resources;
+	gps->resource_context = resource_context;
 	gps->target_ops = target_ops;
 	gps->target = target;
 	gps->node = node;
@@ -345,6 +351,11 @@ static sint32 connect_model(void *instance,
 	const AthrillDeviceConnectArgs *args)
 {
 	UbloxM8 *gps = instance;
+	if (args->resources->uart_send == NULL) {
+		return -1;
+	}
+	gps->resources = args->resources;
+	gps->resource_context = args->context;
 	return athrill_device_connect_value_source(gps->node_description, args,
 		&gps->source);
 }

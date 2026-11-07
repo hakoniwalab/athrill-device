@@ -17,20 +17,25 @@
 # passes, F-RAM and SD card are unchanged, and the PX4 SIH flight checks
 # (examples/px4-sih/verify: determinism, hover, MAVLink flight, published run)
 # all pass.
+# console.norm re-recorded 2026-11-08: the normalisation also drops Athrill's
+# configuration echo lines ("DEVICE_CONFIG_<KEY> = <value>", which depend on
+# who reads a key); the firmware's console is unchanged (the same hash for the
+# target's UART and the athrill-device UART).
 firmware_sha256 f8a78a13f3a545305cce45eeef677e4d436325ee6a6065b1753c387283f3d05e
 instructions 2135922026
 sha256 fram.bin 00ee14df6986fc5baf43fdc3ea53db8088ed207dd2bd588b842d53053e7947fe
 sha256 sd.img 12e2df7d9124ac9839d1c37a203a30b0c50eb7178cfd1c1988d60cc974e5d921
-sha256 console.norm 5eb55ab121910bb6090f18f9384e678048cc28e992989c171e8790977c8a931e
+sha256 console.norm 3a63ac490233fe8996f0ef022b37f984f6acef4d6ef8897e4a8858c225ed9636
 # tick: the order the devices are ticked in (target TARGET_TICK lines, with
 # "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
 # 2026-11-08 with athrill-target-stm32 0050bb4 + the tick-order log.
 # Re-recorded 2026-11-08 when the I2C controllers became athrill-device
 # models (#13 step 4-2) and the external I2C buses were added: the
 # order alone changed; every other value above is unchanged.
+# Tick order re-recorded 2026-11-08 when the USART/UARTs became athrill-device
+# models (#13 step 4-4; the TCP links tick with their UART): the order alone
+# changed.
 tick arm_m_scs
-tick stm32_uart_tcp
-tick stm32_uart
 tick stm32_sdmmc
 tick stm32h7_sdmmc
 tick /soc/i2c@40005400
@@ -56,9 +61,16 @@ tick /soc/timers@40000800
 tick /soc/timers@40000c00
 tick /soc/timers@40001000
 tick /soc/timers@40001800
+tick /soc/serial@40004400
+tick /soc/serial@40004800
+tick /soc/serial@40004c00
+tick /soc/serial@40007800
+tick /soc/serial@40007c00
 tick /soc/timers@40010000
 tick /soc/timers@40010400
+tick /soc/serial@40011000
 tick /soc/serial@40011000/gnss
+tick /soc/serial@40011400
 tick /soc/timers@40014000
 tick /soc/spi@40013000/imu@0
 tick /soc/i2c@40006000
