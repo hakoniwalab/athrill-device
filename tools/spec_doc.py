@@ -117,7 +117,7 @@ def gen_map_doc(path: Path) -> str:
              "## Bindings\n", "| Term | Register | Offset | Field | Bits | Access |", "|---|---|---|---|---|---|"]
     for term, b in d["bindings"].items():
         if "registers" not in b:
-            kind = next(k for k in ("devicetree", "derived", "sequence") if k in b)
+            kind = next((k for k in ("devicetree", "derived", "sequence", "not_applicable") if k in b), "unbound")
             lines.append(f"| {term} | {kind}: {cell(b[kind])} | | | | |")
             continue
         for r in b["registers"]:

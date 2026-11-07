@@ -40,7 +40,7 @@ Features: base, dma
 | CR1 | 0x00 | 0x00000000 | **CPHA**(0:1), **CPOL**(1:1), **MSTR**(2:1), **BR**(3:3), **SPE**(6:1), **LSBFIRST**(7:1), SSI(8:1), SSM(9:1), RXONLY(10:1), CRCL(11:1), CRCNEXT(12:1), CRCEN(13:1), BIDIOE(14:1), BIDIMODE(15:1) |
 | CR2 | 0x04 | 0x00000700 | **RXDMAEN**(0:1), **TXDMAEN**(1:1), SSOE(2:1), NSSP(3:1), FRF(4:1), **ERRIE**(5:1), **RXNEIE**(6:1), **TXEIE**(7:1), **DS**(8:4), FRXTH(12:1), LDMA_RX(13:1), LDMA_TX(14:1) |
 | SR | 0x08 | 0x00000002 | **RXNE**(0:1), **TXE**(1:1), CHSIDE(2:1), UDR(3:1), CRCERR(4:1), MODF(5:1), **OVR**(6:1), **BSY**(7:1), FRE(8:1), FRLVL(9:2), FTLVL(11:2) |
-| DR | 0x0C | 0x00000000 | DR(0:16) |
+| DR | 0x0C | 0x00000000 | **DR**(0:16) |
 | CRCPR | 0x10 | 0x00000007 | CRCPOLY(0:16) |
 | RXCRCR | 0x14 | 0x00000000 | RxCRC(0:16) |
 | TXCRCR | 0x18 | 0x00000000 | TxCRC(0:16) |
