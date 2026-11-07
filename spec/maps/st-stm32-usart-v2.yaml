@@ -1,0 +1,566 @@
+ip: st-stm32-usart-v2
+compatible:
+- st,stm32-usart
+- st,stm32-uart
+soc: st,stm32h7
+manual: RM0433 Rev 8 section 48 (USART/UART), STM32H742/743/753/750
+model: uart
+model_version: 1.0.0
+features:
+- base
+- dma
+- fifo
+- inversion
+bindings:
+  enable:
+    reg: CR1
+    field: UE
+    access: rw
+  tx_enable:
+    reg: CR1
+    field: TE
+    access: rw
+  rx_enable:
+    reg: CR1
+    field: RE
+    access: rw
+  word_length:
+    reg: CR1
+    field:
+    - M1
+    - M0
+    access: rw
+    note: M1:M0 = 00 8 bits, 01 9 bits, 10 7 bits (incl. parity)
+  parity:
+    reg: CR1
+    field:
+    - PCE
+    - PS
+    access: rw
+  stop_bits:
+    reg: CR2
+    field: STOP
+    access: rw
+  baud_divider:
+    reg: BRR
+    field: BRR
+    access: rw
+  oversampling:
+    reg: CR1
+    field: OVER8
+    access: rw
+  tx_data:
+    reg: TDR
+    access: fifo
+  rx_data:
+    reg: RDR
+    access: fifo
+  tx_space:
+    reg: ISR
+    field: TXFNF
+    access: ro
+  tx_complete:
+    reg: ISR
+    field: TC
+    access: ro
+  rx_available:
+    reg: ISR
+    field: RXFNE
+    access: ro
+  idle_line:
+    reg: ISR
+    field: IDLE
+    access: ro
+  overrun:
+    reg: ISR
+    field: ORE
+    access: ro
+  framing_error:
+    reg: ISR
+    field: FE
+    access: ro
+  parity_error:
+    reg: ISR
+    field: PE
+    access: ro
+  status_ack:
+    reg: ICR
+    field:
+    - IDLECF
+    - ORECF
+    - FECF
+    - PECF
+    - TCCF
+    access: w1c
+  tx_irq_enable:
+    reg: CR1
+    field: TXFNFIE
+    access: rw
+  tc_irq_enable:
+    reg: CR1
+    field: TCIE
+    access: rw
+  rx_irq_enable:
+    reg: CR1
+    field: RXFNEIE
+    access: rw
+  idle_irq_enable:
+    reg: CR1
+    field: IDLEIE
+    access: rw
+  irq:
+    devicetree: interrupts
+  tx_dma_enable:
+    reg: CR3
+    field: DMAT
+    access: rw
+  rx_dma_enable:
+    reg: CR3
+    field: DMAR
+    access: rw
+  tx_dma_request:
+    devicetree: dmas, dma-names = tx
+  rx_dma_request:
+    devicetree: dmas, dma-names = rx
+  rx_invert:
+    reg: CR2
+    field: RXINV
+    access: rw
+  tx_invert:
+    reg: CR2
+    field: TXINV
+    access: rw
+  swap_pins:
+    reg: CR2
+    field: SWAP
+    access: rw
+  fifo_enable:
+    reg: CR1
+    field: FIFOEN
+    access: rw
+  rx_fifo_full:
+    reg: ISR
+    field: RXFF
+    access: ro
+  tx_fifo_empty:
+    reg: ISR
+    field: TXFE
+    access: ro
+constants:
+  fifo_depth: 16
+unmodelled:
+- reg:
+  - CR2
+  - CR3
+  fields:
+  - clock, LIN, smartcard, IrDA, RS-485, auto baud rate, flow control
+  answer: stored and read back
+- reg:
+  - GTPR
+  - RTOR
+  - RQR
+  answer: stored (RQR flush requests act on the FIFOs)
+registers_source: RM0433 Rev 8 section 48.8 (USART registers), hand-written; to be checked against ST CMSIS headers now and
+  the SVD-generated map (#31)
+registers:
+  CR1:
+    offset: '0x00'
+    reset: '0x00000000'
+    fields:
+      UE:
+        lsb: 0
+        width: 1
+      RE:
+        lsb: 2
+        width: 1
+      TE:
+        lsb: 3
+        width: 1
+      IDLEIE:
+        lsb: 4
+        width: 1
+      PEIE:
+        lsb: 8
+        width: 1
+      PS:
+        lsb: 9
+        width: 1
+      PCE:
+        lsb: 10
+        width: 1
+      WAKE:
+        lsb: 11
+        width: 1
+      M0:
+        lsb: 12
+        width: 1
+      MME:
+        lsb: 13
+        width: 1
+      CMIE:
+        lsb: 14
+        width: 1
+      OVER8:
+        lsb: 15
+        width: 1
+      DEDT:
+        lsb: 16
+        width: 5
+      DEAT:
+        lsb: 21
+        width: 5
+      RTOIE:
+        lsb: 26
+        width: 1
+      EOBIE:
+        lsb: 27
+        width: 1
+      M1:
+        lsb: 28
+        width: 1
+      RXFNEIE:
+        lsb: 5
+        width: 1
+      TCIE:
+        lsb: 6
+        width: 1
+      TXFNFIE:
+        lsb: 7
+        width: 1
+      FIFOEN:
+        lsb: 29
+        width: 1
+      TXFEIE:
+        lsb: 30
+        width: 1
+      RXFFIE:
+        lsb: 31
+        width: 1
+  CR2:
+    offset: '0x04'
+    reset: '0x00000000'
+    fields:
+      ADDM7:
+        lsb: 4
+        width: 1
+      LBDL:
+        lsb: 5
+        width: 1
+      LBDIE:
+        lsb: 6
+        width: 1
+      LBCL:
+        lsb: 8
+        width: 1
+      CPHA:
+        lsb: 9
+        width: 1
+      CPOL:
+        lsb: 10
+        width: 1
+      CLKEN:
+        lsb: 11
+        width: 1
+      STOP:
+        lsb: 12
+        width: 2
+      LINEN:
+        lsb: 14
+        width: 1
+      SWAP:
+        lsb: 15
+        width: 1
+      RXINV:
+        lsb: 16
+        width: 1
+      TXINV:
+        lsb: 17
+        width: 1
+      DATAINV:
+        lsb: 18
+        width: 1
+      MSBFIRST:
+        lsb: 19
+        width: 1
+      ABREN:
+        lsb: 20
+        width: 1
+      ABRMOD:
+        lsb: 21
+        width: 2
+      RTOEN:
+        lsb: 23
+        width: 1
+      ADD:
+        lsb: 24
+        width: 8
+  CR3:
+    offset: '0x08'
+    reset: '0x00000000'
+    fields:
+      EIE:
+        lsb: 0
+        width: 1
+      IREN:
+        lsb: 1
+        width: 1
+      IRLP:
+        lsb: 2
+        width: 1
+      HDSEL:
+        lsb: 3
+        width: 1
+      NACK:
+        lsb: 4
+        width: 1
+      SCEN:
+        lsb: 5
+        width: 1
+      DMAR:
+        lsb: 6
+        width: 1
+      DMAT:
+        lsb: 7
+        width: 1
+      RTSE:
+        lsb: 8
+        width: 1
+      CTSE:
+        lsb: 9
+        width: 1
+      CTSIE:
+        lsb: 10
+        width: 1
+      ONEBIT:
+        lsb: 11
+        width: 1
+      OVRDIS:
+        lsb: 12
+        width: 1
+      DDRE:
+        lsb: 13
+        width: 1
+      DEM:
+        lsb: 14
+        width: 1
+      DEP:
+        lsb: 15
+        width: 1
+      SCARCNT:
+        lsb: 17
+        width: 3
+      TXFTIE:
+        lsb: 23
+        width: 1
+      TCBGTIE:
+        lsb: 24
+        width: 1
+      RXFTCFG:
+        lsb: 25
+        width: 3
+      RXFTIE:
+        lsb: 28
+        width: 1
+      TXFTCFG:
+        lsb: 29
+        width: 3
+  BRR:
+    offset: '0x0C'
+    reset: '0x00000000'
+    fields:
+      BRR:
+        lsb: 0
+        width: 16
+  GTPR:
+    offset: '0x10'
+    reset: '0x00000000'
+    fields:
+      PSC:
+        lsb: 0
+        width: 8
+      GT:
+        lsb: 8
+        width: 8
+  RTOR:
+    offset: '0x14'
+    reset: '0x00000000'
+    fields:
+      RTO:
+        lsb: 0
+        width: 24
+      BLEN:
+        lsb: 24
+        width: 8
+  RQR:
+    offset: '0x18'
+    reset: '0x00000000'
+    fields:
+      ABRRQ:
+        lsb: 0
+        width: 1
+      SBKRQ:
+        lsb: 1
+        width: 1
+      MMRQ:
+        lsb: 2
+        width: 1
+      RXFRQ:
+        lsb: 3
+        width: 1
+      TXFRQ:
+        lsb: 4
+        width: 1
+  ISR:
+    offset: '0x1C'
+    reset: '0x008000C0'
+    fields:
+      PE:
+        lsb: 0
+        width: 1
+      FE:
+        lsb: 1
+        width: 1
+      NE:
+        lsb: 2
+        width: 1
+      ORE:
+        lsb: 3
+        width: 1
+      IDLE:
+        lsb: 4
+        width: 1
+      RXFNE:
+        lsb: 5
+        width: 1
+      TC:
+        lsb: 6
+        width: 1
+      TXFNF:
+        lsb: 7
+        width: 1
+      LBDF:
+        lsb: 8
+        width: 1
+      CTSIF:
+        lsb: 9
+        width: 1
+      CTS:
+        lsb: 10
+        width: 1
+      RTOF:
+        lsb: 11
+        width: 1
+      EOBF:
+        lsb: 12
+        width: 1
+      UDR:
+        lsb: 13
+        width: 1
+      ABRE:
+        lsb: 14
+        width: 1
+      ABRF:
+        lsb: 15
+        width: 1
+      BUSY:
+        lsb: 16
+        width: 1
+      CMF:
+        lsb: 17
+        width: 1
+      SBKF:
+        lsb: 18
+        width: 1
+      RWU:
+        lsb: 19
+        width: 1
+      TEACK:
+        lsb: 21
+        width: 1
+      REACK:
+        lsb: 22
+        width: 1
+      TXFE:
+        lsb: 23
+        width: 1
+      RXFF:
+        lsb: 24
+        width: 1
+      TCBGT:
+        lsb: 25
+        width: 1
+      RXFT:
+        lsb: 26
+        width: 1
+      TXFT:
+        lsb: 27
+        width: 1
+  ICR:
+    offset: '0x20'
+    reset: '0x00000000'
+    fields:
+      PECF:
+        lsb: 0
+        width: 1
+      FECF:
+        lsb: 1
+        width: 1
+      NECF:
+        lsb: 2
+        width: 1
+      ORECF:
+        lsb: 3
+        width: 1
+      IDLECF:
+        lsb: 4
+        width: 1
+      TXFECF:
+        lsb: 5
+        width: 1
+      TCCF:
+        lsb: 6
+        width: 1
+      TCBGTCF:
+        lsb: 7
+        width: 1
+      LBDCF:
+        lsb: 8
+        width: 1
+      CTSCF:
+        lsb: 9
+        width: 1
+      RTOCF:
+        lsb: 11
+        width: 1
+      EOBCF:
+        lsb: 12
+        width: 1
+      UDRCF:
+        lsb: 13
+        width: 1
+      CMCF:
+        lsb: 17
+        width: 1
+  RDR:
+    offset: '0x24'
+    reset: '0x00000000'
+    fields:
+      RDR:
+        lsb: 0
+        width: 9
+  TDR:
+    offset: '0x28'
+    reset: '0x00000000'
+    fields:
+      TDR:
+        lsb: 0
+        width: 9
+  PRESC:
+    offset: '0x2C'
+    reset: '0x00000000'
+    fields:
+      PRESCALER:
+        lsb: 0
+        width: 4
+note_selection: Zephyr uses the same compatible for F7 and H7 USARTs; the IP version is selected by the SoC compatible of
+  the root node.
