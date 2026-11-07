@@ -94,6 +94,113 @@ and keeps only the bindings (terms to registers and fields) hand-written.
 The stm32-rs project's patched SVDs may be consulted as a reference when
 investigating a difference; they are not a source.
 
+## Bindings interface (format 1)
+
+The bindings interface is one C interface for every model and every IP
+version (`include/athrill_bindings.h`). Differences between IP versions and
+between models are values in its structures, never different structures:
+a 16-bit data register and a 32-bit one are both an `AthrillBindRegister`
+with `size` 16 or 32.
+
+Format and code are versioned together: the generated YAML carries
+`bindings_format: 1`; `src/bindings.c` dispatches on it to `src/bindings_v1.c`,
+which reads exactly format 1 into the structures below. An unknown format, an
+unknown key or a shape the structures cannot hold stops loading with an error;
+nothing is dropped silently. The member names equal the YAML keys.
+
+### Shapes the interface must hold
+
+Counted over the 17 generated bindings (2026-11-07, 320 terms):
+
+| Shape | Terms | Example |
+|---|---|---|
+| one field | 161 | I2C `enable` = `CR1.PE` |
+| indexed repetition | 79 | DMA `stream_enable` = `S{s}CR.EN`, s = 0..7 |
+| Devicetree resource | 31 | DMA `stream_irq` |
+| several fields of one register | 18 | I2C `status_ack` = `ICR.{STOPCF,NACKCF}` |
+| whole register | 15 | I2C `tx_data` = `TXDR` |
+| indexed whole registers | 6 | DMA `memory_address` = `S{s}M0AR`, `S{s}M1AR` |
+| several whole registers | 5 | GPIO `pin_config` |
+| indexed, other peripheral | 2 | EXTI `line_source` = SYSCFG `EXTICR{r}.EXTI{n}` |
+| not applicable on a SoC | 1 | H7 DMA `request_select` |
+| sequence | 1 | F7 SPI `overrun_ack` (read DR, then SR) |
+| derived | 1 | H7 SPI `busy` |
+
+Further shapes already known from the SVD/IP survey and covered by the same
+structures: a value split over fields (H7 I2C `SADD0..9`, USART `BRR`),
+instances with a different layout (TIM2/TIM5 32-bit counters), and value
+encodings (`DS` = bits - 1, `BR` = divider 2^(BR+1)).
+
+### Structures
+
+```c
+typedef struct {            /* one SVD field */
+	char   name[24];
+	uint8  lsb, width;
+	AthrillBindSvdAccess access;      /* read-write, read-only, write-only, ... (patched SVD) */
+} AthrillBindField;
+
+typedef struct {            /* one SVD register of one peripheral */
+	char   name[24];
+	uint16 peripheral;                /* index into AthrillBindings.peripherals */
+	uint32 offset, size, reset;       /* size in bits: 16 or 32 is a value, not a type */
+	uint32 stored_mask;               /* bits of writable fields */
+	uint16 field_first, field_count;  /* slice of AthrillBindings.fields */
+} AthrillBindRegister;
+
+typedef struct {            /* one place a term lives at */
+	uint16 reg;                       /* index into AthrillBindings.registers */
+	uint16 field_first, field_count;  /* slice of AthrillBindings.place_fields (0 = whole register) */
+	uint8  index_count;               /* 0..2 placeholder values, e.g. s=3 or r=2,n=5 */
+	char   index_name[2][4];
+	uint16 index_value[2];
+} AthrillBindPlace;
+
+typedef struct {            /* how the register value maps to the term value */
+	AthrillBindEncodingKind kind;     /* IDENTITY, MINUS_ONE, POW2_PLUS_ONE, TABLE */
+	int32  arg;
+} AthrillBindEncoding;
+
+typedef struct {            /* one model term */
+	char   name[40];
+	AthrillBindKind kind;             /* REGISTER, DEVICETREE, DERIVED, SEQUENCE, NOT_APPLICABLE */
+	AthrillBindAccess access;         /* rw, ro, wo, w1c, w1s, w0c, rs, rc, fifo */
+	AthrillBindEncoding encoding;
+	uint16 place_first, place_count;  /* slice of AthrillBindings.places, in index order */
+	const char *text;                 /* Devicetree property, derivation or sequence (documentation) */
+} AthrillBindTerm;
+
+typedef struct {            /* an instance whose layout differs (e.g. TIM2) */
+	char   instance[16];
+	uint16 peripheral;                /* the SVD peripheral to use for it */
+} AthrillBindInstance;
+```
+
+`AthrillBindings` holds the header data (`bindings_format`, `ip`, `soc`,
+`compatible[]`, `model`, `model_version`, `features[]`, `constants[]`) and the
+flat arrays `peripherals[]`, `registers[]`, `fields[]`, `places[]`,
+`place_fields[]`, `terms[]`, `instances[]`.
+
+### Operations
+
+- `athrill_bindings_for(compatible, soc)`: one bindings set; `soc` selects
+  between sets that share a compatible (F7 and H7 USART).
+- `athrill_bindings_register(b, peripheral, name)` / `athrill_bindings_field(...)`:
+  look up by SVD name (used once at start-up).
+- `athrill_bindings_term(b, name)`: a term with its places.
+- `athrill_bindings_resolve_places(term, index_name, out[], count)`: the places
+  of an indexed term as an array indexed by the placeholder value (stream,
+  channel, line), so a model indexes `out[s]` at run time.
+
+Models resolve once at start-up into their own arrays and variables; at run
+time no lookup or loop over bindings takes place.
+
+### Conformance test
+
+A test loads every file in `spec/bindings/` and checks, against the YAML read
+independently by the test, that every term, place, index and field arrived
+with its values: no term lost, no place dropped.
+
 ## Verification
 
 - The model specification's behaviour rules are spec items; tests are written
