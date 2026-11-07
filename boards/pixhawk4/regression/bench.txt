@@ -1,0 +1,17 @@
+# Regression reference: Pixhawk 4 (fmu-v5), PX4 bench
+# Checked by athrill-target-stm32 examples/px4-bench/check.sh.
+#
+# Valid only for this firmware: the release asset px4_fmu-v5_default.elf of
+# hakoniwalab/athrill-target-stm32 v0.1.1 (PX4 v1.17.0). With another
+# firmware the values are not compared.
+#
+# Recorded 2026-11-07 with athrill-target-stm32 014c1b0 and athrill-device
+# 934895f; the C path and the Devicetree path give the same values.
+# console.norm: console.txt without the two Devicetree lines
+# ("DEVICE_CONFIG_DEVICE_TREE = <local path>", "DEVICE_TREE sha256=...") so that
+# the C path and the Devicetree path give the same value.
+firmware_sha256 f8a78a13f3a545305cce45eeef677e4d436325ee6a6065b1753c387283f3d05e
+instructions 2131907110
+sha256 fram.bin 00ee14df6986fc5baf43fdc3ea53db8088ed207dd2bd588b842d53053e7947fe
+sha256 sd.img 12e2df7d9124ac9839d1c37a203a30b0c50eb7178cfd1c1988d60cc974e5d921
+sha256 console.norm df750846364a87e9b08984f49d32f07cdba8b1f953590a4e208badd5dd6d9cd6
