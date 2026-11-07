@@ -3,9 +3,6 @@
  * from RM0410 Rev 5 chapter 8 and RM0433 Rev 8 chapters 15 and 17, not from
  * the implementation under test.
  *
- * Intentionally unsupported manual behaviour is exercised by the
- * "spec-gaps" invocation.  CTest registers that invocation with WILL_FAIL.
- *
  * FIFO thresholds, bursts, double-buffer mode, and inter-stream priorities
  * (apart from observable stream order) are deliberately not tested here.
  * SPDX-License-Identifier: MIT
@@ -729,25 +726,10 @@ static void test_dmamux_routing(void)
 	athrill_device_stm32_dmamux_model.destroy(mux.device);
 }
 
-static int gap_checks;
-static int gap_failures;
-
-static void gap_eq(const char *manual, const char *what, uint32 got,
-	uint32 expected)
-{
-	gap_checks++;
-	printf("SPEC-GAP check: %s (%s)\n", what, manual);
-	if (got != expected) {
-		gap_failures++;
-		printf("FAIL: %s = 0x%08x, expected 0x%08x from %s\n",
-			what, got, expected, manual);
-	}
-}
-
 /* RM0410 8.5.6-8.5.8 and RM0433 15.5.6-15.5.8: SxNDTR, SxPAR and
  * SxM0AR may be written only while EN=0.  ADV-DMA-B009 therefore requires
  * writes attempted with EN=1 to be ignored. */
-static void test_enabled_write_protection_gaps(void)
+static void test_enabled_write_protection(void)
 {
 	reset_dma(&dma1);
 	reset_bus();
@@ -756,12 +738,9 @@ static void test_enabled_write_protection_gaps(void)
 	dma_wr(&dma1, S(0U, S_PAR), P_CH1);
 	dma_wr(&dma1, S(0U, S_M0AR), RAM_BASE + 0x600U);
 	dma_wr(&dma1, S(0U, S_NDTR), 7U);
-	gap_eq("RM0410 8.5.7; RM0433 15.5.7", "PAR write while EN=1",
-		dma_rd(&dma1, S(0U, S_PAR)), P_CH0);
-	gap_eq("RM0410 8.5.8; RM0433 15.5.8", "M0AR write while EN=1",
-		dma_rd(&dma1, S(0U, S_M0AR)), RAM_BASE + 0x500U);
-	gap_eq("RM0410 8.5.6; RM0433 15.5.6", "NDTR write while EN=1",
-		dma_rd(&dma1, S(0U, S_NDTR)), 3U);
+	TEST_CHECK(dma_rd(&dma1, S(0U, S_PAR)) == P_CH0);
+	TEST_CHECK(dma_rd(&dma1, S(0U, S_M0AR)) == RAM_BASE + 0x500U);
+	TEST_CHECK(dma_rd(&dma1, S(0U, S_NDTR)) == 3U);
 }
 
 int main(int argc, char **argv)
@@ -772,13 +751,6 @@ int main(int argc, char **argv)
 	make_dma(&dma2, DMA2_BASE, 64U, 2U,
 		"/soc/dma@40026400");
 
-	if (argc == 2 && strcmp(argv[1], "spec-gaps") == 0) {
-		test_enabled_write_protection_gaps();
-		athrill_device_stm32_dma_model.destroy(dma2.device);
-		athrill_device_stm32_dma_model.destroy(dma1.device);
-		printf("%d spec-gap checks, %d failures\n", gap_checks, gap_failures);
-		return gap_failures == 0 ? 0 : 1;
-	}
 	TEST_CHECK(argc == 1);
 	test_channel_selection();
 	test_flags_and_interrupts();
@@ -788,6 +760,7 @@ int main(int argc, char **argv)
 	test_enable_pending_and_stop();
 	test_two_controllers_chained_request();
 	test_dmamux_routing();
+	test_enabled_write_protection();
 	athrill_device_stm32_dma_model.destroy(dma2.device);
 	athrill_device_stm32_dma_model.destroy(dma1.device);
 	puts("stm32-dma-spec: ok");

@@ -170,8 +170,6 @@ if(BUILD_TESTING)
   target_include_directories(test_stm32_dma_spec PRIVATE src/models)
   target_link_libraries(test_stm32_dma_spec PRIVATE athrill_device)
   add_test(NAME stm32-dma-spec COMMAND test_stm32_dma_spec)
-  add_test(NAME stm32-dma-spec-gaps COMMAND test_stm32_dma_spec spec-gaps)
-  set_tests_properties(stm32-dma-spec-gaps PROPERTIES WILL_FAIL TRUE)
 
   add_executable(test_stm32_i2c tests/test_stm32_i2c.c)
   target_compile_definitions(test_stm32_i2c PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
