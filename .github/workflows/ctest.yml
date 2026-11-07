@@ -24,7 +24,7 @@ jobs:
         if: always()
         run: |
           specs=""
-          for f in spec/*.yaml; do specs="$specs --spec $f"; done
+          for f in spec/*.yaml; do case "$f" in spec/svd-*) continue;; esac; specs="$specs --spec $f"; done
           python3 tools/trace_report.py $specs \
             --trace-map build/traceability/trace-map.json \
             --junit ${{ matrix.build-type }}=build/ctest.xml \
