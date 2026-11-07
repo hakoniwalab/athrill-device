@@ -14,6 +14,7 @@
  *   boards/px4/fmu-v6c/src/timer_config.cpp
  *   boards/px4/fmu-v6c/init/rc.board_sensors
  *   boards/px4/fmu-v6c/default.px4board
+ *   boards/px4/fmu-v6c/nuttx-config/nsh/defconfig
  *   boards/px4/fmu-v6c/nuttx-config/include/board.h
  *   boards/px4/fmu-v6c/nuttx-config/include/board_dma_map.h
  *   boards/px4/fmu-v6c/src/board_config.h
@@ -173,6 +174,18 @@
 		athrill,mount-rotation = "none";
 	};
 };
+
+/*
+ * The other USART/UARTs PX4 v1.17.0 enables on FMUv6C (nuttx-config/nsh/
+ * defconfig: USART2, USART3 (the console), UART5, USART6, UART7, UART8),
+ * with nothing on them.
+ */
+&usart2 { status = "okay"; };
+&usart3 { status = "okay"; };
+&uart5 { status = "okay"; };
+&usart6 { status = "okay"; };
+&uart7 { status = "okay"; };
+&uart8 { status = "okay"; };
 
 /* GPS1 is /dev/ttyS0. */
 &usart1 {

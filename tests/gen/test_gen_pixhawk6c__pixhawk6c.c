@@ -1312,6 +1312,56 @@ static int case_pixhawk6c__pixhawk6c__soc__i2c_58001c00__magnetometer_c__ADV_I2C
 	return 0;
 }
 
+static int case_pixhawk6c__pixhawk6c__soc__serial_40004400__ADV_UART_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_uart_bindings("/soc/serial@40004400") == 0U);
+	CHECK(0U <= 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c__soc__serial_40004800__ADV_UART_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_uart_bindings("/soc/serial@40004800") == 0U);
+	CHECK(0U <= 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c__soc__serial_40005000__ADV_UART_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_uart_bindings("/soc/serial@40005000") == 0U);
+	CHECK(0U <= 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c__soc__serial_40007800__ADV_UART_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_uart_bindings("/soc/serial@40007800") == 0U);
+	CHECK(0U <= 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c__soc__serial_40007c00__ADV_UART_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_uart_bindings("/soc/serial@40007c00") == 0U);
+	CHECK(0U <= 1U);
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk6c__pixhawk6c__soc__serial_40011000__ADV_UART_002_T1(void)
 {
 	uint32 index;
@@ -1334,6 +1384,16 @@ static int case_pixhawk6c__pixhawk6c__soc__serial_40011000__gnss__ADV_UART_001_T
 	return 0;
 }
 
+static int case_pixhawk6c__pixhawk6c__soc__serial_40011400__ADV_UART_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_uart_bindings("/soc/serial@40011400") == 0U);
+	CHECK(0U <= 1U);
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk6c__pixhawk6c__soc__ADV_DT_001_T1(void)
 {
 	uint32 index;
@@ -1350,7 +1410,7 @@ static int case_pixhawk6c__pixhawk6c__root__ADV_DT_002_T1(void)
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 76U);
+	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 82U);
 	CHECK(count_model_path(captured_stderr, "/") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000000") == 1U);
@@ -1361,8 +1421,13 @@ static int case_pixhawk6c__pixhawk6c__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000c00/pwm") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40003800") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40003800/fram@0") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/serial@40004400") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/serial@40004800") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/serial@40005000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005800") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/serial@40007800") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/serial@40007c00") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/can@4000a000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/can@4000a400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40010000") == 1U);
@@ -1370,6 +1435,7 @@ static int case_pixhawk6c__pixhawk6c__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40010400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/serial@40011000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/serial@40011000/gnss") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/serial@40011400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40013000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40013000/accelerometer@0") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40013000/gyroscope@1") == 1U);
@@ -1800,6 +1866,36 @@ static int case_pixhawk6c__pixhawk6c__soc__spi_40003800__ADV_DT_004_T1(void)
 	return 0;
 }
 
+static int case_pixhawk6c__pixhawk6c__soc__serial_40004400__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {38U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c__soc__serial_40004800__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {39U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c__soc__serial_40005000__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {53U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk6c__pixhawk6c__soc__i2c_40005400__ADV_DT_004_T1(void)
 {
 	uint32 index;
@@ -1819,6 +1915,26 @@ static int case_pixhawk6c__pixhawk6c__soc__i2c_40005800__ADV_DT_004_T1(void)
 	{ static const uint32 wanted[] = {33U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	{ static const uint32 wanted[] = {34U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c__soc__serial_40007800__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {82U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c__soc__serial_40007c00__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {83U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	destroy_board();
 	return 0;
@@ -1889,6 +2005,16 @@ static int case_pixhawk6c__pixhawk6c__soc__serial_40011000__ADV_DT_004_T1(void)
 	uint32 index;
 	CHECK(build_board() == 0);
 	{ static const uint32 wanted[] = {37U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c__soc__serial_40011400__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {71U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	destroy_board();
 	return 0;
@@ -2457,8 +2583,14 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__i2c@58001c00__ADV-I2C-002.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__i2c_58001c00__ADV_I2C_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__i2c@58001c00__pressure@77__ADV-I2C-001.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__i2c_58001c00__pressure_77__ADV_I2C_001_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__i2c@58001c00__magnetometer@c__ADV-I2C-001.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__i2c_58001c00__magnetometer_c__ADV_I2C_001_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40004400__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40004400__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40004800__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40004800__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40005000__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40005000__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40007800__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40007800__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40007c00__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40007c00__ADV_UART_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40011000__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40011000__ADV_UART_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40011000__gnss__ADV-UART-001.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40011000__gnss__ADV_UART_001_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40011400__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40011400__ADV_UART_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__ADV-DT-001.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__ADV_DT_001_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__root__ADV-DT-002.T1") == 0) return case_pixhawk6c__pixhawk6c__root__ADV_DT_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__timers@40000000__ADV-DT-003.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__timers_40000000__ADV_DT_003_T1();
@@ -2495,13 +2627,19 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__timers@40000800__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__timers_40000800__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__timers@40000c00__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__timers_40000c00__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__spi@40003800__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__spi_40003800__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40004400__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40004400__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40004800__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40004800__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40005000__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40005000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__i2c@40005400__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__i2c_40005400__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__i2c@40005800__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__i2c_40005800__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40007800__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40007800__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40007c00__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40007c00__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__can@4000a000__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__can_4000a000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__can@4000a400__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__can_4000a400__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__timers@40010000__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__timers_40010000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__timers@40010400__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__timers_40010400__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40011000__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40011000__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__serial@40011400__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__serial_40011400__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__spi@40013000__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__spi_40013000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__timers@40014000__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__timers_40014000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c__soc__timers@40014400__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c__soc__timers_40014400__ADV_DT_004_T1();
