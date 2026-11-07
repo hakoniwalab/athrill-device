@@ -1,0 +1,19 @@
+# Regression reference: Pixhawk 6C (fmu-v6c), PX4 armed take-off with the
+# in-process Hakoniwa aircraft
+# Checked by athrill-target-stm32 examples/px4-v6c-hakoniwa/verify-armed-inproc.sh.
+#
+# Valid only for this firmware: px4_fmu-v6c_default.elf built from PX4 v1.17.0
+# (make px4_fmu-v6c_default in px4io/px4-dev:v1.17.0-beta1). A rebuild may not
+# be bit-identical; with another firmware the values are not compared.
+# Aircraft: Hakoniwa Drone 5.0.0, x500-px4-sitl, lockstep, timeStep 0.001,
+# randomSeed 12345.
+#
+# Recorded 2026-11-07 with athrill-target-stm32 014c1b0 and athrill-device
+# 934895f; the C path and the Devicetree path give the same values.
+firmware_sha256 8719b2ea764d3185bbf4fbda7d7031763b03eac700d2fe355967eea57c4ffe78
+instructions 5265357395
+sha256 console.raw d5d8684fc36d6c43baddfe8442efe3893fba56c7499ace77736dccf3ca31cf11
+sha256 pwm.trace e665400e757ddf38e6fe7a6bb16c7209a20aab197541c7faff4e02476cf94f10
+sha256 sensor-device.trace 3941cc3f448906f2f33ba556407352dc17641093c0425823d9519c079e1deaf9
+sha256 fram.bin 67e3abfd8acef2aa873578409cb6afa198fc0d767facf3c4a815d4594942af3b
+sha256 sd.img dc35488e318a92d58e16840ae7dacbc79b30a84b3e353be6b6fe76f4d59884d8
