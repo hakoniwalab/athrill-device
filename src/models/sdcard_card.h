@@ -13,7 +13,7 @@
 #ifndef ATHRILL_STM32_SDCARD_H
 #define ATHRILL_STM32_SDCARD_H
 
-#include "std_types.h"
+#include "athrill_device_if.h"
 
 #define SDCARD_BLOCK	512U
 

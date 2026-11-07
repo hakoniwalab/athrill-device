@@ -61,3 +61,11 @@
  */
 &dmamux1 { dma-masters = <&dma1>, <&dma2>; };
 &dmamux2 { dma-masters = <&bdma1>; };
+
+/*
+ * Zephyr names the F7 and H7 SDMMC st,stm32-sdmmc, but the H7 IP is the
+ * SDMMC v2 with its internal DMA (RM0433 chapter 55), not the F7 v1: mark
+ * the H7 instances so the model takes the v2 registers.
+ */
+&sdmmc1 { athrill,stm32h7-sdmmc; };
+&sdmmc2 { athrill,stm32h7-sdmmc; };

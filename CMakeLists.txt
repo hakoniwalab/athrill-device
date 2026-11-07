@@ -28,6 +28,10 @@ add_library(athrill_device STATIC
   src/models/stm32_exti.c
   src/models/stm32_dmamux.c
   src/models/stm32_dma.c
+  src/models/stm32_sdmmc.c
+  src/models/stm32h7_sdmmc.c
+  src/models/sdcard.c
+  src/models/sdcard_card.c
   src/models/stm32_i2c.c
   src/models/stm32_spi.c
   src/models/stm32_spi_bindings.c
@@ -165,6 +169,11 @@ if(BUILD_TESTING)
   target_include_directories(test_stm32_dma PRIVATE src/models)
   target_link_libraries(test_stm32_dma PRIVATE athrill_device)
   add_test(NAME stm32-dma COMMAND test_stm32_dma)
+  add_executable(test_stm32_sdmmc tests/test_stm32_sdmmc.c)
+  target_compile_definitions(test_stm32_sdmmc PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_stm32_sdmmc PRIVATE src/models)
+  target_link_libraries(test_stm32_sdmmc PRIVATE athrill_device)
+  add_test(NAME stm32-sdmmc COMMAND test_stm32_sdmmc)
   add_executable(test_stm32_dma_spec tests/test_stm32_dma_spec.c)
   target_compile_definitions(test_stm32_dma_spec PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_stm32_dma_spec PRIVATE src/models)

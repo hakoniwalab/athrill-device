@@ -66,6 +66,9 @@ struct NodeRecord {
 	/* ABI 1.14: the DMA provider model of a node with #dma-cells */
 	const AthrillDeviceDmaProviderOps *dma_provider;
 	void *dma_provider_instance;
+	/* ABI 1.15: the SD card operations a card model offers */
+	const void *sd_card_ops;
+	void *sd_card_instance;
 	std_bool uart_bound;
 };
 
@@ -187,7 +190,7 @@ static sint32 adapter_create(const AthrillDeviceCreateArgs *args, void **instanc
 	return 0;
 }
 
-/* [ADV-SD-004] attach each SD card and controller adapter at its DT node */
+/* Attach a named target adapter at its DT node. */
 static sint32 adapter_connect_named(void *instance,
 	const AthrillDeviceConnectArgs *args, const char *adapter_name)
 {
@@ -350,7 +353,6 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 	}
 
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
-NAMED_ADAPTER(stm32_sdmmc_model, "stm32-sdmmc-adapter", "stm32-sdmmc");
 NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter", "stm32f7-flash");
 NAMED_ADAPTER(stm32f7_rtc_model, "stm32f7-rtc-adapter", "stm32f7-rtc");
 NAMED_ADAPTER(stm32f7_adc_model, "stm32f7-adc-adapter", "stm32f7-adc");
@@ -358,7 +360,6 @@ NAMED_ADAPTER(stm32f7_rng_model, "stm32f7-rng-adapter", "stm32f7-rng");
 NAMED_ADAPTER(stm32f7_otgfs_model, "stm32f7-otgfs-adapter", "stm32f7-otgfs");
 NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter", "stm32f7-crc");
 NAMED_ADAPTER(stm32f7_backup_sram_model, "stm32f7-backup-sram-adapter", "stm32f7-backup-sram");
-NAMED_ADAPTER(sdcard_model, "sdcard-adapter", "sdcard");
 NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-source");
 NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
 NAMED_ADAPTER(stm32h7_rcc_model, "stm32h7-rcc-adapter", "stm32h7-rcc");
@@ -443,7 +444,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_timer_compatibles, 1U, &athrill_device_stm32_tim_model },
 	{ stm32f7_pwm_compatibles, 1U, &structural_model },
 	{ stm32f7_uart_compatibles, 2U, &athrill_device_stm32_uart_model },
-	{ stm32_sdmmc_compatibles, 1U, &stm32_sdmmc_model },
+	{ stm32_sdmmc_compatibles, 1U, &athrill_device_stm32_sdmmc_model },
 	{ stm32f7_flash_compatibles, 3U, &stm32f7_flash_model },
 	{ stm32f7_rtc_compatibles, 1U, &stm32f7_rtc_model },
 	{ stm32f7_adc_compatibles, 1U, &stm32f7_adc_model },
@@ -456,7 +457,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ ist8310_compatibles, 1U, &athrill_device_ist8310_model },
 	{ ms5611_compatibles, 1U, &athrill_device_ms5611_model },
 	{ ublox_m8_compatibles, 1U, &athrill_device_ublox_m8_model },
-	{ sdcard_compatibles, 1U, &sdcard_model },
+	{ sdcard_compatibles, 1U, &athrill_device_sdcard_model },
 	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
 	{ bench_sensor_compatibles, 1U, &bench_sensor_model },
 	{ stm32h7_soc_compatibles, 2U, &stm32h7_soc_model },
@@ -1487,6 +1488,40 @@ static sint32 resource_get_dma_master(void *context, uint32 index,
 	return 0;
 }
 
+/* [ADV-SD-004] ABI 1.15: a card model offers its card to its controller. */
+static sint32 resource_sd_card_provide(void *context, const void *ops, void *instance)
+{
+	NodeRecord *node = context;
+	if (ops == NULL || node->sd_card_ops != NULL || node->parent_index < 0) {
+		return -1;
+	}
+	node->sd_card_ops = ops;
+	node->sd_card_instance = instance;
+	fprintf(stderr, "DEVICE_SD_CARD controller=%s card=%s\n",
+		node->runtime->nodes[node->parent_index].path, node->path);
+	return 0;
+}
+
+/* ABI 1.15: for a controller, the card of an enabled child. */
+static sint32 resource_get_sd_card(void *context, const void **ops, void **instance)
+{
+	NodeRecord *node = context;
+	uint32 i;
+	if (ops == NULL || instance == NULL) {
+		return -1;
+	}
+	for (i = 0U; i < node->runtime->node_count; i++) {
+		NodeRecord *child = &node->runtime->nodes[i];
+		if (child->enabled && child->parent_index == (int)node->preorder &&
+		    child->sd_card_ops != NULL) {
+			*ops = child->sd_card_ops;
+			*instance = child->sd_card_instance;
+			return 0;
+		}
+	}
+	return -1;
+}
+
 /* [ADV-UART-002] expose only enabled children bound to this controller */
 static sint32 resource_get_uart_child(void *context, uint32 index,
 	AthrillDeviceUartEndpoint *endpoint)
@@ -1516,7 +1551,8 @@ static const AthrillDeviceResourceOps resource_ops = {
 	resource_get_spi_peripheral, resource_watch_gpio,
 	resource_publish_gpio_outputs, resource_get_uart_peripheral,
 	resource_uart_listen, resource_uart_send, resource_dma_provide,
-	resource_dma_request, resource_get_dma_master
+	resource_dma_request, resource_get_dma_master, resource_sd_card_provide,
+	resource_get_sd_card
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,

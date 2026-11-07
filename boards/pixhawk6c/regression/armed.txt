@@ -26,9 +26,12 @@ sha256 sd.img dc35488e318a92d58e16840ae7dacbc79b30a84b3e353be6b6fe76f4d59884d8
 # Tick order re-recorded 2026-11-08 when the USART/UARTs became athrill-device
 # models (#13 step 4-4; the TCP links tick with their UART): the order alone
 # changed.
+# Tick order re-recorded 2026-11-08 when the SDMMC and the SD card became
+# athrill-device models (#13 step 4-6): the controllers tick as Devicetree
+# models instead of first in the target's list. Every other value above is
+# unchanged (also with every SDMMC register access ending the CPU batch,
+# which the target did only for H7 writes).
 tick arm_m_scs
-tick stm32_sdmmc
-tick stm32h7_sdmmc
 tick /soc/i2c@40005400
 tick /soc/i2c@40005800
 tick /soc/interrupt-controller@58000000
@@ -61,6 +64,7 @@ tick /soc/serial@40011400
 tick /soc/timers@40014000
 tick /soc/timers@40014400
 tick /soc/timers@40014800
+tick /soc/sdmmc@48022400
 tick /soc/system-config@58000400
 tick /soc/serial@40011000/gnss
 tick /soc/spi@40013000/accelerometer@0

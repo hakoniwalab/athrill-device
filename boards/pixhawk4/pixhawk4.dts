@@ -221,6 +221,9 @@
 	status = "okay";
 	bus-width = <4>;
 	cd-gpios = <&gpiog 0 GPIO_ACTIVE_LOW>;
+	/* D0 (PC8) as the firmware reads it as a GPIO: high through the
+	 * board's pull-up while the card is not busy. */
+	athrill,d0-gpios = <&gpioc 8 GPIO_ACTIVE_HIGH>;
 	/* The F7 controller changes the direction of its one allocated stream. */
 	dmas = <&dma2 6 4 (STM32_DMA_PERIPH_RX | STM32_DMA_32BITS) STM32_DMA_FIFO_FULL>,
 	       <&dma2 6 4 (STM32_DMA_PERIPH_TX | STM32_DMA_32BITS) STM32_DMA_FIFO_FULL>,

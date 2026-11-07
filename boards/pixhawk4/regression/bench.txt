@@ -22,9 +22,9 @@
 # who reads a key); the firmware's console is unchanged (the same hash for the
 # target's UART and the athrill-device UART).
 firmware_sha256 f8a78a13f3a545305cce45eeef677e4d436325ee6a6065b1753c387283f3d05e
-instructions 2135922026
+instructions 2135921900
 sha256 fram.bin 00ee14df6986fc5baf43fdc3ea53db8088ed207dd2bd588b842d53053e7947fe
-sha256 sd.img 12e2df7d9124ac9839d1c37a203a30b0c50eb7178cfd1c1988d60cc974e5d921
+sha256 sd.img 4eafd1bc40bd0e9b3045282c87c7b34f2e420a59689c09d487e74cd8d06d2a97
 sha256 console.norm 3a63ac490233fe8996f0ef022b37f984f6acef4d6ef8897e4a8858c225ed9636
 # tick: the order the devices are ticked in (target TARGET_TICK lines, with
 # "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
@@ -41,9 +41,18 @@ sha256 console.norm 3a63ac490233fe8996f0ef022b37f984f6acef4d6ef8897e4a8858c225ed
 # (each device follows the ones it references, else Devicetree order). The
 # order alone changed; every other value above is unchanged and the PX4 SIH
 # flight checks give the published run.
+# Re-recorded 2026-11-08 (instructions, sd.img, tick order) when the SDMMC
+# and the SD card became athrill-device models (#13 step 4-6). The F7 SDMMC
+# DMA now runs on request lines: a write's stream fills the FIFO when it
+# starts and completes before DATAEND, as on the chip (before: the data came
+# from memory at the end of the bus time). Shown by experiment: with the old
+# write timing restored in the new model, instructions (2135922026) and
+# sd.img equal the old reference in the new tick order. The one byte that
+# differs in sd.img is a 32-bit value near the end of /dataman (203501 ->
+# 203499); console.norm and fram.bin are unchanged, every bench check passes,
+# and the PX4 SIH flight checks pass in 3 runs. Tick order: the controllers
+# tick as Devicetree models (DEVICE_TICK) instead of first in the target's list.
 tick arm_m_scs
-tick stm32_sdmmc
-tick stm32h7_sdmmc
 tick /soc/i2c@40005400
 tick /soc/i2c@40005800
 tick /soc/i2c@40005c00
@@ -77,6 +86,7 @@ tick /soc/serial@40007c00
 tick /soc/serial@40011000
 tick /soc/serial@40011000/gnss
 tick /soc/serial@40011400
+tick /soc/sdmmc@40012c00
 tick /soc/spi@40013000/imu@0
 tick /soc/spi@40013400/pressure@0
 tick /soc/i2c@40006000
