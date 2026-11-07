@@ -94,6 +94,23 @@ applies to it, it writes a C test case. Each case:
 CTest runs the generated tests for every DTB under `boards/`. Adding a board
 adds its tests without new test code.
 
+## Committed generated files
+
+So that anyone can check the coverage without building, the generated tests and
+the trace map are also committed, and the specification items are rendered as
+documents:
+
+- `tests/gen/test_gen_<board>.c`, `tests/gen/trace-map.json`: written by
+  `tools/gen_commit.py` from the same generator; paths are replaced by
+  `ATHRILL_DEVICE_SOURCE_DIR` / `ATHRILL_TRACE_BUILD_DIR`.
+- `docs/spec/`: written by `tools/spec_doc.py` from `spec/` (items, model
+  specifications, maps).
+
+Both are generated, never edited. CI regenerates them and fails if the
+committed copies differ (`--check`), so a change to a DTS or a spec file must
+come with the regenerated files. CI also publishes the trace report of every
+build as an artifact.
+
 ## Library tags
 
 Code that implements an item carries the item ID in a comment next to the
