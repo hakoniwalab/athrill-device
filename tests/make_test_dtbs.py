@@ -26,7 +26,7 @@ PROPERTY_NAMES = [
     "athrill,test-spi-child", "athrill,test-i2c-child",
     "athrill,test-uart-child", "status", "size",
     "int-gpios", "axis-align-x", "pwms", "pwm-names",
-    "athrill,stm32h7-timer",
+    "athrill,stm32h7-timer", "dma-channels", "dma-masters", "dma-requests",
 ]
 STRING_BLOCK = strings(*PROPERTY_NAMES)
 STRING_OFFSETS: dict[str, int] = {}
@@ -292,6 +292,32 @@ def main() -> None:
         ], [])]),
         "overflow-reg.dtb": overflow_reg,
         "overflow-ranges.dtb": overflow_ranges,
+        # ABI 1.14 request lines (tests/test_dma_request.c): a requester
+        # whose "tx" reaches the DMAMUX (request 37), a model master
+        # directly (stream 3, channel 4) and a target DMA; its "rx" is
+        # DMAMUX request 38. The DMAMUX feeds masters 7 and 8 (8 each).
+        "dma-request.dtb": board([
+            provider("intc", 2, "#interrupt-cells", 1),
+            provider("dma", 4, "#dma-cells", 1),
+            node("dmamux@40020800", [
+                ("compatible", strings("st,stm32-dmamux")),
+                ("reg", be32(0x40020800, 0x400)),
+                ("#dma-cells", be32(3)), ("phandle", be32(6)),
+                ("interrupt-parent", be32(2)), ("interrupts", be32(102)),
+                ("dma-channels", be32(16)), ("dma-masters", be32(7, 8)),
+            ], []),
+            device("dma@5000", 0x5000, 0x100, compatible="vendor,dma-master",
+                   extra=[("#dma-cells", be32(4)), ("phandle", be32(7)),
+                          ("dma-requests", be32(8))]),
+            device("dma@5100", 0x5100, 0x100, compatible="vendor,dma-master",
+                   extra=[("#dma-cells", be32(4)), ("phandle", be32(8)),
+                          ("dma-requests", be32(8))]),
+            device("device@6000", 0x6000, 0x100,
+                   compatible="vendor,dma-requester",
+                   extra=[("dmas", be32(6, 0, 37, 0, 7, 3, 4, 0, 0, 4, 9,
+                                        6, 0, 38, 0)),
+                          ("dma-names", strings("tx", "tx", "tx", "rx"))]),
+        ]),
         "plugin.dtb": board([clock("clock", 1),
                              device("device@1000", 0x1000, 0x100, 1,
                                     "vendor,plugin")]),

@@ -17,6 +17,10 @@ static uint32 reg_cells[2] = { BASE, 0x400U };
 static sint32 get_u32(void *context, const char *name, uint32 index, uint32 *value)
 {
 	(void)context;
+	if (strcmp(name, "dma-channels") == 0 && index == 0U) {
+		*value = 16U;
+		return 0;
+	}
 	if (strcmp(name, "reg") != 0 || index > 1U) {
 		return -1;
 	}

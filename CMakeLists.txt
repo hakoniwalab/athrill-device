@@ -128,6 +128,7 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/exti.dtb"
       "${TEST_DTB_DIR}/timer-pwm.dtb"
       "${TEST_DTB_DIR}/timer-h7-pwm.dtb"
+      "${TEST_DTB_DIR}/dma-request.dtb"
       "${TEST_DTB_DIR}/disabled-provider.dtb"
       "${TEST_DTB_DIR}/duplicate-phandle.dtb"
       "${TEST_DTB_DIR}/duplicate-spi.dtb"
@@ -242,6 +243,18 @@ if(BUILD_TESTING)
     ATHRILL_DEVICE_STANDALONE_TYPES TEST_PLUGIN_OLD_MINOR)
   target_include_directories(test_plugin_old_minor PRIVATE include)
   set_target_properties(test_plugin_old_minor PROPERTIES PREFIX "")
+
+  add_library(test_plugin_dma MODULE tests/test_plugin_dma.c)
+  target_compile_definitions(test_plugin_dma PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_plugin_dma PRIVATE include)
+  set_target_properties(test_plugin_dma PROPERTIES PREFIX "")
+  add_executable(test_dma_request tests/test_dma_request.c)
+  target_compile_definitions(test_dma_request PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES TEST_DTB_DIR="${TEST_DTB_DIR}")
+  target_link_libraries(test_dma_request PRIVATE athrill_device)
+  add_dependencies(test_dma_request generate-test-dtbs)
+  add_test(NAME dma-request-lines
+    COMMAND test_dma_request $<TARGET_FILE:test_plugin_dma>)
 
   add_test(NAME device-tree-framework
     COMMAND test_device_tree $<TARGET_FILE:test_plugin_good> $<TARGET_FILE:test_plugin_bad>
