@@ -36,8 +36,16 @@ def num(text: str | None, default: int = 0) -> int:
     return int(t, 0)
 
 
+def load_patches(soc: str) -> list[dict]:
+    path = ROOT / "spec" / "svd-patches.yaml"
+    if not path.exists():
+        return []
+    return [p for p in (yaml.safe_load(path.read_text(encoding="utf-8")) or {}).get("patches", []) if p["soc"] == soc]
+
+
 class Svd:
-    def __init__(self, path: Path):
+    def __init__(self, path: Path, patches: list[dict] | None = None):
+        self.patches = patches or []
         self.root = ET.parse(path).getroot()
         self.periph = {p.findtext("name"): p for p in self.root.iter("peripheral")}
         self.default_size = num(self.root.findtext("size"), 32)
@@ -89,6 +97,20 @@ class Svd:
         inherit = {"size": self.default_size, "reset": self.default_reset, "access": self.default_access}
         if regs is not None:
             walk(regs, 0, "", inherit)
+        family = {name, p.findtext("name")}
+        for patch in self.patches:
+            if patch["peripheral"] not in family or patch["register"] not in out:
+                continue
+            reg = out[patch["register"]]
+            if "svd_has" in patch and "reset" in patch and reg["reset"] != int(str(patch["svd_has"]), 0):
+                raise SystemExit(f"svd-patches: {patch['peripheral']}.{patch['register']} SVD now has "
+                                 f"0x{reg['reset']:08X}, not {patch['svd_has']}: the SVD changed, review the patch")
+            if "reset" in patch:
+                reg["reset"] = int(str(patch["reset"]), 0)
+            for key in ("field", "add_field"):
+                if key in patch:
+                    f = patch[key]
+                    reg["fields"][f["name"]] = {"lsb": f["lsb"], "width": f["width"], "access": reg["access"]}
         return out
 
 
@@ -178,10 +200,8 @@ def main() -> int:
     total = 0
     for chk in src["checks"]:
         svd_file = args.svd_dir / src["svd"][chk["soc"]]["file"]
-        svd = cache.setdefault(chk["soc"], Svd(svd_file))
+        svd = cache.setdefault(chk["soc"], Svd(svd_file, load_patches(chk["soc"])))
         problems, notes = check(svd, chk["peripheral"], ROOT / chk["map"], chk.get("aliases", {}), chk.get("blocks"))
-        known = {(k["peripheral"], k["register"]) for k in src.get("known_svd_errors", []) if k["soc"] == chk["soc"]}
-        problems = [p for p in problems if not any(p.startswith(f"register {reg}:") for per, reg in known if per == chk["peripheral"])]
         print(f"{chk['map']} vs {chk['soc']} {chk['peripheral']}: {len(problems)} mismatches, {len(notes)} notes")
         for p in problems:
             print("  MISMATCH", p)

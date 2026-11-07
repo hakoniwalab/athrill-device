@@ -59,9 +59,21 @@ A map binds one IP version to a model specification.
   with how the implementation answers them (store and read back, read as reset
   value).
 
-Bit positions, widths and reset values are not typed into maps. Until the SVD
-generator exists (#31) they come from the existing code; after it they come from
-the generated definitions, checked against the map's register and field names.
+Register definitions (offsets, fields, reset values, access) have one canonical
+source: the **ST SVD** of the SoC, at the revision pinned in
+`spec/svd-sources.yaml` (fetched by `tools/fetch_svd.sh`, not committed).
+Where the SVD disagrees with the reference manual, the manual wins and the
+correction is recorded in `spec/svd-patches.yaml`, one entry per difference with
+the manual section and page as evidence. Nothing else overrides the SVD. The
+patches carry the SVD value they correct, so a new SVD revision that fixes or
+changes the value stops the tools until the patch is reviewed.
+
+During the transition, maps still carry hand-written `registers`;
+`tools/svd_map.py check-all` compares them with the patched SVD and must report
+no mismatch. The next step generates the maps' `registers` from the patched SVD
+and keeps only the bindings (terms to registers and fields) hand-written.
+The stm32-rs project's patched SVDs may be consulted as a reference when
+investigating a difference; they are not a source.
 
 ## Verification
 
