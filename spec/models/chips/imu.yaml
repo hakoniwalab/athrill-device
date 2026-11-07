@@ -1,0 +1,58 @@
+model: imu
+version: 1.0.0
+summary: Accelerometer and gyroscope chips on SPI as used by PX4 and ArduPilot (ICM-20689, ICM-42688-P, BMI055 accelerometer and gyroscope dies). Values come from the common sensor source (Hakoniwa sensor device or bench source).
+
+terms:
+  # base
+  - {name: identity,         kind: status,  feature: base, meaning: "Chip ID register value from the datasheet (ADV-CHIP-*-001)."}
+  - {name: reset,            kind: control, feature: base, meaning: "Soft reset: registers return to reset values."}
+  - {name: power_mode,       kind: control, feature: base, meaning: "Sleep/normal per sensor; in sleep the data registers hold their last value."}
+  - {name: accel_range,      kind: control, feature: accel, meaning: "Full scale of the accelerometer (e.g. ±2/4/8/16 g)."}
+  - {name: gyro_range,       kind: control, feature: gyro,  meaning: "Full scale of the gyroscope (e.g. ±250..2000 dps)."}
+  - {name: output_rate,      kind: control, feature: base, meaning: "Output data rate; samples are produced at this rate."}
+  - {name: filter_config,    kind: control, feature: base, meaning: "Digital low-pass/bandwidth settings: stored only."}
+  - {name: accel_sample,     kind: data,    feature: accel, meaning: "Three axes of acceleration as raw signed counts."}
+  - {name: gyro_sample,      kind: data,    feature: gyro,  meaning: "Three axes of angular rate as raw signed counts."}
+  - {name: temperature,      kind: data,    feature: base, meaning: "Die temperature as raw counts (datasheet formula)."}
+  - {name: data_ready,       kind: status,  feature: base, meaning: "A new sample is in the data registers."}
+  - {name: data_ready_line,  kind: event,   feature: base, meaning: "The chip's interrupt pin (Devicetree int-gpios)."}
+  - {name: int_config,       kind: control, feature: base, meaning: "Which condition drives data_ready_line, level/pulse, polarity."}
+  # fifo
+  - {name: fifo_enable,      kind: control, feature: fifo, meaning: "Samples are pushed to the chip FIFO."}
+  - {name: fifo_count,       kind: status,  feature: fifo, meaning: "Bytes (or samples) in the FIFO."}
+  - {name: fifo_data,        kind: data,    feature: fifo, meaning: "FIFO read port in the datasheet's packet format."}
+  - {name: fifo_overflow,    kind: status,  feature: fifo, meaning: "Samples were dropped because the FIFO was full."}
+  - {name: fifo_reset,       kind: control, feature: fifo, meaning: "Empties the FIFO."}
+
+features:
+  base: Identity, reset, power, rate, temperature, data-ready.
+  accel: Accelerometer.
+  gyro: Gyroscope.
+  fifo: Sample FIFO.
+
+behaviour:
+  - id: ADV-IMU-B001
+    feature: base
+    rule: identity reads the datasheet chip ID at any time after power-up and after reset.
+  - id: ADV-IMU-B002
+    feature: accel
+    rule: An acceleration a (m/s², sensor frame) from the sensor source reads as raw = round(a / g0 x counts_per_g(accel_range)) per axis, saturated to the signed register width, in the datasheet's byte order, after the board's mount rotation (athrill,mount-rotation) is undone into the chip frame.
+  - id: ADV-IMU-B003
+    feature: gyro
+    rule: An angular rate w (rad/s) reads as raw = round(w x 180/pi x counts_per_dps(gyro_range)) per axis, saturated, byte order and axes as for ADV-IMU-B002.
+  - id: ADV-IMU-B004
+    feature: base
+    rule: A new sample is produced every 1 / output_rate of model time; data_ready turns on and data_ready_line follows int_config; reading the data (or the status, as the datasheet states) turns data_ready off.
+  - id: ADV-IMU-B005
+    feature: fifo
+    rule: With fifo_enable, each sample is appended to the FIFO in the datasheet's packet format; fifo_count counts what is stored; reading fifo_data returns packets in order; when full, new samples are dropped and fifo_overflow turns on (or the oldest are overwritten, as the datasheet states).
+  - id: ADV-IMU-B006
+    feature: base
+    rule: Multi-byte register reads auto-increment the register address as the datasheet states, so a burst returns all axes of one sample (no tearing between axes).
+  - id: ADV-IMU-B007
+    feature: base
+    rule: The SPI read protocol (read bit, dummy bytes where the datasheet requires them, e.g. none on BMI055) follows the datasheet.
+
+timing: Samples are produced at output_rate in model time; the sensor source's sample at that time is used.
+out_of_scope:
+  - self-test, wake-on-motion, tap/step detection, offset registers other than as stored, I2C/I3C mode of these chips, noise and bias (Hakoniwa Drone's sensor models provide them in the source values)

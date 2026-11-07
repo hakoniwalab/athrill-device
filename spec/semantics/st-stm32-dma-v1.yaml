@@ -1,0 +1,121 @@
+ip: st-stm32-dma-v1
+compatible:
+- st,stm32-dma-v1
+- st,stm32-dma
+manual: RM0410 Rev 5 section 8.5; RM0433 Rev 8 section 15.5 (DMA registers)
+model: dma-controller
+model_version: 1.0.0
+features:
+- base
+- fifo
+- double_buffer
+svd:
+  st,stm32f7: DMA1
+  st,stm32h7: DMA1
+bindings:
+  stream_enable:
+    reg: S{s}CR
+    field: EN
+    access: rw
+  direction:
+    reg: S{s}CR
+    field: DIR
+    access: rw
+  request_select:
+    reg: S{s}CR
+    field:
+      st,stm32f7: CHSEL
+    access: rw
+    note: F7 only (CHSEL); H7 routes requests through DMAMUX (mux_request_id)
+  peripheral_address:
+    reg: S{s}PAR
+    field: PA
+    access: rw
+  memory_address:
+    reg:
+    - S{s}M0AR
+    - S{s}M1AR
+    access: rw
+  item_count:
+    reg: S{s}NDTR
+    field: NDT
+    access: rw
+  peripheral_width:
+    reg: S{s}CR
+    field: PSIZE
+    access: rw
+  memory_width:
+    reg: S{s}CR
+    field: MSIZE
+    access: rw
+  peripheral_increment:
+    reg: S{s}CR
+    field: PINC
+    access: rw
+  memory_increment:
+    reg: S{s}CR
+    field: MINC
+    access: rw
+  circular:
+    reg: S{s}CR
+    field: CIRC
+    access: rw
+  half_transfer:
+    reg:
+    - LISR
+    - HISR
+    field: HTIF{s}
+    access: ro
+  transfer_complete:
+    reg:
+    - LISR
+    - HISR
+    field: TCIF{s}
+    access: ro
+  transfer_error:
+    reg:
+    - LISR
+    - HISR
+    field: TEIF{s}
+    access: ro
+  flag_ack:
+    reg:
+    - LIFCR
+    - HIFCR
+    field:
+    - CHTIF{s}
+    - CTCIF{s}
+    - CTEIF{s}
+    - CFEIF{s}
+    - CDMEIF{s}
+    access: w1c
+  ht_irq_enable:
+    reg: S{s}CR
+    field: HTIE
+    access: rw
+  tc_irq_enable:
+    reg: S{s}CR
+    field: TCIE
+    access: rw
+  te_irq_enable:
+    reg: S{s}CR
+    field: TEIE
+    access: rw
+  stream_irq:
+    devicetree: interrupts (one per stream)
+  fifo_mode:
+    reg: S{s}FCR
+    field:
+    - DMDIS
+    - FTH
+    access: rw
+  double_buffer:
+    reg: S{s}CR
+    field: DBM
+    access: rw
+  current_target:
+    reg: S{s}CR
+    field: CT
+    access: rw
+features_h7_add:
+- mux (via st-stm32-dmamux)

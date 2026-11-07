@@ -1,0 +1,1419 @@
+# AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-gpio.yaml, the pinned ST SVD (STM32H743.svd) and
+# spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+ip: st-stm32-gpio
+compatible:
+- st,stm32-gpio
+manual: RM0410 Rev 5 section 6.4; RM0433 Rev 8 section 11.4 (GPIO registers). Same layout on F7 and H7.
+model: gpio-exti
+model_version: 1.0.0
+features:
+- base
+notes:
+- note_reset: Reset values of MODER/OSPEEDR/PUPDR differ per port (A/B debug pins); the model uses the per-port values of
+    the existing code until the SVD map (#31).
+- field_names: F7 SVD names fields MODERn/ODRn/IDRn, H7 SVD MODEn/ODn/IDn (RM0433 naming); bound per SoC.
+soc: st,stm32h7
+svd_source:
+  file: STM32H743.svd
+  repository: https://github.com/Open-CMSIS-Pack/STM32H7xx_DFP
+  revision: 058af2e871a1ee2f203459f8780c02741079ba5a
+  peripheral: GPIOC
+  patches_applied: []
+bindings:
+  pin_mode:
+    access: rw
+    note: 00 input, 01 output, 10 alternate, 11 analog
+    registers:
+    - reg: MODER
+      offset: '0x00'
+      size: 32
+      fields:
+      - field: MODE0
+        lsb: 0
+        width: 2
+        svd_access: read-write
+        index:
+          n: 0
+      - field: MODE1
+        lsb: 2
+        width: 2
+        svd_access: read-write
+        index:
+          n: 1
+      - field: MODE2
+        lsb: 4
+        width: 2
+        svd_access: read-write
+        index:
+          n: 2
+      - field: MODE3
+        lsb: 6
+        width: 2
+        svd_access: read-write
+        index:
+          n: 3
+      - field: MODE4
+        lsb: 8
+        width: 2
+        svd_access: read-write
+        index:
+          n: 4
+      - field: MODE5
+        lsb: 10
+        width: 2
+        svd_access: read-write
+        index:
+          n: 5
+      - field: MODE6
+        lsb: 12
+        width: 2
+        svd_access: read-write
+        index:
+          n: 6
+      - field: MODE7
+        lsb: 14
+        width: 2
+        svd_access: read-write
+        index:
+          n: 7
+      - field: MODE8
+        lsb: 16
+        width: 2
+        svd_access: read-write
+        index:
+          n: 8
+      - field: MODE9
+        lsb: 18
+        width: 2
+        svd_access: read-write
+        index:
+          n: 9
+      - field: MODE10
+        lsb: 20
+        width: 2
+        svd_access: read-write
+        index:
+          n: 10
+      - field: MODE11
+        lsb: 22
+        width: 2
+        svd_access: read-write
+        index:
+          n: 11
+      - field: MODE12
+        lsb: 24
+        width: 2
+        svd_access: read-write
+        index:
+          n: 12
+      - field: MODE13
+        lsb: 26
+        width: 2
+        svd_access: read-write
+        index:
+          n: 13
+      - field: MODE14
+        lsb: 28
+        width: 2
+        svd_access: read-write
+        index:
+          n: 14
+      - field: MODE15
+        lsb: 30
+        width: 2
+        svd_access: read-write
+        index:
+          n: 15
+  output_level:
+    access: rw
+    registers:
+    - reg: ODR
+      offset: '0x14'
+      size: 32
+      fields:
+      - field: OD0
+        lsb: 0
+        width: 1
+        svd_access: read-write
+        index:
+          n: 0
+      - field: OD1
+        lsb: 1
+        width: 1
+        svd_access: read-write
+        index:
+          n: 1
+      - field: OD2
+        lsb: 2
+        width: 1
+        svd_access: read-write
+        index:
+          n: 2
+      - field: OD3
+        lsb: 3
+        width: 1
+        svd_access: read-write
+        index:
+          n: 3
+      - field: OD4
+        lsb: 4
+        width: 1
+        svd_access: read-write
+        index:
+          n: 4
+      - field: OD5
+        lsb: 5
+        width: 1
+        svd_access: read-write
+        index:
+          n: 5
+      - field: OD6
+        lsb: 6
+        width: 1
+        svd_access: read-write
+        index:
+          n: 6
+      - field: OD7
+        lsb: 7
+        width: 1
+        svd_access: read-write
+        index:
+          n: 7
+      - field: OD8
+        lsb: 8
+        width: 1
+        svd_access: read-write
+        index:
+          n: 8
+      - field: OD9
+        lsb: 9
+        width: 1
+        svd_access: read-write
+        index:
+          n: 9
+      - field: OD10
+        lsb: 10
+        width: 1
+        svd_access: read-write
+        index:
+          n: 10
+      - field: OD11
+        lsb: 11
+        width: 1
+        svd_access: read-write
+        index:
+          n: 11
+      - field: OD12
+        lsb: 12
+        width: 1
+        svd_access: read-write
+        index:
+          n: 12
+      - field: OD13
+        lsb: 13
+        width: 1
+        svd_access: read-write
+        index:
+          n: 13
+      - field: OD14
+        lsb: 14
+        width: 1
+        svd_access: read-write
+        index:
+          n: 14
+      - field: OD15
+        lsb: 15
+        width: 1
+        svd_access: read-write
+        index:
+          n: 15
+  set_reset:
+    access: wo
+    registers:
+    - reg: BSRR
+      offset: '0x18'
+      size: 32
+      fields:
+      - field: BS0
+        lsb: 0
+        width: 1
+        svd_access: write-only
+        index:
+          n: 0
+      - field: BS1
+        lsb: 1
+        width: 1
+        svd_access: write-only
+        index:
+          n: 1
+      - field: BS2
+        lsb: 2
+        width: 1
+        svd_access: write-only
+        index:
+          n: 2
+      - field: BS3
+        lsb: 3
+        width: 1
+        svd_access: write-only
+        index:
+          n: 3
+      - field: BS4
+        lsb: 4
+        width: 1
+        svd_access: write-only
+        index:
+          n: 4
+      - field: BS5
+        lsb: 5
+        width: 1
+        svd_access: write-only
+        index:
+          n: 5
+      - field: BS6
+        lsb: 6
+        width: 1
+        svd_access: write-only
+        index:
+          n: 6
+      - field: BS7
+        lsb: 7
+        width: 1
+        svd_access: write-only
+        index:
+          n: 7
+      - field: BS8
+        lsb: 8
+        width: 1
+        svd_access: write-only
+        index:
+          n: 8
+      - field: BS9
+        lsb: 9
+        width: 1
+        svd_access: write-only
+        index:
+          n: 9
+      - field: BS10
+        lsb: 10
+        width: 1
+        svd_access: write-only
+        index:
+          n: 10
+      - field: BS11
+        lsb: 11
+        width: 1
+        svd_access: write-only
+        index:
+          n: 11
+      - field: BS12
+        lsb: 12
+        width: 1
+        svd_access: write-only
+        index:
+          n: 12
+      - field: BS13
+        lsb: 13
+        width: 1
+        svd_access: write-only
+        index:
+          n: 13
+      - field: BS14
+        lsb: 14
+        width: 1
+        svd_access: write-only
+        index:
+          n: 14
+      - field: BS15
+        lsb: 15
+        width: 1
+        svd_access: write-only
+        index:
+          n: 15
+      - field: BR0
+        lsb: 16
+        width: 1
+        svd_access: write-only
+        index:
+          n: 0
+      - field: BR1
+        lsb: 17
+        width: 1
+        svd_access: write-only
+        index:
+          n: 1
+      - field: BR2
+        lsb: 18
+        width: 1
+        svd_access: write-only
+        index:
+          n: 2
+      - field: BR3
+        lsb: 19
+        width: 1
+        svd_access: write-only
+        index:
+          n: 3
+      - field: BR4
+        lsb: 20
+        width: 1
+        svd_access: write-only
+        index:
+          n: 4
+      - field: BR5
+        lsb: 21
+        width: 1
+        svd_access: write-only
+        index:
+          n: 5
+      - field: BR6
+        lsb: 22
+        width: 1
+        svd_access: write-only
+        index:
+          n: 6
+      - field: BR7
+        lsb: 23
+        width: 1
+        svd_access: write-only
+        index:
+          n: 7
+      - field: BR8
+        lsb: 24
+        width: 1
+        svd_access: write-only
+        index:
+          n: 8
+      - field: BR9
+        lsb: 25
+        width: 1
+        svd_access: write-only
+        index:
+          n: 9
+      - field: BR10
+        lsb: 26
+        width: 1
+        svd_access: write-only
+        index:
+          n: 10
+      - field: BR11
+        lsb: 27
+        width: 1
+        svd_access: write-only
+        index:
+          n: 11
+      - field: BR12
+        lsb: 28
+        width: 1
+        svd_access: write-only
+        index:
+          n: 12
+      - field: BR13
+        lsb: 29
+        width: 1
+        svd_access: write-only
+        index:
+          n: 13
+      - field: BR14
+        lsb: 30
+        width: 1
+        svd_access: write-only
+        index:
+          n: 14
+      - field: BR15
+        lsb: 31
+        width: 1
+        svd_access: write-only
+        index:
+          n: 15
+  input_level:
+    access: ro
+    registers:
+    - reg: IDR
+      offset: '0x10'
+      size: 32
+      fields:
+      - field: ID0
+        lsb: 0
+        width: 1
+        svd_access: read-only
+        index:
+          n: 0
+      - field: ID1
+        lsb: 1
+        width: 1
+        svd_access: read-only
+        index:
+          n: 1
+      - field: ID2
+        lsb: 2
+        width: 1
+        svd_access: read-only
+        index:
+          n: 2
+      - field: ID3
+        lsb: 3
+        width: 1
+        svd_access: read-only
+        index:
+          n: 3
+      - field: ID4
+        lsb: 4
+        width: 1
+        svd_access: read-only
+        index:
+          n: 4
+      - field: ID5
+        lsb: 5
+        width: 1
+        svd_access: read-only
+        index:
+          n: 5
+      - field: ID6
+        lsb: 6
+        width: 1
+        svd_access: read-only
+        index:
+          n: 6
+      - field: ID7
+        lsb: 7
+        width: 1
+        svd_access: read-only
+        index:
+          n: 7
+      - field: ID8
+        lsb: 8
+        width: 1
+        svd_access: read-only
+        index:
+          n: 8
+      - field: ID9
+        lsb: 9
+        width: 1
+        svd_access: read-only
+        index:
+          n: 9
+      - field: ID10
+        lsb: 10
+        width: 1
+        svd_access: read-only
+        index:
+          n: 10
+      - field: ID11
+        lsb: 11
+        width: 1
+        svd_access: read-only
+        index:
+          n: 11
+      - field: ID12
+        lsb: 12
+        width: 1
+        svd_access: read-only
+        index:
+          n: 12
+      - field: ID13
+        lsb: 13
+        width: 1
+        svd_access: read-only
+        index:
+          n: 13
+      - field: ID14
+        lsb: 14
+        width: 1
+        svd_access: read-only
+        index:
+          n: 14
+      - field: ID15
+        lsb: 15
+        width: 1
+        svd_access: read-only
+        index:
+          n: 15
+  pin_config:
+    access: rw
+    note: stored only
+    registers:
+    - reg: OTYPER
+      offset: '0x04'
+      size: 32
+    - reg: OSPEEDR
+      offset: '0x08'
+      size: 32
+    - reg: PUPDR
+      offset: '0x0C'
+      size: 32
+    - reg: AFRL
+      offset: '0x20'
+      size: 32
+    - reg: AFRH
+      offset: '0x24'
+      size: 32
+    - reg: LCKR
+      offset: '0x1C'
+      size: 32
+registers:
+  MODER:
+    offset: '0x00'
+    size: 32
+    reset: '0xABFFFFFF'
+    access: read-write
+    fields:
+      MODE0:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      MODE1:
+        lsb: 2
+        width: 2
+        access: read-write
+        bound: true
+      MODE2:
+        lsb: 4
+        width: 2
+        access: read-write
+        bound: true
+      MODE3:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      MODE4:
+        lsb: 8
+        width: 2
+        access: read-write
+        bound: true
+      MODE5:
+        lsb: 10
+        width: 2
+        access: read-write
+        bound: true
+      MODE6:
+        lsb: 12
+        width: 2
+        access: read-write
+        bound: true
+      MODE7:
+        lsb: 14
+        width: 2
+        access: read-write
+        bound: true
+      MODE8:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: true
+      MODE9:
+        lsb: 18
+        width: 2
+        access: read-write
+        bound: true
+      MODE10:
+        lsb: 20
+        width: 2
+        access: read-write
+        bound: true
+      MODE11:
+        lsb: 22
+        width: 2
+        access: read-write
+        bound: true
+      MODE12:
+        lsb: 24
+        width: 2
+        access: read-write
+        bound: true
+      MODE13:
+        lsb: 26
+        width: 2
+        access: read-write
+        bound: true
+      MODE14:
+        lsb: 28
+        width: 2
+        access: read-write
+        bound: true
+      MODE15:
+        lsb: 30
+        width: 2
+        access: read-write
+        bound: true
+  OTYPER:
+    offset: '0x04'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      OT0:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      OT1:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: true
+      OT2:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      OT3:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      OT4:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      OT5:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: true
+      OT6:
+        lsb: 6
+        width: 1
+        access: read-write
+        bound: true
+      OT7:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: true
+      OT8:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      OT9:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      OT10:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      OT11:
+        lsb: 11
+        width: 1
+        access: read-write
+        bound: true
+      OT12:
+        lsb: 12
+        width: 1
+        access: read-write
+        bound: true
+      OT13:
+        lsb: 13
+        width: 1
+        access: read-write
+        bound: true
+      OT14:
+        lsb: 14
+        width: 1
+        access: read-write
+        bound: true
+      OT15:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: true
+  OSPEEDR:
+    offset: '0x08'
+    size: 32
+    reset: '0x0C000000'
+    access: read-write
+    fields:
+      OSPEED0:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED1:
+        lsb: 2
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED2:
+        lsb: 4
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED3:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED4:
+        lsb: 8
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED5:
+        lsb: 10
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED6:
+        lsb: 12
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED7:
+        lsb: 14
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED8:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED9:
+        lsb: 18
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED10:
+        lsb: 20
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED11:
+        lsb: 22
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED12:
+        lsb: 24
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED13:
+        lsb: 26
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED14:
+        lsb: 28
+        width: 2
+        access: read-write
+        bound: true
+      OSPEED15:
+        lsb: 30
+        width: 2
+        access: read-write
+        bound: true
+  PUPDR:
+    offset: '0x0C'
+    size: 32
+    reset: '0x12100000'
+    access: read-write
+    fields:
+      PUPD0:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      PUPD1:
+        lsb: 2
+        width: 2
+        access: read-write
+        bound: true
+      PUPD2:
+        lsb: 4
+        width: 2
+        access: read-write
+        bound: true
+      PUPD3:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      PUPD4:
+        lsb: 8
+        width: 2
+        access: read-write
+        bound: true
+      PUPD5:
+        lsb: 10
+        width: 2
+        access: read-write
+        bound: true
+      PUPD6:
+        lsb: 12
+        width: 2
+        access: read-write
+        bound: true
+      PUPD7:
+        lsb: 14
+        width: 2
+        access: read-write
+        bound: true
+      PUPD8:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: true
+      PUPD9:
+        lsb: 18
+        width: 2
+        access: read-write
+        bound: true
+      PUPD10:
+        lsb: 20
+        width: 2
+        access: read-write
+        bound: true
+      PUPD11:
+        lsb: 22
+        width: 2
+        access: read-write
+        bound: true
+      PUPD12:
+        lsb: 24
+        width: 2
+        access: read-write
+        bound: true
+      PUPD13:
+        lsb: 26
+        width: 2
+        access: read-write
+        bound: true
+      PUPD14:
+        lsb: 28
+        width: 2
+        access: read-write
+        bound: true
+      PUPD15:
+        lsb: 30
+        width: 2
+        access: read-write
+        bound: true
+  IDR:
+    offset: '0x10'
+    size: 32
+    reset: '0x00000000'
+    access: read-only
+    fields:
+      ID0:
+        lsb: 0
+        width: 1
+        access: read-only
+        bound: true
+      ID1:
+        lsb: 1
+        width: 1
+        access: read-only
+        bound: true
+      ID2:
+        lsb: 2
+        width: 1
+        access: read-only
+        bound: true
+      ID3:
+        lsb: 3
+        width: 1
+        access: read-only
+        bound: true
+      ID4:
+        lsb: 4
+        width: 1
+        access: read-only
+        bound: true
+      ID5:
+        lsb: 5
+        width: 1
+        access: read-only
+        bound: true
+      ID6:
+        lsb: 6
+        width: 1
+        access: read-only
+        bound: true
+      ID7:
+        lsb: 7
+        width: 1
+        access: read-only
+        bound: true
+      ID8:
+        lsb: 8
+        width: 1
+        access: read-only
+        bound: true
+      ID9:
+        lsb: 9
+        width: 1
+        access: read-only
+        bound: true
+      ID10:
+        lsb: 10
+        width: 1
+        access: read-only
+        bound: true
+      ID11:
+        lsb: 11
+        width: 1
+        access: read-only
+        bound: true
+      ID12:
+        lsb: 12
+        width: 1
+        access: read-only
+        bound: true
+      ID13:
+        lsb: 13
+        width: 1
+        access: read-only
+        bound: true
+      ID14:
+        lsb: 14
+        width: 1
+        access: read-only
+        bound: true
+      ID15:
+        lsb: 15
+        width: 1
+        access: read-only
+        bound: true
+  ODR:
+    offset: '0x14'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      OD0:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      OD1:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: true
+      OD2:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      OD3:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      OD4:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      OD5:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: true
+      OD6:
+        lsb: 6
+        width: 1
+        access: read-write
+        bound: true
+      OD7:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: true
+      OD8:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      OD9:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      OD10:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      OD11:
+        lsb: 11
+        width: 1
+        access: read-write
+        bound: true
+      OD12:
+        lsb: 12
+        width: 1
+        access: read-write
+        bound: true
+      OD13:
+        lsb: 13
+        width: 1
+        access: read-write
+        bound: true
+      OD14:
+        lsb: 14
+        width: 1
+        access: read-write
+        bound: true
+      OD15:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: true
+  BSRR:
+    offset: '0x18'
+    size: 32
+    reset: '0x00000000'
+    access: write-only
+    fields:
+      BS0:
+        lsb: 0
+        width: 1
+        access: write-only
+        bound: true
+      BS1:
+        lsb: 1
+        width: 1
+        access: write-only
+        bound: true
+      BS2:
+        lsb: 2
+        width: 1
+        access: write-only
+        bound: true
+      BS3:
+        lsb: 3
+        width: 1
+        access: write-only
+        bound: true
+      BS4:
+        lsb: 4
+        width: 1
+        access: write-only
+        bound: true
+      BS5:
+        lsb: 5
+        width: 1
+        access: write-only
+        bound: true
+      BS6:
+        lsb: 6
+        width: 1
+        access: write-only
+        bound: true
+      BS7:
+        lsb: 7
+        width: 1
+        access: write-only
+        bound: true
+      BS8:
+        lsb: 8
+        width: 1
+        access: write-only
+        bound: true
+      BS9:
+        lsb: 9
+        width: 1
+        access: write-only
+        bound: true
+      BS10:
+        lsb: 10
+        width: 1
+        access: write-only
+        bound: true
+      BS11:
+        lsb: 11
+        width: 1
+        access: write-only
+        bound: true
+      BS12:
+        lsb: 12
+        width: 1
+        access: write-only
+        bound: true
+      BS13:
+        lsb: 13
+        width: 1
+        access: write-only
+        bound: true
+      BS14:
+        lsb: 14
+        width: 1
+        access: write-only
+        bound: true
+      BS15:
+        lsb: 15
+        width: 1
+        access: write-only
+        bound: true
+      BR0:
+        lsb: 16
+        width: 1
+        access: write-only
+        bound: true
+      BR1:
+        lsb: 17
+        width: 1
+        access: write-only
+        bound: true
+      BR2:
+        lsb: 18
+        width: 1
+        access: write-only
+        bound: true
+      BR3:
+        lsb: 19
+        width: 1
+        access: write-only
+        bound: true
+      BR4:
+        lsb: 20
+        width: 1
+        access: write-only
+        bound: true
+      BR5:
+        lsb: 21
+        width: 1
+        access: write-only
+        bound: true
+      BR6:
+        lsb: 22
+        width: 1
+        access: write-only
+        bound: true
+      BR7:
+        lsb: 23
+        width: 1
+        access: write-only
+        bound: true
+      BR8:
+        lsb: 24
+        width: 1
+        access: write-only
+        bound: true
+      BR9:
+        lsb: 25
+        width: 1
+        access: write-only
+        bound: true
+      BR10:
+        lsb: 26
+        width: 1
+        access: write-only
+        bound: true
+      BR11:
+        lsb: 27
+        width: 1
+        access: write-only
+        bound: true
+      BR12:
+        lsb: 28
+        width: 1
+        access: write-only
+        bound: true
+      BR13:
+        lsb: 29
+        width: 1
+        access: write-only
+        bound: true
+      BR14:
+        lsb: 30
+        width: 1
+        access: write-only
+        bound: true
+      BR15:
+        lsb: 31
+        width: 1
+        access: write-only
+        bound: true
+  LCKR:
+    offset: '0x1C'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      LCK0:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      LCK1:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: true
+      LCK2:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      LCK3:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      LCK4:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      LCK5:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: true
+      LCK6:
+        lsb: 6
+        width: 1
+        access: read-write
+        bound: true
+      LCK7:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: true
+      LCK8:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      LCK9:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      LCK10:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      LCK11:
+        lsb: 11
+        width: 1
+        access: read-write
+        bound: true
+      LCK12:
+        lsb: 12
+        width: 1
+        access: read-write
+        bound: true
+      LCK13:
+        lsb: 13
+        width: 1
+        access: read-write
+        bound: true
+      LCK14:
+        lsb: 14
+        width: 1
+        access: read-write
+        bound: true
+      LCK15:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: true
+      LCKK:
+        lsb: 16
+        width: 1
+        access: read-write
+        bound: true
+  AFRL:
+    offset: '0x20'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      AFSEL0:
+        lsb: 0
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL1:
+        lsb: 4
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL2:
+        lsb: 8
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL3:
+        lsb: 12
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL4:
+        lsb: 16
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL5:
+        lsb: 20
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL6:
+        lsb: 24
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL7:
+        lsb: 28
+        width: 4
+        access: read-write
+        bound: true
+  AFRH:
+    offset: '0x24'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      AFSEL8:
+        lsb: 0
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL9:
+        lsb: 4
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL10:
+        lsb: 8
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL11:
+        lsb: 12
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL12:
+        lsb: 16
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL13:
+        lsb: 20
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL14:
+        lsb: 24
+        width: 4
+        access: read-write
+        bound: true
+      AFSEL15:
+        lsb: 28
+        width: 4
+        access: read-write
+        bound: true

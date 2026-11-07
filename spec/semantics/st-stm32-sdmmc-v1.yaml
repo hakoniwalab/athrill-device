@@ -1,0 +1,146 @@
+ip: st-stm32-sdmmc-v1
+compatible:
+- st,stm32-sdmmc
+manual: RM0410 Rev 5 section 39 (SDMMC)
+model: sdmmc
+model_version: 1.0.0
+features:
+- base
+- fifo_dma
+svd:
+  st,stm32f7: SDMMC1
+bindings:
+  power_on:
+    reg: POWER
+    field: PWRCTRL
+    access: rw
+  clock_enable:
+    reg: CLKCR
+    field: CLKEN
+    access: rw
+    note: ''
+  command_index:
+    reg: CMD
+    field: CMDINDEX
+    access: rw
+  command_argument:
+    reg: ARG
+    access: rw
+  response_type:
+    reg: CMD
+    field: WAITRESP
+    access: rw
+  send_command:
+    reg: CMD
+    field: CPSMEN
+    access: rw
+  response:
+    reg:
+    - RESP1
+    - RESP2
+    - RESP3
+    - RESP4
+    access: ro
+  command_sent:
+    reg: STA
+    field: CMDSENT
+    access: ro
+  response_received:
+    reg: STA
+    field: CMDREND
+    access: ro
+  command_timeout:
+    reg: STA
+    field: CTIMEOUT
+    access: ro
+  data_length:
+    reg: DLEN
+    field: DATALENGTH
+    access: rw
+  block_size:
+    reg: DCTRL
+    field: DBLOCKSIZE
+    access: rw
+  data_direction:
+    reg: DCTRL
+    field: DTDIR
+    access: rw
+  data_enable:
+    reg: DCTRL
+    field: DTEN
+    access: rw
+  data_end:
+    reg: STA
+    field: DATAEND
+    access: ro
+  data_block_end:
+    reg: STA
+    field: DBCKEND
+    access: ro
+  data_timeout:
+    reg: STA
+    field: DTIMEOUT
+    access: ro
+  flag_ack:
+    reg: ICR
+    field:
+    - CCRCFAILC
+    - DCRCFAILC
+    - CTIMEOUTC
+    - DTIMEOUTC
+    - TXUNDERRC
+    - RXOVERRC
+    - CMDRENDC
+    - CMDSENTC
+    - DATAENDC
+    - STBITERRC
+    - DBCKENDC
+    - SDIOITC
+    - CEATAENDC
+    access: w1c
+  irq_enables:
+    reg: MASK
+    field:
+    - CCRCFAILIE
+    - DCRCFAILIE
+    - CTIMEOUTIE
+    - DTIMEOUTIE
+    - TXUNDERRIE
+    - RXOVERRIE
+    - CMDRENDIE
+    - CMDSENTIE
+    - DATAENDIE
+    - STBITERRIE
+    - DBCKENDIE
+    - CMDACTIE
+    - TXACTIE
+    - RXACTIE
+    - TXFIFOHEIE
+    - RXFIFOHFIE
+    - TXFIFOFIE
+    - RXFIFOFIE
+    - TXFIFOEIE
+    - RXFIFOEIE
+    - TXDAVLIE
+    - RXDAVLIE
+    - SDIOITIE
+    - CEATAENDIE
+    access: rw
+  irq:
+    devicetree: interrupts
+  fifo_data:
+    reg: FIFO
+    access: fifo
+  dma_request:
+    devicetree: dmas
+unmodelled:
+- reg: CLKCR
+  fields:
+  - PWRSAV
+  - BYPASS
+  - NEGEDGE
+  - HWFC_EN
+  answer: stored
+- reg:
+  - DTIMER
+  answer: stored

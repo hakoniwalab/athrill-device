@@ -24,7 +24,7 @@ jobs:
         if: always()
         run: |
           specs=""
-          for f in spec/*.yaml; do specs="$specs --spec $f"; done
+          for f in spec/*.yaml; do case "$f" in spec/svd-*) continue;; esac; specs="$specs --spec $f"; done
           python3 tools/trace_report.py $specs \
             --trace-map build/traceability/trace-map.json \
             --junit ${{ matrix.build-type }}=build/ctest.xml \
@@ -50,3 +50,7 @@ jobs:
         run: python3 tools/gen_commit.py --check
       - name: Committed spec documents match the YAML
         run: python3 tools/spec_doc.py --check
+      - name: Pinned ST SVD files
+        run: sh tools/fetch_svd.sh build/svd
+      - name: Bindings match SVD + semantics + SVD patches
+        run: python3 tools/bindings_gen.py --check --svd-dir build/svd

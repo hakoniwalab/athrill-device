@@ -1,0 +1,55 @@
+ip: st-stm32-gpio
+compatible:
+- st,stm32-gpio
+manual: RM0410 Rev 5 section 6.4; RM0433 Rev 8 section 11.4 (GPIO registers). Same layout on F7 and H7.
+model: gpio-exti
+model_version: 1.0.0
+features:
+- base
+svd:
+  st,stm32f7: GPIOC
+  st,stm32h7: GPIOC
+notes:
+- note_reset: Reset values of MODER/OSPEEDR/PUPDR differ per port (A/B debug pins); the model uses the per-port values of
+    the existing code until the SVD map (#31).
+- field_names: F7 SVD names fields MODERn/ODRn/IDRn, H7 SVD MODEn/ODn/IDn (RM0433 naming); bound per SoC.
+bindings:
+  pin_mode:
+    reg: MODER
+    field:
+      st,stm32f7: MODER{n}
+      st,stm32h7: MODE{n}
+    access: rw
+    note: 00 input, 01 output, 10 alternate, 11 analog
+  output_level:
+    reg: ODR
+    field:
+      st,stm32f7: ODR{n}
+      st,stm32h7: OD{n}
+    access: rw
+  set_reset:
+    reg: BSRR
+    field:
+      st,stm32f7:
+      - BS{n}
+      - BR{n}
+      st,stm32h7:
+      - BS{n}
+      - BR{n}
+    access: wo
+  input_level:
+    reg: IDR
+    field:
+      st,stm32f7: IDR{n}
+      st,stm32h7: ID{n}
+    access: ro
+  pin_config:
+    reg:
+    - OTYPER
+    - OSPEEDR
+    - PUPDR
+    - AFRL
+    - AFRH
+    - LCKR
+    access: rw
+    note: stored only

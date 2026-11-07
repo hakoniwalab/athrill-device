@@ -95,16 +95,49 @@ def map_doc(path: Path) -> str:
         lines.append(f"\n## Registers\n\nSource: {cell(d.get('registers_source', ''))}\n")
         lines.append("| Register | Offset | Reset | Fields (lsb:width) |")
         lines.append("|---|---|---|---|")
-        for name, r in regs.items():
-            fields = ", ".join(f"{f}({v['lsb']}:{v['width']})" for f, v in r.get("fields", {}).items())
-            lines.append(f"| {name} | {r['offset']} | {r['reset']} | {fields} |")
+        blocks = [("", regs)] + [(f"{k}[{b['count']}] +{b['stride']}: ", b["registers"])
+                                 for k, b in list(regs.items()) + [(k, d[k]) for k in ("stream",) if k in d]
+                                 if isinstance(b, dict) and "registers" in b]
+        for prefix, rr in blocks:
+            for name, r in rr.items():
+                if not (isinstance(r, dict) and "offset" in r):
+                    continue
+                fields = ", ".join(f"{f}({v['lsb']}:{v['width']})" for f, v in r.get("fields", {}).items())
+                lines.append(f"| {prefix}{name} | {r['offset']} | {r['reset']} | {fields} |")
+    return "\n".join(lines) + "\n"
+
+
+def gen_map_doc(path: Path) -> str:
+    d = yaml.safe_load(path.read_text(encoding="utf-8"))
+    src = d["svd_source"]
+    lines = [NOTE.format(src=path.relative_to(ROOT).as_posix()),
+             f"# Bindings: {d['ip']} on {d['soc']} → {d['model']} {d['model_version']}\n",
+             f"SVD: {src['file']} @ {src['revision'][:10]} ({src['peripheral']}); patches applied: "
+             f"{', '.join(src['patches_applied']) or 'none'}  \nFeatures: {', '.join(d['features'])}\n",
+             "## Bindings\n", "| Term | Register | Offset | Field | Bits | Access |", "|---|---|---|---|---|---|"]
+    for term, b in d["bindings"].items():
+        if "registers" not in b:
+            kind = next((k for k in ("devicetree", "derived", "sequence", "not_applicable") if k in b), "unbound")
+            lines.append(f"| {term} | {kind}: {cell(b[kind])} | | | | |")
+            continue
+        for r in b["registers"]:
+            fields = r.get("fields") or [{"field": "(whole)", "lsb": 0, "width": r["size"]}]
+            for f in fields:
+                lines.append(f"| {term} | {r['reg']} | {r['offset']} | {f['field']} | "
+                             f"{f['lsb'] + f['width'] - 1}:{f['lsb']} | {b.get('access', '')} |")
+    lines.append("\n## Registers\n")
+    lines.append("| Register | Offset | Reset | Fields (bound in bold) |")
+    lines.append("|---|---|---|---|")
+    for name, r in d["registers"].items():
+        fs = ", ".join((f"**{f}**" if v["bound"] else f) + f"({v['lsb']}:{v['width']})" for f, v in r["fields"].items())
+        lines.append(f"| {name} | {r['offset']} | {r['reset']} | {fs} |")
     return "\n".join(lines) + "\n"
 
 
 def generate() -> dict[str, str]:
     files: dict[str, str] = {}
     index = [NOTE.format(src="spec/"), "# Specifications\n"]
-    items = sorted((ROOT / "spec").glob("*.yaml"))
+    items = sorted(p for p in (ROOT / "spec").glob("*.yaml") if not p.name.startswith("svd-"))
     if items:
         index.append("## Specification items (Devicetree traceability)\n")
         for p in items:
@@ -118,7 +151,14 @@ def generate() -> dict[str, str]:
             name = "model-" + "-".join(p.relative_to(ROOT / "spec" / "models").with_suffix("").parts) + ".md"
             files[name] = model_doc(p)
             index.append(f"- [{p.stem}]({name})")
-    maps = sorted((ROOT / "spec" / "maps").glob("*.yaml")) if (ROOT / "spec" / "maps").exists() else []
+    maps = []
+    gen_maps = sorted((ROOT / "spec" / "bindings").glob("*_gen.yaml")) if (ROOT / "spec" / "bindings").exists() else []
+    if gen_maps:
+        index.append("\n## Bindings (generated from SVD + semantics + SVD patches)\n")
+        for p in gen_maps:
+            name = f"bindings-{p.stem}.md"
+            files[name] = gen_map_doc(p)
+            index.append(f"- [{p.stem}]({name})")
     if maps:
         index.append("\n## Maps\n")
         for p in maps:
