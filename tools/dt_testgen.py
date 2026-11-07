@@ -172,6 +172,7 @@ MMIO_MODEL_COMPATIBLES = {
     "st,stm32-gpio", "st,stm32-exti", "st,stm32f7-syscfg",
     "st,stm32h7-syscfg", "st,stm32-timers", "st,stm32-dmamux",
     "st,stm32-i2c-v2", "st,stm32-spi-fifo", "st,stm32-spi", "st,stm32h7-spi",
+    "st,stm32-usart", "st,stm32-uart",
 }
 # I2C controllers that are athrill-device models: their children are bound to
 # the controller, not to the target, so the harness finds them by driving the
@@ -2019,6 +2020,23 @@ static sint32 native_spi_command_read(const Binding *binding, uint8 command,
 \treturn native_spi_select(binding, FALSE);
 }}
 
+/* Bindings of the native UART controllers' children, from DEVICE_UART_CHILD
+ * (the runtime binds them to the controller, not to the target). */
+static int native_uart_bind(void)
+{{
+\tconst char *at = captured_stderr;
+\twhile (at != NULL && (at = strstr(at, "DEVICE_UART_CHILD controller=")) != NULL) {{
+\t\tUartBinding *binding;
+\t\tif (target.uart_binding_count >= MAX_UART_BINDINGS) return -1;
+\t\tbinding = &target.uart_bindings[target.uart_binding_count];
+\t\tif (sscanf(at, "DEVICE_UART_CHILD controller=%191s child=%191s",
+\t\t    binding->controller, binding->peripheral) != 2) return -1;
+\t\ttarget.uart_binding_count++;
+\t\tat += 1;
+\t}}
+\treturn 0;
+}}
+
 static int build_board(void)
 {{
 \tCapture capture = {{0}};
@@ -2028,6 +2046,7 @@ static int build_board(void)
 \tfree(capture.out); captured_stderr = capture.err;
 \tif (result == 0 && native_i2c_bind() != 0) result = -1;
 \tif (result == 0 && native_spi_bind() != 0) result = -1;
+\tif (result == 0 && native_uart_bind() != 0) result = -1;
 \treturn result;
 }}
 

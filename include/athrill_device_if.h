@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       12U
+#define ATHRILL_DEVICE_ABI_MINOR       13U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -374,6 +374,18 @@ typedef struct AthrillDeviceResourceOps {
 	sint32 (*publish_gpio_outputs)(void *context,
 	                               const AthrillDeviceGpioLine *lines,
 	                               uint32 count, uint32 levels);
+	/* Added in ABI 1.13; UART lines between athrill-device models. For a
+	 * UART controller model: its index-th child (get_uart_peripheral) and
+	 * the receiver of the bytes its children send (uart_listen). For a
+	 * child: send a byte to its controller (uart_send; a controller that is
+	 * not a model gets it through the target's uart_send_from_node). */
+	sint32 (*get_uart_peripheral)(void *context, uint32 index,
+	                              const AthrillDeviceUartPeripheralOps **ops,
+	                              void **instance);
+	sint32 (*uart_listen)(void *context,
+	                      sint32 (*receive)(void *instance, uint8 data),
+	                      void *instance);
+	sint32 (*uart_send)(void *context, uint8 data);
 } AthrillDeviceResourceOps;
 
 typedef struct {

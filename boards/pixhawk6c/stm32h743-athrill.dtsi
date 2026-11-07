@@ -37,3 +37,17 @@
 &timers15 { athrill,stm32h7-timer; };
 &timers16 { athrill,stm32h7-timer; };
 &timers17 { athrill,stm32h7-timer; };
+
+/*
+ * The USART/UART compatibles are shared with F7 too, but every H743 USART
+ * runs from D2PCLK (120 MHz, CPU / 4).  Mark the instances so the model takes
+ * the H7 kernel clock divider instead of the F7 one.
+ */
+&usart1 { athrill,stm32h7-uart; };
+&usart2 { athrill,stm32h7-uart; };
+&usart3 { athrill,stm32h7-uart; };
+&uart4 { athrill,stm32h7-uart; };
+&uart5 { athrill,stm32h7-uart; };
+&usart6 { athrill,stm32h7-uart; };
+&uart7 { athrill,stm32h7-uart; };
+&uart8 { athrill,stm32h7-uart; };

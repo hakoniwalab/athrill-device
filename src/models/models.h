@@ -20,6 +20,7 @@ extern const AthrillDeviceModelOps athrill_device_stm32_dmamux_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_i2c_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_spi_model;
 extern const AthrillDeviceModelOps athrill_device_stm32h7_spi_model;
+extern const AthrillDeviceModelOps athrill_device_stm32_uart_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_tim_model;
 extern const AthrillDeviceModelOps athrill_device_pwm_actuator_model;
 

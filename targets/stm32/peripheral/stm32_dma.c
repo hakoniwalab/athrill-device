@@ -4,6 +4,7 @@
  */
 #include "stm32_dma.h"
 #include "athrill_device_spi_dma.h"
+#include "athrill_device_stm32_bridge.h"
 #include "athrill_device_host.h"
 #include "athrill_protocol_dma.h"
 
@@ -565,6 +566,10 @@ void stm32_dma_reset(void)
 	uint32 c;
 	uint32 s;
 	uint32 r;
+
+	/* TO BE REMOVED (step 4-5): the UART models reach these streams through
+	 * athrill_device_stm32_bridge.h. */
+	athrill_device_stm32_dma_bridge(stm32_dma_peripheral_tx, stm32_dma_peripheral_rx);
 
 	for (c = 0U; c < 2U; c++) {
 		dmas[c].isr[0] = 0U;
