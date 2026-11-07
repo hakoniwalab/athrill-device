@@ -25,6 +25,7 @@ class Node:
     name: str
     parent: "Node | None"
     properties: dict[str, bytes] = dataclasses.field(default_factory=dict)
+    property_offsets: dict[str, int] = dataclasses.field(default_factory=dict)
     children: list["Node"] = dataclasses.field(default_factory=list)
 
     @property
@@ -82,6 +83,29 @@ class UartController:
     dma_names: list[str]
 
 
+@dataclasses.dataclass(frozen=True)
+class MmioWindow:
+    address: int
+    size: int
+
+
+@dataclasses.dataclass(frozen=True)
+class Interrupt:
+    provider_path: str
+    cells: tuple[int, ...]
+
+
+# These native models own MMIO in the public architecture.  Transitional
+# target adapters are instances, but their windows remain target-owned.
+MMIO_MODEL_COMPATIBLES = {
+    "st,stm32-gpio", "st,stm32-exti", "st,stm32-timers",
+}
+IRQ_RESOLVING_COMPATIBLES = {"st,stm32-exti", "st,stm32-timers"}
+TARGET_ARCHITECTURAL_COMPATIBLES = {
+    "arm,armv7m-systick", "arm,v7m-nvic", "arm,cortex-m7", "arm,armv7m-mpu",
+}
+
+
 def align4(value: int) -> int:
     return (value + 3) & ~3
 
@@ -125,8 +149,10 @@ class Fdt:
             raise ValueError(f"{path}: unsupported FDT header")
         if struct_off + struct_size > total or strings_off + strings_size > total:
             raise ValueError(f"{path}: FDT block outside total size")
+        self.data = data
         self._strings = data[strings_off:strings_off + strings_size]
-        self.root = self._parse_structure(data[struct_off:struct_off + struct_size])
+        self.root = self._parse_structure(
+            data[struct_off:struct_off + struct_size], struct_off)
         self.nodes = list(self._walk(self.root))
         self.phandles: dict[int, Node] = {}
         for node in self.nodes:
@@ -137,7 +163,7 @@ class Fdt:
                         raise ValueError(f"{path}: invalid or duplicate {prop} at {node.path}")
                     self.phandles[values[0]] = node
 
-    def _parse_structure(self, block: bytes) -> Node:
+    def _parse_structure(self, block: bytes, block_offset: int) -> Node:
         offset = 0
         stack: list[Node] = []
         root: Node | None = None
@@ -173,6 +199,7 @@ class Fdt:
                 name = self._string_at(name_offset)
                 if name in stack[-1].properties:
                     raise ValueError(f"duplicate property {name} at {stack[-1].path}")
+                stack[-1].property_offsets[name] = block_offset + offset
                 stack[-1].properties[name] = block[offset:end]
                 offset = align4(end)
             elif token == FDT_NOP:
@@ -212,6 +239,119 @@ def enabled(node: Node) -> bool:
 
 def compatible(node: Node) -> list[str]:
     return strings(node.properties.get("compatible"))
+
+
+def is_model_instance(node: Node) -> bool:
+    values = compatible(node)
+    return enabled(node) and bool(values) and not TARGET_ARCHITECTURAL_COMPATIBLES.intersection(values)
+
+
+def integer(values: list[int]) -> int:
+    if len(values) > 2:
+        raise ValueError("Devicetree integer has more than two cells")
+    result = 0
+    for value in values:
+        result = (result << 32) | value
+    return result
+
+
+def inherited_cell_count(node: Node | None, name: str, default: int) -> int:
+    current = node
+    while current is not None:
+        if name in current.properties:
+            value = cells(current.properties[name])
+            if len(value) != 1 or value[0] > 2:
+                raise ValueError(f"{current.path}: invalid {name}")
+            return value[0]
+        current = current.parent
+    return default
+
+
+def translated_address(node: Node, address: int, size: int) -> int:
+    bus = node.parent
+    while bus is not None and bus.parent is not None:
+        raw = bus.properties.get("ranges")
+        if raw:
+            values = cells(raw)
+            child_ac = inherited_cell_count(bus, "#address-cells", 2)
+            parent_ac = inherited_cell_count(bus.parent, "#address-cells", 2)
+            size_cells = inherited_cell_count(bus, "#size-cells", 1)
+            width = child_ac + parent_ac + size_cells
+            if width == 0 or len(values) % width:
+                raise ValueError(f"{bus.path}: invalid ranges")
+            for at in range(0, len(values), width):
+                child = integer(values[at:at + child_ac])
+                parent = integer(values[at + child_ac:at + child_ac + parent_ac])
+                extent = integer(values[at + child_ac + parent_ac:at + width])
+                if address >= child and address - child <= extent and size <= extent - (address - child):
+                    address = parent + address - child
+                    break
+            else:
+                raise ValueError(f"{node.path}: reg is outside parent ranges")
+        bus = bus.parent
+    return address
+
+
+def reg_windows(node: Node) -> list[MmioWindow]:
+    if node.parent is None or "reg" not in node.properties:
+        return []
+    address_cells = inherited_cell_count(node.parent, "#address-cells", 2)
+    size_cells = inherited_cell_count(node.parent, "#size-cells", 1)
+    width = address_cells + size_cells
+    values = cells(node.properties["reg"])
+    if size_cells == 0 or width == 0 or len(values) % width:
+        return []
+    result = []
+    for at in range(0, len(values), width):
+        address = integer(values[at:at + address_cells])
+        size = integer(values[at + address_cells:at + width])
+        if size == 0:
+            raise ValueError(f"{node.path}: zero-sized reg")
+        result.append(MmioWindow(translated_address(node, address, size), size))
+    return result
+
+
+def node_interrupts(fdt: Fdt, node: Node) -> list[Interrupt]:
+    raw = node.properties.get("interrupts")
+    if raw is None:
+        return []
+    current: Node | None = node
+    parent_handle: int | None = None
+    while current is not None:
+        if "interrupt-parent" in current.properties:
+            handles = cells(current.properties["interrupt-parent"])
+            if len(handles) != 1:
+                raise ValueError(f"{current.path}: invalid interrupt-parent")
+            parent_handle = handles[0]
+            break
+        current = current.parent
+    provider = fdt.phandles.get(parent_handle or 0)
+    if provider is None:
+        raise ValueError(f"{node.path}: missing interrupt parent")
+    count_values = cells(provider.properties.get("#interrupt-cells"))
+    if len(count_values) != 1 or count_values[0] == 0:
+        raise ValueError(f"{provider.path}: invalid #interrupt-cells")
+    width = count_values[0]
+    values = cells(raw)
+    if len(values) % width:
+        raise ValueError(f"{node.path}: invalid interrupts")
+    return [Interrupt(provider.path, tuple(values[at:at + width]))
+            for at in range(0, len(values), width)]
+
+
+def negative_dtb(fdt: Fdt, output: Path) -> Node:
+    candidates = [node for node in fdt.nodes
+                  if enabled(node) and node.parent is not None and compatible(node)]
+    if not candidates:
+        raise ValueError("board has no enabled non-root compatible to mutate")
+    node = candidates[0]
+    raw = node.properties["compatible"]
+    mutated = bytes(ord("x") if value else 0 for value in raw)
+    data = bytearray(fdt.data)
+    at = node.property_offsets["compatible"]
+    data[at:at + len(mutated)] = mutated
+    output.write_bytes(data)
+    return node
 
 
 def is_spi_controller(node: Node) -> bool:
@@ -329,7 +469,7 @@ def load_test_specs(paths: list[Path]) -> dict[str, str]:
             if match:
                 applies_to = match.group(1)
                 continue
-            match = re.match(r"^    - id:\s*(ADV-[A-Z0-9-]+-\d+\.T\d+)\s*$", line)
+            match = re.match(r"^\s+- id:\s*(ADV-[A-Z0-9-]+-\d+\.T\d+)\s*$", line)
             if match:
                 if applies_to is None:
                     raise ValueError(f"{path}: test before applies_to")
@@ -345,6 +485,11 @@ def load_test_specs(paths: list[Path]) -> dict[str, str]:
         "ADV-UART-001.T1": "uart-child",
         "ADV-UART-002.T1": "uart-controller",
         "ADV-UART-006.T1": "uart-controller-with-dmas",
+        "ADV-DT-001.T1": "dt-negative",
+        "ADV-DT-002.T1": "dt-node",
+        "ADV-DT-003.T1": "dt-mmio-node",
+        "ADV-DT-004.T1": "dt-irq-node",
+        "ADV-DT-005.T1": "dt-board",
     }
     for test_id, target in required.items():
         if result.get(test_id) != target:
@@ -510,10 +655,87 @@ def generated_uart_cases(board: str, controllers: list[UartController]) -> list[
     return result
 
 
+def generated_dt_cases(board: str, fdt: Fdt, negative_path: Path,
+                       negative_node: Node) -> list[dict[str, object]]:
+    result: list[dict[str, object]] = []
+    instances = [node for node in fdt.nodes if is_model_instance(node)]
+    expected_windows = [window for node in fdt.nodes
+                        if enabled(node) and MMIO_MODEL_COMPATIBLES.intersection(compatible(node))
+                        for window in reg_windows(node)]
+    result.append({
+        "name": case_name(board, negative_node.path, "ADV-DT-001.T1"),
+        "test_spec_id": "ADV-DT-001.T1", "item_id": "ADV-DT-001",
+        "node_path": negative_node.path,
+        "derived_properties": {"negative_dtb": str(negative_path),
+                               "mutated_property": "compatible"},
+        "kind": "dt-negative", "area": "dt", "negative_path": negative_path,
+        "negative_node": negative_node,
+    })
+    result.append({
+        "name": case_name(board, "/", "ADV-DT-002.T1"),
+        "test_spec_id": "ADV-DT-002.T1", "item_id": "ADV-DT-002",
+        "node_path": "/",
+        "derived_properties": {"enabled_compatible_nodes": [node.path for node in instances]},
+        "kind": "dt-inventory", "area": "dt", "instances": instances,
+    })
+    for node in fdt.nodes:
+        if not enabled(node) or not MMIO_MODEL_COMPATIBLES.intersection(compatible(node)):
+            continue
+        windows = reg_windows(node)
+        if not windows:
+            continue
+        result.append({
+            "name": case_name(board, node.path, "ADV-DT-003.T1"),
+            "test_spec_id": "ADV-DT-003.T1", "item_id": "ADV-DT-003",
+            "node_path": node.path,
+            "derived_properties": {"reg": [dataclasses.asdict(value) for value in windows]},
+            "kind": "dt-mmio", "area": "dt", "node": node,
+            "windows": windows, "all_windows": expected_windows,
+            "will_fail": True,
+            "known_defect": "EXTI registers an extra SYSCFG window absent from its reg property",
+        })
+    for node in fdt.nodes:
+        if not is_model_instance(node):
+            continue
+        interrupts = node_interrupts(fdt, node)
+        if not interrupts:
+            continue
+        result.append({
+            "name": case_name(board, node.path, "ADV-DT-004.T1"),
+            "test_spec_id": "ADV-DT-004.T1", "item_id": "ADV-DT-004",
+            "node_path": node.path,
+            "derived_properties": {"interrupts": [dataclasses.asdict(value) for value in interrupts]},
+            "kind": "dt-irq", "area": "dt", "node": node,
+            "interrupts": interrupts,
+            "will_fail": not IRQ_RESOLVING_COMPATIBLES.intersection(compatible(node)),
+            "known_defect": (None if IRQ_RESOLVING_COMPATIBLES.intersection(compatible(node)) else
+                             "instantiated adapter does not resolve its interrupts entries"),
+        })
+    result.append({
+        "name": case_name(board, "/", "ADV-DT-005.T1"),
+        "test_spec_id": "ADV-DT-005.T1", "item_id": "ADV-DT-005",
+        "node_path": "/", "derived_properties": {"dtb_size": len(fdt.data)},
+        "kind": "dt-determinism", "area": "dt",
+    })
+    return result
+
+
+def c_windows(values: list[MmioWindow]) -> str:
+    return ", ".join(f"{{{value.address}ULL, {value.size}ULL}}" for value in values)
+
+
+def c_interrupt(value: Interrupt) -> tuple[str, int]:
+    wanted = ", ".join(f"{cell}U" for cell in value.cells) or "0U"
+    return wanted, len(value.cells)
+
+
 def render_case(case: dict[str, object]) -> str:
     name = str(case["name"])
-    controller = case["controller"]
-    lines = [f"static int case_{c_identifier(name)}(void)", "{", "\tuint32 index;", "\tCHECK(build_board() == 0);"]
+    controller = case.get("controller")
+    prebuild = case["kind"] not in ("dt-negative", "dt-determinism")
+    lines = [f"static int case_{c_identifier(name)}(void)", "{", "\tuint32 index;"]
+    if prebuild:
+        lines.append("\tCHECK(build_board() == 0);")
     if case["kind"] == "child":
         assert isinstance(controller, SpiController)
         child = case["child"]
@@ -587,6 +809,55 @@ def render_case(case: dict[str, object]) -> str:
                 f"\t  CHECK(find_dma({c_string(dma.provider_path)}, wanted, {len(dma.cells)}U,",
                 f"\t                 {index}U, {c_string(dma_name_at(controller.dma_names, index))})); }}",
             ])
+    elif case["kind"] == "dt-negative":
+        node = case["negative_node"]
+        assert isinstance(node, Node)
+        lines.extend([
+            "\tCapture output = {0};",
+            f"\tCHECK(capture_build({c_string(str(case['negative_path']))}, &output) != 0);",
+            f"\tCHECK(strstr(output.out, {c_string('node=' + node.path)}) != NULL ||",
+            f"\t      strstr(output.err, {c_string('node=' + node.path)}) != NULL);",
+            "\tfree_capture(&output);",
+        ])
+    elif case["kind"] == "dt-inventory":
+        instances = case["instances"]
+        assert isinstance(instances, list)
+        lines.append(f"\tCHECK(count_lines(captured_stderr, \"DEVICE_MODEL path=\") == {len(instances)}U);")
+        for node in instances:
+            assert isinstance(node, Node)
+            lines.append(
+                f"\tCHECK(count_model_path(captured_stderr, {c_string(node.path)}) == 1U);"
+            )
+    elif case["kind"] == "dt-mmio":
+        all_windows = case["all_windows"]
+        assert isinstance(all_windows, list)
+        lines.extend([
+            f"\t{{ static const ExpectedWindow expected[] = {{{c_windows(all_windows)}}};",
+            "\t  CHECK(mmio_set_matches(expected, sizeof(expected) / sizeof(expected[0])));",
+            "\t  CHECK(mmio_pairwise_disjoint()); }",
+        ])
+    elif case["kind"] == "dt-irq":
+        interrupts = case["interrupts"]
+        assert isinstance(interrupts, list)
+        for interrupt in interrupts:
+            assert isinstance(interrupt, Interrupt)
+            wanted, count = c_interrupt(interrupt)
+            lines.extend([
+                f"\t{{ static const uint32 wanted[] = {{{wanted}}};",
+                f"\t  CHECK(find_irq({c_string(interrupt.provider_path)}, wanted, {count}U)); }}",
+            ])
+    elif case["kind"] == "dt-determinism":
+        lines.extend([
+            "\tCapture first = {0}, second = {0};",
+            "\tCHECK(capture_build(board_dtb_path, &first) == 0);",
+            "\tdestroy_board();",
+            "\tCHECK(capture_build(board_dtb_path, &second) == 0);",
+            "\tCHECK(strcmp(first.out, second.out) == 0);",
+            "\tCHECK(strcmp(first.err, second.err) == 0);",
+            "\tCHECK(strstr(first.out, \"DEVICE_TREE sha256=\") != NULL);",
+            "\tCHECK(strstr(first.err, \"DEVICE_MODEL path=\") != NULL);",
+            "\tfree_capture(&first); free_capture(&second);",
+        ])
     else:
         raise ValueError(f"unknown generated case kind {case['kind']}")
     lines.extend(["\tdestroy_board();", "\treturn 0;", "}"])
@@ -615,6 +886,7 @@ def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #define CHECK(condition) do {{ if (!(condition)) {{ \\
 \tfprintf(stderr, "%s:%d: check failed: %s\\n", __FILE__, __LINE__, #condition); \\
@@ -623,6 +895,8 @@ def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
 #define MAX_I2C_BINDINGS 32U
 #define MAX_UART_BINDINGS 32U
 #define MAX_DMAS 32U
+#define MAX_MMIO 64U
+#define MAX_IRQS 128U
 
 typedef struct {{
 \tchar controller[192];
@@ -651,6 +925,15 @@ typedef struct {{
 \tchar name[192];
 }} DmaResolution;
 
+typedef struct {{ uint64 address; uint64 size; }} ExpectedWindow;
+typedef struct {{ uint64 address; uint64 size; }} MmioResolution;
+typedef struct {{
+\tchar provider[192];
+\tuint32 cell_count;
+\tuint32 cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
+}} IrqResolution;
+typedef struct {{ char *out; char *err; }} Capture;
+
 typedef struct {{
 \tBinding bindings[MAX_BINDINGS];
 \tuint32 binding_count;
@@ -660,12 +943,18 @@ typedef struct {{
 \tuint32 uart_binding_count;
 \tDmaResolution dmas[MAX_DMAS];
 \tuint32 dma_count;
+\tMmioResolution mmio[MAX_MMIO];
+\tuint32 mmio_count;
+\tIrqResolution irqs[MAX_IRQS];
+\tuint32 irq_count;
 \tuint64 next_handle;
 }} TestTarget;
 
 static TestTarget target;
 static AthrillDeviceRuntime *runtime;
 static const char *plugin_path;
+static const char *const board_dtb_path = {c_string(str(dtb.resolve()))};
+static char *captured_stderr;
 
 static void copy_text(char *to, size_t size, const char *from)
 {{
@@ -677,7 +966,11 @@ static sint32 mmio_register(void *context, uint64 address, uint64 size,
 \tconst AthrillDeviceMmioOps *ops, void *instance, AthrillDeviceMmioToken *token)
 {{
 \tTestTarget *value = context;
-\t(void)address; (void)size; (void)ops; (void)instance;
+\t(void)ops; (void)instance;
+\tif (value->mmio_count >= MAX_MMIO) return -1;
+\tvalue->mmio[value->mmio_count].address = address;
+\tvalue->mmio[value->mmio_count].size = size;
+\tvalue->mmio_count++;
 \ttoken->value = ++value->next_handle;
 \treturn 0;
 }}
@@ -687,7 +980,18 @@ static void mmio_unregister(void *context, AthrillDeviceMmioToken token)
 
 static sint32 irq_resolve(void *context, const AthrillDeviceSpecifier *spec,
 \tAthrillDeviceIrqLine *line)
-{{ (void)spec; line->value = ++((TestTarget *)context)->next_handle; return 0; }}
+{{
+\tTestTarget *value = context;
+\tIrqResolution *resolution;
+\tuint32 index;
+\tif (value->irq_count >= MAX_IRQS) return -1;
+\tresolution = &value->irqs[value->irq_count++];
+\tcopy_text(resolution->provider, sizeof(resolution->provider), spec->provider_path);
+\tresolution->cell_count = spec->cell_count;
+\tfor (index = 0U; index < spec->cell_count; index++) resolution->cells[index] = spec->cells[index];
+\tline->value = ++value->next_handle;
+\treturn 0;
+}}
 static sint32 irq_set(void *context, AthrillDeviceIrqLine line, std_bool asserted)
 {{ (void)context; (void)line; (void)asserted; return 0; }}
 static std_bool irq_is_active(void *context, AthrillDeviceIrqLine line)
@@ -843,17 +1147,112 @@ static void destroy_board(void)
 \truntime = NULL;
 }}
 
-static int build_board(void)
+static int raw_build_board(const char *dtb_path)
 {{
 \tAthrillDeviceBuildOptions options;
 \tmemset(&target, 0, sizeof(target));
 \tmemset(&options, 0, sizeof(options));
-\toptions.dtb_path = {c_string(str(dtb.resolve()))};
+\toptions.dtb_path = dtb_path;
 \toptions.target_compatibles = target_compatibles;
 \toptions.target_compatible_count = sizeof(target_compatibles) / sizeof(target_compatibles[0]);
 \toptions.maximum_dtb_size = 16U * 1024U * 1024U;
 {plugin_code}
 \treturn athrill_device_build(&options, &target_ops, &target, &runtime);
+}}
+
+static char *read_capture(FILE *stream)
+{{
+\tlong length;
+\tchar *text;
+\tif (fseek(stream, 0L, SEEK_END) != 0 || (length = ftell(stream)) < 0 ||
+\t    fseek(stream, 0L, SEEK_SET) != 0) return NULL;
+\ttext = malloc((size_t)length + 1U);
+\tif (text == NULL) return NULL;
+\tif (length != 0 && fread(text, 1U, (size_t)length, stream) != (size_t)length) {{
+\t\tfree(text); return NULL;
+\t}}
+\ttext[length] = 0;
+\treturn text;
+}}
+
+static int capture_build(const char *dtb_path, Capture *capture)
+{{
+\tFILE *out = tmpfile(), *err = tmpfile();
+\tint saved_out, saved_err, result;
+\tif (out == NULL || err == NULL) return -1;
+\tfflush(NULL);
+\tsaved_out = dup(STDOUT_FILENO); saved_err = dup(STDERR_FILENO);
+\tif (saved_out < 0 || saved_err < 0 || dup2(fileno(out), STDOUT_FILENO) < 0 ||
+\t    dup2(fileno(err), STDERR_FILENO) < 0) return -1;
+\tresult = raw_build_board(dtb_path);
+\tfflush(NULL);
+\t(void)dup2(saved_out, STDOUT_FILENO); (void)dup2(saved_err, STDERR_FILENO);
+\t(void)close(saved_out); (void)close(saved_err);
+\tcapture->out = read_capture(out); capture->err = read_capture(err);
+\tfclose(out); fclose(err);
+\treturn capture->out != NULL && capture->err != NULL ? result : -1;
+}}
+
+static void free_capture(Capture *capture)
+{{ free(capture->out); free(capture->err); capture->out = NULL; capture->err = NULL; }}
+
+static int build_board(void)
+{{
+\tCapture capture = {{0}};
+\tint result;
+\tfree(captured_stderr); captured_stderr = NULL;
+\tresult = capture_build(board_dtb_path, &capture);
+\tfree(capture.out); captured_stderr = capture.err;
+\treturn result;
+}}
+
+static uint32 count_lines(const char *text, const char *prefix)
+{{
+\tuint32 count = 0U;
+\tconst char *at = text;
+\twhile (at != NULL && (at = strstr(at, prefix)) != NULL) {{ count++; at += strlen(prefix); }}
+\treturn count;
+}}
+
+static uint32 count_model_path(const char *text, const char *path)
+{{
+\tchar needle[512];
+\t(void)snprintf(needle, sizeof(needle), "DEVICE_MODEL path=%s compatible=", path);
+\treturn count_lines(text, needle);
+}}
+
+static int mmio_set_matches(const ExpectedWindow *expected, uint32 count)
+{{
+\tuint32 i, j, found;
+\tif (target.mmio_count != count) return 0;
+\tfor (i = 0U; i < count; i++) {{
+\t\tfound = 0U;
+\t\tfor (j = 0U; j < target.mmio_count; j++)
+\t\t\tif (target.mmio[j].address == expected[i].address &&
+\t\t\t    target.mmio[j].size == expected[i].size) found++;
+\t\tif (found != 1U) return 0;
+\t}}
+\treturn 1;
+}}
+
+static int mmio_pairwise_disjoint(void)
+{{
+\tuint32 i, j;
+\tfor (i = 0U; i < target.mmio_count; i++)
+\t\tfor (j = 0U; j < i; j++)
+\t\t\tif (target.mmio[i].address < target.mmio[j].address + target.mmio[j].size &&
+\t\t\t    target.mmio[j].address < target.mmio[i].address + target.mmio[i].size) return 0;
+\treturn 1;
+}}
+
+static int find_irq(const char *provider, const uint32 *wanted, uint32 count)
+{{
+\tuint32 index;
+\tfor (index = 0U; index < target.irq_count; index++)
+\t\tif (target.irqs[index].cell_count == count &&
+\t\t    strcmp(target.irqs[index].provider, provider) == 0 &&
+\t\t    memcmp(target.irqs[index].cells, wanted, count * sizeof(*wanted)) == 0) return 1;
+\treturn 0;
 }}
 
 static uint32 count_bindings(const char *controller)
@@ -995,14 +1394,27 @@ def main() -> int:
         uart_controllers = find_uart(fdt)
         relative = dtb.as_posix().split("/boards/", 1)[-1]
         board = relative.replace("/", "__").removesuffix(".dtb")
+        negative_path = args.out / f"{c_identifier(board)}__unknown-compatible.dtb"
+        negative_node = negative_dtb(fdt, negative_path)
         cases = (generated_spi_cases(board, spi_controllers) +
                  generated_i2c_cases(board, i2c_controllers) +
-                 generated_uart_cases(board, uart_controllers))
+                 generated_uart_cases(board, uart_controllers) +
+                 generated_dt_cases(board, fdt, negative_path, negative_node))
+        dt_instances = [node for node in fdt.nodes if is_model_instance(node)]
+        dt_mmio_nodes = [node for node in fdt.nodes
+                         if enabled(node) and MMIO_MODEL_COMPATIBLES.intersection(compatible(node))
+                         and reg_windows(node)]
+        dt_irq_nodes = [node for node in fdt.nodes if is_model_instance(node) and node_interrupts(fdt, node)]
         trace_map["board_coverage"].append({
             "board": relative,
             "uart_controllers": len(uart_controllers),
             "uart_children": sum(len(value.children) for value in uart_controllers),
             "uart_controllers_with_dmas": sum(bool(value.dmas) for value in uart_controllers),
+            "dt_negative_nodes": 1,
+            "dt_nodes": len(dt_instances),
+            "dt_mmio_nodes": len(dt_mmio_nodes),
+            "dt_irq_nodes": len(dt_irq_nodes),
+            "dt_boards": 1,
         })
         use_plugin = "hakoniwa" in dtb.stem
         source = args.out / f"{c_identifier(board)}.c"

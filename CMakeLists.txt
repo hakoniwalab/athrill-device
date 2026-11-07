@@ -58,12 +58,14 @@ if(BUILD_TESTING)
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/spi.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/i2c.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/uart.yaml"
+    "${CMAKE_CURRENT_SOURCE_DIR}/spec/dt.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py")
   execute_process(
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py"
             --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/spi.yaml"
             --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/i2c.yaml"
             --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/uart.yaml"
+            --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/dt.yaml"
             --out "${TRACE_GENERATED_DIR}" ${TRACE_BOARD_DTBS}
     RESULT_VARIABLE TRACE_TESTGEN_RESULT
     ERROR_VARIABLE TRACE_TESTGEN_ERROR)
