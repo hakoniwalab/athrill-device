@@ -26,6 +26,7 @@ add_library(athrill_device STATIC
   src/bindings_v1.c
   src/models/stm32_gpio.c
   src/models/stm32_exti.c
+  src/models/stm32_dmamux.c
   src/models/stm32_tim.c
   src/models/ublox_m8.c
   src/sha256.c
@@ -134,6 +135,12 @@ if(BUILD_TESTING)
     ATHRILL_TEST_BINDINGS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/spec/bindings")
   target_link_libraries(test_bindings_conformance PRIVATE athrill_device PkgConfig::YAML)
   add_test(NAME bindings-conformance COMMAND test_bindings_conformance)
+
+  add_executable(test_stm32_dmamux tests/test_stm32_dmamux.c)
+  target_compile_definitions(test_stm32_dmamux PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_stm32_dmamux PRIVATE src/models)
+  target_link_libraries(test_stm32_dmamux PRIVATE athrill_device)
+  add_test(NAME stm32-dmamux COMMAND test_stm32_dmamux)
 
   add_executable(test_channel tests/test_channel.c)
   target_compile_definitions(test_channel PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

@@ -344,7 +344,6 @@ NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
 NAMED_ADAPTER(stm32h7_rcc_model, "stm32h7-rcc-adapter", "stm32h7-rcc");
 NAMED_ADAPTER(stm32h7_pwr_model, "stm32h7-pwr-adapter", "stm32h7-pwr");
 NAMED_ADAPTER(stm32h7_spi_model, "stm32h7-spi-adapter", "stm32h7-spi");
-NAMED_ADAPTER(stm32h7_dmamux_model, "stm32h7-dmamux-adapter", "stm32h7-dmamux");
 NAMED_ADAPTER(stm32h7_boot_register_model, "stm32h7-boot-register-adapter",
 	"stm32h7-boot-register");
 
@@ -445,7 +444,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32h7_rcc_compatibles, 1U, &stm32h7_rcc_model },
 	{ stm32h7_pwr_compatibles, 1U, &stm32h7_pwr_model },
 	{ stm32h7_spi_compatibles, 1U, &stm32h7_spi_model },
-	{ stm32h7_dmamux_compatibles, 1U, &stm32h7_dmamux_model },
+	{ stm32h7_dmamux_compatibles, 1U, &athrill_device_stm32_dmamux_model },
 	{ stm32h7_boot_register_compatibles, 6U, &stm32h7_boot_register_model },
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
 	{ bmi055_gyro_compatibles, 1U, &athrill_device_bmi055_model },
