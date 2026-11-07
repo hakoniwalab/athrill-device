@@ -8,6 +8,7 @@ import dataclasses
 import json
 import re
 import struct
+from collections import Counter
 from pathlib import Path
 from typing import Iterable
 
@@ -136,6 +137,20 @@ class GpioChipSelect:
     chip_select: int
     gpio: Specifier
     gpio_base: int
+
+
+@dataclasses.dataclass(frozen=True)
+class ChipCase:
+    node: Node
+    bus: str
+    controller_path: str
+    selector: int
+    compatible: str
+    item_id: str
+    test_id: str
+    operation: str
+    register: int | None = None
+    expected: int | None = None
 
 
 @dataclasses.dataclass(frozen=True)
@@ -617,6 +632,38 @@ def find_gpio_chip_selects(fdt: Fdt, controllers: list[SpiController]) -> list[G
     return result
 
 
+CHIP_TESTS = {
+    "invensense,icm42688": ("ADV-CHIP-ICM42688-001", "spi-register", 0x75, 0x47),
+    "invensense,icm20689": ("ADV-CHIP-ICM20689-001", "spi-register", 0x75, 0x98),
+    "bosch,bma280": ("ADV-CHIP-BMI055A-001", "spi-register-dummy", 0x00, 0xFA),
+    "bosch,bmg160": ("ADV-CHIP-BMI055G-001", "spi-register", 0x00, 0x0F),
+    "isentek,ist8310": ("ADV-CHIP-IST8310-001", "i2c-register", 0x00, 0x10),
+    "meas,ms5611": ("ADV-CHIP-MS5611-001", "ms5611-prom", None, None),
+}
+
+
+def find_chip_cases(controllers: list[SpiController],
+                    i2c_controllers: list[I2cController]) -> list[ChipCase]:
+    result = []
+    for controller in controllers:
+        for child in controller.children:
+            matches = CHIP_TESTS.keys() & set(compatible(child.node))
+            for match in sorted(matches):
+                item_id, operation, register, expected = CHIP_TESTS[match]
+                result.append(ChipCase(
+                    child.node, "spi", controller.node.path, child.chip_select,
+                    match, item_id, item_id + ".T1", operation, register, expected))
+    for controller in i2c_controllers:
+        for child in controller.children:
+            matches = CHIP_TESTS.keys() & set(compatible(child.node))
+            for match in sorted(matches):
+                item_id, operation, register, expected = CHIP_TESTS[match]
+                result.append(ChipCase(
+                    child.node, "i2c", controller.node.path, child.address,
+                    match, item_id, item_id + ".T1", operation, register, expected))
+    return result
+
+
 def load_test_specs(paths: list[Path]) -> dict[str, str]:
     """Read the small documented YAML subset without a YAML dependency."""
     result: dict[str, str] = {}
@@ -653,6 +700,12 @@ def load_test_specs(paths: list[Path]) -> dict[str, str]:
         "ADV-PWM-001.T1": "pwm-map",
         "ADV-GPIO-001.T1": "gpio-int-consumer",
         "ADV-GPIO-002.T1": "spi-cs-gpio",
+        "ADV-CHIP-ICM42688-001.T1": "chip:invensense,icm42688",
+        "ADV-CHIP-ICM20689-001.T1": "chip:invensense,icm20689",
+        "ADV-CHIP-BMI055A-001.T1": "chip:bosch,bma280",
+        "ADV-CHIP-BMI055G-001.T1": "chip:bosch,bmg160",
+        "ADV-CHIP-IST8310-001.T1": "chip:isentek,ist8310",
+        "ADV-CHIP-MS5611-001.T1": "chip:meas,ms5611",
     }
     for test_id, target in required.items():
         if result.get(test_id) != target:
@@ -949,6 +1002,28 @@ def generated_gpio_cases(board: str, interrupt_consumers: list[GpioInterruptCons
     return result
 
 
+def generated_chip_cases(board: str, chips: list[ChipCase]) -> list[dict[str, object]]:
+    return [{
+        "name": case_name(board, chip.node.path, chip.test_id),
+        "test_spec_id": chip.test_id,
+        "item_id": chip.item_id,
+        "node_path": chip.node.path,
+        "derived_properties": {
+            "bus": chip.bus,
+            "controller": chip.controller_path,
+            "selector": chip.selector,
+            "compatible": chip.compatible,
+            "register": chip.register,
+            "expected": chip.expected,
+        },
+        "kind": "chip", "area": "chip", "chip": chip,
+        "will_fail": chip.operation == "spi-register-dummy",
+        "known_defect": ("BMI055 accelerometer model returns register data on the first byte and "
+                         "does not provide the datasheet-required SPI dummy byte"
+                         if chip.operation == "spi-register-dummy" else None),
+    } for chip in chips]
+
+
 def pwm_setup_lines(pwm_map: PwmMap) -> list[str]:
     lines = []
     timers: dict[str, list[tuple[int, PwmEntry]]] = {}
@@ -1206,6 +1281,38 @@ def render_case(case: dict[str, object]) -> str:
             "\tCHECK(target.bindings[index].selected);",
             "\tCHECK(count_selected_bindings() == 1U);",
         ])
+    elif case["kind"] == "chip":
+        chip = case["chip"]
+        assert isinstance(chip, ChipCase)
+        lines.append("\tuint8 value;")
+        if chip.bus == "spi":
+            lines.extend([
+                f"\tindex = find_binding({c_string(chip.controller_path)}, {chip.selector}U);",
+                "\tCHECK(index < target.binding_count);",
+            ])
+        else:
+            lines.extend([
+                f"\tindex = find_i2c_binding({c_string(chip.controller_path)}, {chip.selector}U);",
+                "\tCHECK(index < target.i2c_binding_count);",
+            ])
+        if chip.operation.startswith("spi-register"):
+            assert chip.register is not None and chip.expected is not None
+            dummy = 1 if chip.operation == "spi-register-dummy" else 0
+            lines.extend([
+                f"\tCHECK(spi_register_read(index, {chip.register}U, {dummy}U, &value) == 0);",
+                f"\tCHECK(value == {chip.expected}U);",
+            ])
+        elif chip.operation == "i2c-register":
+            assert chip.register is not None and chip.expected is not None
+            lines.extend([
+                f"\tCHECK(i2c_register_read(index, {chip.register}U, &value) == 0);",
+                f"\tCHECK(value == {chip.expected}U);",
+            ])
+        elif chip.operation == "ms5611-prom":
+            lines.append(
+                f"\tCHECK(ms5611_prom_crc(index, {'TRUE' if chip.bus == 'spi' else 'FALSE'}));")
+        else:
+            raise ValueError(f"unknown chip operation {chip.operation}")
     else:
         raise ValueError(f"unknown generated case kind {case['kind']}")
     lines.extend(["\tdestroy_board();", "\treturn 0;", "}"])
@@ -1232,6 +1339,8 @@ def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
         "athrill,stm32h7-timer" in node.properties for node in fdt.nodes) else 216_000_000
     return f'''/* Generated by tools/dt_testgen.py; do not edit. */
 #include "athrill_device_if.h"
+#include "athrill_protocol_i2c.h"
+#include "athrill_protocol_spi.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -1266,7 +1375,23 @@ typedef struct {{
 typedef struct {{
 \tchar controller[192];
 \tuint16 address;
+\tconst AthrillDeviceI2cPeripheralOps *ops;
+\tvoid *instance;
 }} I2cBinding;
+
+typedef struct {{
+\tBinding *binding;
+\tAthrillChannel *channel;
+\tAthrillSpiProtocol *protocol;
+\tuint64 time;
+}} SpiConnection;
+
+typedef struct {{
+\tI2cBinding *binding;
+\tAthrillChannel *channel;
+\tAthrillI2cProtocol *protocol;
+\tuint64 time;
+}} I2cConnection;
 
 typedef struct {{
 \tchar controller[192];
@@ -1454,6 +1579,8 @@ static sint32 i2c_bind_node(void *context, const AthrillDeviceNode *controller,
 \tbinding = &value->i2c_bindings[value->i2c_binding_count++];
 \tcopy_text(binding->controller, sizeof(binding->controller), controller->path);
 \tbinding->address = address;
+\tbinding->ops = ops;
+\tbinding->instance = instance;
 \tendpoint->value = ++value->next_handle;
 \treturn 0;
 }}
@@ -1772,6 +1899,223 @@ static uint32 find_i2c_binding(const char *controller, uint16 address)
 \treturn target.i2c_binding_count;
 }}
 
+static void spi_child_select(void *context, uint64 time)
+{{
+\tBinding *binding = context;
+\t(void)time;
+\tbinding->ops->set_chip_select(binding->instance, TRUE);
+}}
+
+static sint32 spi_child_exchange(void *context, uint8 transmitted,
+\tuint8 *received, uint64 time)
+{{
+\tBinding *binding = context;
+\t(void)time;
+\t*received = binding->ops->exchange_byte(binding->instance, transmitted);
+\treturn 0;
+}}
+
+static void spi_child_deselect(void *context, uint64 time)
+{{
+\tBinding *binding = context;
+\t(void)time;
+\tbinding->ops->set_chip_select(binding->instance, FALSE);
+}}
+
+static const AthrillSpiChildOps spi_child_ops = {{
+\tspi_child_select, spi_child_exchange, spi_child_deselect
+}};
+
+static sint32 spi_connection_open(uint32 index, SpiConnection *connection)
+{{
+\tAthrillChannelConfig config;
+\tif (index >= target.binding_count) return -1;
+\tmemset(connection, 0, sizeof(*connection));
+\tmemset(&config, 0, sizeof(config));
+\tconnection->binding = &target.bindings[index];
+\tconfig.peripheral_width = 1U; config.memory_width = 1U;
+\tconfig.capacity = 1U; config.threshold = 1U; config.burst = 1U;
+\tconfig.selection.kind = ATHRILL_CHANNEL_SELECT_CHIP;
+\tconfig.selection.value = connection->binding->chip_select;
+\tconfig.count_kind = ATHRILL_CHANNEL_COUNT_SELECTION;
+\tconfig.directions = ATHRILL_CHANNEL_ALLOW_EXCHANGE;
+\tif (athrill_channel_create(&config, &connection->channel) != 0) return -1;
+\tif (athrill_spi_protocol_create(connection->channel, &spi_child_ops,
+\t    connection->binding, &connection->protocol) != 0) {{
+\t\tathrill_channel_destroy(connection->channel); return -1;
+\t}}
+\tconnection->time = 1U;
+\treturn 0;
+}}
+
+static void spi_connection_close(SpiConnection *connection)
+{{
+\tathrill_spi_protocol_destroy(connection->protocol);
+\tathrill_channel_destroy(connection->channel);
+}}
+
+static sint32 spi_command_read(uint32 index, uint8 command, uint8 *data, uint32 count)
+{{
+\tSpiConnection connection;
+\tuint32 at;
+\tuint8 received;
+\tif (spi_connection_open(index, &connection) != 0) return -1;
+\tif (athrill_spi_select(connection.protocol, connection.binding->chip_select,
+\t    connection.time++) != 1 ||
+\t    athrill_spi_exchange(connection.protocol, command, &received,
+\t    connection.time++) != 0) {{ spi_connection_close(&connection); return -1; }}
+\tfor (at = 0U; at < count; at++)
+\t\tif (athrill_spi_exchange(connection.protocol, 0U, &data[at],
+\t\t    connection.time++) != 0) {{ spi_connection_close(&connection); return -1; }}
+\tif (athrill_spi_deselect(connection.protocol, connection.time++) != 0) {{
+\t\tspi_connection_close(&connection); return -1;
+\t}}
+\tspi_connection_close(&connection);
+\treturn 0;
+}}
+
+static sint32 spi_register_read(uint32 index, uint8 address, uint32 dummy_count,
+\tuint8 *value)
+{{
+\tuint8 data[2];
+\tif (dummy_count > 1U || spi_command_read(index, address | 0x80U,
+\t    data, dummy_count + 1U) != 0) return -1;
+\t*value = data[dummy_count];
+\treturn 0;
+}}
+
+static std_bool i2c_child_start(void *context, std_bool read,
+\tstd_bool repeated, uint64 time)
+{{
+\tI2cBinding *binding = context;
+\t(void)repeated; (void)time;
+\treturn binding->ops->start != NULL && binding->ops->start(binding->instance, read);
+}}
+
+static std_bool i2c_child_write(void *context, uint8 data, uint64 time)
+{{
+\tI2cBinding *binding = context;
+\t(void)time;
+\tif (binding->ops->write_byte == NULL) return FALSE;
+\tbinding->ops->write_byte(binding->instance, data);
+\treturn TRUE;
+}}
+
+static sint32 i2c_child_read(void *context, uint8 *data,
+\tstd_bool master_ack, uint64 time)
+{{
+\tI2cBinding *binding = context;
+\t(void)master_ack; (void)time;
+\tif (binding->ops->read_byte == NULL) return -1;
+\t*data = binding->ops->read_byte(binding->instance);
+\treturn 0;
+}}
+
+static void i2c_child_stop(void *context, uint64 time)
+{{
+\tI2cBinding *binding = context;
+\t(void)time;
+\tif (binding->ops->stop != NULL) binding->ops->stop(binding->instance);
+}}
+
+static const AthrillI2cChildOps i2c_child_ops = {{
+\ti2c_child_start, i2c_child_write, i2c_child_read, i2c_child_stop
+}};
+
+static sint32 i2c_connection_open(uint32 index, I2cConnection *connection)
+{{
+\tAthrillChannelConfig config;
+\tif (index >= target.i2c_binding_count) return -1;
+\tmemset(connection, 0, sizeof(*connection));
+\tmemset(&config, 0, sizeof(config));
+\tconnection->binding = &target.i2c_bindings[index];
+\tconfig.peripheral_width = 1U; config.memory_width = 1U;
+\tconfig.capacity = 1U; config.threshold = 1U; config.burst = 1U;
+\tconfig.selection.kind = ATHRILL_CHANNEL_SELECT_ADDRESS;
+\tconfig.selection.value = connection->binding->address;
+\tconfig.count_kind = ATHRILL_CHANNEL_COUNT_SELECTION;
+\tconfig.directions = ATHRILL_CHANNEL_ALLOW_EXCHANGE;
+\tif (athrill_channel_create(&config, &connection->channel) != 0) return -1;
+\tif (athrill_i2c_protocol_create(connection->channel, &i2c_child_ops,
+\t    connection->binding, &connection->protocol) != 0) {{
+\t\tathrill_channel_destroy(connection->channel); return -1;
+\t}}
+\tconnection->time = 1U;
+\treturn 0;
+}}
+
+static void i2c_connection_close(I2cConnection *connection)
+{{
+\tathrill_i2c_protocol_destroy(connection->protocol);
+\tathrill_channel_destroy(connection->channel);
+}}
+
+static sint32 i2c_write_byte(I2cConnection *connection, uint8 data)
+{{
+\tstd_bool ack;
+\treturn athrill_i2c_write(connection->protocol, data, &ack,
+\t    connection->time++) == 0 && ack ? 0 : -1;
+}}
+
+static sint32 i2c_command_read(uint32 index, uint8 command, uint8 *data, uint32 count)
+{{
+\tI2cConnection connection;
+\tuint32 at;
+\tif (i2c_connection_open(index, &connection) != 0) return -1;
+\tif (athrill_i2c_start(connection.protocol, connection.binding->address, FALSE,
+\t    connection.time++) != 1 || i2c_write_byte(&connection, command) != 0 ||
+\t    athrill_i2c_stop(connection.protocol, connection.time++) != 0) {{
+\t\ti2c_connection_close(&connection); return -1;
+\t}}
+\tif (count != 0U && athrill_i2c_start(connection.protocol,
+\t    connection.binding->address, TRUE, connection.time++) != 1) {{
+\t\ti2c_connection_close(&connection); return -1;
+\t}}
+\tfor (at = 0U; at < count; at++)
+\t\tif (athrill_i2c_read(connection.protocol, &data[at], at + 1U < count,
+\t\t    connection.time++) != 0) {{ i2c_connection_close(&connection); return -1; }}
+\tif (count != 0U && athrill_i2c_stop(connection.protocol,
+\t    connection.time++) != 0) {{ i2c_connection_close(&connection); return -1; }}
+\ti2c_connection_close(&connection);
+\treturn 0;
+}}
+
+static sint32 i2c_register_read(uint32 index, uint8 address, uint8 *value)
+{{ return i2c_command_read(index, address, value, 1U); }}
+
+static uint8 ms5611_crc4(uint16 *prom)
+{{
+\tuint16 remainder = 0U, saved = prom[7];
+\tuint32 byte, bit;
+\tprom[7] &= 0xff00U;
+\tfor (byte = 0U; byte < 16U; byte++) {{
+\t\tremainder ^= (byte & 1U) ? (prom[byte >> 1] & 0xffU) :
+\t\t    (prom[byte >> 1] >> 8);
+\t\tfor (bit = 0U; bit < 8U; bit++)
+\t\t\tremainder = (remainder & 0x8000U) ?
+\t\t\t    (uint16)((remainder << 1) ^ 0x3000U) : (uint16)(remainder << 1);
+\t}}
+\tprom[7] = saved;
+\treturn (uint8)((remainder >> 12) & 0x0fU);
+}}
+
+static int ms5611_prom_crc(uint32 index, std_bool spi)
+{{
+\tuint16 prom[8];
+\tuint8 bytes[2], stored;
+\tuint32 word;
+\tif ((spi ? spi_command_read(index, 0x1eU, bytes, 0U) :
+\t    i2c_command_read(index, 0x1eU, bytes, 0U)) != 0) return 0;
+\tfor (word = 0U; word < 8U; word++) {{
+\t\tuint8 command = (uint8)(0xa0U + 2U * word);
+\t\tif ((spi ? spi_command_read(index, command, bytes, 2U) :
+\t\t    i2c_command_read(index, command, bytes, 2U)) != 0) return 0;
+\t\tprom[word] = (uint16)(((uint16)bytes[0] << 8) | bytes[1]);
+\t}}
+\tstored = (uint8)(prom[7] & 0x0fU);
+\treturn ms5611_crc4(prom) == stored;
+}}
+
 static uint32 count_uart_bindings(const char *controller)
 {{
 \tuint32 index, count = 0;
@@ -1970,6 +2314,7 @@ def main() -> int:
         pwm_maps = find_pwm_maps(fdt)
         gpio_interrupt_consumers = find_gpio_interrupt_consumers(fdt)
         gpio_chip_selects = find_gpio_chip_selects(fdt, spi_controllers)
+        chip_cases = find_chip_cases(spi_controllers, i2c_controllers)
         relative = dtb.as_posix().split("/boards/", 1)[-1]
         board = relative.replace("/", "__").removesuffix(".dtb")
         negative_path = args.out / f"{c_identifier(board)}__unknown-compatible.dtb"
@@ -1982,7 +2327,8 @@ def main() -> int:
                  generated_sd_cases(board, sd_cards) +
                  generated_pwm_cases(board, pwm_maps) +
                  generated_gpio_cases(board, gpio_interrupt_consumers,
-                                      gpio_chip_selects))
+                                      gpio_chip_selects) +
+                 generated_chip_cases(board, chip_cases))
         dt_instances = [node for node in fdt.nodes if is_model_instance(node)]
         dt_mmio_nodes = [node for node in fdt.nodes
                          if enabled(node) and MMIO_MODEL_COMPATIBLES.intersection(compatible(node))
@@ -2005,6 +2351,9 @@ def main() -> int:
             "pwm_entries": sum(len(value.entries) for value in pwm_maps),
             "gpio_interrupt_consumers": len(gpio_interrupt_consumers),
             "gpio_chip_selects": len(gpio_chip_selects),
+            "chip_nodes": len(chip_cases),
+            "chip_compatibles": dict(sorted(Counter(
+                value.compatible for value in chip_cases).items())),
         })
         use_plugin = "hakoniwa" in dtb.stem
         source = args.out / f"{c_identifier(board)}.c"

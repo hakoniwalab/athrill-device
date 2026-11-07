@@ -317,6 +317,14 @@ def report(args: argparse.Namespace) -> str:
             "(7.2.4 through 7.2.7). RM0433 sections 20.4 and 12.3 correctly cover the "
             "H7 mapping and EXTICR registers. The specification was not changed."
         )
+    if "ADV-CHIP-BMI055A-001" in items:
+        specification_findings.append(
+            "ADV-CHIP-BMI055A-001/ADV-CHIP-BMI055G-001: the BMI055 register-map "
+            "section citations are wrong. In BMI055 datasheet BST-BMI055-DS000-06, "
+            "the accelerometer register map is section 6.2 and the gyroscope register "
+            "map is section 8.2, not sections 7 and 9. The expected chip IDs remain "
+            "0xFA and 0x0F. The specification was not changed."
+        )
     output.extend(["", "## Specification review findings", ""])
     output.extend(f"- {finding}" for finding in specification_findings)
     if not specification_findings:
@@ -420,11 +428,28 @@ def report(args: argparse.Namespace) -> str:
                 f"{value.get('gpio_chip_selects', 0)} |"
             )
 
+    if any("chip_nodes" in value for value in board_coverage):
+        chip_compatibles = sorted({compatible for value in board_coverage
+                                   for compatible in value.get("chip_compatibles", {})})
+        output.extend([
+            "",
+            "## Chip-ID applicability by board DTB",
+            "",
+            "| Board DTB | Chip nodes | " + " | ".join(chip_compatibles) + " |",
+            "|---|---:|" + "---:|" * len(chip_compatibles),
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            compatible_counts = value.get("chip_compatibles", {})
+            output.append("| " + " | ".join([
+                value["board"], str(value.get("chip_nodes", 0)),
+                *(str(compatible_counts.get(name, 0)) for name in chip_compatibles),
+            ]) + " |")
+
     output.extend([
         "",
         "## Testability note",
         "",
-        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. DT negative tests mutate build-directory copies only. DT expectations come from the independent parser; confirmed extra MMIO registrations and unresolved adapter interrupts remain `WILL_FAIL`. The specification was left unchanged.",
+        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. DT negative tests mutate build-directory copies only. DT expectations come from the independent parser; confirmed extra MMIO registrations and unresolved adapter interrupts remain `WILL_FAIL`. Chip-ID and PROM reads use the public SPI/I2C protocol APIs at the selector derived from each node's `reg`. The specification was left unchanged.",
         "",
         "## Area cost",
         "",
