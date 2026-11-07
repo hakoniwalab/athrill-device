@@ -19,4 +19,34 @@ jobs:
       - name: Build
         run: cmake --build build --parallel
       - name: Test
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure --output-junit ctest.xml
+      - name: Trace report
+        if: always()
+        run: |
+          specs=""
+          for f in spec/*.yaml; do specs="$specs --spec $f"; done
+          python3 tools/trace_report.py $specs \
+            --trace-map build/traceability/trace-map.json \
+            --junit ${{ matrix.build-type }}=build/ctest.xml \
+            --source-root . --generator tools/dt_testgen.py \
+            --output build/trace-report.md
+      - name: Upload trace report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trace-report-${{ matrix.os }}-${{ matrix.build-type }}
+          path: |
+            build/trace-report.md
+            build/traceability/trace-map.json
+            build/ctest.xml
+
+  generated:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: PyYAML for the spec documents
+        run: python3 -m pip install --user pyyaml
+      - name: Committed generated tests match the generator
+        run: python3 tools/gen_commit.py --check
+      - name: Committed spec documents match the YAML
+        run: python3 tools/spec_doc.py --check
