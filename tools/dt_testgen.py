@@ -169,7 +169,7 @@ class Interrupt:
 # target adapters are instances, but their windows remain target-owned.
 MMIO_MODEL_COMPATIBLES = {
     "st,stm32-gpio", "st,stm32-exti", "st,stm32f7-syscfg",
-    "st,stm32h7-syscfg", "st,stm32-timers",
+    "st,stm32h7-syscfg", "st,stm32-timers", "st,stm32-dmamux",
 }
 TARGET_ARCHITECTURAL_COMPATIBLES = {
     "arm,armv7m-systick", "arm,v7m-nvic", "arm,cortex-m7", "arm,armv7m-mpu",
