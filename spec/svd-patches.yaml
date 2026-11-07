@@ -65,7 +65,7 @@ patches:
     svd_has: {TXPIE: read-only, DPXPIE: read-only}
     manual_access: "rs (set by software, cleared by hardware)"
     evidence: {manual: RM0433 Rev 9, section: "50.11.5 SPI_IER", page: 2223}
-    found: "map_gen access check, 2026-11-07"
+    found: "bindings_gen access check, 2026-11-07"
   - soc: "st,stm32h7"
     peripheral: SPI1
     register: CR1
@@ -73,18 +73,18 @@ patches:
     svd_has: {CSTART: read-only}
     manual_access: "rs (set by software to start, cleared by hardware at EOT)"
     evidence: {manual: RM0433 Rev 9, section: "50.11.1 SPI_CR1", page: 2216}
-    found: "map_gen access check, 2026-11-07"
+    found: "bindings_gen access check, 2026-11-07"
   - soc: "st,stm32f7"
     peripheral: TIM1
     register: CCMR1_Output
     add_fields: [{name: OC1M_3, lsb: 16, width: 1}, {name: OC2M_3, lsb: 24, width: 1}]
     svd_has: "fields absent"
     evidence: {manual: RM0410 Rev 5, section: "25.4.7 TIMx_CCMR1 (OC1M[3] bit 16, OC2M[3] bit 24)", page: 927}
-    found: "map_gen binding check, 2026-11-07 (the H7 SVD has them)"
+    found: "bindings_gen binding check, 2026-11-07 (the H7 SVD has them)"
   - soc: "st,stm32f7"
     peripheral: TIM1
     register: CCMR2_Output
     add_fields: [{name: OC3M_3, lsb: 16, width: 1}, {name: OC4M_3, lsb: 24, width: 1}]
     svd_has: "fields absent"
     evidence: {manual: RM0410 Rev 5, section: "25.4.8 TIMx_CCMR2 (OC3M[3] bit 16, OC4M[3] bit 24)", page: 930}
-    found: "map_gen binding check, 2026-11-07"
+    found: "bindings_gen binding check, 2026-11-07"

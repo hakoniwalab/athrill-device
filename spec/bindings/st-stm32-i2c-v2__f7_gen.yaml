@@ -1,0 +1,753 @@
+# AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-i2c-v2.yaml, the pinned ST SVD (STM32F765.svd) and
+# spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+ip: st-stm32-i2c-v2
+compatible:
+- st,stm32-i2c-v2
+manual: RM0410 Rev 5 section 33 (I2C); RM0433 Rev 8 section 47 (I2C). Same register layout on F7 and H7.
+model: i2c-controller
+model_version: 1.0.0
+features:
+- base
+- dma
+constants:
+  max_nbytes: 255
+unmodelled:
+- reg:
+  - OAR1
+  - OAR2
+  - TIMEOUTR
+  - PECR
+  answer: stored and read back
+- reg: CR1
+  fields:
+  - DNF
+  - ANFOFF
+  - SBC
+  - NOSTRETCH
+  - GCEN
+  - SMBHEN
+  - SMBDEN
+  - ALERTEN
+  - PECEN
+  - ADDRIE
+  answer: stored
+- reg: ISR
+  fields:
+  - TXE
+  - ADDR
+  - BERR
+  - ARLO
+  - OVR
+  - PECERR
+  - TIMEOUT
+  - ALERT
+  - DIR
+  - ADDCODE
+  answer: TXE follows TXIS; others reset value
+soc: st,stm32f7
+svd_source:
+  file: STM32F765.svd
+  repository: https://github.com/Open-CMSIS-Pack/STM32F7xx_DFP
+  revision: c5bcd5c8a5007c3ef0a3f69dcea0dc6f5a22c9a2
+  peripheral: I2C1
+  patches_applied: []
+bindings:
+  enable:
+    access: rw
+    registers:
+    - reg: CR1
+      offset: '0x00'
+      size: 32
+      fields:
+      - field: PE
+        lsb: 0
+        width: 1
+        svd_access: read-write
+  target_address:
+    access: rw
+    note: 7-bit address in SADD[7:1]; the H7 SVD splits SADD into single bits SADD0..SADD9 (concatenated in bit order)
+    registers:
+    - reg: CR2
+      offset: '0x04'
+      size: 32
+      fields:
+      - field: SADD
+        lsb: 0
+        width: 10
+        svd_access: read-write
+  direction:
+    access: rw
+    registers:
+    - reg: CR2
+      offset: '0x04'
+      size: 32
+      fields:
+      - field: RD_WRN
+        lsb: 10
+        width: 1
+        svd_access: read-write
+  byte_count:
+    access: rw
+    registers:
+    - reg: CR2
+      offset: '0x04'
+      size: 32
+      fields:
+      - field: NBYTES
+        lsb: 16
+        width: 8
+        svd_access: read-write
+  auto_end:
+    access: rw
+    registers:
+    - reg: CR2
+      offset: '0x04'
+      size: 32
+      fields:
+      - field: AUTOEND
+        lsb: 25
+        width: 1
+        svd_access: read-write
+  reload:
+    access: rw
+    registers:
+    - reg: CR2
+      offset: '0x04'
+      size: 32
+      fields:
+      - field: RELOAD
+        lsb: 24
+        width: 1
+        svd_access: read-write
+  start:
+    access: w1s
+    registers:
+    - reg: CR2
+      offset: '0x04'
+      size: 32
+      fields:
+      - field: START
+        lsb: 13
+        width: 1
+        svd_access: read-write
+  stop:
+    access: w1s
+    registers:
+    - reg: CR2
+      offset: '0x04'
+      size: 32
+      fields:
+      - field: STOP
+        lsb: 14
+        width: 1
+        svd_access: read-write
+  tx_data:
+    access: fifo
+    registers:
+    - reg: TXDR
+      offset: '0x28'
+      size: 32
+  rx_data:
+    access: fifo
+    registers:
+    - reg: RXDR
+      offset: '0x24'
+      size: 32
+  tx_space:
+    access: ro
+    registers:
+    - reg: ISR
+      offset: '0x18'
+      size: 32
+      fields:
+      - field: TXIS
+        lsb: 1
+        width: 1
+        svd_access: read-write
+  rx_available:
+    access: ro
+    registers:
+    - reg: ISR
+      offset: '0x18'
+      size: 32
+      fields:
+      - field: RXNE
+        lsb: 2
+        width: 1
+        svd_access: read-only
+  transfer_complete:
+    access: ro
+    registers:
+    - reg: ISR
+      offset: '0x18'
+      size: 32
+      fields:
+      - field: TC
+        lsb: 6
+        width: 1
+        svd_access: read-only
+  reload_complete:
+    access: ro
+    registers:
+    - reg: ISR
+      offset: '0x18'
+      size: 32
+      fields:
+      - field: TCR
+        lsb: 7
+        width: 1
+        svd_access: read-only
+  stop_detected:
+    access: ro
+    registers:
+    - reg: ISR
+      offset: '0x18'
+      size: 32
+      fields:
+      - field: STOPF
+        lsb: 5
+        width: 1
+        svd_access: read-only
+  nack:
+    access: ro
+    registers:
+    - reg: ISR
+      offset: '0x18'
+      size: 32
+      fields:
+      - field: NACKF
+        lsb: 4
+        width: 1
+        svd_access: read-only
+  busy:
+    access: ro
+    registers:
+    - reg: ISR
+      offset: '0x18'
+      size: 32
+      fields:
+      - field: BUSY
+        lsb: 15
+        width: 1
+        svd_access: read-only
+  status_ack:
+    access: w1c
+    registers:
+    - reg: ICR
+      offset: '0x1C'
+      size: 32
+      fields:
+      - field: STOPCF
+        lsb: 5
+        width: 1
+        svd_access: write-only
+      - field: NACKCF
+        lsb: 4
+        width: 1
+        svd_access: write-only
+  irq_enables:
+    access: rw
+    registers:
+    - reg: CR1
+      offset: '0x00'
+      size: 32
+      fields:
+      - field: TXIE
+        lsb: 1
+        width: 1
+        svd_access: read-write
+      - field: RXIE
+        lsb: 2
+        width: 1
+        svd_access: read-write
+      - field: TCIE
+        lsb: 6
+        width: 1
+        svd_access: read-write
+      - field: STOPIE
+        lsb: 5
+        width: 1
+        svd_access: read-write
+      - field: NACKIE
+        lsb: 4
+        width: 1
+        svd_access: read-write
+      - field: ERRIE
+        lsb: 7
+        width: 1
+        svd_access: read-write
+  irq:
+    devicetree: interrupts (event, error)
+  tx_dma_enable:
+    access: rw
+    registers:
+    - reg: CR1
+      offset: '0x00'
+      size: 32
+      fields:
+      - field: TXDMAEN
+        lsb: 14
+        width: 1
+        svd_access: read-write
+  rx_dma_enable:
+    access: rw
+    registers:
+    - reg: CR1
+      offset: '0x00'
+      size: 32
+      fields:
+      - field: RXDMAEN
+        lsb: 15
+        width: 1
+        svd_access: read-write
+  tx_dma_request:
+    devicetree: dmas, dma-names = tx
+  rx_dma_request:
+    devicetree: dmas, dma-names = rx
+registers:
+  CR1:
+    offset: '0x00'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      PE:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      TXIE:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: true
+      RXIE:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      ADDRIE:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: false
+      NACKIE:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      STOPIE:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: true
+      TCIE:
+        lsb: 6
+        width: 1
+        access: read-write
+        bound: true
+      ERRIE:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: true
+      DNF:
+        lsb: 8
+        width: 4
+        access: read-write
+        bound: false
+      ANFOFF:
+        lsb: 12
+        width: 1
+        access: read-write
+        bound: false
+      TXDMAEN:
+        lsb: 14
+        width: 1
+        access: read-write
+        bound: true
+      RXDMAEN:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: true
+      SBC:
+        lsb: 16
+        width: 1
+        access: read-write
+        bound: false
+      NOSTRETCH:
+        lsb: 17
+        width: 1
+        access: read-write
+        bound: false
+      WUPEN:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: false
+      GCEN:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: false
+      SMBHEN:
+        lsb: 20
+        width: 1
+        access: read-write
+        bound: false
+      SMBDEN:
+        lsb: 21
+        width: 1
+        access: read-write
+        bound: false
+      ALERTEN:
+        lsb: 22
+        width: 1
+        access: read-write
+        bound: false
+      PECEN:
+        lsb: 23
+        width: 1
+        access: read-write
+        bound: false
+  CR2:
+    offset: '0x04'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      SADD:
+        lsb: 0
+        width: 10
+        access: read-write
+        bound: true
+      RD_WRN:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      ADD10:
+        lsb: 11
+        width: 1
+        access: read-write
+        bound: false
+      HEAD10R:
+        lsb: 12
+        width: 1
+        access: read-write
+        bound: false
+      START:
+        lsb: 13
+        width: 1
+        access: read-write
+        bound: true
+      STOP:
+        lsb: 14
+        width: 1
+        access: read-write
+        bound: true
+      NACK:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+      NBYTES:
+        lsb: 16
+        width: 8
+        access: read-write
+        bound: true
+      RELOAD:
+        lsb: 24
+        width: 1
+        access: read-write
+        bound: true
+      AUTOEND:
+        lsb: 25
+        width: 1
+        access: read-write
+        bound: true
+      PECBYTE:
+        lsb: 26
+        width: 1
+        access: read-write
+        bound: false
+  OAR1:
+    offset: '0x08'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      OA1:
+        lsb: 0
+        width: 10
+        access: read-write
+        bound: false
+      OA1MODE:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: false
+      OA1EN:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+  OAR2:
+    offset: '0x0C'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      OA2:
+        lsb: 1
+        width: 7
+        access: read-write
+        bound: false
+      OA2MSK:
+        lsb: 8
+        width: 3
+        access: read-write
+        bound: false
+      OA2EN:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+  TIMINGR:
+    offset: '0x10'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      SCLL:
+        lsb: 0
+        width: 8
+        access: read-write
+        bound: false
+      SCLH:
+        lsb: 8
+        width: 8
+        access: read-write
+        bound: false
+      SDADEL:
+        lsb: 16
+        width: 4
+        access: read-write
+        bound: false
+      SCLDEL:
+        lsb: 20
+        width: 4
+        access: read-write
+        bound: false
+      PRESC:
+        lsb: 28
+        width: 4
+        access: read-write
+        bound: false
+  TIMEOUTR:
+    offset: '0x14'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      TIMEOUTA:
+        lsb: 0
+        width: 12
+        access: read-write
+        bound: false
+      TIDLE:
+        lsb: 12
+        width: 1
+        access: read-write
+        bound: false
+      TIMOUTEN:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+      TIMEOUTB:
+        lsb: 16
+        width: 12
+        access: read-write
+        bound: false
+      TEXTEN:
+        lsb: 31
+        width: 1
+        access: read-write
+        bound: false
+  ISR:
+    offset: '0x18'
+    size: 32
+    reset: '0x00000001'
+    access: read-write
+    fields:
+      TXE:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: false
+      TXIS:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: true
+      RXNE:
+        lsb: 2
+        width: 1
+        access: read-only
+        bound: true
+      ADDR:
+        lsb: 3
+        width: 1
+        access: read-only
+        bound: false
+      NACKF:
+        lsb: 4
+        width: 1
+        access: read-only
+        bound: true
+      STOPF:
+        lsb: 5
+        width: 1
+        access: read-only
+        bound: true
+      TC:
+        lsb: 6
+        width: 1
+        access: read-only
+        bound: true
+      TCR:
+        lsb: 7
+        width: 1
+        access: read-only
+        bound: true
+      BERR:
+        lsb: 8
+        width: 1
+        access: read-only
+        bound: false
+      ARLO:
+        lsb: 9
+        width: 1
+        access: read-only
+        bound: false
+      OVR:
+        lsb: 10
+        width: 1
+        access: read-only
+        bound: false
+      PECERR:
+        lsb: 11
+        width: 1
+        access: read-only
+        bound: false
+      TIMEOUT:
+        lsb: 12
+        width: 1
+        access: read-only
+        bound: false
+      ALERT:
+        lsb: 13
+        width: 1
+        access: read-only
+        bound: false
+      BUSY:
+        lsb: 15
+        width: 1
+        access: read-only
+        bound: true
+      DIR:
+        lsb: 16
+        width: 1
+        access: read-only
+        bound: false
+      ADDCODE:
+        lsb: 17
+        width: 7
+        access: read-only
+        bound: false
+  ICR:
+    offset: '0x1C'
+    size: 32
+    reset: '0x00000000'
+    access: write-only
+    fields:
+      ADDRCF:
+        lsb: 3
+        width: 1
+        access: write-only
+        bound: false
+      NACKCF:
+        lsb: 4
+        width: 1
+        access: write-only
+        bound: true
+      STOPCF:
+        lsb: 5
+        width: 1
+        access: write-only
+        bound: true
+      BERRCF:
+        lsb: 8
+        width: 1
+        access: write-only
+        bound: false
+      ARLOCF:
+        lsb: 9
+        width: 1
+        access: write-only
+        bound: false
+      OVRCF:
+        lsb: 10
+        width: 1
+        access: write-only
+        bound: false
+      PECCF:
+        lsb: 11
+        width: 1
+        access: write-only
+        bound: false
+      TIMOUTCF:
+        lsb: 12
+        width: 1
+        access: write-only
+        bound: false
+      ALERTCF:
+        lsb: 13
+        width: 1
+        access: write-only
+        bound: false
+  PECR:
+    offset: '0x20'
+    size: 32
+    reset: '0x00000000'
+    access: read-only
+    fields:
+      PEC:
+        lsb: 0
+        width: 8
+        access: read-only
+        bound: false
+  RXDR:
+    offset: '0x24'
+    size: 32
+    reset: '0x00000000'
+    access: read-only
+    fields:
+      RXDATA:
+        lsb: 0
+        width: 8
+        access: read-only
+        bound: true
+  TXDR:
+    offset: '0x28'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      TXDATA:
+        lsb: 0
+        width: 8
+        access: read-write
+        bound: true

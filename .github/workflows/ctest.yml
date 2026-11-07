@@ -52,7 +52,5 @@ jobs:
         run: python3 tools/spec_doc.py --check
       - name: Pinned ST SVD files
         run: sh tools/fetch_svd.sh build/svd
-      - name: Generated maps match bindings + patched SVD
-        run: python3 tools/map_gen.py --check --svd-dir build/svd
-      - name: Hand-written maps match the patched SVD
-        run: python3 tools/svd_map.py check-all --svd-dir build/svd
+      - name: Bindings match SVD + semantics + SVD patches
+        run: python3 tools/bindings_gen.py --check --svd-dir build/svd

@@ -111,7 +111,7 @@ def gen_map_doc(path: Path) -> str:
     d = yaml.safe_load(path.read_text(encoding="utf-8"))
     src = d["svd_source"]
     lines = [NOTE.format(src=path.relative_to(ROOT).as_posix()),
-             f"# Generated map: {d['ip']} on {d['soc']} → {d['model']} {d['model_version']}\n",
+             f"# Bindings: {d['ip']} on {d['soc']} → {d['model']} {d['model_version']}\n",
              f"SVD: {src['file']} @ {src['revision'][:10]} ({src['peripheral']}); patches applied: "
              f"{', '.join(src['patches_applied']) or 'none'}  \nFeatures: {', '.join(d['features'])}\n",
              "## Bindings\n", "| Term | Register | Offset | Field | Bits | Access |", "|---|---|---|---|---|---|"]
@@ -151,12 +151,12 @@ def generate() -> dict[str, str]:
             name = "model-" + "-".join(p.relative_to(ROOT / "spec" / "models").with_suffix("").parts) + ".md"
             files[name] = model_doc(p)
             index.append(f"- [{p.stem}]({name})")
-    maps = sorted((ROOT / "spec" / "maps").glob("*.yaml")) if (ROOT / "spec" / "maps").exists() else []
-    gen_maps = sorted((ROOT / "spec" / "maps" / "gen").glob("*_gen.yaml")) if (ROOT / "spec" / "maps" / "gen").exists() else []
+    maps = []
+    gen_maps = sorted((ROOT / "spec" / "bindings").glob("*_gen.yaml")) if (ROOT / "spec" / "bindings").exists() else []
     if gen_maps:
-        index.append("\n## Generated maps (bindings + patched ST SVD)\n")
+        index.append("\n## Bindings (generated from SVD + semantics + SVD patches)\n")
         for p in gen_maps:
-            name = f"map-{p.stem}.md"
+            name = f"bindings-{p.stem}.md"
             files[name] = gen_map_doc(p)
             index.append(f"- [{p.stem}]({name})")
     if maps:

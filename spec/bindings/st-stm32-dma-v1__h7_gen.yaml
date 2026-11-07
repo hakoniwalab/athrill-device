@@ -1,0 +1,3605 @@
+# AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-dma-v1.yaml, the pinned ST SVD (STM32H743.svd) and
+# spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+ip: st-stm32-dma-v1
+compatible:
+- st,stm32-dma-v1
+- st,stm32-dma
+manual: RM0410 Rev 5 section 8.5; RM0433 Rev 8 section 15.5 (DMA registers)
+model: dma-controller
+model_version: 1.0.0
+features:
+- base
+- fifo
+- double_buffer
+features_h7_add:
+- mux (via st-stm32-dmamux)
+soc: st,stm32h7
+svd_source:
+  file: STM32H743.svd
+  repository: https://github.com/Open-CMSIS-Pack/STM32H7xx_DFP
+  revision: 058af2e871a1ee2f203459f8780c02741079ba5a
+  peripheral: DMA1
+  patches_applied: []
+bindings:
+  stream_enable:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: EN
+        lsb: 0
+        width: 1
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: EN
+        lsb: 0
+        width: 1
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: EN
+        lsb: 0
+        width: 1
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: EN
+        lsb: 0
+        width: 1
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: EN
+        lsb: 0
+        width: 1
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: EN
+        lsb: 0
+        width: 1
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: EN
+        lsb: 0
+        width: 1
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: EN
+        lsb: 0
+        width: 1
+        svd_access: read-write
+  direction:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: DIR
+        lsb: 6
+        width: 2
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: DIR
+        lsb: 6
+        width: 2
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: DIR
+        lsb: 6
+        width: 2
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: DIR
+        lsb: 6
+        width: 2
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: DIR
+        lsb: 6
+        width: 2
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: DIR
+        lsb: 6
+        width: 2
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: DIR
+        lsb: 6
+        width: 2
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: DIR
+        lsb: 6
+        width: 2
+        svd_access: read-write
+  request_select:
+    not_applicable: st,stm32h7
+    access: rw
+    note: F7 only (CHSEL); H7 routes requests through DMAMUX (mux_request_id)
+  peripheral_address:
+    access: rw
+    registers:
+    - reg: S0PAR
+      offset: '0x18'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: PA
+        lsb: 0
+        width: 32
+        svd_access: read-write
+    - reg: S1PAR
+      offset: '0x30'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: PA
+        lsb: 0
+        width: 32
+        svd_access: read-write
+    - reg: S2PAR
+      offset: '0x48'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: PA
+        lsb: 0
+        width: 32
+        svd_access: read-write
+    - reg: S3PAR
+      offset: '0x60'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: PA
+        lsb: 0
+        width: 32
+        svd_access: read-write
+    - reg: S4PAR
+      offset: '0x78'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: PA
+        lsb: 0
+        width: 32
+        svd_access: read-write
+    - reg: S5PAR
+      offset: '0x90'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: PA
+        lsb: 0
+        width: 32
+        svd_access: read-write
+    - reg: S6PAR
+      offset: '0xA8'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: PA
+        lsb: 0
+        width: 32
+        svd_access: read-write
+    - reg: S7PAR
+      offset: '0xC0'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: PA
+        lsb: 0
+        width: 32
+        svd_access: read-write
+  memory_address:
+    access: rw
+    registers:
+    - reg: S0M0AR
+      offset: '0x1C'
+      size: 32
+      index:
+        s: 0
+    - reg: S1M0AR
+      offset: '0x34'
+      size: 32
+      index:
+        s: 1
+    - reg: S2M0AR
+      offset: '0x4C'
+      size: 32
+      index:
+        s: 2
+    - reg: S3M0AR
+      offset: '0x64'
+      size: 32
+      index:
+        s: 3
+    - reg: S4M0AR
+      offset: '0x7C'
+      size: 32
+      index:
+        s: 4
+    - reg: S5M0AR
+      offset: '0x94'
+      size: 32
+      index:
+        s: 5
+    - reg: S6M0AR
+      offset: '0xAC'
+      size: 32
+      index:
+        s: 6
+    - reg: S7M0AR
+      offset: '0xC4'
+      size: 32
+      index:
+        s: 7
+    - reg: S0M1AR
+      offset: '0x20'
+      size: 32
+      index:
+        s: 0
+    - reg: S1M1AR
+      offset: '0x38'
+      size: 32
+      index:
+        s: 1
+    - reg: S2M1AR
+      offset: '0x50'
+      size: 32
+      index:
+        s: 2
+    - reg: S3M1AR
+      offset: '0x68'
+      size: 32
+      index:
+        s: 3
+    - reg: S4M1AR
+      offset: '0x80'
+      size: 32
+      index:
+        s: 4
+    - reg: S5M1AR
+      offset: '0x98'
+      size: 32
+      index:
+        s: 5
+    - reg: S6M1AR
+      offset: '0xB0'
+      size: 32
+      index:
+        s: 6
+    - reg: S7M1AR
+      offset: '0xC8'
+      size: 32
+      index:
+        s: 7
+  item_count:
+    access: rw
+    registers:
+    - reg: S0NDTR
+      offset: '0x14'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: NDT
+        lsb: 0
+        width: 16
+        svd_access: read-write
+    - reg: S1NDTR
+      offset: '0x2C'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: NDT
+        lsb: 0
+        width: 16
+        svd_access: read-write
+    - reg: S2NDTR
+      offset: '0x44'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: NDT
+        lsb: 0
+        width: 16
+        svd_access: read-write
+    - reg: S3NDTR
+      offset: '0x5C'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: NDT
+        lsb: 0
+        width: 16
+        svd_access: read-write
+    - reg: S4NDTR
+      offset: '0x74'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: NDT
+        lsb: 0
+        width: 16
+        svd_access: read-write
+    - reg: S5NDTR
+      offset: '0x8C'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: NDT
+        lsb: 0
+        width: 16
+        svd_access: read-write
+    - reg: S6NDTR
+      offset: '0xA4'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: NDT
+        lsb: 0
+        width: 16
+        svd_access: read-write
+    - reg: S7NDTR
+      offset: '0xBC'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: NDT
+        lsb: 0
+        width: 16
+        svd_access: read-write
+  peripheral_width:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: PSIZE
+        lsb: 11
+        width: 2
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: PSIZE
+        lsb: 11
+        width: 2
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: PSIZE
+        lsb: 11
+        width: 2
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: PSIZE
+        lsb: 11
+        width: 2
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: PSIZE
+        lsb: 11
+        width: 2
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: PSIZE
+        lsb: 11
+        width: 2
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: PSIZE
+        lsb: 11
+        width: 2
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: PSIZE
+        lsb: 11
+        width: 2
+        svd_access: read-write
+  memory_width:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: MSIZE
+        lsb: 13
+        width: 2
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: MSIZE
+        lsb: 13
+        width: 2
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: MSIZE
+        lsb: 13
+        width: 2
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: MSIZE
+        lsb: 13
+        width: 2
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: MSIZE
+        lsb: 13
+        width: 2
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: MSIZE
+        lsb: 13
+        width: 2
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: MSIZE
+        lsb: 13
+        width: 2
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: MSIZE
+        lsb: 13
+        width: 2
+        svd_access: read-write
+  peripheral_increment:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: PINC
+        lsb: 9
+        width: 1
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: PINC
+        lsb: 9
+        width: 1
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: PINC
+        lsb: 9
+        width: 1
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: PINC
+        lsb: 9
+        width: 1
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: PINC
+        lsb: 9
+        width: 1
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: PINC
+        lsb: 9
+        width: 1
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: PINC
+        lsb: 9
+        width: 1
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: PINC
+        lsb: 9
+        width: 1
+        svd_access: read-write
+  memory_increment:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: MINC
+        lsb: 10
+        width: 1
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: MINC
+        lsb: 10
+        width: 1
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: MINC
+        lsb: 10
+        width: 1
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: MINC
+        lsb: 10
+        width: 1
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: MINC
+        lsb: 10
+        width: 1
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: MINC
+        lsb: 10
+        width: 1
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: MINC
+        lsb: 10
+        width: 1
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: MINC
+        lsb: 10
+        width: 1
+        svd_access: read-write
+  circular:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: CIRC
+        lsb: 8
+        width: 1
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: CIRC
+        lsb: 8
+        width: 1
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: CIRC
+        lsb: 8
+        width: 1
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: CIRC
+        lsb: 8
+        width: 1
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: CIRC
+        lsb: 8
+        width: 1
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: CIRC
+        lsb: 8
+        width: 1
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: CIRC
+        lsb: 8
+        width: 1
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: CIRC
+        lsb: 8
+        width: 1
+        svd_access: read-write
+  half_transfer:
+    access: ro
+    registers:
+    - reg: LISR
+      offset: '0x00'
+      size: 32
+      fields:
+      - field: HTIF0
+        lsb: 4
+        width: 1
+        svd_access: read-only
+        index:
+          s: 0
+      - field: HTIF1
+        lsb: 10
+        width: 1
+        svd_access: read-only
+        index:
+          s: 1
+      - field: HTIF2
+        lsb: 20
+        width: 1
+        svd_access: read-only
+        index:
+          s: 2
+      - field: HTIF3
+        lsb: 26
+        width: 1
+        svd_access: read-only
+        index:
+          s: 3
+    - reg: HISR
+      offset: '0x04'
+      size: 32
+      fields:
+      - field: HTIF4
+        lsb: 4
+        width: 1
+        svd_access: read-only
+        index:
+          s: 4
+      - field: HTIF5
+        lsb: 10
+        width: 1
+        svd_access: read-only
+        index:
+          s: 5
+      - field: HTIF6
+        lsb: 20
+        width: 1
+        svd_access: read-only
+        index:
+          s: 6
+      - field: HTIF7
+        lsb: 26
+        width: 1
+        svd_access: read-only
+        index:
+          s: 7
+  transfer_complete:
+    access: ro
+    registers:
+    - reg: LISR
+      offset: '0x00'
+      size: 32
+      fields:
+      - field: TCIF0
+        lsb: 5
+        width: 1
+        svd_access: read-only
+        index:
+          s: 0
+      - field: TCIF1
+        lsb: 11
+        width: 1
+        svd_access: read-only
+        index:
+          s: 1
+      - field: TCIF2
+        lsb: 21
+        width: 1
+        svd_access: read-only
+        index:
+          s: 2
+      - field: TCIF3
+        lsb: 27
+        width: 1
+        svd_access: read-only
+        index:
+          s: 3
+    - reg: HISR
+      offset: '0x04'
+      size: 32
+      fields:
+      - field: TCIF4
+        lsb: 5
+        width: 1
+        svd_access: read-only
+        index:
+          s: 4
+      - field: TCIF5
+        lsb: 11
+        width: 1
+        svd_access: read-only
+        index:
+          s: 5
+      - field: TCIF6
+        lsb: 21
+        width: 1
+        svd_access: read-only
+        index:
+          s: 6
+      - field: TCIF7
+        lsb: 27
+        width: 1
+        svd_access: read-only
+        index:
+          s: 7
+  transfer_error:
+    access: ro
+    registers:
+    - reg: LISR
+      offset: '0x00'
+      size: 32
+      fields:
+      - field: TEIF0
+        lsb: 3
+        width: 1
+        svd_access: read-only
+        index:
+          s: 0
+      - field: TEIF1
+        lsb: 9
+        width: 1
+        svd_access: read-only
+        index:
+          s: 1
+      - field: TEIF2
+        lsb: 19
+        width: 1
+        svd_access: read-only
+        index:
+          s: 2
+      - field: TEIF3
+        lsb: 25
+        width: 1
+        svd_access: read-only
+        index:
+          s: 3
+    - reg: HISR
+      offset: '0x04'
+      size: 32
+      fields:
+      - field: TEIF4
+        lsb: 3
+        width: 1
+        svd_access: read-only
+        index:
+          s: 4
+      - field: TEIF5
+        lsb: 9
+        width: 1
+        svd_access: read-only
+        index:
+          s: 5
+      - field: TEIF6
+        lsb: 19
+        width: 1
+        svd_access: read-only
+        index:
+          s: 6
+      - field: TEIF7
+        lsb: 25
+        width: 1
+        svd_access: read-only
+        index:
+          s: 7
+  flag_ack:
+    access: w1c
+    registers:
+    - reg: LIFCR
+      offset: '0x08'
+      size: 32
+      fields:
+      - field: CHTIF0
+        lsb: 4
+        width: 1
+        svd_access: read-write
+        index:
+          s: 0
+      - field: CHTIF1
+        lsb: 10
+        width: 1
+        svd_access: read-write
+        index:
+          s: 1
+      - field: CHTIF2
+        lsb: 20
+        width: 1
+        svd_access: read-write
+        index:
+          s: 2
+      - field: CHTIF3
+        lsb: 26
+        width: 1
+        svd_access: read-write
+        index:
+          s: 3
+      - field: CTCIF0
+        lsb: 5
+        width: 1
+        svd_access: read-write
+        index:
+          s: 0
+      - field: CTCIF1
+        lsb: 11
+        width: 1
+        svd_access: read-write
+        index:
+          s: 1
+      - field: CTCIF2
+        lsb: 21
+        width: 1
+        svd_access: read-write
+        index:
+          s: 2
+      - field: CTCIF3
+        lsb: 27
+        width: 1
+        svd_access: read-write
+        index:
+          s: 3
+      - field: CTEIF0
+        lsb: 3
+        width: 1
+        svd_access: read-write
+        index:
+          s: 0
+      - field: CTEIF1
+        lsb: 9
+        width: 1
+        svd_access: read-write
+        index:
+          s: 1
+      - field: CTEIF2
+        lsb: 19
+        width: 1
+        svd_access: read-write
+        index:
+          s: 2
+      - field: CTEIF3
+        lsb: 25
+        width: 1
+        svd_access: read-write
+        index:
+          s: 3
+      - field: CFEIF0
+        lsb: 0
+        width: 1
+        svd_access: read-write
+        index:
+          s: 0
+      - field: CFEIF1
+        lsb: 6
+        width: 1
+        svd_access: read-write
+        index:
+          s: 1
+      - field: CFEIF2
+        lsb: 16
+        width: 1
+        svd_access: read-write
+        index:
+          s: 2
+      - field: CFEIF3
+        lsb: 22
+        width: 1
+        svd_access: read-write
+        index:
+          s: 3
+      - field: CDMEIF0
+        lsb: 2
+        width: 1
+        svd_access: read-write
+        index:
+          s: 0
+      - field: CDMEIF1
+        lsb: 8
+        width: 1
+        svd_access: read-write
+        index:
+          s: 1
+      - field: CDMEIF2
+        lsb: 18
+        width: 1
+        svd_access: read-write
+        index:
+          s: 2
+      - field: CDMEIF3
+        lsb: 24
+        width: 1
+        svd_access: read-write
+        index:
+          s: 3
+    - reg: HIFCR
+      offset: '0x0C'
+      size: 32
+      fields:
+      - field: CHTIF4
+        lsb: 4
+        width: 1
+        svd_access: read-write
+        index:
+          s: 4
+      - field: CHTIF5
+        lsb: 10
+        width: 1
+        svd_access: read-write
+        index:
+          s: 5
+      - field: CHTIF6
+        lsb: 20
+        width: 1
+        svd_access: read-write
+        index:
+          s: 6
+      - field: CHTIF7
+        lsb: 26
+        width: 1
+        svd_access: read-write
+        index:
+          s: 7
+      - field: CTCIF4
+        lsb: 5
+        width: 1
+        svd_access: read-write
+        index:
+          s: 4
+      - field: CTCIF5
+        lsb: 11
+        width: 1
+        svd_access: read-write
+        index:
+          s: 5
+      - field: CTCIF6
+        lsb: 21
+        width: 1
+        svd_access: read-write
+        index:
+          s: 6
+      - field: CTCIF7
+        lsb: 27
+        width: 1
+        svd_access: read-write
+        index:
+          s: 7
+      - field: CTEIF4
+        lsb: 3
+        width: 1
+        svd_access: read-write
+        index:
+          s: 4
+      - field: CTEIF5
+        lsb: 9
+        width: 1
+        svd_access: read-write
+        index:
+          s: 5
+      - field: CTEIF6
+        lsb: 19
+        width: 1
+        svd_access: read-write
+        index:
+          s: 6
+      - field: CTEIF7
+        lsb: 25
+        width: 1
+        svd_access: read-write
+        index:
+          s: 7
+      - field: CFEIF4
+        lsb: 0
+        width: 1
+        svd_access: read-write
+        index:
+          s: 4
+      - field: CFEIF5
+        lsb: 6
+        width: 1
+        svd_access: read-write
+        index:
+          s: 5
+      - field: CFEIF6
+        lsb: 16
+        width: 1
+        svd_access: read-write
+        index:
+          s: 6
+      - field: CFEIF7
+        lsb: 22
+        width: 1
+        svd_access: read-write
+        index:
+          s: 7
+      - field: CDMEIF4
+        lsb: 2
+        width: 1
+        svd_access: read-write
+        index:
+          s: 4
+      - field: CDMEIF5
+        lsb: 8
+        width: 1
+        svd_access: read-write
+        index:
+          s: 5
+      - field: CDMEIF6
+        lsb: 18
+        width: 1
+        svd_access: read-write
+        index:
+          s: 6
+      - field: CDMEIF7
+        lsb: 24
+        width: 1
+        svd_access: read-write
+        index:
+          s: 7
+  ht_irq_enable:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: HTIE
+        lsb: 3
+        width: 1
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: HTIE
+        lsb: 3
+        width: 1
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: HTIE
+        lsb: 3
+        width: 1
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: HTIE
+        lsb: 3
+        width: 1
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: HTIE
+        lsb: 3
+        width: 1
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: HTIE
+        lsb: 3
+        width: 1
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: HTIE
+        lsb: 3
+        width: 1
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: HTIE
+        lsb: 3
+        width: 1
+        svd_access: read-write
+  tc_irq_enable:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: TCIE
+        lsb: 4
+        width: 1
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: TCIE
+        lsb: 4
+        width: 1
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: TCIE
+        lsb: 4
+        width: 1
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: TCIE
+        lsb: 4
+        width: 1
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: TCIE
+        lsb: 4
+        width: 1
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: TCIE
+        lsb: 4
+        width: 1
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: TCIE
+        lsb: 4
+        width: 1
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: TCIE
+        lsb: 4
+        width: 1
+        svd_access: read-write
+  te_irq_enable:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: TEIE
+        lsb: 2
+        width: 1
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: TEIE
+        lsb: 2
+        width: 1
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: TEIE
+        lsb: 2
+        width: 1
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: TEIE
+        lsb: 2
+        width: 1
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: TEIE
+        lsb: 2
+        width: 1
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: TEIE
+        lsb: 2
+        width: 1
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: TEIE
+        lsb: 2
+        width: 1
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: TEIE
+        lsb: 2
+        width: 1
+        svd_access: read-write
+  stream_irq:
+    devicetree: interrupts (one per stream)
+  fifo_mode:
+    access: rw
+    registers:
+    - reg: S0FCR
+      offset: '0x24'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: DMDIS
+        lsb: 2
+        width: 1
+        svd_access: read-write
+      - field: FTH
+        lsb: 0
+        width: 2
+        svd_access: read-write
+    - reg: S1FCR
+      offset: '0x3C'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: DMDIS
+        lsb: 2
+        width: 1
+        svd_access: read-write
+      - field: FTH
+        lsb: 0
+        width: 2
+        svd_access: read-write
+    - reg: S2FCR
+      offset: '0x54'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: DMDIS
+        lsb: 2
+        width: 1
+        svd_access: read-write
+      - field: FTH
+        lsb: 0
+        width: 2
+        svd_access: read-write
+    - reg: S3FCR
+      offset: '0x6C'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: DMDIS
+        lsb: 2
+        width: 1
+        svd_access: read-write
+      - field: FTH
+        lsb: 0
+        width: 2
+        svd_access: read-write
+    - reg: S4FCR
+      offset: '0x84'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: DMDIS
+        lsb: 2
+        width: 1
+        svd_access: read-write
+      - field: FTH
+        lsb: 0
+        width: 2
+        svd_access: read-write
+    - reg: S5FCR
+      offset: '0x9C'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: DMDIS
+        lsb: 2
+        width: 1
+        svd_access: read-write
+      - field: FTH
+        lsb: 0
+        width: 2
+        svd_access: read-write
+    - reg: S6FCR
+      offset: '0xB4'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: DMDIS
+        lsb: 2
+        width: 1
+        svd_access: read-write
+      - field: FTH
+        lsb: 0
+        width: 2
+        svd_access: read-write
+    - reg: S7FCR
+      offset: '0xCC'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: DMDIS
+        lsb: 2
+        width: 1
+        svd_access: read-write
+      - field: FTH
+        lsb: 0
+        width: 2
+        svd_access: read-write
+  double_buffer:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: DBM
+        lsb: 18
+        width: 1
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: DBM
+        lsb: 18
+        width: 1
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: DBM
+        lsb: 18
+        width: 1
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: DBM
+        lsb: 18
+        width: 1
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: DBM
+        lsb: 18
+        width: 1
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: DBM
+        lsb: 18
+        width: 1
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: DBM
+        lsb: 18
+        width: 1
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: DBM
+        lsb: 18
+        width: 1
+        svd_access: read-write
+  current_target:
+    access: rw
+    registers:
+    - reg: S0CR
+      offset: '0x10'
+      size: 32
+      index:
+        s: 0
+      fields:
+      - field: CT
+        lsb: 19
+        width: 1
+        svd_access: read-write
+    - reg: S1CR
+      offset: '0x28'
+      size: 32
+      index:
+        s: 1
+      fields:
+      - field: CT
+        lsb: 19
+        width: 1
+        svd_access: read-write
+    - reg: S2CR
+      offset: '0x40'
+      size: 32
+      index:
+        s: 2
+      fields:
+      - field: CT
+        lsb: 19
+        width: 1
+        svd_access: read-write
+    - reg: S3CR
+      offset: '0x58'
+      size: 32
+      index:
+        s: 3
+      fields:
+      - field: CT
+        lsb: 19
+        width: 1
+        svd_access: read-write
+    - reg: S4CR
+      offset: '0x70'
+      size: 32
+      index:
+        s: 4
+      fields:
+      - field: CT
+        lsb: 19
+        width: 1
+        svd_access: read-write
+    - reg: S5CR
+      offset: '0x88'
+      size: 32
+      index:
+        s: 5
+      fields:
+      - field: CT
+        lsb: 19
+        width: 1
+        svd_access: read-write
+    - reg: S6CR
+      offset: '0xA0'
+      size: 32
+      index:
+        s: 6
+      fields:
+      - field: CT
+        lsb: 19
+        width: 1
+        svd_access: read-write
+    - reg: S7CR
+      offset: '0xB8'
+      size: 32
+      index:
+        s: 7
+      fields:
+      - field: CT
+        lsb: 19
+        width: 1
+        svd_access: read-write
+registers:
+  LISR:
+    offset: '0x00'
+    size: 32
+    reset: '0x00000000'
+    access: read-only
+    fields:
+      FEIF0:
+        lsb: 0
+        width: 1
+        access: read-only
+        bound: false
+      DMEIF0:
+        lsb: 2
+        width: 1
+        access: read-only
+        bound: false
+      TEIF0:
+        lsb: 3
+        width: 1
+        access: read-only
+        bound: true
+      HTIF0:
+        lsb: 4
+        width: 1
+        access: read-only
+        bound: true
+      TCIF0:
+        lsb: 5
+        width: 1
+        access: read-only
+        bound: true
+      FEIF1:
+        lsb: 6
+        width: 1
+        access: read-only
+        bound: false
+      DMEIF1:
+        lsb: 8
+        width: 1
+        access: read-only
+        bound: false
+      TEIF1:
+        lsb: 9
+        width: 1
+        access: read-only
+        bound: true
+      HTIF1:
+        lsb: 10
+        width: 1
+        access: read-only
+        bound: true
+      TCIF1:
+        lsb: 11
+        width: 1
+        access: read-only
+        bound: true
+      FEIF2:
+        lsb: 16
+        width: 1
+        access: read-only
+        bound: false
+      DMEIF2:
+        lsb: 18
+        width: 1
+        access: read-only
+        bound: false
+      TEIF2:
+        lsb: 19
+        width: 1
+        access: read-only
+        bound: true
+      HTIF2:
+        lsb: 20
+        width: 1
+        access: read-only
+        bound: true
+      TCIF2:
+        lsb: 21
+        width: 1
+        access: read-only
+        bound: true
+      FEIF3:
+        lsb: 22
+        width: 1
+        access: read-only
+        bound: false
+      DMEIF3:
+        lsb: 24
+        width: 1
+        access: read-only
+        bound: false
+      TEIF3:
+        lsb: 25
+        width: 1
+        access: read-only
+        bound: true
+      HTIF3:
+        lsb: 26
+        width: 1
+        access: read-only
+        bound: true
+      TCIF3:
+        lsb: 27
+        width: 1
+        access: read-only
+        bound: true
+  HISR:
+    offset: '0x04'
+    size: 32
+    reset: '0x00000000'
+    access: read-only
+    fields:
+      FEIF4:
+        lsb: 0
+        width: 1
+        access: read-only
+        bound: false
+      DMEIF4:
+        lsb: 2
+        width: 1
+        access: read-only
+        bound: false
+      TEIF4:
+        lsb: 3
+        width: 1
+        access: read-only
+        bound: true
+      HTIF4:
+        lsb: 4
+        width: 1
+        access: read-only
+        bound: true
+      TCIF4:
+        lsb: 5
+        width: 1
+        access: read-only
+        bound: true
+      FEIF5:
+        lsb: 6
+        width: 1
+        access: read-only
+        bound: false
+      DMEIF5:
+        lsb: 8
+        width: 1
+        access: read-only
+        bound: false
+      TEIF5:
+        lsb: 9
+        width: 1
+        access: read-only
+        bound: true
+      HTIF5:
+        lsb: 10
+        width: 1
+        access: read-only
+        bound: true
+      TCIF5:
+        lsb: 11
+        width: 1
+        access: read-only
+        bound: true
+      FEIF6:
+        lsb: 16
+        width: 1
+        access: read-only
+        bound: false
+      DMEIF6:
+        lsb: 18
+        width: 1
+        access: read-only
+        bound: false
+      TEIF6:
+        lsb: 19
+        width: 1
+        access: read-only
+        bound: true
+      HTIF6:
+        lsb: 20
+        width: 1
+        access: read-only
+        bound: true
+      TCIF6:
+        lsb: 21
+        width: 1
+        access: read-only
+        bound: true
+      FEIF7:
+        lsb: 22
+        width: 1
+        access: read-only
+        bound: false
+      DMEIF7:
+        lsb: 24
+        width: 1
+        access: read-only
+        bound: false
+      TEIF7:
+        lsb: 25
+        width: 1
+        access: read-only
+        bound: true
+      HTIF7:
+        lsb: 26
+        width: 1
+        access: read-only
+        bound: true
+      TCIF7:
+        lsb: 27
+        width: 1
+        access: read-only
+        bound: true
+  LIFCR:
+    offset: '0x08'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      CFEIF0:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      CDMEIF0:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      CTEIF0:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      CHTIF0:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      CTCIF0:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: true
+      CFEIF1:
+        lsb: 6
+        width: 1
+        access: read-write
+        bound: true
+      CDMEIF1:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      CTEIF1:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      CHTIF1:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      CTCIF1:
+        lsb: 11
+        width: 1
+        access: read-write
+        bound: true
+      CFEIF2:
+        lsb: 16
+        width: 1
+        access: read-write
+        bound: true
+      CDMEIF2:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: true
+      CTEIF2:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: true
+      CHTIF2:
+        lsb: 20
+        width: 1
+        access: read-write
+        bound: true
+      CTCIF2:
+        lsb: 21
+        width: 1
+        access: read-write
+        bound: true
+      CFEIF3:
+        lsb: 22
+        width: 1
+        access: read-write
+        bound: true
+      CDMEIF3:
+        lsb: 24
+        width: 1
+        access: read-write
+        bound: true
+      CTEIF3:
+        lsb: 25
+        width: 1
+        access: read-write
+        bound: true
+      CHTIF3:
+        lsb: 26
+        width: 1
+        access: read-write
+        bound: true
+      CTCIF3:
+        lsb: 27
+        width: 1
+        access: read-write
+        bound: true
+  HIFCR:
+    offset: '0x0C'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      CFEIF4:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      CDMEIF4:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      CTEIF4:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      CHTIF4:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      CTCIF4:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: true
+      CFEIF5:
+        lsb: 6
+        width: 1
+        access: read-write
+        bound: true
+      CDMEIF5:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      CTEIF5:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      CHTIF5:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      CTCIF5:
+        lsb: 11
+        width: 1
+        access: read-write
+        bound: true
+      CFEIF6:
+        lsb: 16
+        width: 1
+        access: read-write
+        bound: true
+      CDMEIF6:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: true
+      CTEIF6:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: true
+      CHTIF6:
+        lsb: 20
+        width: 1
+        access: read-write
+        bound: true
+      CTCIF6:
+        lsb: 21
+        width: 1
+        access: read-write
+        bound: true
+      CFEIF7:
+        lsb: 22
+        width: 1
+        access: read-write
+        bound: true
+      CDMEIF7:
+        lsb: 24
+        width: 1
+        access: read-write
+        bound: true
+      CTEIF7:
+        lsb: 25
+        width: 1
+        access: read-write
+        bound: true
+      CHTIF7:
+        lsb: 26
+        width: 1
+        access: read-write
+        bound: true
+      CTCIF7:
+        lsb: 27
+        width: 1
+        access: read-write
+        bound: true
+  S0CR:
+    offset: '0x10'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      EN:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      DMEIE:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: false
+      TEIE:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      HTIE:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      TCIE:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      PFCTRL:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: false
+      DIR:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      CIRC:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      PINC:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      MINC:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      PSIZE:
+        lsb: 11
+        width: 2
+        access: read-write
+        bound: true
+      MSIZE:
+        lsb: 13
+        width: 2
+        access: read-write
+        bound: true
+      PINCOS:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+      PL:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: false
+      DBM:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: true
+      CT:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: true
+      PBURST:
+        lsb: 21
+        width: 2
+        access: read-write
+        bound: false
+      MBURST:
+        lsb: 23
+        width: 2
+        access: read-write
+        bound: false
+  S0NDTR:
+    offset: '0x14'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      NDT:
+        lsb: 0
+        width: 16
+        access: read-write
+        bound: true
+  S0PAR:
+    offset: '0x18'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      PA:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S0M0AR:
+    offset: '0x1C'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M0A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S0M1AR:
+    offset: '0x20'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M1A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S0FCR:
+    offset: '0x24'
+    size: 32
+    reset: '0x00000021'
+    access: read-write
+    fields:
+      FTH:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      DMDIS:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      FS:
+        lsb: 3
+        width: 3
+        access: read-only
+        bound: false
+      FEIE:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: false
+  S1CR:
+    offset: '0x28'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      EN:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      DMEIE:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: false
+      TEIE:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      HTIE:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      TCIE:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      PFCTRL:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: false
+      DIR:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      CIRC:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      PINC:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      MINC:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      PSIZE:
+        lsb: 11
+        width: 2
+        access: read-write
+        bound: true
+      MSIZE:
+        lsb: 13
+        width: 2
+        access: read-write
+        bound: true
+      PINCOS:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+      PL:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: false
+      DBM:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: true
+      CT:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: true
+      ACK:
+        lsb: 20
+        width: 1
+        access: read-write
+        bound: false
+      PBURST:
+        lsb: 21
+        width: 2
+        access: read-write
+        bound: false
+      MBURST:
+        lsb: 23
+        width: 2
+        access: read-write
+        bound: false
+  S1NDTR:
+    offset: '0x2C'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      NDT:
+        lsb: 0
+        width: 16
+        access: read-write
+        bound: true
+  S1PAR:
+    offset: '0x30'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      PA:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S1M0AR:
+    offset: '0x34'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M0A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S1M1AR:
+    offset: '0x38'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M1A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S1FCR:
+    offset: '0x3C'
+    size: 32
+    reset: '0x00000021'
+    access: read-write
+    fields:
+      FTH:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      DMDIS:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      FS:
+        lsb: 3
+        width: 3
+        access: read-only
+        bound: false
+      FEIE:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: false
+  S2CR:
+    offset: '0x40'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      EN:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      DMEIE:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: false
+      TEIE:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      HTIE:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      TCIE:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      PFCTRL:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: false
+      DIR:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      CIRC:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      PINC:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      MINC:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      PSIZE:
+        lsb: 11
+        width: 2
+        access: read-write
+        bound: true
+      MSIZE:
+        lsb: 13
+        width: 2
+        access: read-write
+        bound: true
+      PINCOS:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+      PL:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: false
+      DBM:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: true
+      CT:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: true
+      ACK:
+        lsb: 20
+        width: 1
+        access: read-write
+        bound: false
+      PBURST:
+        lsb: 21
+        width: 2
+        access: read-write
+        bound: false
+      MBURST:
+        lsb: 23
+        width: 2
+        access: read-write
+        bound: false
+  S2NDTR:
+    offset: '0x44'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      NDT:
+        lsb: 0
+        width: 16
+        access: read-write
+        bound: true
+  S2PAR:
+    offset: '0x48'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      PA:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S2M0AR:
+    offset: '0x4C'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M0A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S2M1AR:
+    offset: '0x50'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M1A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S2FCR:
+    offset: '0x54'
+    size: 32
+    reset: '0x00000021'
+    access: read-write
+    fields:
+      FTH:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      DMDIS:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      FS:
+        lsb: 3
+        width: 3
+        access: read-only
+        bound: false
+      FEIE:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: false
+  S3CR:
+    offset: '0x58'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      EN:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      DMEIE:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: false
+      TEIE:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      HTIE:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      TCIE:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      PFCTRL:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: false
+      DIR:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      CIRC:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      PINC:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      MINC:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      PSIZE:
+        lsb: 11
+        width: 2
+        access: read-write
+        bound: true
+      MSIZE:
+        lsb: 13
+        width: 2
+        access: read-write
+        bound: true
+      PINCOS:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+      PL:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: false
+      DBM:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: true
+      CT:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: true
+      ACK:
+        lsb: 20
+        width: 1
+        access: read-write
+        bound: false
+      PBURST:
+        lsb: 21
+        width: 2
+        access: read-write
+        bound: false
+      MBURST:
+        lsb: 23
+        width: 2
+        access: read-write
+        bound: false
+  S3NDTR:
+    offset: '0x5C'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      NDT:
+        lsb: 0
+        width: 16
+        access: read-write
+        bound: true
+  S3PAR:
+    offset: '0x60'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      PA:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S3M0AR:
+    offset: '0x64'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M0A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S3M1AR:
+    offset: '0x68'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M1A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S3FCR:
+    offset: '0x6C'
+    size: 32
+    reset: '0x00000021'
+    access: read-write
+    fields:
+      FTH:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      DMDIS:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      FS:
+        lsb: 3
+        width: 3
+        access: read-only
+        bound: false
+      FEIE:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: false
+  S4CR:
+    offset: '0x70'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      EN:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      DMEIE:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: false
+      TEIE:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      HTIE:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      TCIE:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      PFCTRL:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: false
+      DIR:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      CIRC:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      PINC:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      MINC:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      PSIZE:
+        lsb: 11
+        width: 2
+        access: read-write
+        bound: true
+      MSIZE:
+        lsb: 13
+        width: 2
+        access: read-write
+        bound: true
+      PINCOS:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+      PL:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: false
+      DBM:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: true
+      CT:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: true
+      ACK:
+        lsb: 20
+        width: 1
+        access: read-write
+        bound: false
+      PBURST:
+        lsb: 21
+        width: 2
+        access: read-write
+        bound: false
+      MBURST:
+        lsb: 23
+        width: 2
+        access: read-write
+        bound: false
+  S4NDTR:
+    offset: '0x74'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      NDT:
+        lsb: 0
+        width: 16
+        access: read-write
+        bound: true
+  S4PAR:
+    offset: '0x78'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      PA:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S4M0AR:
+    offset: '0x7C'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M0A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S4M1AR:
+    offset: '0x80'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M1A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S4FCR:
+    offset: '0x84'
+    size: 32
+    reset: '0x00000021'
+    access: read-write
+    fields:
+      FTH:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      DMDIS:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      FS:
+        lsb: 3
+        width: 3
+        access: read-only
+        bound: false
+      FEIE:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: false
+  S5CR:
+    offset: '0x88'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      EN:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      DMEIE:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: false
+      TEIE:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      HTIE:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      TCIE:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      PFCTRL:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: false
+      DIR:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      CIRC:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      PINC:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      MINC:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      PSIZE:
+        lsb: 11
+        width: 2
+        access: read-write
+        bound: true
+      MSIZE:
+        lsb: 13
+        width: 2
+        access: read-write
+        bound: true
+      PINCOS:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+      PL:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: false
+      DBM:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: true
+      CT:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: true
+      ACK:
+        lsb: 20
+        width: 1
+        access: read-write
+        bound: false
+      PBURST:
+        lsb: 21
+        width: 2
+        access: read-write
+        bound: false
+      MBURST:
+        lsb: 23
+        width: 2
+        access: read-write
+        bound: false
+  S5NDTR:
+    offset: '0x8C'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      NDT:
+        lsb: 0
+        width: 16
+        access: read-write
+        bound: true
+  S5PAR:
+    offset: '0x90'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      PA:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S5M0AR:
+    offset: '0x94'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M0A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S5M1AR:
+    offset: '0x98'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M1A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S5FCR:
+    offset: '0x9C'
+    size: 32
+    reset: '0x00000021'
+    access: read-write
+    fields:
+      FTH:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      DMDIS:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      FS:
+        lsb: 3
+        width: 3
+        access: read-only
+        bound: false
+      FEIE:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: false
+  S6CR:
+    offset: '0xA0'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      EN:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      DMEIE:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: false
+      TEIE:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      HTIE:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      TCIE:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      PFCTRL:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: false
+      DIR:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      CIRC:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      PINC:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      MINC:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      PSIZE:
+        lsb: 11
+        width: 2
+        access: read-write
+        bound: true
+      MSIZE:
+        lsb: 13
+        width: 2
+        access: read-write
+        bound: true
+      PINCOS:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+      PL:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: false
+      DBM:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: true
+      CT:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: true
+      ACK:
+        lsb: 20
+        width: 1
+        access: read-write
+        bound: false
+      PBURST:
+        lsb: 21
+        width: 2
+        access: read-write
+        bound: false
+      MBURST:
+        lsb: 23
+        width: 2
+        access: read-write
+        bound: false
+  S6NDTR:
+    offset: '0xA4'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      NDT:
+        lsb: 0
+        width: 16
+        access: read-write
+        bound: true
+  S6PAR:
+    offset: '0xA8'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      PA:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S6M0AR:
+    offset: '0xAC'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M0A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S6M1AR:
+    offset: '0xB0'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M1A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S6FCR:
+    offset: '0xB4'
+    size: 32
+    reset: '0x00000021'
+    access: read-write
+    fields:
+      FTH:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      DMDIS:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      FS:
+        lsb: 3
+        width: 3
+        access: read-only
+        bound: false
+      FEIE:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: false
+  S7CR:
+    offset: '0xB8'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      EN:
+        lsb: 0
+        width: 1
+        access: read-write
+        bound: true
+      DMEIE:
+        lsb: 1
+        width: 1
+        access: read-write
+        bound: false
+      TEIE:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      HTIE:
+        lsb: 3
+        width: 1
+        access: read-write
+        bound: true
+      TCIE:
+        lsb: 4
+        width: 1
+        access: read-write
+        bound: true
+      PFCTRL:
+        lsb: 5
+        width: 1
+        access: read-write
+        bound: false
+      DIR:
+        lsb: 6
+        width: 2
+        access: read-write
+        bound: true
+      CIRC:
+        lsb: 8
+        width: 1
+        access: read-write
+        bound: true
+      PINC:
+        lsb: 9
+        width: 1
+        access: read-write
+        bound: true
+      MINC:
+        lsb: 10
+        width: 1
+        access: read-write
+        bound: true
+      PSIZE:
+        lsb: 11
+        width: 2
+        access: read-write
+        bound: true
+      MSIZE:
+        lsb: 13
+        width: 2
+        access: read-write
+        bound: true
+      PINCOS:
+        lsb: 15
+        width: 1
+        access: read-write
+        bound: false
+      PL:
+        lsb: 16
+        width: 2
+        access: read-write
+        bound: false
+      DBM:
+        lsb: 18
+        width: 1
+        access: read-write
+        bound: true
+      CT:
+        lsb: 19
+        width: 1
+        access: read-write
+        bound: true
+      ACK:
+        lsb: 20
+        width: 1
+        access: read-write
+        bound: false
+      PBURST:
+        lsb: 21
+        width: 2
+        access: read-write
+        bound: false
+      MBURST:
+        lsb: 23
+        width: 2
+        access: read-write
+        bound: false
+  S7NDTR:
+    offset: '0xBC'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      NDT:
+        lsb: 0
+        width: 16
+        access: read-write
+        bound: true
+  S7PAR:
+    offset: '0xC0'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      PA:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S7M0AR:
+    offset: '0xC4'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M0A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S7M1AR:
+    offset: '0xC8'
+    size: 32
+    reset: '0x00000000'
+    access: read-write
+    fields:
+      M1A:
+        lsb: 0
+        width: 32
+        access: read-write
+        bound: true
+  S7FCR:
+    offset: '0xCC'
+    size: 32
+    reset: '0x00000021'
+    access: read-write
+    fields:
+      FTH:
+        lsb: 0
+        width: 2
+        access: read-write
+        bound: true
+      DMDIS:
+        lsb: 2
+        width: 1
+        access: read-write
+        bound: true
+      FS:
+        lsb: 3
+        width: 3
+        access: read-only
+        bound: false
+      FEIE:
+        lsb: 7
+        width: 1
+        access: read-write
+        bound: false

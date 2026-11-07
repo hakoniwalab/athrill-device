@@ -5,18 +5,37 @@ one vendor IP version. This document defines how the behaviour of a device
 class is written once, in abstract terms, and bound to the registers of each IP
 version by a map.
 
-## Three sources, three layers
+## Boundaries
 
-| What | Source | Form |
-|---|---|---|
-| Where a part is and how it is wired (`reg`, `interrupts`, buses, chip selects, `dmas`) | Devicetree | read at run time |
-| What a part does, in abstract terms | model specification (this document) | `spec/models/<class>.yaml` |
-| Which register bit carries each abstract term, per IP version | map | `spec/maps/<ip>.yaml`; register and field names from the reference manual, positions and reset values later generated from the SVD |
+```
+ Conversion tool (tools/bindings_gen.py)
+   inputs only:  ST SVD (pinned)            register definitions
+                 spec/svd-patches.yaml      corrections of SVD errors, with manual evidence
+                 spec/semantics/ + spec/models/   model semantics: which model term is which SVD name
+   output only:  spec/bindings/             bindings
 
-Implementation: one generic behaviour implementation per model
-specification, driven by the map of the IP it is instantiated for (selected by
-the node's `compatible`). Boards only place IP versions; what a board supports
-follows from its IP versions' model versions and features.
+ Device implementation
+   reads only:   spec/bindings/ + spec/models/
+```
+
+- **Model specification** (`spec/models/`): the meaning — terms and behaviour,
+  no registers.
+- **Bindings** (`spec/bindings/<ip>__<soc>_gen.yaml`, generated): the
+  translation between register accesses and meaning. Input side: register
+  offset and bits (the base address comes from the Devicetree `reg` at start-up);
+  output side: model terms. The device implementation receives meaning from
+  the bindings and gives meaning back; it never sees the SVD.
+- **Semantics** (`spec/semantics/<ip>.yaml`, hand-written or proposed by a tool
+  and reviewed): which model term is which SVD register/field name, per IP
+  version (and per SoC where the SVD names differ). The SVD knows positions, not
+  meaning; this is the only place meaning meets SVD names.
+- **SVD** (pinned) and **SVD patches**: register definitions; the SVD is
+  canonical and wrong values are corrected only in `spec/svd-patches.yaml`.
+  SVD quirks that are not errors (split fields, different spellings) are not
+  patched; the semantics use the SVD names and note the manual's.
+
+The Devicetree places IP instances (`reg`, `interrupts`, ...) and selects the
+bindings by `compatible` and SoC. Boards add no bindings.
 
 ## Model specification
 
@@ -43,9 +62,9 @@ controller, without register names.
 Scope follows the fidelity rule: only behaviour that PX4 or ArduPilot drivers
 depend on. Everything else is out of the model, and the map says so.
 
-## Map
+## Semantics file
 
-A map binds one IP version to a model specification.
+A semantics file binds one IP version to a model specification by SVD names.
 
 - `ip`: the IP version, and the `compatible` strings it serves.
 - `model`, `model_version`, `features`: what it implements.
