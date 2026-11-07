@@ -1,0 +1,267 @@
+id: athrill-stm32-board-build
+title: Athrill STM32 Board Build
+recipe_version: 0.1
+goal:
+  user_request: Build athrill3 and its Hakoniwa sensor-device plugin for a supported STM32 flight-controller board.
+  description: >
+    Materialize the revisions pinned by this Recipe, build one Release/LTO
+    athrill3 with EXDEV and Devicetree support, build the 32-bit Hakoniwa
+    sensor-device plugin, smoke the selected board on its base DTB, and emit
+    install artifacts plus a Recipe Receipt.
+feasibility:
+  status: feasible
+  confidence: high
+  rationale:
+    - athrill-target-stm32 owns the portable CMake build and both PX4 smoke procedures.
+    - athrill-device owns both board DTBs and the 32-bit Hakoniwa sensor-device plugin.
+validation:
+  status: verified
+  summary: The component runner passed both board gates from clean Recipe work directories on macOS.
+  steps:
+    - id: pixhawk4_px4_bench
+      status: verified
+      evidence:
+        - repository: hakoniwalab/athrill-target-stm32
+          path: examples/px4-bench/check.sh
+          revision: recipes/pins/sources.json
+          result: ALL PASS; 2131907110 instructions; console SHA-256 84fee1073a6583623d8aab4fb93128e62c68fd388f4b50f3e67d82508f5540b2; ICM20689, MS5611, and IST8310 driver start lines present
+    - id: pixhawk6c_bounded_boot
+      status: verified
+      evidence:
+        - repository: hakoniwalab/athrill-target-stm32
+          path: examples/px4-v6c-boot
+          revision: recipes/pins/sources.json
+          result: 872046340 instructions at the 20000000000-clock bound; console SHA-256 3be44f3089dba1fb5e326f379bf9b9aeafd8f71dc4110f5c41804fc7c04c685c; SD SHA-256 ecb93b4d429fbc2edf5eec3a8f99bbe65a8459e38b538a277a71f34d0dd2bd1c; BMI055 accel/gyro, ICM42688-P, MS5611, and IST8310 driver start lines present
+constraints:
+  - simulation-only-build
+  - supported-boards-pixhawk4-and-pixhawk6c
+  - no-library-injection
+  - no-tcp-listener
+  - work-under-recipe-workspace
+target_environment:
+  required_for: build-and-smoke
+  status: specified
+  os: macOS | Linux
+  os_version: current-supported-host
+  architecture: arm64 | x86_64
+  execution_mode: native
+  runtimes:
+    - name: CMake
+      required: true
+      version: "3.20+"
+      path: host
+  hakoniwa:
+    install_prefix: work/foundation/install
+    components_built: [hakoniwa-core-pro]
+execution_environment:
+  required_for: build-and-smoke
+  status: specified
+  workspace:
+    mode: managed
+  os: macOS | Linux
+  os_version: current-supported-host
+  architecture: arm64 | x86_64
+  execution_mode: native
+  gui:
+    required: false
+    status: disabled
+  shared_memory:
+    required: false
+    access: build-only
+  hakoniwa:
+    install_prefix: work/foundation/install
+    hako_cmd_access: not-required
+foundation_contract:
+  mode: required
+  reason: The normal sensor-device plugin links the Foundation hakoniwa-core CMake package and shakoc library.
+foundation_requirements:
+  hakoniwa-core-pro:
+    capabilities:
+      cmake_package: true
+      core_shared: true
+recipe_local_requirements_schema_version: 1
+recipe_local_requirements:
+  athrill-device:
+    root:
+      default_path: .
+      override_env: ATHRILL_DEVICE_ROOT
+      relative_to: recipe_repository
+    source:
+      type: local
+    required_artifacts:
+      - path: recipes/athrill-stm32-board-build.yaml
+        kind: file
+      - path: boards/pixhawk4/pixhawk4.dtb
+        kind: file
+      - path: boards/pixhawk6c/pixhawk6c.dtb
+        kind: file
+  athrill:
+    root:
+      default_path: work/recipes/athrill-stm32-board-build/sources/athrill
+      override_env: ATHRILL_ROOT
+      relative_to: recipe_repository
+    source:
+      type: git
+      url: https://github.com/toppers/athrill.git
+      revision: 2b9b49f21a9f8ad5e63d396f013ad86d341b29e6
+    required_artifacts:
+      - path: cmake/AthrillCore.cmake
+        kind: file
+  athrill-arm-common:
+    root:
+      default_path: work/recipes/athrill-stm32-board-build/sources/athrill-arm-common
+      override_env: ATHRILL_ARM_COMMON_ROOT
+      relative_to: recipe_repository
+    source:
+      type: git
+      url: https://github.com/hakoniwalab/athrill-arm-common.git
+      revision: 60d8098cfcbbda5489c74843c15d3d2742e6c3bb
+    required_artifacts:
+      - path: include/arm_common/arm_pseudo_dp.h
+        kind: file
+  athrill-target-stm32:
+    root:
+      default_path: work/recipes/athrill-stm32-board-build/sources/athrill-target-stm32
+      override_env: ATHRILL_TARGET_STM32_ROOT
+      relative_to: recipe_repository
+    source:
+      type: git
+      url: https://github.com/hakoniwalab/athrill-target-stm32.git
+      revision: b0525dfb79c5801f02687a993471168def23b9a0
+    required_artifacts:
+      - path: examples/px4-bench/check.sh
+        kind: executable
+      - path: examples/px4-v6c-boot/run.sh
+        kind: executable
+      - path: examples/px4-sih/make-sd-image.sh
+        kind: executable
+  hakoniwa-pdu-registry:
+    root:
+      default_path: work/recipes/athrill-stm32-board-build/sources/hakoniwa-pdu-registry
+      override_env: HAKONIWA_PDU_REGISTRY_ROOT
+      relative_to: recipe_repository
+    source:
+      type: git
+      url: https://github.com/hakoniwalab/hakoniwa-pdu-registry.git
+      revision: c40ad51fe410b7692fdffcd0c8c94dbf0ea6adb5
+    required_artifacts:
+      - path: pdu/types/hako_mavlink_msgs/pdu_ctype_HakoHilSensor.h
+        kind: file
+component_execution:
+  entrypoint: recipes/recipe.py
+  pin_manifest: recipes/pins/sources.json
+  smoke_manifest: recipes/pins/smoke.json
+  operations: [doctor, plan, configure, build, smoke, install, run]
+  arguments:
+    board: [pixhawk4, pixhawk6c]
+    firmware: PX4 v1.17.0 board ELF path
+  optional_inputs:
+    hako_drone_root: Unpacked Hakoniwa Drone v5 release root; enables the in-process plugin on macOS.
+    hako_drone_source_dir: Matching Drone v5 source tree needed for headers omitted from the release archive.
+agency_boundary:
+  agent_actions:
+    - id: build_and_smoke
+      description: Materialize public sources, build local simulation artifacts, and run the bounded software-only board smoke.
+      autonomous: true
+      preconditions: [user_requested_execution, firmware_elf_provided]
+  human_decisions: []
+  human_actions: []
+  required_permissions: []
+  notes:
+    - No human action is expected after the selected board firmware ELF is supplied.
+components:
+  - id: athrill-device
+    roles: [integration_boundary]
+    purpose: Supply the board DTBs, device framework, and Hakoniwa sensor-device plugins.
+  - id: hakoniwa-core-pro
+    roles: [simulation_core, communication_infrastructure]
+    purpose: Supply the CMake package and shakoc library used by the normal sensor-device plugin.
+connections:
+  - from: athrill-device
+    to: hakoniwa-core-pro
+    interface: api
+    data: [polling asset API, sensor and actuator PDUs]
+    contract:
+      status: partially_verified
+      requires: [hakoniwa-core CMake package, matching PDU C types]
+      validation_notes: [This Recipe verifies compile and link; Recipe 2 owns a live PIL flight.]
+data_flow:
+  summary: The build consumes pinned sources and one board firmware ELF; the smoke creates its persistent fixtures in the Recipe workspace, runs that firmware on the board DTB, and records measured output.
+  steps:
+    - from: PX4 firmware ELF
+      to: athrill3
+      data: [unmodified board firmware]
+      description: The selected board ELF boots on the corresponding Devicetree path.
+time_model:
+  mode: instruction-emulation
+  components: [athrill-device]
+  notes:
+    - The smoke uses Athrill virtual clocks and a measured retired-instruction count; it does not use wall-clock success criteria.
+artifact_sets:
+  runtime_artifacts:
+    description: Emulator, plugins, board DTBs, and Recipe Receipt.
+    status: verified
+    artifacts: [athrill3, hako_sensor_device, optional hako_sensor_device_inproc, board DTBs, Recipe Receipt]
+  pdu_artifacts:
+    description: PDU C types consumed while compiling the Hakoniwa plugin.
+    status: verified
+    artifacts: [hako_mavlink_msgs]
+artifacts:
+  - id: athrill3
+    kind: executable
+    path: work/recipes/athrill-stm32-board-build/install/bin/athrill3
+  - id: sensor-device-plugin
+    kind: native-library
+    path: work/recipes/athrill-stm32-board-build/install/lib
+  - id: board-dtbs
+    kind: runtime-artifacts
+    path: work/recipes/athrill-stm32-board-build/install/boards
+  - id: recipe-receipt
+    kind: receipt
+    path: work/recipes/athrill-stm32-board-build/install/share/hakoniwa/receipts
+missing_pieces: []
+demo:
+  objective: Build and smoke one supported board without starting Hakoniwa or binding a TCP listener.
+  steps:
+    - id: inspect
+      command: python3 recipes/recipe.py plan --board pixhawk4 --firmware /path/to/px4_fmu-v5_default.elf
+      expected: Report every source, Foundation package, build option, output, and smoke oracle without mutation.
+    - id: run
+      command: python3 recipes/recipe.py run --board pixhawk4 --firmware /path/to/px4_fmu-v5_default.elf --business-pack-root /path/to/hakoniwa-business-pack
+      expected: Build, smoke, install, and write a Receipt under the Recipe work directory.
+  observability:
+    success_signals:
+      - Pixhawk 4 reports ALL PASS and exactly 2,131,907,110 instructions; its bench console hash matches and contains the ICM20689, MS5611, and IST8310 start lines.
+      - Pixhawk 6C with a freshly generated fixed FAT32 image reaches the 20,000,000,000-clock bound with exactly 872,046,340 instructions, console SHA-256 3be44f3089dba1fb5e326f379bf9b9aeafd8f71dc4110f5c41804fc7c04c685c, post-smoke SD SHA-256 ecb93b4d429fbc2edf5eec3a8f99bbe65a8459e38b538a277a71f34d0dd2bd1c, and the BMI055 accel/gyro, ICM42688-P, MS5611, and IST8310 start lines.
+    failure_signals:
+      - A source revision differs from recipes/pins/sources.json.
+      - The firmware, instruction count, console hash or required driver start content, SD hash, DTB, Foundation package, or address width differs.
+    fixtures: [PX4 v1.17.0 board ELF supplied as a local path, Recipe-generated fixed FAT32 SD image]
+    automation: [component-owned recipes/recipe.py]
+  verification_checks:
+    lifecycle: [No background process remains after either bounded smoke.]
+    behavior: [The selected firmware reaches the board-specific measured oracle on the DT path.]
+    logs: [The Receipt records source revisions, options, firmware hash, instruction count, console hash, required console lines, and the Pixhawk 6C SD hashes.]
+  cleanup:
+    expected_behavior: [No process, socket, or shared-memory runtime is left by this build Recipe.]
+    verification_checks: [Confirm no athrill3 process remains after smoke.]
+    cautions: [Removing the Recipe work directory discards the build artifacts and Receipt.]
+expected_result: >
+  One Release/LTO athrill3 serves both boards; the selected board smoke passes
+  on its base DTB; the normal 32-bit plugin and optional in-process plugin are
+  installed with both base and Hakoniwa DTBs; and the Receipt captures exact
+  revisions, options, firmware hash, instruction count, console hash, required
+  driver start lines, and the Pixhawk 6C SD hashes.
+source_catalogs:
+  - component_id: athrill-device
+  - component_id: hakoniwa-core-pro
+source_artifacts:
+  - repository: hakoniwalab/athrill-device
+    path: recipes/pins/sources.json
+    revision: current checkout
+    description: Canonical source revision manifest read by the component runner.
+  - repository: hakoniwalab/athrill-device
+    path: recipes/pins/smoke.json
+    revision: current checkout
+    description: Board-specific measured smoke oracle.
+tags: [athrill, stm32, pixhawk4, pixhawk6c, build]
