@@ -141,6 +141,22 @@ items they already check. System checks (boot equality of the C-built and
 Devicetree-built board, the armed take-off trace, hover) are recorded as
 `system` verification of the items they cover.
 
+## Keeping the cost low
+
+Traceability is only kept up if it costs little. Rules:
+
+- Nothing in the chain is maintained by hand except the spec files. The
+  per-board tests, the trace map and the report are generated.
+- Items are coarse: one item per guarantee a firmware driver depends on, not
+  one per register or per line of code. A binding has a handful of items.
+- Library tags go on the function that implements the item, not on every
+  line.
+- Board-specific facts stay in the DTS; adding a board adds no spec text.
+- Gaps are reported, not enforced, until an area is fully rolled out; then
+  CI fails on gaps in that area only.
+- Each area is introduced in one small step that ends green. The pilot's
+  effort is measured before the next area starts.
+
 ## Rollout
 
 1. SPI as the pilot: items, test specifications, generated tests for
