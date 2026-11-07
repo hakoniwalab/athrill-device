@@ -345,8 +345,6 @@ def generated_cases(board: str, controllers: list[SpiController]) -> list[dict[s
                 },
                 "kind": "dma",
                 "controller": controller,
-                "will_fail": True,
-                "known_defect": "SPI controller dmas are not resolved through the public dma_resolve callback",
             })
     return result
 
