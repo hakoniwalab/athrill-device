@@ -1,0 +1,471 @@
+ip: st-stm32-dma-v1
+compatible:
+- st,stm32-dma-v1
+- st,stm32-dma
+soc: st,stm32f7 | st,stm32h7
+manual: RM0410 Rev 5 section 8.5; RM0433 Rev 8 section 15.5 (DMA registers)
+model: dma-controller
+model_version: 1.0.0
+features:
+- base
+- fifo
+- double_buffer
+features_h7_add:
+- mux (via st-stm32-dmamux)
+bindings:
+  stream_enable:
+    reg: SxCR
+    field: EN
+    access: rw
+  direction:
+    reg: SxCR
+    field: DIR
+    access: rw
+  request_select:
+    reg: SxCR
+    field: CHSEL
+    access: rw
+    note: 'F7 only; H7: mux_request_id in DMAMUX'
+  peripheral_address:
+    reg: SxPAR
+    field: PA
+    access: rw
+  memory_address:
+    reg:
+    - SxM0AR
+    - SxM1AR
+    access: rw
+  item_count:
+    reg: SxNDTR
+    field: NDT
+    access: rw
+  peripheral_width:
+    reg: SxCR
+    field: PSIZE
+    access: rw
+  memory_width:
+    reg: SxCR
+    field: MSIZE
+    access: rw
+  peripheral_increment:
+    reg: SxCR
+    field: PINC
+    access: rw
+  memory_increment:
+    reg: SxCR
+    field: MINC
+    access: rw
+  circular:
+    reg: SxCR
+    field: CIRC
+    access: rw
+  half_transfer:
+    reg: LISR/HISR
+    field: HTIFn
+    access: ro
+  transfer_complete:
+    reg: LISR/HISR
+    field: TCIFn
+    access: ro
+  transfer_error:
+    reg: LISR/HISR
+    field: TEIFn
+    access: ro
+  flag_ack:
+    reg: LIFCR/HIFCR
+    field: C*IFn
+    access: w1c
+  ht_irq_enable:
+    reg: SxCR
+    field: HTIE
+    access: rw
+  tc_irq_enable:
+    reg: SxCR
+    field: TCIE
+    access: rw
+  te_irq_enable:
+    reg: SxCR
+    field: TEIE
+    access: rw
+  stream_irq:
+    devicetree: interrupts (one per stream)
+  fifo_mode:
+    reg: SxFCR
+    field:
+    - DMDIS
+    - FTH
+    access: rw
+  double_buffer:
+    reg: SxCR
+    field: DBM
+    access: rw
+  current_target:
+    reg: SxCR
+    field: CT
+    access: rw
+registers_source: RM0433 Rev 8 section 15.5 / RM0410 Rev 5 section 8.5, hand-written
+registers:
+  LISR:
+    offset: '0x00'
+    reset: '0x00000000'
+    fields:
+      FEIF0:
+        lsb: 0
+        width: 1
+      DMEIF0:
+        lsb: 2
+        width: 1
+      TEIF0:
+        lsb: 3
+        width: 1
+      HTIF0:
+        lsb: 4
+        width: 1
+      TCIF0:
+        lsb: 5
+        width: 1
+      FEIF1:
+        lsb: 6
+        width: 1
+      DMEIF1:
+        lsb: 8
+        width: 1
+      TEIF1:
+        lsb: 9
+        width: 1
+      HTIF1:
+        lsb: 10
+        width: 1
+      TCIF1:
+        lsb: 11
+        width: 1
+      FEIF2:
+        lsb: 16
+        width: 1
+      DMEIF2:
+        lsb: 18
+        width: 1
+      TEIF2:
+        lsb: 19
+        width: 1
+      HTIF2:
+        lsb: 20
+        width: 1
+      TCIF2:
+        lsb: 21
+        width: 1
+      FEIF3:
+        lsb: 22
+        width: 1
+      DMEIF3:
+        lsb: 24
+        width: 1
+      TEIF3:
+        lsb: 25
+        width: 1
+      HTIF3:
+        lsb: 26
+        width: 1
+      TCIF3:
+        lsb: 27
+        width: 1
+  HISR:
+    offset: '0x04'
+    reset: '0x00000000'
+    fields:
+      FEIF4:
+        lsb: 0
+        width: 1
+      DMEIF4:
+        lsb: 2
+        width: 1
+      TEIF4:
+        lsb: 3
+        width: 1
+      HTIF4:
+        lsb: 4
+        width: 1
+      TCIF4:
+        lsb: 5
+        width: 1
+      FEIF5:
+        lsb: 6
+        width: 1
+      DMEIF5:
+        lsb: 8
+        width: 1
+      TEIF5:
+        lsb: 9
+        width: 1
+      HTIF5:
+        lsb: 10
+        width: 1
+      TCIF5:
+        lsb: 11
+        width: 1
+      FEIF6:
+        lsb: 16
+        width: 1
+      DMEIF6:
+        lsb: 18
+        width: 1
+      TEIF6:
+        lsb: 19
+        width: 1
+      HTIF6:
+        lsb: 20
+        width: 1
+      TCIF6:
+        lsb: 21
+        width: 1
+      FEIF7:
+        lsb: 22
+        width: 1
+      DMEIF7:
+        lsb: 24
+        width: 1
+      TEIF7:
+        lsb: 25
+        width: 1
+      HTIF7:
+        lsb: 26
+        width: 1
+      TCIF7:
+        lsb: 27
+        width: 1
+  LIFCR:
+    offset: '0x08'
+    reset: '0x00000000'
+    fields:
+      CFEIF0:
+        lsb: 0
+        width: 1
+      CDMEIF0:
+        lsb: 2
+        width: 1
+      CTEIF0:
+        lsb: 3
+        width: 1
+      CHTIF0:
+        lsb: 4
+        width: 1
+      CTCIF0:
+        lsb: 5
+        width: 1
+      CFEIF1:
+        lsb: 6
+        width: 1
+      CDMEIF1:
+        lsb: 8
+        width: 1
+      CTEIF1:
+        lsb: 9
+        width: 1
+      CHTIF1:
+        lsb: 10
+        width: 1
+      CTCIF1:
+        lsb: 11
+        width: 1
+      CFEIF2:
+        lsb: 16
+        width: 1
+      CDMEIF2:
+        lsb: 18
+        width: 1
+      CTEIF2:
+        lsb: 19
+        width: 1
+      CHTIF2:
+        lsb: 20
+        width: 1
+      CTCIF2:
+        lsb: 21
+        width: 1
+      CFEIF3:
+        lsb: 22
+        width: 1
+      CDMEIF3:
+        lsb: 24
+        width: 1
+      CTEIF3:
+        lsb: 25
+        width: 1
+      CHTIF3:
+        lsb: 26
+        width: 1
+      CTCIF3:
+        lsb: 27
+        width: 1
+  HIFCR:
+    offset: '0x0C'
+    reset: '0x00000000'
+    fields:
+      CFEIF4:
+        lsb: 0
+        width: 1
+      CDMEIF4:
+        lsb: 2
+        width: 1
+      CTEIF4:
+        lsb: 3
+        width: 1
+      CHTIF4:
+        lsb: 4
+        width: 1
+      CTCIF4:
+        lsb: 5
+        width: 1
+      CFEIF5:
+        lsb: 6
+        width: 1
+      CDMEIF5:
+        lsb: 8
+        width: 1
+      CTEIF5:
+        lsb: 9
+        width: 1
+      CHTIF5:
+        lsb: 10
+        width: 1
+      CTCIF5:
+        lsb: 11
+        width: 1
+      CFEIF6:
+        lsb: 16
+        width: 1
+      CDMEIF6:
+        lsb: 18
+        width: 1
+      CTEIF6:
+        lsb: 19
+        width: 1
+      CHTIF6:
+        lsb: 20
+        width: 1
+      CTCIF6:
+        lsb: 21
+        width: 1
+      CFEIF7:
+        lsb: 22
+        width: 1
+      CDMEIF7:
+        lsb: 24
+        width: 1
+      CTEIF7:
+        lsb: 25
+        width: 1
+      CHTIF7:
+        lsb: 26
+        width: 1
+      CTCIF7:
+        lsb: 27
+        width: 1
+stream:
+  stride: '0x18'
+  base: '0x10'
+  count: 8
+  registers:
+    CR:
+      offset: '0x00'
+      reset: '0x00000000'
+      fields:
+        EN:
+          lsb: 0
+          width: 1
+        DMEIE:
+          lsb: 1
+          width: 1
+        TEIE:
+          lsb: 2
+          width: 1
+        HTIE:
+          lsb: 3
+          width: 1
+        TCIE:
+          lsb: 4
+          width: 1
+        PFCTRL:
+          lsb: 5
+          width: 1
+        DIR:
+          lsb: 6
+          width: 2
+        CIRC:
+          lsb: 8
+          width: 1
+        PINC:
+          lsb: 9
+          width: 1
+        MINC:
+          lsb: 10
+          width: 1
+        PSIZE:
+          lsb: 11
+          width: 2
+        MSIZE:
+          lsb: 13
+          width: 2
+        PINCOS:
+          lsb: 15
+          width: 1
+        PL:
+          lsb: 16
+          width: 2
+        DBM:
+          lsb: 18
+          width: 1
+        CT:
+          lsb: 19
+          width: 1
+        PBURST:
+          lsb: 21
+          width: 2
+        MBURST:
+          lsb: 23
+          width: 2
+    NDTR:
+      offset: '0x04'
+      reset: '0x00000000'
+      fields:
+        NDT:
+          lsb: 0
+          width: 16
+    PAR:
+      offset: '0x08'
+      reset: '0x00000000'
+      fields:
+        PA:
+          lsb: 0
+          width: 32
+    M0AR:
+      offset: '0x0C'
+      reset: '0x00000000'
+      fields:
+        M0A:
+          lsb: 0
+          width: 32
+    M1AR:
+      offset: '0x10'
+      reset: '0x00000000'
+      fields:
+        M1A:
+          lsb: 0
+          width: 32
+    FCR:
+      offset: '0x14'
+      reset: '0x00000021'
+      fields:
+        FTH:
+          lsb: 0
+          width: 2
+        DMDIS:
+          lsb: 2
+          width: 1
+        FS:
+          lsb: 3
+          width: 3
+        FEIE:
+          lsb: 7
+          width: 1
+  note: 'F7: CR bits 25..27 CHSEL select the request channel. H7: CHSEL does not exist (request via DMAMUX), bits 20 TRBUFF.'
