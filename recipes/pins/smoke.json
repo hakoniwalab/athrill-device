@@ -7,21 +7,34 @@
       "dtb": "boards/pixhawk4/pixhawk4.dtb",
       "hakoniwa_dtb": "boards/pixhawk4/pixhawk4-hakoniwa.dtb",
       "instructions": 2131907110,
-      "success": "ALL PASS"
+      "success": "ALL PASS",
+      "console_sha256": "84fee1073a6583623d8aab4fb93128e62c68fd388f4b50f3e67d82508f5540b2",
+      "required_console_lines": [
+        "icm20689 #0 on SPI bus 1 rotation 2",
+        "ms5611 #0 on SPI bus 4",
+        "ist8310 #0 on I2C bus 3 (external) address 0xE rotation 10"
+      ]
     },
     "pixhawk6c": {
       "firmware": "px4_fmu-v6c_default.elf",
       "firmware_sha256": "8719b2ea764d3185bbf4fbda7d7031763b03eac700d2fe355967eea57c4ffe78",
       "dtb": "boards/pixhawk6c/pixhawk6c.dtb",
       "hakoniwa_dtb": "boards/pixhawk6c/pixhawk6c-hakoniwa.dtb",
-      "clock_limit": 2000000000,
+      "clock_limit": 20000000000,
       "fixture": "fresh-1-gib-fat32-px4sd",
       "fixture_content": "FAT32 without a partition table; fixed PX4SD volume label and serial; initially no files",
       "sd_size": 1073741824,
       "sd_initial_sha256": "05e9dcc78775c0fda8bec01333266521250925350f7d153c9206dc381e7b6e51",
-      "instructions": 117119458,
-      "console_sha256": "05ebf764d02f797bff2124053f40488ce0ac8657aeb44969cbc9e212c83678a5",
-      "sd_sha256": "98fb22f2dbbbddc90e5573b98fc3e7b3bd8395903b5ed04742ff7cdedf956eb3"
+      "instructions": 872046340,
+      "console_sha256": "3be44f3089dba1fb5e326f379bf9b9aeafd8f71dc4110f5c41804fc7c04c685c",
+      "sd_sha256": "ecb93b4d429fbc2edf5eec3a8f99bbe65a8459e38b538a277a71f34d0dd2bd1c",
+      "required_console_lines": [
+        "bmi055_accel #0 on SPI bus 1 rotation 4",
+        "bmi055_gyro #0 on SPI bus 1 rotation 4",
+        "icm42688p #0 on SPI bus 1 rotation 6",
+        "ms5611 #0 on I2C bus 4 (external) address 0x77",
+        "ist8310 #0 on I2C bus 4 (external) address 0xC"
+      ]
     }
   }
 }

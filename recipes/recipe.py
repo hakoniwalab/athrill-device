@@ -308,6 +308,11 @@ def plan(args: argparse.Namespace) -> int:
     smoke = smoke_pin(args.board)
     print(f"Smoke: {args.board} DT path with {smoke['dtb']}")
     print(f"  firmware SHA-256: {smoke['firmware_sha256']}")
+    print(f"  expected instructions: {smoke['instructions']}")
+    print(f"  expected console SHA-256: {smoke['console_sha256']}")
+    print("  required console lines:")
+    for line in smoke["required_console_lines"]:
+        print(f"    - {line}")
     if smoke.get("sd_initial_sha256"):
         print(f"  SD fixture: {smoke['fixture']}")
         print(f"  initial SD SHA-256: {smoke['sd_initial_sha256']}")
@@ -419,6 +424,19 @@ def parse_steps(text: str) -> int:
     return int(matches[-1])
 
 
+def verify_console_lines(board: str, console: Path, required: Sequence[str]) -> list[str]:
+    if not console.is_file():
+        raise RecipeError(f"{board} UART console capture was not produced: {console}")
+    actual = set(console.read_text(encoding="utf-8", errors="replace").splitlines())
+    missing = [line for line in required if line not in actual]
+    if missing:
+        rendered = "\n".join(f"  - {line}" for line in missing)
+        raise RecipeError(
+            f"{board} console is missing required sensor driver start lines:\n{rendered}"
+        )
+    return list(required)
+
+
 def smoke_pixhawk4(work: Path, firmware: Path, athrill3: Path) -> dict[str, Any]:
     target = source_paths(work)["athrill-target-stm32"]
     pin = smoke_pin("pixhawk4")
@@ -438,6 +456,12 @@ def smoke_pixhawk4(work: Path, firmware: Path, athrill3: Path) -> dict[str, Any]
             f"Pixhawk 4 instruction count mismatch: expected {pin['instructions']}, got {instructions}"
         )
     console = target / "examples" / "px4-bench" / "work" / "run1" / "console.txt"
+    console_lines = verify_console_lines("Pixhawk 4", console, pin["required_console_lines"])
+    console_hash = sha256(console)
+    if console_hash != pin["console_sha256"]:
+        raise RecipeError(
+            f"Pixhawk 4 console hash mismatch: expected {pin['console_sha256']}, got {console_hash}"
+        )
     return {
         "status": "verified",
         "board": "pixhawk4",
@@ -445,7 +469,9 @@ def smoke_pixhawk4(work: Path, firmware: Path, athrill3: Path) -> dict[str, Any]
         "instructions": instructions,
         "expected_instructions": pin["instructions"],
         "success": pin["success"],
-        "console_sha256": sha256(console),
+        "console_sha256": console_hash,
+        "expected_console_sha256": pin["console_sha256"],
+        "required_console_lines": console_lines,
         "firmware_sha256": sha256(firmware),
     }
 
@@ -495,8 +521,7 @@ def smoke_pixhawk6c(work: Path, firmware: Path, athrill3: Path) -> dict[str, Any
         )
     instructions = parse_steps(result.stdout + result.stderr)
     console = smoke / "console.raw"
-    if not console.is_file():
-        raise RecipeError("Pixhawk 6C UART console capture was not produced")
+    console_lines = verify_console_lines("Pixhawk 6C", console, pin["required_console_lines"])
     console_hash = sha256(console)
     sd_hash = sha256(sd_image)
     if instructions != pin["instructions"]:
@@ -521,6 +546,7 @@ def smoke_pixhawk6c(work: Path, firmware: Path, athrill3: Path) -> dict[str, Any
         "expected_instructions": pin["instructions"],
         "console_sha256": console_hash,
         "expected_console_sha256": pin["console_sha256"],
+        "required_console_lines": console_lines,
         "sd_initial_sha256": initial_sd_hash,
         "expected_sd_initial_sha256": pin["sd_initial_sha256"],
         "sd_sha256": sd_hash,
@@ -610,6 +636,14 @@ def write_receipt(path: Path, data: dict[str, Any]) -> None:
         )
     if data["smoke"].get("sd_sha256"):
         lines.append(f"  sd_sha256: {yaml_string(data['smoke']['sd_sha256'])}")
+    if data["smoke"].get("required_console_lines"):
+        lines.extend([
+            "  console_content:",
+            "    status: verified",
+            "    required_lines:",
+        ])
+        for line in data["smoke"]["required_console_lines"]:
+            lines.append(f"      - {yaml_string(line)}")
     lines.append("artifacts:")
     for artifact in data["artifacts"]:
         lines.extend([

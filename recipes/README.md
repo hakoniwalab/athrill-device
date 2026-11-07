@@ -105,14 +105,21 @@ pinned target's `examples/px4-sih/make-sd-image.sh` to create `sd.img` inside
 filesystem without a partition table, labeled `PX4SD`, with the generator's
 fixed volume serial and label date and no files. The Recipe verifies both the
 initial image hash and the post-smoke image hash, as well as the instruction
-count and console hash. This exercises PX4's SD/parameter startup path without
-depending on an ignored or pre-existing image.
+count and console hash. The finite bound is 20,000,000,000 clocks: long enough
+for the blank F-RAM recovery to finish and for PX4 to start BMI055 accel and
+gyro plus ICM42688-P on SPI1, and MS5611 and IST8310 on I2C4. Exact startup
+lines for all five drivers are mandatory console content, so a matching hash
+alone is not the behavioral oracle. This exercises PX4's SD/parameter and
+board-sensor startup paths without depending on an ignored or pre-existing
+image.
 
 Pixhawk 4 does not depend on a pre-existing image. Its pinned upstream
 `examples/px4-bench/check.sh` deletes `examples/px4-bench/work`, creates a new
 deterministic image with its local `make-sd-image.sh`, clones that seed for
 both benchmark runs, and requires the two resulting SD images, F-RAM images,
-and consoles to be identical.
+and consoles to be identical. The Recipe additionally pins the run-1 console
+hash and requires its ICM20689 on SPI1, MS5611 on SPI4, and IST8310 on I2C3
+startup lines.
 
 Installed outputs are below `<work-dir>/install/`:
 

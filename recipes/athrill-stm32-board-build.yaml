@@ -24,14 +24,14 @@ validation:
         - repository: hakoniwalab/athrill-target-stm32
           path: examples/px4-bench/check.sh
           revision: recipes/pins/sources.json
-          result: ALL PASS; 2131907110 instructions
+          result: ALL PASS; 2131907110 instructions; console SHA-256 84fee1073a6583623d8aab4fb93128e62c68fd388f4b50f3e67d82508f5540b2; ICM20689, MS5611, and IST8310 driver start lines present
     - id: pixhawk6c_bounded_boot
       status: verified
       evidence:
         - repository: hakoniwalab/athrill-target-stm32
           path: examples/px4-v6c-boot
           revision: recipes/pins/sources.json
-          result: 117119458 instructions; console SHA-256 05ebf764d02f797bff2124053f40488ce0ac8657aeb44969cbc9e212c83678a5; SD SHA-256 98fb22f2dbbbddc90e5573b98fc3e7b3bd8395903b5ed04742ff7cdedf956eb3
+          result: 872046340 instructions at the 20000000000-clock bound; console SHA-256 3be44f3089dba1fb5e326f379bf9b9aeafd8f71dc4110f5c41804fc7c04c685c; SD SHA-256 ecb93b4d429fbc2edf5eec3a8f99bbe65a8459e38b538a277a71f34d0dd2bd1c; BMI055 accel/gyro, ICM42688-P, MS5611, and IST8310 driver start lines present
 constraints:
   - simulation-only-build
   - supported-boards-pixhawk4-and-pixhawk6c
@@ -231,17 +231,17 @@ demo:
       expected: Build, smoke, install, and write a Receipt under the Recipe work directory.
   observability:
     success_signals:
-      - Pixhawk 4 reports ALL PASS and exactly 2,131,907,110 instructions.
-      - Pixhawk 6C with a freshly generated fixed FAT32 image reports exactly 117,119,458 instructions, console SHA-256 05ebf764d02f797bff2124053f40488ce0ac8657aeb44969cbc9e212c83678a5, and post-smoke SD SHA-256 98fb22f2dbbbddc90e5573b98fc3e7b3bd8395903b5ed04742ff7cdedf956eb3.
+      - Pixhawk 4 reports ALL PASS and exactly 2,131,907,110 instructions; its bench console hash matches and contains the ICM20689, MS5611, and IST8310 start lines.
+      - Pixhawk 6C with a freshly generated fixed FAT32 image reaches the 20,000,000,000-clock bound with exactly 872,046,340 instructions, console SHA-256 3be44f3089dba1fb5e326f379bf9b9aeafd8f71dc4110f5c41804fc7c04c685c, post-smoke SD SHA-256 ecb93b4d429fbc2edf5eec3a8f99bbe65a8459e38b538a277a71f34d0dd2bd1c, and the BMI055 accel/gyro, ICM42688-P, MS5611, and IST8310 start lines.
     failure_signals:
       - A source revision differs from recipes/pins/sources.json.
-      - The firmware, instruction count, console hash, SD hash, DTB, Foundation package, or address width differs.
+      - The firmware, instruction count, console hash or required driver start content, SD hash, DTB, Foundation package, or address width differs.
     fixtures: [PX4 v1.17.0 board ELF supplied as a local path, Recipe-generated fixed FAT32 SD image]
     automation: [component-owned recipes/recipe.py]
   verification_checks:
     lifecycle: [No background process remains after either bounded smoke.]
     behavior: [The selected firmware reaches the board-specific measured oracle on the DT path.]
-    logs: [The Receipt records source revisions, options, firmware hash, instruction count, console hash, and the Pixhawk 6C SD hashes.]
+    logs: [The Receipt records source revisions, options, firmware hash, instruction count, console hash, required console lines, and the Pixhawk 6C SD hashes.]
   cleanup:
     expected_behavior: [No process, socket, or shared-memory runtime is left by this build Recipe.]
     verification_checks: [Confirm no athrill3 process remains after smoke.]
@@ -250,8 +250,8 @@ expected_result: >
   One Release/LTO athrill3 serves both boards; the selected board smoke passes
   on its base DTB; the normal 32-bit plugin and optional in-process plugin are
   installed with both base and Hakoniwa DTBs; and the Receipt captures exact
-  revisions, options, firmware hash, instruction count, console hash, and the
-  Pixhawk 6C SD hashes.
+  revisions, options, firmware hash, instruction count, console hash, required
+  driver start lines, and the Pixhawk 6C SD hashes.
 source_catalogs:
   - component_id: athrill-device
   - component_id: hakoniwa-core-pro
