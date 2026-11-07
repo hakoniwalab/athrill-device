@@ -168,6 +168,20 @@ static const TimType h7_tim_table[] = {
 	  .irq_update = 118U, .irq_cc = 118U, .irq_trg_com = 118U, .irq_brk = 118U },
 };
 
+static const TimType *timer_table(const AthrillDeviceNode *node,
+	uint32 *count)
+{
+	const void *property;
+	uint32 size;
+	if (node->ops->get_property(node->context,
+		"athrill,stm32h7-timer", &property, &size) == 0) {
+		*count = sizeof(h7_tim_table) / sizeof(h7_tim_table[0]);
+		return h7_tim_table;
+	}
+	*count = sizeof(f7_tim_table) / sizeof(f7_tim_table[0]);
+	return f7_tim_table;
+}
+
 static uint32 reg(const TimType *t, uint32 offset)
 {
 	return t->regs[offset / 4U];
@@ -671,10 +685,12 @@ static const AthrillDevicePwmProviderOps timer_pwm_ops = {
 static sint32 timer_validate(const AthrillDeviceNode *node, char *error,
 	uint32 error_size)
 {
-	uint32 base, i;
+	const TimType *table;
+	uint32 base, count, i;
+	table = timer_table(node, &count);
 	if (node->ops->get_u32(node->context, "reg", 0U, &base) == 0) {
-		for (i = 0U; i < sizeof(f7_tim_table) / sizeof(f7_tim_table[0]); i++) {
-			if (f7_tim_table[i].base == base) {
+		for (i = 0U; i < count; i++) {
+			if (table[i].base == base) {
 				return 0;
 			}
 		}
@@ -688,15 +704,17 @@ static sint32 timer_validate(const AthrillDeviceNode *node, char *error,
 static sint32 timer_create(const AthrillDeviceCreateArgs *args, void **instance)
 {
 	TimType *timer = NULL;
-	uint32 base, i;
+	const TimType *table;
+	uint32 base, count, i;
 	if (args->node->ops->get_u32(args->node->context, "reg", 0U, &base) != 0) {
 		return -1;
 	}
-	for (i = 0U; i < sizeof(f7_tim_table) / sizeof(f7_tim_table[0]); i++) {
-		if (f7_tim_table[i].base == base) {
+	table = timer_table(args->node, &count);
+	for (i = 0U; i < count; i++) {
+		if (table[i].base == base) {
 			timer = malloc(sizeof(*timer));
 			if (timer != NULL) {
-				*timer = f7_tim_table[i];
+				*timer = table[i];
 			}
 			break;
 		}

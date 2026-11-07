@@ -7,10 +7,12 @@
 #include <stddef.h>
 
 extern const AthrillDeviceModelOps athrill_device_fm25v02_model;
+extern const AthrillDeviceModelOps athrill_device_bmi055_model;
 extern const AthrillDeviceModelOps athrill_device_ms5611_model;
 extern const AthrillDeviceModelOps athrill_device_ist8310_model;
 extern const AthrillDeviceModelOps athrill_device_ublox_m8_model;
 extern const AthrillDeviceModelOps athrill_device_icm20689_model;
+extern const AthrillDeviceModelOps athrill_device_icm42688p_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_gpio_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_exti_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_tim_model;

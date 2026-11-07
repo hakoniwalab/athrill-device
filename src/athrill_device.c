@@ -74,6 +74,8 @@ struct AthrillDeviceRuntime {
 	uint32 node_count;
 	uint32 *order;
 	uint32 order_count;
+	uint32 *tick_order;
+	uint32 tick_order_count;
 	PluginRecord *plugins;
 	uint32 plugin_count;
 };
@@ -312,11 +314,11 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 	}
 
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
-NAMED_ADAPTER(stm32f7_dma_model, "stm32f7-dma-adapter", "stm32f7-dma");
+NAMED_ADAPTER(stm32_dma_model, "stm32-dma-adapter", "stm32-dma");
 NAMED_ADAPTER(stm32f7_spi_model, "stm32f7-spi-adapter", "stm32f7-spi");
 NAMED_ADAPTER(stm32f7_i2c_model, "stm32f7-i2c-adapter", "stm32f7-i2c");
 NAMED_ADAPTER(stm32f7_uart_model, "stm32f7-uart-adapter", "stm32f7-uart");
-NAMED_ADAPTER(stm32f7_sdmmc_model, "stm32f7-sdmmc-adapter", "stm32f7-sdmmc");
+NAMED_ADAPTER(stm32_sdmmc_model, "stm32-sdmmc-adapter", "stm32-sdmmc");
 NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter", "stm32f7-flash");
 NAMED_ADAPTER(stm32f7_rtc_model, "stm32f7-rtc-adapter", "stm32f7-rtc");
 NAMED_ADAPTER(stm32f7_adc_model, "stm32f7-adc-adapter", "stm32f7-adc");
@@ -326,9 +328,16 @@ NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter", "stm32f7-crc");
 NAMED_ADAPTER(stm32f7_backup_sram_model, "stm32f7-backup-sram-adapter", "stm32f7-backup-sram");
 NAMED_ADAPTER(sdcard_model, "sdcard-adapter", "sdcard");
 NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-source");
+NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
+NAMED_ADAPTER(stm32h7_rcc_model, "stm32h7-rcc-adapter", "stm32h7-rcc");
+NAMED_ADAPTER(stm32h7_pwr_model, "stm32h7-pwr-adapter", "stm32h7-pwr");
+NAMED_ADAPTER(stm32h7_spi_model, "stm32h7-spi-adapter", "stm32h7-spi");
+NAMED_ADAPTER(stm32h7_dmamux_model, "stm32h7-dmamux-adapter", "stm32h7-dmamux");
+NAMED_ADAPTER(stm32h7_boot_register_model, "stm32h7-boot-register-adapter",
+	"stm32h7-boot-register");
 
 static const char *const structural_compatibles[] = {
-	"holybro,pixhawk4",
+	"holybro,pixhawk4", "holybro,pixhawk6c",
 	"simple-bus", "simple-mfd", "syscon", "fixed-clock",
 	"zephyr,memory-region", "zephyr,memory-attr", "mmio-sram",
 	"st,stm32f7-pinctrl", "st,stm32-pinctrl", "st,stm32-reset",
@@ -341,13 +350,13 @@ static const char *const structural_compatibles[] = {
 static const char *const stm32f7_soc_compatibles[] = { "st,stm32f765", "st,stm32f7" };
 static const char *const stm32f7_gpio_compatibles[] = { "st,stm32-gpio" };
 static const char *const stm32f7_exti_compatibles[] = { "st,stm32-exti" };
-static const char *const stm32f7_dma_compatibles[] = { "st,stm32-dma-v1" };
+static const char *const stm32_dma_compatibles[] = { "st,stm32-dma-v1" };
 static const char *const stm32f7_spi_compatibles[] = { "st,stm32-spi-fifo", "st,stm32-spi" };
 static const char *const stm32f7_i2c_compatibles[] = { "st,stm32-i2c-v2" };
 static const char *const stm32f7_timer_compatibles[] = { "st,stm32-timers" };
 static const char *const stm32f7_pwm_compatibles[] = { "st,stm32-pwm" };
 static const char *const stm32f7_uart_compatibles[] = { "st,stm32-usart", "st,stm32-uart" };
-static const char *const stm32f7_sdmmc_compatibles[] = { "st,stm32-sdmmc" };
+static const char *const stm32_sdmmc_compatibles[] = { "st,stm32-sdmmc" };
 static const char *const stm32f7_flash_compatibles[] = {
 	"st,stm32-flash-controller", "st,stm32f7-flash-controller",
 	"zephyr,flash-controller"
@@ -366,6 +375,21 @@ static const char *const ublox_m8_compatibles[] = { "u-blox,m8" };
 static const char *const sdcard_compatibles[] = { "zephyr,sdmmc-disk" };
 static const char *const pwm_actuator_compatibles[] = { "athrill,pwm-actuator-map" };
 static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-source" };
+static const char *const stm32h7_soc_compatibles[] = { "st,stm32h743", "st,stm32h7" };
+static const char *const stm32h7_rcc_compatibles[] = { "st,stm32h7-rcc" };
+static const char *const stm32h7_pwr_compatibles[] = { "st,stm32h7-pwr" };
+static const char *const stm32h7_spi_compatibles[] = { "st,stm32h7-spi" };
+static const char *const stm32h7_dmamux_compatibles[] = { "st,stm32-dmamux" };
+static const char *const stm32h7_boot_register_compatibles[] = {
+	"st,stm32-bdma", "st,stm32-watchdog", "st,stm32h7-syscfg",
+	"st,stm32h7-axi-target", "st,stm32h7-dbgmcu",
+	"st,stm32h7-system-memory", "st,stm32h7-fdcan"
+};
+static const char *const bmi055_accel_compatibles[] = { "bosch,bma280" };
+static const char *const bmi055_gyro_compatibles[] = { "bosch,bmg160" };
+static const char *const icm42688p_compatibles[] = {
+	"invensense,icm42688", "invensense,icm4268x"
+};
 static const char *const test_compatibles[] = {
 	"athrill,test-mmio", "athrill,test-spi-controller",
 	"athrill,test-i2c-controller", "athrill,test-uart-controller"
@@ -379,13 +403,13 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_soc_compatibles, 2U, &stm32f7_soc_model },
 	{ stm32f7_gpio_compatibles, 1U, &athrill_device_stm32_gpio_model },
 	{ stm32f7_exti_compatibles, 1U, &athrill_device_stm32_exti_model },
-	{ stm32f7_dma_compatibles, 1U, &stm32f7_dma_model },
+	{ stm32_dma_compatibles, 1U, &stm32_dma_model },
 	{ stm32f7_spi_compatibles, 2U, &stm32f7_spi_model },
 	{ stm32f7_i2c_compatibles, 1U, &stm32f7_i2c_model },
 	{ stm32f7_timer_compatibles, 1U, &athrill_device_stm32_tim_model },
 	{ stm32f7_pwm_compatibles, 1U, &structural_model },
 	{ stm32f7_uart_compatibles, 2U, &stm32f7_uart_model },
-	{ stm32f7_sdmmc_compatibles, 1U, &stm32f7_sdmmc_model },
+	{ stm32_sdmmc_compatibles, 1U, &stm32_sdmmc_model },
 	{ stm32f7_flash_compatibles, 3U, &stm32f7_flash_model },
 	{ stm32f7_rtc_compatibles, 1U, &stm32f7_rtc_model },
 	{ stm32f7_adc_compatibles, 1U, &stm32f7_adc_model },
@@ -401,6 +425,15 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ sdcard_compatibles, 1U, &sdcard_model },
 	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
 	{ bench_sensor_compatibles, 1U, &bench_sensor_model },
+	{ stm32h7_soc_compatibles, 2U, &stm32h7_soc_model },
+	{ stm32h7_rcc_compatibles, 1U, &stm32h7_rcc_model },
+	{ stm32h7_pwr_compatibles, 1U, &stm32h7_pwr_model },
+	{ stm32h7_spi_compatibles, 1U, &stm32h7_spi_model },
+	{ stm32h7_dmamux_compatibles, 1U, &stm32h7_dmamux_model },
+	{ stm32h7_boot_register_compatibles, 7U, &stm32h7_boot_register_model },
+	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
+	{ bmi055_gyro_compatibles, 1U, &athrill_device_bmi055_model },
+	{ icm42688p_compatibles, 2U, &athrill_device_icm42688p_model },
 	{ test_compatibles, 4U, &test_mmio_model },
 	{ test_peripheral_compatibles, 1U, &test_peripheral_model }
 };
@@ -1226,7 +1259,8 @@ static int node_has_compatible(const NodeRecord *node, const char *wanted)
 
 static int is_spi_controller(const NodeRecord *node)
 {
-	return node_has_compatible(node, "st,stm32-spi-fifo") ||
+	return node_has_compatible(node, "st,stm32h7-spi") ||
+		node_has_compatible(node, "st,stm32-spi-fifo") ||
 		node_has_compatible(node, "st,stm32-spi") ||
 		node_has_compatible(node, "athrill,test-spi-controller");
 }
@@ -1375,6 +1409,60 @@ static int stable_topological_sort(AthrillDeviceRuntime *runtime)
 	}
 	free(done);
 	return 0;
+}
+
+static int tick_before_value_source(const AthrillDeviceRuntime *runtime,
+	const NodeRecord *node, uint32 source_index)
+{
+	const fdt32_t *source;
+	int length;
+	int provider;
+
+	if (fdt_getprop(runtime->dtb, node->offset,
+	    "athrill,tick-before-value-source", NULL) == NULL) {
+		return 0;
+	}
+	source = fdt_getprop(runtime->dtb, node->offset, "value-source",
+		&length);
+	if (source == NULL || length != (int)sizeof(*source)) {
+		return 0;
+	}
+	provider = node_index_by_phandle(runtime, fdt32_to_cpu(*source));
+	return provider >= 0 && (uint32)provider == source_index;
+}
+
+static int build_tick_order(AthrillDeviceRuntime *runtime)
+{
+	uint8 *added;
+	uint32 i, j;
+
+	runtime->tick_order = calloc(runtime->order_count,
+		sizeof(*runtime->tick_order));
+	added = calloc(runtime->order_count, 1U);
+	if (runtime->tick_order == NULL || added == NULL) {
+		free(added);
+		return -1;
+	}
+	for (i = 0U; i < runtime->order_count; i++) {
+		uint32 source_index = runtime->order[i];
+		for (j = 0U; j < runtime->order_count; j++) {
+			NodeRecord *candidate =
+				&runtime->nodes[runtime->order[j]];
+			if (!added[j] && tick_before_value_source(runtime,
+			    candidate, source_index)) {
+				runtime->tick_order[runtime->tick_order_count++] =
+					runtime->order[j];
+				added[j] = 1U;
+			}
+		}
+		if (!added[i]) {
+			runtime->tick_order[runtime->tick_order_count++] =
+				source_index;
+			added[i] = 1U;
+		}
+	}
+	free(added);
+	return runtime->tick_order_count == runtime->order_count ? 0 : -1;
 }
 
 static int cells_value(const fdt32_t *cells, uint32 count, uint64 *value)
@@ -1994,7 +2082,8 @@ sint32 athrill_device_build(const AthrillDeviceBuildOptions *options,
 	if (load_plugins(runtime, options) != 0 || inventory_nodes(runtime, options) != 0 ||
 	    select_models(runtime, options) != 0 || build_dependencies(runtime) != 0 ||
 	    validate_common_properties(runtime) != 0 ||
-	    stable_topological_sort(runtime) != 0 || validate_and_create(runtime) != 0 ||
+	    stable_topological_sort(runtime) != 0 || build_tick_order(runtime) != 0 ||
+	    validate_and_create(runtime) != 0 ||
 	    register_and_connect(runtime) != 0) {
 		goto fail;
 	}
@@ -2022,6 +2111,28 @@ sint32 athrill_device_reset(AthrillDeviceRuntime *runtime)
 	return 0;
 }
 
+static sint32 tick_one(NodeRecord *node, uint64 now,
+	AthrillDeviceTickResult *result)
+{
+	AthrillDeviceTickResult one;
+
+	if (!node->created || node->model->tick == NULL) {
+		return 0;
+	}
+	one.next_event_interval = ATHRILL_DEVICE_NO_EVENT;
+	one.can_skip = TRUE;
+	if (node->model->tick(node->instance, now, &one) != 0) {
+		return -1;
+	}
+	if (one.next_event_interval < result->next_event_interval) {
+		result->next_event_interval = one.next_event_interval;
+	}
+	if (!one.can_skip) {
+		result->can_skip = FALSE;
+	}
+	return 0;
+}
+
 sint32 athrill_device_tick(AthrillDeviceRuntime *runtime, uint64 now,
                            AthrillDeviceTickResult *result)
 {
@@ -2031,22 +2142,10 @@ sint32 athrill_device_tick(AthrillDeviceRuntime *runtime, uint64 now,
 	}
 	result->next_event_interval = ATHRILL_DEVICE_NO_EVENT;
 	result->can_skip = TRUE;
-	for (i = 0U; i < runtime->order_count; i++) {
-		NodeRecord *node = &runtime->nodes[runtime->order[i]];
-		AthrillDeviceTickResult one;
-		if (!node->created || node->model->tick == NULL) {
-			continue;
-		}
-		one.next_event_interval = ATHRILL_DEVICE_NO_EVENT;
-		one.can_skip = TRUE;
-		if (node->model->tick(node->instance, now, &one) != 0) {
+	for (i = 0U; i < runtime->tick_order_count; i++) {
+		NodeRecord *node = &runtime->nodes[runtime->tick_order[i]];
+		if (tick_one(node, now, result) != 0) {
 			return -1;
-		}
-		if (one.next_event_interval < result->next_event_interval)
-			result->next_event_interval =
-			    one.next_event_interval;
-		if (!one.can_skip) {
-			result->can_skip = FALSE;
 		}
 	}
 	return 0;
@@ -2084,6 +2183,7 @@ void athrill_device_destroy(AthrillDeviceRuntime *runtime)
 		}
 	free(runtime->plugins);
 	free(runtime->order);
+	free(runtime->tick_order);
 	free(runtime->nodes);
 	free(runtime->dtb);
 	free(runtime);

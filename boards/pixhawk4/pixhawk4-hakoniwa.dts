@@ -14,20 +14,25 @@
 
 &pwm_actuators {
 	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
 };
 
 &icm20689 {
 	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
 };
 
 &magnetometer {
 	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
 };
 
 &barometer {
 	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
 };
 
 &gps1 {
 	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
 };

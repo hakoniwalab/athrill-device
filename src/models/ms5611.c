@@ -221,6 +221,71 @@ static uint8 exchange(void *instance, uint8 mosi)
 	return chip->out_pos < chip->out_len ? chip->out[chip->out_pos++] : 0U;
 }
 
+static std_bool i2c_start(void *instance, std_bool read)
+{
+	Ms5611 *chip = instance;
+	if (read) {
+		chip->out_pos = 0U;
+	} else {
+		chip->command = 0xffU;
+		chip->out_len = 0U;
+		chip->out_pos = 0U;
+	}
+	return TRUE;
+}
+
+static void i2c_write_byte(void *instance, uint8 data)
+{
+	Ms5611 *chip = instance;
+	if (chip->command == 0xffU) {
+		command(chip, data);
+	}
+}
+
+static uint8 i2c_read_byte(void *instance)
+{
+	Ms5611 *chip = instance;
+	return chip->out_pos < chip->out_len ? chip->out[chip->out_pos++] : 0U;
+}
+
+static void i2c_stop(void *instance)
+{
+	(void)instance;
+}
+
+static sint32 i2c_transfer(void *instance,
+	AthrillDeviceI2cMessage *messages, uint32 message_count)
+{
+	Ms5611 *chip = instance;
+	uint32 message;
+	uint32 byte;
+	if (messages == NULL && message_count != 0U) {
+		return -1;
+	}
+	for (message = 0U; message < message_count; message++) {
+		AthrillDeviceI2cMessage *current = &messages[message];
+		if (current->data == NULL && current->size != 0U) {
+			return -1;
+		}
+		if (!i2c_start(chip, current->read)) {
+			return -1;
+		}
+		if (current->read) {
+			for (byte = 0U; byte < current->size; byte++) {
+				current->data[byte] = i2c_read_byte(chip);
+			}
+		} else {
+			for (byte = 0U; byte < current->size; byte++) {
+				i2c_write_byte(chip, current->data[byte]);
+			}
+		}
+		if (current->stop) {
+			i2c_stop(chip);
+		}
+	}
+	return 0;
+}
+
 static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 {
 	Ms5611 *chip = calloc(1U, sizeof(*chip));
@@ -257,8 +322,14 @@ static const AthrillDeviceSpiPeripheralOps spi_ops = {
 	sizeof(AthrillDeviceSpiPeripheralOps), select_chip, exchange
 };
 
+static const AthrillDeviceI2cPeripheralOps i2c_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceI2cPeripheralOps), i2c_transfer,
+	i2c_start, i2c_write_byte, i2c_read_byte, i2c_stop
+};
+
 const AthrillDeviceModelOps athrill_device_ms5611_model = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceModelOps), "ms5611", "1", NULL,
-	create, free, NULL, &spi_ops, NULL, NULL, connect_model, reset, tick
+	create, free, NULL, &spi_ops, &i2c_ops, NULL, connect_model, reset, tick
 };

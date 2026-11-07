@@ -12,6 +12,41 @@ set(CMAKE_C_EXTENSIONS ON)
 option(HAKO_SENSOR_DEVICE_BUILD_INPROC
   "Build the sensor device with a Hakoniwa Drone aircraft in process" OFF)
 
+# Keep the legacy EXDEV entry point until the EXDEV deprecation gate.  The
+# same shared library also exports the Devicetree model-plugin entry point.
+set(ATHRILL_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../athrill"
+    CACHE PATH "Athrill core source tree (toppers/athrill v3.0.0 or later)")
+get_filename_component(ATHRILL_SOURCE_DIR "${ATHRILL_SOURCE_DIR}" ABSOLUTE)
+set(ATHRILL_SRC_DIR "${ATHRILL_SOURCE_DIR}/src")
+if(NOT EXISTS "${ATHRILL_SRC_DIR}/inc/athrill_exdev.h")
+  message(FATAL_ERROR "Athrill EXDEV headers not found under ${ATHRILL_SOURCE_DIR}")
+endif()
+set(ATHRILL_ADDRESS_WIDTH "" CACHE STRING
+    "Required address width of the athrill3 that loads the EXDEV library (32 or 64)")
+set_property(CACHE ATHRILL_ADDRESS_WIDTH PROPERTY STRINGS 32 64)
+if(NOT ATHRILL_ADDRESS_WIDTH STREQUAL "32" AND
+   NOT ATHRILL_ADDRESS_WIDTH STREQUAL "64")
+  message(FATAL_ERROR
+    "Set ATHRILL_ADDRESS_WIDTH to the loading athrill3 bus width "
+    "(32 for athrill-target-stm32, 64 for athrill-target-riscv)")
+endif()
+
+function(configure_hako_dual_abi_target target)
+  target_link_libraries(${target} PRIVATE hako_sensor_device_core)
+  target_include_directories(${target} PRIVATE
+    "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/inc>"
+    "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/lib>"
+    "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/cpu>"
+    "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/device/mpu>"
+    "$<$<COMPILE_LANGUAGE:C>:${ATHRILL_SRC_DIR}/device/peripheral/serial/fifo>")
+  target_compile_definitions(${target} PRIVATE
+    ATHRILL_EXT_DEVICE OS_LINUX ATHRILL_ADDRESS_WIDTH=${ATHRILL_ADDRESS_WIDTH})
+  if(APPLE)
+    # Athrill supplies the EXDEV callbacks to a library loaded with dlopen.
+    target_link_options(${target} PRIVATE -undefined dynamic_lookup)
+  endif()
+endfunction()
+
 # The register behaviour, without Athrill (also used by tests).
 add_library(hako_sensor_device_core STATIC src/hako_sensor_device.c)
 target_include_directories(hako_sensor_device_core PUBLIC src include)
@@ -25,6 +60,7 @@ set(HAKO_PDU_REGISTRY_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../hakoniwa-pdu-regis
 # Explicit plugin for compatible hakoniwa,sensor-device.
 add_library(hako_sensor_device SHARED
   src/hako_sensor_device_model.c
+  src/hako_sensor_device_exdev.c
   src/hako_sensor_device_link.c
   src/hako_sensor_device_link_mavlink.c)
 target_include_directories(hako_sensor_device PRIVATE
@@ -34,6 +70,7 @@ target_include_directories(hako_sensor_device PRIVATE
 target_link_libraries(hako_sensor_device PRIVATE hakoniwa-core::shakoc)
 target_compile_definitions(hako_sensor_device PRIVATE
   ATHRILL_DEVICE_STANDALONE_TYPES)
+configure_hako_dual_abi_target(hako_sensor_device)
 set_target_properties(hako_sensor_device PROPERTIES C_VISIBILITY_PRESET hidden)
 
 if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
@@ -82,6 +119,7 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
 
   add_library(hako_sensor_device_inproc SHARED
     src/hako_sensor_device_model.c
+    src/hako_sensor_device_exdev.c
     src/hako_sensor_device_link_inproc.cpp
     src/hako_sensor_device_link_mavlink.c)
   target_include_directories(hako_sensor_device_inproc PRIVATE
@@ -90,6 +128,7 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
   configure_hako_inproc_target(hako_sensor_device_inproc)
   target_compile_definitions(hako_sensor_device_inproc PRIVATE
     HAKO_SENSOR_DEVICE_INPROC ATHRILL_DEVICE_STANDALONE_TYPES)
+  configure_hako_dual_abi_target(hako_sensor_device_inproc)
   set_target_properties(hako_sensor_device_inproc PROPERTIES
     C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
 

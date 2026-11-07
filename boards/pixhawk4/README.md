@@ -15,7 +15,7 @@ The checked-in blobs have SHA-256:
 
 ```text
 d69341d08b5bf05fc1ceba6deb5fb400ea1162dd52ba60aa08e77fc3696a8c13  pixhawk4.dtb
-f7b93e0e8a82b5dcf8d1267ce89290765c72c1efd053f2a62db287d110aea501  pixhawk4-hakoniwa.dtb
+d66bbf6185768087ad85366580ed5bb5d5a03e20156b7c8c6c8950bacee90f77  pixhawk4-hakoniwa.dtb
 ```
 
 It was made with GNU cpp and dtc 1.7.x from a Linux container, from the

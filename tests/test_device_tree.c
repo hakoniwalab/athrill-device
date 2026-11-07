@@ -24,6 +24,7 @@ typedef struct {
 	uint32 irq_set_count;
 	uint64 last_irq;
 	uint64 clock;
+	uint64 frequency;
 	float32 actuator_values[16];
 	uint32 actuator_count;
 	uint32 dma_resolved;
@@ -502,8 +503,8 @@ static sint32 uart_send_from_node(void *context,
 
 static uint64 time_frequency(void *context)
 {
-	(void)context;
-	return 216000000U;
+	TestTarget *target = context;
+	return target->frequency != 0U ? target->frequency : 216000000U;
 }
 
 static uint64 time_now(void *context)
@@ -683,6 +684,31 @@ int main(int argc, char **argv)
 	athrill_device_destroy(runtime);
 	runtime = NULL;
 	target.irq_resolved = 0U;
+
+	path(dtb, sizeof(dtb), "timer-h7-pwm.dtb");
+	target.registered = 0U;
+	target.irq_resolved = 0U;
+	target.actuator_count = 0U;
+	target.clock = 0U;
+	target.frequency = 480000000U;
+	TEST_CHECK(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
+	TEST_CHECK(target.registered == 1U && target.irq_resolved == 4U);
+	TEST_CHECK(target.ops->write(target.instance, 0x40010028U, 4U, 239U) == 0);
+	TEST_CHECK(target.ops->write(target.instance, 0x4001002cU, 4U, 19999U) == 0);
+	TEST_CHECK(target.ops->write(target.instance, 0x40010034U, 4U, 1500U) == 0);
+	TEST_CHECK(target.ops->write(target.instance, 0x40010018U, 4U, 6U << 4) == 0);
+	TEST_CHECK(target.ops->write(target.instance, 0x40010020U, 4U, 1U) == 0);
+	TEST_CHECK(target.ops->write(target.instance, 0x40010014U, 4U, 1U) == 0);
+	TEST_CHECK(target.ops->write(target.instance, 0x40010044U, 4U, 1U << 15) == 0);
+	TEST_CHECK(target.ops->write(target.instance, 0x40010000U, 4U, 1U) == 0);
+	TEST_CHECK(athrill_device_tick(runtime, 1U, &tick) == 0);
+	TEST_CHECK(target.actuator_count == 1U &&
+		target.actuator_values[0] > 0.499F &&
+		target.actuator_values[0] < 0.501F);
+	athrill_device_destroy(runtime);
+	runtime = NULL;
+	target.irq_resolved = 0U;
+	target.frequency = 216000000U;
 
 	path(dtb, sizeof(dtb), "gps.dtb");
 	target.uart_bound = 0U;
