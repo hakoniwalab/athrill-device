@@ -1,0 +1,31 @@
+model: magnetometer
+version: 1.0.0
+summary: Single-measurement 3-axis magnetometer on I2C (IST8310). Values come from the common sensor source.
+
+terms:
+  - {name: identity,        kind: status,  feature: base, meaning: "WAI register value (ADV-CHIP-IST8310-001)."}
+  - {name: soft_reset,      kind: control, feature: base, meaning: "Registers return to reset values."}
+  - {name: single_measure,  kind: control, feature: base, meaning: "Starts one measurement."}
+  - {name: averaging,       kind: control, feature: base, meaning: "Averaging setting: stored; affects conversion time only."}
+  - {name: resolution,      kind: control, feature: base, meaning: "Output resolution setting (counts per gauss) as the datasheet's control register states."}
+  - {name: data_ready,      kind: status,  feature: base, meaning: "A measurement is in the data registers."}
+  - {name: mag_sample,      kind: data,    feature: base, meaning: "Three axes as raw signed counts."}
+  - {name: temperature,     kind: data,    feature: base, meaning: "Raw temperature counts."}
+
+features:
+  base: Identity, single measurement, data.
+
+behaviour:
+  - id: ADV-MAG-B001
+    feature: base
+    rule: A field B (gauss, sensor frame) from the source reads as raw = round(B x counts_per_gauss(resolution)) per axis, saturated, in the datasheet's byte order, after the board's mount rotation is undone.
+  - id: ADV-MAG-B002
+    feature: base
+    rule: single_measure produces one sample after the datasheet's measurement time; data_ready turns on; reading the data turns it off; no further sample is produced until the next single_measure.
+  - id: ADV-MAG-B003
+    feature: base
+    rule: Multi-byte reads auto-increment and return all axes of one sample.
+
+timing: Measurement completes the datasheet's time after single_measure in model time.
+out_of_scope:
+  - self-test, cross-axis calibration registers (stored), noise (from the source)

@@ -1,0 +1,32 @@
+model: fram
+version: 1.0.0
+summary: SPI F-RAM used for parameters (FM25V02 / fm25xxx). Content persists in the host file named in the configuration.
+
+terms:
+  - {name: write_enable,   kind: control, feature: base, meaning: "WREN: allows the next write; WRDI clears it."}
+  - {name: status,         kind: status,  feature: base, meaning: "Status register (WEL, block protection: stored)."}
+  - {name: read,           kind: data,    feature: base, meaning: "READ at a 2-byte address, continuing sequentially."}
+  - {name: write,          kind: data,    feature: base, meaning: "WRITE at a 2-byte address, continuing sequentially."}
+  - {name: device_id,      kind: status,  feature: base, meaning: "RDID response bytes as the datasheet states."}
+  - {name: size,           kind: status,  feature: base, meaning: "Memory size from the Devicetree (size)."}
+
+features:
+  base: Read, write with write enable, status, ID, persistence.
+
+behaviour:
+  - id: ADV-FRAM-B001
+    feature: base
+    rule: A WRITE after WREN stores bytes at sequential addresses wrapping at size; without WREN it stores nothing; chip deselect ends the command and clears the write-enable latch after a write.
+  - id: ADV-FRAM-B002
+    feature: base
+    rule: A READ returns the stored bytes at sequential addresses, wrapping at size; unwritten bytes read as the host file's content (0xFF/0x00 as initialised).
+  - id: ADV-FRAM-B003
+    feature: base
+    rule: RDID returns the datasheet device ID bytes; RDSR returns the status with WEL reflecting write_enable.
+  - id: ADV-FRAM-B004
+    feature: base
+    rule: Written content is in the host file when the run ends and is read back on the next run.
+
+timing: Writes take effect immediately (F-RAM has no write delay).
+out_of_scope:
+  - sleep mode, block protection enforcement (stored only), fast read
