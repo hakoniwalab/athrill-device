@@ -42,7 +42,7 @@ registers_source: RM0433 Rev 8 section 11.4 / RM0410 Rev 5 section 6.4, hand-wri
 registers:
   MODER:
     offset: '0x00'
-    reset: '0x00000000'
+    reset: per-instance
     fields:
       MODER0:
         lsb: 0
@@ -146,7 +146,7 @@ registers:
         width: 1
   OSPEEDR:
     offset: '0x08'
-    reset: '0x00000000'
+    reset: per-instance
     fields:
       OSPEEDR0:
         lsb: 0
@@ -198,7 +198,7 @@ registers:
         width: 2
   PUPDR:
     offset: '0x0C'
-    reset: '0x00000000'
+    reset: per-instance
     fields:
       PUPDR0:
         lsb: 0
