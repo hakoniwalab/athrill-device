@@ -69,6 +69,19 @@ class I2cController:
     children: list[I2cChild]
 
 
+@dataclasses.dataclass
+class UartChild:
+    node: Node
+
+
+@dataclasses.dataclass
+class UartController:
+    node: Node
+    children: list[UartChild]
+    dmas: list[Specifier]
+    dma_names: list[str]
+
+
 def align4(value: int) -> int:
     return (value + 3) & ~3
 
@@ -213,6 +226,12 @@ def is_i2c_controller(node: Node) -> bool:
     )
 
 
+def is_uart_controller(node: Node) -> bool:
+    return enabled(node) and bool(
+        {"st,stm32-usart", "st,stm32-uart"}.intersection(compatible(node))
+    )
+
+
 def decode_specifiers(fdt: Fdt, node: Node, property_name: str,
                       cell_property: str) -> list[Specifier]:
     raw = node.properties.get(property_name)
@@ -285,6 +304,21 @@ def find_i2c(fdt: Fdt) -> list[I2cController]:
     return result
 
 
+def find_uart(fdt: Fdt) -> list[UartController]:
+    result: list[UartController] = []
+    for node in fdt.nodes:
+        if not is_uart_controller(node):
+            continue
+        children = [UartChild(child) for child in node.children if enabled(child)]
+        result.append(UartController(
+            node=node,
+            children=children,
+            dmas=decode_specifiers(fdt, node, "dmas", "#dma-cells"),
+            dma_names=strings(node.properties.get("dma-names")),
+        ))
+    return result
+
+
 def load_test_specs(paths: list[Path]) -> dict[str, str]:
     """Read the small documented YAML subset without a YAML dependency."""
     result: dict[str, str] = {}
@@ -308,6 +342,9 @@ def load_test_specs(paths: list[Path]) -> dict[str, str]:
         "ADV-SPI-006.T1": "spi-controller-with-dmas",
         "ADV-I2C-001.T1": "i2c-child",
         "ADV-I2C-002.T1": "i2c-controller",
+        "ADV-UART-001.T1": "uart-child",
+        "ADV-UART-002.T1": "uart-controller",
+        "ADV-UART-006.T1": "uart-controller-with-dmas",
     }
     for test_id, target in required.items():
         if result.get(test_id) != target:
@@ -423,6 +460,53 @@ def generated_i2c_cases(board: str, controllers: list[I2cController]) -> list[di
     return result
 
 
+def generated_uart_cases(board: str, controllers: list[UartController]) -> list[dict[str, object]]:
+    result: list[dict[str, object]] = []
+    for controller in controllers:
+        result.append({
+            "name": case_name(board, controller.node.path, "ADV-UART-002.T1"),
+            "test_spec_id": "ADV-UART-002.T1",
+            "item_id": "ADV-UART-002",
+            "node_path": controller.node.path,
+            "derived_properties": {
+                "child_count": len(controller.children),
+                "children": [child.node.path for child in controller.children],
+            },
+            "kind": "uart-inventory",
+            "area": "uart",
+            "controller": controller,
+        })
+        for child in controller.children:
+            result.append({
+                "name": case_name(board, child.node.path, "ADV-UART-001.T1"),
+                "test_spec_id": "ADV-UART-001.T1",
+                "item_id": "ADV-UART-001",
+                "node_path": child.node.path,
+                "derived_properties": {"controller": controller.node.path},
+                "kind": "uart-child",
+                "area": "uart",
+                "controller": controller,
+                "child": child,
+            })
+        if controller.dmas:
+            result.append({
+                "name": case_name(board, controller.node.path, "ADV-UART-006.T1"),
+                "test_spec_id": "ADV-UART-006.T1",
+                "item_id": "ADV-UART-006",
+                "node_path": controller.node.path,
+                "derived_properties": {
+                    "dmas": [specifier_json(dma) for dma in controller.dmas],
+                    "dma-names": controller.dma_names,
+                },
+                "kind": "uart-dma",
+                "area": "uart",
+                "controller": controller,
+                "will_fail": True,
+                "known_defect": "UART controller dmas are not resolved through the public dma_resolve callback",
+            })
+    return result
+
+
 def render_case(case: dict[str, object]) -> str:
     name = str(case["name"])
     controller = case["controller"]
@@ -470,6 +554,44 @@ def render_case(case: dict[str, object]) -> str:
             lines.append(
                 f"\tCHECK(find_i2c_binding({c_string(controller.node.path)}, {child.address}U) < target.i2c_binding_count);"
             )
+    elif case["kind"] == "uart-child":
+        assert isinstance(controller, UartController)
+        child = case["child"]
+        assert isinstance(child, UartChild)
+        lines.extend([
+            "\tindex = find_uart_binding(" + c_string(controller.node.path) +
+            f", {c_string(child.node.path)});",
+            "\tCHECK(index < target.uart_binding_count);",
+            f"\tCHECK(count_uart_peripheral({c_string(child.node.path)}) == 1U);",
+        ])
+    elif case["kind"] == "uart-inventory":
+        assert isinstance(controller, UartController)
+        lines.append(
+            f"\tCHECK(count_uart_bindings({c_string(controller.node.path)}) == {len(controller.children)}U);"
+        )
+        lines.append(f"\tCHECK({len(controller.children)}U <= 1U);")
+        for child in controller.children:
+            lines.append(
+                f"\tCHECK(find_uart_binding({c_string(controller.node.path)}, {c_string(child.node.path)}) < target.uart_binding_count);"
+            )
+    elif case["kind"] == "uart-dma":
+        assert isinstance(controller, UartController)
+        lines.append(f"\tCHECK({len(controller.dma_names)}U == {len(controller.dmas)}U);")
+        first = controller.dmas[0]
+        first_values = ", ".join(f"{value}U" for value in first.cells) or "0U"
+        lines.extend([
+            f"\t{{ static const uint32 wanted[] = {{{first_values}}};",
+            "\t  index = 0U;",
+            f"\t  while (index + {len(controller.dmas)}U <= target.dma_count &&",
+            f"\t         !dma_matches(index, {c_string(first.provider_path)}, wanted, {len(first.cells)}U)) index++; }}",
+            f"\tCHECK(index + {len(controller.dmas)}U <= target.dma_count);",
+        ])
+        for offset, dma in enumerate(controller.dmas):
+            cell_values = ", ".join(f"{value}U" for value in dma.cells) or "0U"
+            lines.extend([
+                f"\t{{ static const uint32 wanted[] = {{{cell_values}}};",
+                f"\t  CHECK(dma_matches(index + {offset}U, {c_string(dma.provider_path)}, wanted, {len(dma.cells)}U)); }}",
+            ])
     else:
         raise ValueError(f"unknown generated case kind {case['kind']}")
     lines.extend(["\tdestroy_board();", "\treturn 0;", "}"])
@@ -504,6 +626,7 @@ def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
 \tdestroy_board(); return 1; }} }} while (0)
 #define MAX_BINDINGS 32U
 #define MAX_I2C_BINDINGS 32U
+#define MAX_UART_BINDINGS 32U
 #define MAX_DMAS 32U
 
 typedef struct {{
@@ -521,6 +644,11 @@ typedef struct {{
 }} I2cBinding;
 
 typedef struct {{
+\tchar controller[192];
+\tchar peripheral[192];
+}} UartBinding;
+
+typedef struct {{
 \tchar provider[192];
 \tuint32 cell_count;
 \tuint32 cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
@@ -531,6 +659,8 @@ typedef struct {{
 \tuint32 binding_count;
 \tI2cBinding i2c_bindings[MAX_I2C_BINDINGS];
 \tuint32 i2c_binding_count;
+\tUartBinding uart_bindings[MAX_UART_BINDINGS];
+\tuint32 uart_binding_count;
 \tDmaResolution dmas[MAX_DMAS];
 \tuint32 dma_count;
 \tuint64 next_handle;
@@ -629,7 +759,18 @@ static sint32 i2c_transfer(void *context, AthrillDeviceI2cEndpoint endpoint,
 static sint32 uart_bind_nodes(void *context, const AthrillDeviceNode *controller,
 \tconst AthrillDeviceNode *peripheral, const AthrillDeviceUartPeripheralOps *ops,
 \tvoid *instance, AthrillDeviceUartEndpoint *endpoint)
-{{ (void)controller; (void)peripheral; (void)ops; (void)instance; endpoint->value = ++((TestTarget *)context)->next_handle; return 0; }}
+{{
+\tTestTarget *value = context;
+\tUartBinding *binding;
+\t(void)instance;
+\tif (controller == NULL || peripheral == NULL || ops == NULL ||
+\t    value->uart_binding_count >= MAX_UART_BINDINGS) return -1;
+\tbinding = &value->uart_bindings[value->uart_binding_count++];
+\tcopy_text(binding->controller, sizeof(binding->controller), controller->path);
+\tcopy_text(binding->peripheral, sizeof(binding->peripheral), peripheral->path);
+\tendpoint->value = ++value->next_handle;
+\treturn 0;
+}}
 static sint32 uart_send(void *context, AthrillDeviceNodeId peripheral, uint8 data)
 {{ (void)context; (void)peripheral; (void)data; return 0; }}
 
@@ -750,13 +891,44 @@ static uint32 find_i2c_binding(const char *controller, uint16 address)
 \treturn target.i2c_binding_count;
 }}
 
+static uint32 count_uart_bindings(const char *controller)
+{{
+\tuint32 index, count = 0;
+\tfor (index = 0; index < target.uart_binding_count; index++)
+\t\tif (strcmp(target.uart_bindings[index].controller, controller) == 0) count++;
+\treturn count;
+}}
+
+static uint32 count_uart_peripheral(const char *peripheral)
+{{
+\tuint32 index, count = 0;
+\tfor (index = 0; index < target.uart_binding_count; index++)
+\t\tif (strcmp(target.uart_bindings[index].peripheral, peripheral) == 0) count++;
+\treturn count;
+}}
+
+static uint32 find_uart_binding(const char *controller, const char *peripheral)
+{{
+\tuint32 index;
+\tfor (index = 0; index < target.uart_binding_count; index++)
+\t\tif (strcmp(target.uart_bindings[index].controller, controller) == 0 &&
+\t\t    strcmp(target.uart_bindings[index].peripheral, peripheral) == 0) return index;
+\treturn target.uart_binding_count;
+}}
+
+static int dma_matches(uint32 index, const char *provider,
+\tconst uint32 *wanted, uint32 count)
+{{
+\treturn index < target.dma_count && target.dmas[index].cell_count == count &&
+\t\tstrcmp(target.dmas[index].provider, provider) == 0 &&
+\t\tmemcmp(target.dmas[index].cells, wanted, count * sizeof(*wanted)) == 0;
+}}
+
 static int find_dma(const char *provider, const uint32 *wanted, uint32 count)
 {{
 \tuint32 index;
 \tfor (index = 0; index < target.dma_count; index++)
-\t\tif (target.dmas[index].cell_count == count &&
-\t\t    strcmp(target.dmas[index].provider, provider) == 0 &&
-\t\t    memcmp(target.dmas[index].cells, wanted, count * sizeof(*wanted)) == 0) return 1;
+\t\tif (dma_matches(index, provider, wanted, count)) return 1;
 \treturn 0;
 }}
 
@@ -808,16 +980,28 @@ def main() -> int:
     args = parser.parse_args()
     load_test_specs(args.spec)
     args.out.mkdir(parents=True, exist_ok=True)
-    trace_map: dict[str, object] = {"schema_version": 1, "generated_tests": []}
+    trace_map: dict[str, object] = {
+        "schema_version": 1,
+        "board_coverage": [],
+        "generated_tests": [],
+    }
     targets: list[dict[str, object]] = []
     for dtb in sorted(args.dtbs):
         fdt = Fdt(dtb)
         spi_controllers = find_spi(fdt)
         i2c_controllers = find_i2c(fdt)
+        uart_controllers = find_uart(fdt)
         relative = dtb.as_posix().split("/boards/", 1)[-1]
         board = relative.replace("/", "__").removesuffix(".dtb")
         cases = (generated_spi_cases(board, spi_controllers) +
-                 generated_i2c_cases(board, i2c_controllers))
+                 generated_i2c_cases(board, i2c_controllers) +
+                 generated_uart_cases(board, uart_controllers))
+        trace_map["board_coverage"].append({
+            "board": relative,
+            "uart_controllers": len(uart_controllers),
+            "uart_children": sum(len(value.children) for value in uart_controllers),
+            "uart_controllers_with_dmas": sum(bool(value.dmas) for value in uart_controllers),
+        })
         use_plugin = "hakoniwa" in dtb.stem
         source = args.out / f"{c_identifier(board)}.c"
         source.write_text(render_source(dtb, fdt, cases, use_plugin), encoding="utf-8")

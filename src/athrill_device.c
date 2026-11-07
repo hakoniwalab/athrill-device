@@ -1044,6 +1044,7 @@ static sint32 resource_get_gpio(void *context, const char *property,
 }
 
 /* [ADV-SPI-006] decode a named DMA tuple through the public target resolver */
+/* [ADV-UART-006] decode a named DMA tuple through the public target resolver */
 static sint32 resource_get_dma(void *context, const char *name, uint32 index,
 	AthrillDeviceDmaChannel *channel)
 {
@@ -1155,6 +1156,7 @@ static sint32 resource_get_i2c_child(void *context, uint16 address,
 	return -1;
 }
 
+/* [ADV-UART-002] expose only enabled children bound to this controller */
 static sint32 resource_get_uart_child(void *context, uint32 index,
 	AthrillDeviceUartEndpoint *endpoint)
 {
@@ -1891,6 +1893,8 @@ static int validate_and_create(AthrillDeviceRuntime *runtime)
 /* [ADV-SPI-002] bind the controller's exact enabled SPI child inventory */
 /* [ADV-I2C-001] bind each I2C child only at its 7-bit reg address */
 /* [ADV-I2C-002] bind the controller's exact enabled I2C child inventory */
+/* [ADV-UART-001] bind each UART child only to its parent controller */
+/* [ADV-UART-002] bind the controller's exact enabled UART child inventory */
 static int bind_bus_children(AthrillDeviceRuntime *runtime)
 {
 	uint32 oi;
@@ -1983,13 +1987,14 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 }
 
 /* [ADV-SPI-006] resolve every SPI DMA tuple in order with its dma-names entry */
-static int resolve_spi_controller_dmas(NodeRecord *node)
+/* [ADV-UART-006] resolve every UART DMA tuple in order with its dma-names entry */
+static int resolve_bus_controller_dmas(NodeRecord *node)
 {
 	const char *names;
 	int names_length, names_at = 0;
 	uint32 count, index;
 
-	if (!is_spi_controller(node)) {
+	if (!is_spi_controller(node) && !is_uart_controller(node)) {
 		return 0;
 	}
 	if (specifier_count(node, "dmas", "#dma-cells", &count) != 0) {
@@ -2039,8 +2044,9 @@ static int register_and_connect(AthrillDeviceRuntime *runtime)
 	}
 	for (oi = 0U; oi < runtime->order_count; oi++) {
 		NodeRecord *node = &runtime->nodes[runtime->order[oi]];
-		if (resolve_spi_controller_dmas(node) != 0) {
-			error_line("spi-dma-resolve", node->path, "dmas",
+		if (resolve_bus_controller_dmas(node) != 0) {
+			error_line(is_uart_controller(node) ? "uart-dma-resolve" :
+				"spi-dma-resolve", node->path, "dmas",
 				"target-rejected");
 			return -1;
 		}

@@ -138,6 +138,7 @@ def report(args: argparse.Namespace) -> str:
     tests = {test.id: (item, test) for item in items_list for test in item.tests}
     trace_map = json.loads(args.trace_map.read_text(encoding="utf-8"))
     generated = trace_map.get("generated_tests", [])
+    board_coverage = trace_map.get("board_coverage", [])
     junit = read_junit(args.junit)
     implementation_tags = scan_tags(args.source_root, ["src", "board"])
     test_tags = scan_tags(args.source_root, ["tests"])
@@ -154,7 +155,12 @@ def report(args: argparse.Namespace) -> str:
         for test in item.tests:
             has_generated = bool(generated_by_spec.get(test.id))
             has_tag = bool(test_tags.get(test.id))
-            if not has_generated and not has_tag:
+            not_applicable = (
+                test.id == "ADV-UART-006.T1" and board_coverage and
+                sum(value.get("uart_controllers_with_dmas", 0)
+                    for value in board_coverage) == 0
+            )
+            if not has_generated and not has_tag and not not_applicable:
                 gaps.append(f"{test.id}: test specification has no generated, unit, or system test")
             for location in test_tags.get(test.id, []):
                 if any(status == "FAIL" for status in junit_for_test_file(location, junit).values()):
@@ -175,7 +181,7 @@ def report(args: argparse.Namespace) -> str:
     test_areas = Counter(test_id.split("-")[1] for test_id in tests)
     generated_areas = Counter(entry["item_id"].split("-")[1] for entry in generated)
     output = [
-        "# SPI and I2C traceability report",
+        "# SPI, I2C, and UART traceability report",
         "",
         f"Generated from {', '.join(str(path) for path in args.spec)}, `{args.trace_map}`, code tags, and {len(args.junit)} CTest JUnit run(s).",
         "",
@@ -211,6 +217,11 @@ def report(args: argparse.Namespace) -> str:
         for test in item.tests:
             entries = generated_by_spec.get(test.id, [])
             tags = test_tags.get(test.id, [])
+            not_applicable = (
+                test.id == "ADV-UART-006.T1" and board_coverage and
+                sum(value.get("uart_controllers_with_dmas", 0)
+                    for value in board_coverage) == 0
+            )
             parts = []
             statuses: dict[str, str] = {}
             if entries:
@@ -224,10 +235,12 @@ def report(args: argparse.Namespace) -> str:
                 parts.append("unit: " + ", ".join(tags))
                 for location in tags:
                     statuses.update(junit_for_test_file(location, junit))
-            if not parts:
+            if not_applicable:
+                parts.append("not applicable: 0 matching UART controllers with dmas")
+            elif not parts:
                 parts.append("GAP: no test")
             test_descriptions.append(f"{test.id} ({'; '.join(parts)})")
-            status_text = result_text(statuses)
+            status_text = "N/A" if not_applicable else result_text(statuses)
             if entries and any(entry.get("will_fail") for entry in entries):
                 status_text += " (known defect retained with CTest WILL_FAIL)"
             test_results.append(status_text)
@@ -250,16 +263,38 @@ def report(args: argparse.Namespace) -> str:
         "",
         "## Generated coverage by board DTB",
         "",
-        "| Board DTB | Generated tests | SPI | I2C | Ordinary | WILL_FAIL |",
-        "|---|---:|---:|---:|---:|---:|",
+        "| Board DTB | Generated tests | SPI | I2C | UART | Ordinary | WILL_FAIL |",
+        "|---|---:|---:|---:|---:|---:|---:|",
     ])
     for board, count in sorted(counts.items()):
         known = sum(1 for entry in generated if entry["board"] == board and entry.get("will_fail"))
         spi = sum(1 for entry in generated if entry["board"] == board and entry["item_id"].startswith("ADV-SPI-"))
         i2c = sum(1 for entry in generated if entry["board"] == board and entry["item_id"].startswith("ADV-I2C-"))
-        output.append(f"| {board} | {count} | {spi} | {i2c} | {count - known} | {known} |")
+        uart = sum(1 for entry in generated if entry["board"] == board and entry["item_id"].startswith("ADV-UART-"))
+        output.append(f"| {board} | {count} | {spi} | {i2c} | {uart} | {count - known} | {known} |")
 
-    output.extend(["", "## Second-area cost", ""])
+    output.extend([
+        "",
+        "## UART node applicability by board DTB",
+        "",
+        "| Board DTB | UART controllers | UART children | UART controllers with dmas |",
+        "|---|---:|---:|---:|",
+    ])
+    for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+        output.append(
+            f"| {value['board']} | {value['uart_controllers']} | "
+            f"{value['uart_children']} | {value['uart_controllers_with_dmas']} |"
+        )
+
+    output.extend([
+        "",
+        "## Testability note",
+        "",
+        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. The implementation currently resolves controller DMA tuples only for SPI, so a future applicable UART case is retained as `WILL_FAIL` with that known defect. The public `dma_resolve` callback exposes provider/cells and call order but not the corresponding `dma-names` string: tuple count and order are testable, but the name-to-direction pairing is not independently observable through the current public target API. The specification was left unchanged.",
+        "",
+        "## Third-area cost",
+        "",
+    ])
     if args.time:
         output.append("Time recorded by the tester:")
         output.append("")
@@ -275,15 +310,15 @@ def report(args: argparse.Namespace) -> str:
         f"The combined rollout has {len(items_list)} items, {len(tests)} test specifications, and {len(generated)} generated cases. "
         "Per-DTB counts are shown above; the base and Hakoniwa variants exercise the same physical wiring independently.",
         "",
-        "## Comparison with the SPI pilot",
+        "## Comparison with the SPI + I2C baseline",
         "",
-        "The SPI pilot recorded 6 items, 6 test specifications, 26 generated cases, 77 specification lines, a 721-line generator, and a 293-line report tool. "
-        f"I2C adds {item_areas['I2C']} items, {test_areas['I2C']} test specifications, and {generated_areas['I2C']} generated cases; "
+        "The SPI + I2C baseline recorded 12 items, 13 test specifications, 36 generated cases, an 851-line generator, and a 307-line report tool. "
+        f"UART adds {item_areas['UART']} items, {test_areas['UART']} test specifications, and {generated_areas['UART']} generated cases; "
         f"the combined totals are {len(items_list)}, {len(tests)}, and {len(generated)} respectively.",
         "",
         "Reused: the stdlib FDT parser, status/compatible decoding, node walking, board discovery, generated C harness, public loader build path, trace-map schema, CTest/JUnit merge, gap rules, code-tag scan, and multi-spec report parser.",
         "",
-        "New for I2C: the coarse I2C specification, controller/child selection and 7-bit `reg` decoding, public `i2c_bind_node` capture and inventory checks, I2C CTest labels, and unit tags for address ACK/NACK, ordered reads/writes, repeated START, and STOP. The report gained per-area and per-board SPI/I2C splits while retaining one combined trace table and gap list.",
+        "New for UART: independent UART controller/child selection, public `uart_bind_nodes` controller/peripheral capture, exact child inventory and uniqueness checks, conditional DMA generation with retained `WILL_FAIL`, UART CTest labels, existing protocol-test tags for frame timing, ordered transmission, and full-duplex independence, plus explicit per-board UART applicability counts.",
     ])
     return "\n".join(output) + "\n"
 
