@@ -20,13 +20,18 @@ sha256 sd.img dc35488e318a92d58e16840ae7dacbc79b30a84b3e353be6b6fe76f4d59884d8
 # tick: the order the devices are ticked in (target TARGET_TICK lines, with
 # "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
 # 2026-11-08 with athrill-target-stm32 0050bb4 + the tick-order log.
+# Re-recorded 2026-11-08 when the I2C controllers became athrill-device
+# models (#13 step 4-2) and the external I2C buses were added: the
+# order alone changed; every other value above is unchanged.
 tick arm_m_scs
 tick stm32_uart_tcp
 tick stm32_uart
-tick stm32_i2c
 tick stm32_sdmmc
 tick stm32h7_sdmmc
+tick /soc/i2c@40005400
+tick /soc/i2c@40005800
 tick /soc/interrupt-controller@58000000
+tick /soc/i2c@58001c00
 tick /soc/pin-controller@58020000/gpio@58020000
 tick /soc/pin-controller@58020000/gpio@58020400
 tick /soc/pin-controller@58020000/gpio@58020800
