@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       11U
+#define ATHRILL_DEVICE_ABI_MINOR       12U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -360,6 +360,20 @@ typedef struct AthrillDeviceResourceOps {
 	sint32 (*get_i2c_peripheral)(void *context, uint16 address,
 	                             const AthrillDeviceI2cPeripheralOps **ops,
 	                             void **instance);
+	/* Added in ABI 1.12; for an SPI controller that is an athrill-device
+	 * model: the child whose reg is chip_select (its cs-gpios index). */
+	sint32 (*get_spi_peripheral)(void *context, uint32 chip_select,
+	                             const AthrillDeviceSpiPeripheralOps **ops,
+	                             void **instance);
+	/* Added in ABI 1.12; model-to-model GPIO. watch_gpio calls callback
+	 * with the new level whenever a GPIO output model changes that line;
+	 * publish_gpio_outputs is how a GPIO output model reports a bank (the
+	 * watchers first, then the target's gpio_outputs, as before). */
+	sint32 (*watch_gpio)(void *context, AthrillDeviceGpioLine line,
+	                     AthrillDeviceGpioEdge callback, void *instance);
+	sint32 (*publish_gpio_outputs)(void *context,
+	                               const AthrillDeviceGpioLine *lines,
+	                               uint32 count, uint32 levels);
 } AthrillDeviceResourceOps;
 
 typedef struct {

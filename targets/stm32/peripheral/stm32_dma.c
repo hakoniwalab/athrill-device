@@ -3,8 +3,7 @@
  * RM0410 8.5 and RM0433 16.5.
  */
 #include "stm32_dma.h"
-#include "stm32_spi.h"
-#include "stm32h7_spi.h"
+#include "athrill_device_spi_dma.h"
 #include "athrill_device_host.h"
 #include "athrill_protocol_dma.h"
 
@@ -47,7 +46,6 @@
 #define FLAG_HT		(1U << 4)
 #define FLAG_TC		(1U << 5)
 
-#define SPI_DR_OFFSET	0x0CU
 
 typedef struct DmaType DmaType;
 
@@ -408,13 +406,13 @@ static void start(DmaType *d, uint32 s)
 	uint32 i;
 	uint32 rx_par = par;
 	uint32 response = 0U;
-	std_bool h7_spi;
 
 	if (((tx[SxCR] >> CR_DIR_SHIFT) & 3U) != DIR_M2P) {
 		return;
 	}
-	h7_spi = stm32h7_spi_dma_exchange(par, 0U, 0U, &rx_par, &response);
-	if (!h7_spi && (!stm32_spi_owns(par) || ((par & 0x3FFU) != SPI_DR_OFFSET))) {
+	/* TO BE REMOVED (step 4-5): the SPI controllers are athrill-device
+	 * models; the stream reaches them through athrill_device_spi_dma.h. */
+	if (!athrill_device_stm32_spi_dma(par, 0U, 0U, 0U, &rx_par, &response)) {
 		return;
 	}
 	if (find_rx(rx_par, &rd, &rs)) {
@@ -431,14 +429,9 @@ static void start(DmaType *d, uint32 s)
 			break;
 		}
 
-		if (h7_spi) {
-			(void)stm32h7_spi_dma_exchange(par, unit(tx[SxCR], CR_PSIZE_SHIFT),
-				(uint32)value, &rx_par, &response);
-		}
-		else {
-			stm32_spi_write(par, unit(tx[SxCR], CR_PSIZE_SHIFT), (uint32)value);
-			response = stm32_spi_read(par, (rx != NULL) ? unit(rx[SxCR], CR_PSIZE_SHIFT) : 1U);
-		}
+		(void)athrill_device_stm32_spi_dma(par, unit(tx[SxCR], CR_PSIZE_SHIFT),
+			(uint32)value, (rx != NULL) ? unit(rx[SxCR], CR_PSIZE_SHIFT) : 1U,
+			&rx_par, &response);
 		if (rx != NULL && !stream_request_rx(rd, rs, response)) {
 			break;
 		}

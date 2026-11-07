@@ -32,6 +32,9 @@ typedef struct {
 	uint32 regs[GPIO_REGS / 4U];
 	uint32 inputs;
 	uint32 base;
+	/* output changes go through the runtime (model watchers, then the target) */
+	const AthrillDeviceResourceOps *resources;
+	void *resource_context;
 } Stm32Gpio;
 
 typedef struct {
@@ -121,8 +124,8 @@ static void set_odr(Stm32Gpio *gpio, uint32 value)
 	uint32 old = gpio->regs[GPIO_ODR / 4U];
 	gpio->regs[GPIO_ODR / 4U] = value & 0xffffU;
 	if (old != gpio->regs[GPIO_ODR / 4U]) {
-		(void)gpio->target_ops->gpio_outputs(gpio->target, gpio->lines,
-			GPIO_PINS, gpio->regs[GPIO_ODR / 4U]);
+		(void)gpio->resources->publish_gpio_outputs(gpio->resource_context,
+			gpio->lines, GPIO_PINS, gpio->regs[GPIO_ODR / 4U]);
 	}
 }
 
@@ -183,8 +186,10 @@ static sint32 gpio_connect(void *instance,
 	Stm32GpioInstance *holder = instance;
 	Stm32Gpio *gpio = &holder->gpio;
 	uint32 pin;
-	(void)args;
-	if (gpio->target_ops->gpio_resolve == NULL ||
+	gpio->resources = args->resources;
+	gpio->resource_context = args->context;
+	if (args->resources->publish_gpio_outputs == NULL ||
+	    gpio->target_ops->gpio_resolve == NULL ||
 	    gpio->target_ops->gpio_subscribe == NULL ||
 	    gpio->target_ops->gpio_outputs == NULL) {
 		return -1;
