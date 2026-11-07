@@ -661,14 +661,16 @@ int main(int argc, char **argv)
 	target.irq_set_count = 0U;
 	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
 	TEST_CHECK(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
-	TEST_CHECK(target.registered == 2U && target.irq_resolved == 7U &&
+	/* [ADV-DT-003.T1] EXTI owns only the window declared by its reg. */
+	TEST_CHECK(target.registered == 1U &&
+		target.addresses[0] == 0x40013c00U &&
+		target.sizes[0] == 0x400U && target.irq_resolved == 7U &&
 		target.gpio_resolved == 176U);
-	/* Route line 4 to GPIOB, enable its rising edge and drive PB4 high. */
-	TEST_CHECK(target.ops->write(target.instance, 0x4001380cU, 4U, 1U) == 0);
+	/* The reset-default route for line 4 is GPIOA; enable and drive PA4 high. */
 	TEST_CHECK(target.ops->write(target.instance, 0x40013c00U, 4U, 1U << 4) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40013c08U, 4U, 1U << 4) == 0);
 	{
-		AthrillDeviceGpioLine line = {16U + 4U + 1U};
+		AthrillDeviceGpioLine line = {4U + 1U};
 		TEST_CHECK(gpio_drive(&target, line, TRUE) == 0);
 	}
 	TEST_CHECK(target.irq_set_count == 1U && target.last_irq == 10U);

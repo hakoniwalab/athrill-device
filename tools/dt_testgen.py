@@ -168,9 +168,9 @@ class Interrupt:
 # These native models own MMIO in the public architecture.  Transitional
 # target adapters are instances, but their windows remain target-owned.
 MMIO_MODEL_COMPATIBLES = {
-    "st,stm32-gpio", "st,stm32-exti", "st,stm32-timers",
+    "st,stm32-gpio", "st,stm32-exti", "st,stm32f7-syscfg",
+    "st,stm32h7-syscfg", "st,stm32-timers",
 }
-IRQ_RESOLVING_COMPATIBLES = {"st,stm32-exti", "st,stm32-timers"}
 TARGET_ARCHITECTURAL_COMPATIBLES = {
     "arm,armv7m-systick", "arm,v7m-nvic", "arm,cortex-m7", "arm,armv7m-mpu",
 }
@@ -907,8 +907,6 @@ def generated_dt_cases(board: str, fdt: Fdt, negative_path: Path,
             "derived_properties": {"reg": [dataclasses.asdict(value) for value in windows]},
             "kind": "dt-mmio", "area": "dt", "node": node,
             "windows": windows, "all_windows": expected_windows,
-            "will_fail": True,
-            "known_defect": "EXTI registers an extra SYSCFG window absent from its reg property",
         })
     for node in fdt.nodes:
         if not is_model_instance(node):
@@ -923,9 +921,6 @@ def generated_dt_cases(board: str, fdt: Fdt, negative_path: Path,
             "derived_properties": {"interrupts": [dataclasses.asdict(value) for value in interrupts]},
             "kind": "dt-irq", "area": "dt", "node": node,
             "interrupts": interrupts,
-            "will_fail": not IRQ_RESOLVING_COMPATIBLES.intersection(compatible(node)),
-            "known_defect": (None if IRQ_RESOLVING_COMPATIBLES.intersection(compatible(node)) else
-                             "instantiated adapter does not resolve its interrupts entries"),
         })
     result.append({
         "name": case_name(board, "/", "ADV-DT-005.T1"),

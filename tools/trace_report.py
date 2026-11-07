@@ -401,7 +401,7 @@ def report(args: argparse.Namespace) -> str:
         "",
         "## Testability note",
         "",
-        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. DT negative tests mutate build-directory copies only. DT expectations come from the independent parser; confirmed extra MMIO registrations and unresolved adapter interrupts remain `WILL_FAIL`. Chip-ID and PROM reads use the public SPI/I2C protocol APIs at the selector derived from each node's `reg`. PWM high time and period are asserted from the public PWM-provider sample in target-clock units; normalized actuator values are only an additional integration check. This tester change leaves the specification and implementation untouched.",
+        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. DT negative tests mutate build-directory copies only. DT expectations come from the independent parser; ADV-DT-003 includes each native SYSCFG node's own translated `reg`, and ADV-DT-004 checks every instantiated node's decoded interrupts without expected-failure inversion. Chip-ID and PROM reads use the public SPI/I2C protocol APIs at the selector derived from each node's `reg`. PWM high time and period are asserted from the public PWM-provider sample in target-clock units; normalized actuator values are only an additional integration check. This tester change leaves the specification and implementation untouched.",
         "",
         "## Area cost",
         "",
@@ -423,7 +423,7 @@ def report(args: argparse.Namespace) -> str:
         "",
         "Reused: the stdlib FDT parser, status/compatible decoding, node walking, board discovery, generated C harness, public loader build path, trace-map schema, CTest/JUnit merge, gap rules, code-tag scan, and multi-spec report parser.",
         "",
-        "The report records per-area applicability and keeps confirmed implementation defects as generated CTest `WILL_FAIL` cases.",
+        "The report records per-area applicability and reports any generated failure as a traceability gap.",
     ])
     return "\n".join(output) + "\n"
 
