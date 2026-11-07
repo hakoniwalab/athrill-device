@@ -18,7 +18,7 @@
 #define MAX_BINDINGS 32U
 #define MAX_I2C_BINDINGS 32U
 #define MAX_UART_BINDINGS 32U
-#define MAX_DMAS 32U
+#define MAX_DMAS 64U
 #define MAX_MMIO 64U
 #define MAX_IRQS 128U
 #define MAX_ADAPTERS 64U
@@ -1230,6 +1230,20 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40003800__fram_0__ADV_SP
 	return 0;
 }
 
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40003800__ADV_SPI_006_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {0U, 40U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 39U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__ADV_SPI_002_T1(void)
 {
 	uint32 index;
@@ -1283,6 +1297,20 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__imu_2__ADV_SPI
 	CHECK(target.bindings[index].gpio_cell_count == 2U);
 	CHECK(target.bindings[index].gpio_cells[0] == 13U);
 	CHECK(target.bindings[index].gpio_cells[1] == 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__ADV_SPI_006_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {0U, 38U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 37U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
 	destroy_board();
 	return 0;
 }
@@ -1346,12 +1374,40 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40004400__ADV_UART_00
 	return 0;
 }
 
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40004400__ADV_UART_006_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {0U, 44U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 43U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40004800__ADV_UART_002_T1(void)
 {
 	uint32 index;
 	CHECK(build_board() == 0);
 	CHECK(count_uart_bindings("/soc/serial@40004800") == 0U);
 	CHECK(0U <= 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40004800__ADV_UART_006_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {0U, 46U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 45U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
 	destroy_board();
 	return 0;
 }
@@ -1366,6 +1422,20 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40005000__ADV_UART_00
 	return 0;
 }
 
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40005000__ADV_UART_006_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {0U, 66U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 65U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40007800__ADV_UART_002_T1(void)
 {
 	uint32 index;
@@ -1376,12 +1446,40 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40007800__ADV_UART_00
 	return 0;
 }
 
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40007800__ADV_UART_006_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {0U, 80U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 79U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40007c00__ADV_UART_002_T1(void)
 {
 	uint32 index;
 	CHECK(build_board() == 0);
 	CHECK(count_uart_bindings("/soc/serial@40007c00") == 0U);
 	CHECK(0U <= 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40007c00__ADV_UART_006_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {0U, 82U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 81U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
 	destroy_board();
 	return 0;
 }
@@ -1408,12 +1506,40 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40011000__gnss__ADV_U
 	return 0;
 }
 
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40011000__ADV_UART_006_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {0U, 42U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 41U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40011400__ADV_UART_002_T1(void)
 {
 	uint32 index;
 	CHECK(build_board() == 0);
 	CHECK(count_uart_bindings("/soc/serial@40011400") == 0U);
 	CHECK(0U <= 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40011400__ADV_UART_006_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {0U, 72U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 71U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
 	destroy_board();
 	return 0;
 }
@@ -2383,7 +2509,61 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__dmamux_40020800__ADV_DMA_005
 	uint32 index;
 	CHECK(build_board() == 0);
 	CHECK(count_model_path(captured_stderr, "/soc/dmamux@40020800") == 1U);
-	CHECK(count_dma_provider("/soc/dmamux@40020800") == 0U);
+	CHECK(count_dma_provider("/soc/dmamux@40020800") == 18U);
+	{ static const uint32 wanted[] = {0U, 40U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 39U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	{ static const uint32 wanted[] = {0U, 44U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 43U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	{ static const uint32 wanted[] = {0U, 46U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 45U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	{ static const uint32 wanted[] = {0U, 66U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 65U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	{ static const uint32 wanted[] = {0U, 80U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 79U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	{ static const uint32 wanted[] = {0U, 82U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 81U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	{ static const uint32 wanted[] = {0U, 42U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 41U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	{ static const uint32 wanted[] = {0U, 72U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 71U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
+	{ static const uint32 wanted[] = {0U, 38U, 1088U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "tx")); }
+	{ static const uint32 wanted[] = {0U, 37U, 1152U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 1U, "rx")); }
 	destroy_board();
 	return 0;
 }
@@ -2676,23 +2856,32 @@ int main(int argc, char **argv)
 	if (atexit(remove_pwm_trace) != 0) return 2;
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40003800__ADV-SPI-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40003800__ADV_SPI_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40003800__fram@0__ADV-SPI-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40003800__fram_0__ADV_SPI_001_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40003800__ADV-SPI-006.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40003800__ADV_SPI_006_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40013000__ADV-SPI-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__ADV_SPI_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40013000__accelerometer@0__ADV-SPI-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__accelerometer_0__ADV_SPI_001_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40013000__gyroscope@1__ADV-SPI-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__gyroscope_1__ADV_SPI_001_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40013000__imu@2__ADV-SPI-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__imu_2__ADV_SPI_001_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40013000__ADV-SPI-006.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__ADV_SPI_006_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@40005400__ADV-I2C-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_40005400__ADV_I2C_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@40005800__ADV-I2C-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_40005800__ADV_I2C_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@58001c00__ADV-I2C-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_58001c00__ADV_I2C_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@58001c00__pressure@77__ADV-I2C-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_58001c00__pressure_77__ADV_I2C_001_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@58001c00__magnetometer@c__ADV-I2C-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_58001c00__magnetometer_c__ADV_I2C_001_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40004400__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40004400__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40004400__ADV-UART-006.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40004400__ADV_UART_006_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40004800__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40004800__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40004800__ADV-UART-006.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40004800__ADV_UART_006_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40005000__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40005000__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40005000__ADV-UART-006.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40005000__ADV_UART_006_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40007800__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40007800__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40007800__ADV-UART-006.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40007800__ADV_UART_006_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40007c00__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40007c00__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40007c00__ADV-UART-006.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40007c00__ADV_UART_006_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40011000__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40011000__ADV_UART_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40011000__gnss__ADV-UART-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40011000__gnss__ADV_UART_001_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40011000__ADV-UART-006.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40011000__ADV_UART_006_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40011400__ADV-UART-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40011400__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40011400__ADV-UART-006.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__serial_40011400__ADV_UART_006_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__ADV-DT-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__ADV_DT_001_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__root__ADV-DT-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__root__ADV_DT_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__timers@40000000__ADV-DT-003.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__timers_40000000__ADV_DT_003_T1();

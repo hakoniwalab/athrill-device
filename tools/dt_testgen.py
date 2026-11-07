@@ -1395,7 +1395,7 @@ def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
 #define MAX_BINDINGS 32U
 #define MAX_I2C_BINDINGS 32U
 #define MAX_UART_BINDINGS 32U
-#define MAX_DMAS 32U
+#define MAX_DMAS 64U
 #define MAX_MMIO 64U
 #define MAX_IRQS 128U
 #define MAX_ADAPTERS 64U

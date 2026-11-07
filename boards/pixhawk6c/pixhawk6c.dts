@@ -25,6 +25,7 @@
 
 #include "stm32h743-athrill.dtsi"
 #include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/dma/stm32_dma.h>
 
 / {
 	model = "Holybro Pixhawk 6C (FMUv6C V6C00) for Athrill";
@@ -107,12 +108,22 @@
 	reg = <0x4000a400 0x400>;
 };
 
+/*
+ * DMA request wiring (dmas): the DMAMUX1 request line of each peripheral
+ * (RM0433, the DMAMUX1 input assignment table). DMAMUX1 routes a request to any
+ * DMA1/DMA2 stream the firmware selects, so the channel cell (0) is not a
+ * wiring fact: the routing is the firmware's DMAMUX setting.
+ */
+
 /* V6C00 internal sensor bus: accel PC15, gyro PC14, ICM PC13. */
 &spi1 {
 	status = "okay";
 	cs-gpios = <&gpioc 15 GPIO_ACTIVE_LOW>,
 		   <&gpioc 14 GPIO_ACTIVE_LOW>,
 		   <&gpioc 13 GPIO_ACTIVE_LOW>;
+	dmas = <&dmamux1 0 38 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 37 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
 
 	bmi055_accel: accelerometer@0 {
 		compatible = "bosch,bma280";
@@ -143,6 +154,9 @@
 &spi2 {
 	status = "okay";
 	cs-gpios = <&gpiod 4 GPIO_ACTIVE_LOW>;
+	dmas = <&dmamux1 0 40 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 39 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
 
 	fram: fram@0 {
 		compatible = "infineon,fm25xxx";
@@ -180,17 +194,50 @@
  * defconfig: USART2, USART3 (the console), UART5, USART6, UART7, UART8),
  * with nothing on them.
  */
-&usart2 { status = "okay"; };
-&usart3 { status = "okay"; };
-&uart5 { status = "okay"; };
-&usart6 { status = "okay"; };
-&uart7 { status = "okay"; };
-&uart8 { status = "okay"; };
+&usart2 {
+	status = "okay";
+	dmas = <&dmamux1 0 44 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 43 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
+&usart3 {
+	status = "okay";
+	dmas = <&dmamux1 0 46 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 45 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
+&uart5 {
+	status = "okay";
+	dmas = <&dmamux1 0 66 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 65 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
+&usart6 {
+	status = "okay";
+	dmas = <&dmamux1 0 72 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 71 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
+&uart7 {
+	status = "okay";
+	dmas = <&dmamux1 0 80 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 79 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
+&uart8 {
+	status = "okay";
+	dmas = <&dmamux1 0 82 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 81 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
 
 /* GPS1 is /dev/ttyS0. */
 &usart1 {
 	status = "okay";
 	current-speed = <57600>;
+	dmas = <&dmamux1 0 42 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 41 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
 
 	gps1: gnss {
 		compatible = "u-blox,m8";

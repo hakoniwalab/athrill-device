@@ -13,6 +13,7 @@
  *   PX4-Autopilot boards/px4/fmu-v5/nuttx-config/nsh/defconfig
  *   PX4-Autopilot boards/px4/fmu-v5/nuttx-config/include/board.h
  *   PX4-Autopilot boards/px4/fmu-v5/src/board_config.h
+ *   PX4-Autopilot boards/px4/fmu-v5/nuttx-config/include/board_dma_map.h
  *   PX4-Autopilot src/drivers/uavcan/uavcan_drivers/stm32/driver/src/uc_stm32_clock.cpp
  * Those PX4 files are BSD-3-Clause.  This file records the V500 baseline
  * devices currently instantiated by Athrill, not every alternate hardware
@@ -67,13 +68,24 @@
 	};
 };
 
+/*
+ * DMA request wiring (dmas): every DMA1/DMA2 stream and channel each
+ * peripheral's request reaches on the STM32F76x (RM0410, the DMA1/DMA2
+ * request mapping tables), so a firmware may take any of them. A name appears once
+ * per stream that request reaches. Where PX4 v1.17.0 uses DMA on FMUv5
+ * (nuttx-config/include/board_dma_map.h), its stream is the first tuple of
+ * that name.
+ */
+
 /* SPI1 sensor bus: ICM-20689 CS PF2, DRDY PB4, PX4 rotation 2 (yaw 90). */
 &spi1 {
 	status = "okay";
 	cs-gpios = <&gpiof 2 GPIO_ACTIVE_LOW>;
 	dmas = <&dma2 3 3 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
-	       <&dma2 0 3 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>;
-	dma-names = "tx", "rx";
+	       <&dma2 0 3 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>,
+	       <&dma2 5 3 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma2 2 3 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx", "tx", "rx";
 
 	icm20689: imu@0 {
 		compatible = "invensense,icm20689";
@@ -92,6 +104,11 @@
 &spi2 {
 	status = "okay";
 	cs-gpios = <&gpiof 5 GPIO_ACTIVE_LOW>;
+	dmas = <&dma1 4 0 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma1 3 0 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>,
+	       <&dma1 6 9 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma1 1 9 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx", "tx", "rx";
 
 	fram: fram@0 {
 		compatible = "infineon,fm25xxx";
@@ -124,6 +141,12 @@
 &spi4 {
 	status = "okay";
 	cs-gpios = <&gpiof 10 GPIO_ACTIVE_LOW>;
+	dmas = <&dma2 1 4 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma2 0 4 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>,
+	       <&dma2 4 5 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma2 3 5 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>,
+	       <&dma2 2 9 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx", "tx", "rx", "tx";
 
 	barometer: pressure@0 {
 		compatible = "meas,ms5611";
@@ -138,16 +161,53 @@
  * defconfig: USART2, USART3, UART4, USART6, UART7 (the console), UART8),
  * with nothing on them.
  */
-&usart2 { status = "okay"; };
-&usart3 { status = "okay"; };
-&uart4 { status = "okay"; };
-&usart6 { status = "okay"; };
-&uart7 { status = "okay"; };
-&uart8 { status = "okay"; };
+&usart2 {
+	status = "okay";
+	dmas = <&dma1 6 4 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma1 5 4 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx";
+};
+&usart3 {
+	status = "okay";
+	dmas = <&dma1 3 4 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma1 1 4 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>,
+	       <&dma1 4 7 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx", "tx";
+};
+&uart4 {
+	status = "okay";
+	dmas = <&dma1 4 4 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma1 2 4 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx";
+};
+&usart6 {
+	status = "okay";
+	dmas = <&dma2 6 5 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma2 2 5 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>,
+	       <&dma2 7 5 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma2 1 5 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx", "tx", "rx";
+};
+&uart7 {
+	status = "okay";
+	dmas = <&dma1 1 5 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma1 3 5 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx";
+};
+&uart8 {
+	status = "okay";
+	dmas = <&dma1 0 5 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma1 6 5 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx";
+};
 
 &usart1 {
 	status = "okay";
 	current-speed = <57600>;
+	dmas = <&dma2 7 4 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
+	       <&dma2 5 4 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>,
+	       <&dma2 2 4 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>;
+	dma-names = "tx", "rx", "rx";
 
 	gps1: gnss {
 		compatible = "u-blox,m8";
@@ -163,14 +223,20 @@
 	cd-gpios = <&gpiog 0 GPIO_ACTIVE_LOW>;
 	/* The F7 controller changes the direction of its one allocated stream. */
 	dmas = <&dma2 6 4 (STM32_DMA_PERIPH_RX | STM32_DMA_32BITS) STM32_DMA_FIFO_FULL>,
-	       <&dma2 6 4 (STM32_DMA_PERIPH_TX | STM32_DMA_32BITS) STM32_DMA_FIFO_FULL>;
-	dma-names = "rx", "tx";
+	       <&dma2 6 4 (STM32_DMA_PERIPH_TX | STM32_DMA_32BITS) STM32_DMA_FIFO_FULL>,
+	       <&dma2 3 4 (STM32_DMA_PERIPH_RX | STM32_DMA_32BITS) STM32_DMA_FIFO_FULL>,
+	       <&dma2 3 4 (STM32_DMA_PERIPH_TX | STM32_DMA_32BITS) STM32_DMA_FIFO_FULL>;
+	dma-names = "rx", "tx", "rx", "tx";
 
 	sdcard: sd-card {
 		compatible = "zephyr,sdmmc-disk";
 		disk-name = "SD";
 		status = "okay";
 	};
+};
+
+&dma1 {
+	status = "okay";
 };
 
 &dma2 {
