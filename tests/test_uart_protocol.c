@@ -51,6 +51,7 @@ static void destroy_uart(UartFixture *fixture)
 	athrill_channel_destroy(fixture->channel);
 }
 
+/* [ADV-UART-003.T1] */
 static void test_frame_ticks_include_start_data_parity_and_stop(void)
 {
 	AthrillUartTiming eight_n_one = {1000000U, 100000U, 8U, 1U, FALSE};
@@ -65,6 +66,7 @@ static void test_frame_ticks_include_start_data_parity_and_stop(void)
 	destroy_uart(&first);
 }
 
+/* [ADV-UART-003.T1] */
 static void test_fractional_frame_ticks_round_up(void)
 {
 	AthrillUartTiming timing = {8000000U, 115200U, 8U, 1U, TRUE};
@@ -75,6 +77,7 @@ static void test_fractional_frame_ticks_round_up(void)
 	destroy_uart(&fixture);
 }
 
+/* [ADV-UART-004.T1] */
 static void test_tx_fifo_preserves_order_and_frame_spacing(void)
 {
 	AthrillUartTiming timing = {1000000U, 100000U, 8U, 1U, FALSE};
@@ -95,6 +98,7 @@ static void test_tx_fifo_preserves_order_and_frame_spacing(void)
 	destroy_uart(&fixture);
 }
 
+/* [ADV-UART-005.T1] */
 static void test_rx_fifo_is_independent_from_tx(void)
 {
 	AthrillUartTiming timing = {1000000U, 100000U, 8U, 1U, FALSE};
@@ -117,6 +121,7 @@ static void test_rx_fifo_is_independent_from_tx(void)
 	destroy_uart(&fixture);
 }
 
+/* [ADV-UART-003.T1] */
 static void test_idle_line_starts_frame_at_requested_clock(void)
 {
 	AthrillUartTiming timing = {1000000U, 100000U, 8U, 1U, FALSE};
