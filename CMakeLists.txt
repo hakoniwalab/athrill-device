@@ -124,6 +124,11 @@ if(BUILD_TESTING)
   target_link_libraries(test_device_tree PRIVATE athrill_device)
   add_dependencies(test_device_tree generate-test-dtbs)
 
+  add_executable(test_bindings tests/test_bindings.c)
+  target_compile_definitions(test_bindings PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_link_libraries(test_bindings PRIVATE athrill_device)
+  add_test(NAME bindings COMMAND test_bindings)
+
   add_executable(test_channel tests/test_channel.c)
   target_compile_definitions(test_channel PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_link_libraries(test_channel PRIVATE athrill_device)
