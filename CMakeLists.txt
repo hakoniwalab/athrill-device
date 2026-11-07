@@ -22,6 +22,7 @@ add_library(athrill_device STATIC
   src/models/ist8310.c
   src/models/ms5611.c
   src/models/pwm_actuator.c
+  src/bindings.c
   src/models/stm32_gpio.c
   src/models/stm32_exti.c
   src/models/stm32_tim.c
@@ -34,8 +35,14 @@ target_include_directories(athrill_device
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   PRIVATE src third_party/libfdt)
-target_compile_definitions(athrill_device PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
-target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m)
+# Bindings (spec/bindings/*_gen.yaml) are read at start-up with libyaml.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-0.1)
+set(ATHRILL_DEVICE_BINDINGS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/spec/bindings" CACHE PATH
+  "Default directory of the generated bindings (override at run time with ATHRILL_DEVICE_BINDINGS_DIR)")
+target_compile_definitions(athrill_device PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
+  ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR="${ATHRILL_DEVICE_BINDINGS_DIR}")
+target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m PkgConfig::YAML)
 
 # Dependency-free reference plugin used by board/boot checks.  Production
 # Hakoniwa and in-process variants are built from board/common and use the
