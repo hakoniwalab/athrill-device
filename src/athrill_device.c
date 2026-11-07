@@ -103,20 +103,25 @@ static void fprint_escaped(FILE *stream, const char *value)
 	}
 }
 
+/*
+ * A table is accepted when its major matches and it is large enough to hold
+ * every field this library reads. Minor versions only append fields, so the
+ * size decides: a table built against an older minor is accepted unless that
+ * table itself grew since (hakoniwalab/athrill-device#52). The minor is not
+ * compared; a bump of one table does not refuse the binaries of the others.
+ */
 static int abi_header_ok(uint32 major, uint32 minor, uint32 size,
                          uint32 needed)
 {
-	return major == ATHRILL_DEVICE_ABI_MAJOR &&
-	       minor >= ATHRILL_DEVICE_ABI_MINOR && size >= needed;
+	(void)minor;
+	return major == ATHRILL_DEVICE_ABI_MAJOR && size >= needed;
 }
 
 static int target_abi_header_ok(uint32 major, uint32 minor, uint32 size)
 {
-	/* ABI 1.10 appends console_write and end_batch to AthrillDeviceTargetOps:
-	 * the size check refuses a target table without them. */
-	return major == ATHRILL_DEVICE_ABI_MAJOR &&
-	       minor >= ATHRILL_DEVICE_ABI_MINOR &&
-	       size >= sizeof(AthrillDeviceTargetOps);
+	/* ABI 1.10 appended console_write and end_batch to AthrillDeviceTargetOps
+	 * (REQUIRED): the size check refuses a target table without them. */
+	return abi_header_ok(major, minor, size, sizeof(AthrillDeviceTargetOps));
 }
 
 static sint32 noop_create(const AthrillDeviceCreateArgs *args, void **instance)
