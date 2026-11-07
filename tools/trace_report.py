@@ -295,6 +295,20 @@ def report(args: argparse.Namespace) -> str:
             "ADV-SD-003.T1: existing tagged multi-block tests do not issue CMD12 and do "
             "not execute the specified combined write/stop/read/stop sequence.",
         ])
+    if "ADV-PWM-001" in items:
+        specification_findings.extend([
+            "ADV-PWM-001/002: the cited PWM-mode subsections are wrong in the current "
+            "manuals. Edge-aligned PWM mode is RM0410 Rev 5 section 26.3.9 and RM0433 "
+            "Rev 8 section 39.3.9; cited 26.3.10 and 39.3.11 describe asymmetric and "
+            "combined PWM modes respectively. The specification was not changed.",
+            "ADV-PWM-002: the expected-value formulas omit the prescaler. For edge-aligned "
+            "PWM mode 1 the high time is `CCR × (PSC+1) / timer_clock` and the period is "
+            "`(ARR+1) × (PSC+1) / timer_clock`, subject to mode/polarity. The stated "
+            "`CCR / timer clock` and `(ARR+1) / timer clock` values are wrong.",
+            "ADV-PWM-002.T1: the existing F765 and H743 tagged cases exercise only a "
+            "1500 us command and observe a normalized actuator value; they do not test "
+            "the specified 1000/1500/2000 us set or directly assert measured period.",
+        ])
     output.extend(["", "## Specification review findings", ""])
     output.extend(f"- {finding}" for finding in specification_findings)
     if not specification_findings:
@@ -369,6 +383,20 @@ def report(args: argparse.Namespace) -> str:
         ])
         for value in sorted(board_coverage, key=lambda entry: entry["board"]):
             output.append(f"| {value['board']} | {value.get('sd_cards', 0)} |")
+
+    if any("pwm_maps" in value for value in board_coverage):
+        output.extend([
+            "",
+            "## PWM applicability by board DTB",
+            "",
+            "| Board DTB | Actuator maps | Ordered PWM entries |",
+            "|---|---:|---:|",
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            output.append(
+                f"| {value['board']} | {value.get('pwm_maps', 0)} | "
+                f"{value.get('pwm_entries', 0)} |"
+            )
 
     output.extend([
         "",

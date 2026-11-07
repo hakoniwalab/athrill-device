@@ -61,6 +61,7 @@ if(BUILD_TESTING)
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/dt.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/dma.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/sd.yaml"
+    "${CMAKE_CURRENT_SOURCE_DIR}/spec/pwm.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py")
   execute_process(
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py"
@@ -70,6 +71,7 @@ if(BUILD_TESTING)
             --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/dt.yaml"
             --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/dma.yaml"
             --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/sd.yaml"
+            --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/pwm.yaml"
             --out "${TRACE_GENERATED_DIR}" ${TRACE_BOARD_DTBS}
     RESULT_VARIABLE TRACE_TESTGEN_RESULT
     ERROR_VARIABLE TRACE_TESTGEN_ERROR)

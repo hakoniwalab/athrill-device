@@ -104,6 +104,22 @@ class SdCard:
 
 
 @dataclasses.dataclass(frozen=True)
+class PwmEntry:
+    provider: Node
+    timer: Node
+    timer_base: int
+    channel: int
+    period_ns: int
+    flags: int
+
+
+@dataclasses.dataclass
+class PwmMap:
+    node: Node
+    entries: list[PwmEntry]
+
+
+@dataclasses.dataclass(frozen=True)
 class MmioWindow:
     address: int
     size: int
@@ -506,6 +522,27 @@ def find_sd_cards(fdt: Fdt) -> list[SdCard]:
     return result
 
 
+def find_pwm_maps(fdt: Fdt) -> list[PwmMap]:
+    result = []
+    for node in fdt.nodes:
+        if not enabled(node) or "athrill,pwm-actuator-map" not in compatible(node):
+            continue
+        specifiers = decode_specifiers(fdt, node, "pwms", "#pwm-cells")
+        entries = []
+        for specifier in specifiers:
+            provider = next((value for value in fdt.nodes
+                             if value.path == specifier.provider_path), None)
+            if provider is None or provider.parent is None or len(specifier.cells) != 3:
+                raise ValueError(f"{node.path}: invalid PWM provider/specifier")
+            windows = reg_windows(provider.parent)
+            if len(windows) != 1 or "st,stm32-timers" not in compatible(provider.parent):
+                raise ValueError(f"{provider.path}: PWM provider has no STM32 timer parent")
+            entries.append(PwmEntry(provider, provider.parent, windows[0].address,
+                                    specifier.cells[0], specifier.cells[1], specifier.cells[2]))
+        result.append(PwmMap(node, entries))
+    return result
+
+
 def load_test_specs(paths: list[Path]) -> dict[str, str]:
     """Read the small documented YAML subset without a YAML dependency."""
     result: dict[str, str] = {}
@@ -539,6 +576,7 @@ def load_test_specs(paths: list[Path]) -> dict[str, str]:
         "ADV-DT-005.T1": "dt-board",
         "ADV-DMA-005.T1": "dma-controller",
         "ADV-SD-004.T1": "sd-card",
+        "ADV-PWM-001.T1": "pwm-map",
     }
     for test_id, target in required.items():
         if result.get(test_id) != target:
@@ -797,6 +835,58 @@ def generated_sd_cases(board: str, cards: list[SdCard]) -> list[dict[str, object
     } for card in cards]
 
 
+def generated_pwm_cases(board: str, maps: list[PwmMap]) -> list[dict[str, object]]:
+    return [{
+        "name": case_name(board, pwm_map.node.path, "ADV-PWM-001.T1"),
+        "test_spec_id": "ADV-PWM-001.T1", "item_id": "ADV-PWM-001",
+        "node_path": pwm_map.node.path,
+        "derived_properties": {"pwms": [
+            {"provider": entry.provider.path, "timer": entry.timer.path,
+             "channel": entry.channel, "period_ns": entry.period_ns,
+             "flags": entry.flags} for entry in pwm_map.entries]},
+        "kind": "pwm-map", "area": "pwm", "pwm_map": pwm_map,
+    } for pwm_map in maps]
+
+
+def pwm_setup_lines(pwm_map: PwmMap) -> list[str]:
+    lines = []
+    timers: dict[str, list[tuple[int, PwmEntry]]] = {}
+    for index, entry in enumerate(pwm_map.entries):
+        timers.setdefault(entry.timer.path, []).append((index, entry))
+    for entries in timers.values():
+        first = entries[0][1]
+        is_h7 = "athrill,stm32h7-timer" in first.timer.properties
+        frequency = 480_000_000 if is_h7 else 216_000_000
+        divider = 2 if is_h7 or first.timer_base not in (0x40010000, 0x40010400) else 1
+        prescaler = frequency // divider // 1_000_000 - 1
+        ccmr = [0, 0]
+        ccer = 0
+        lines.extend([
+            f"\tCHECK(mmio_write32({first.timer_base + 0x28}ULL, {prescaler}U) == 0);",
+            f"\tCHECK(mmio_write32({first.timer_base + 0x2c}ULL, 19999U) == 0);",
+        ])
+        for index, entry in entries:
+            shift = 8 * ((entry.channel - 1) & 1)
+            ccmr[(entry.channel - 1) // 2] |= 6 << (shift + 4)
+            ccer |= 1 << (4 * (entry.channel - 1))
+            pulse = 1100 + 100 * index
+            lines.append(
+                f"\tCHECK(mmio_write32({entry.timer_base + 0x34 + 4 * (entry.channel - 1)}ULL, {pulse}U) == 0);"
+            )
+        lines.extend([
+            f"\tCHECK(mmio_write32({first.timer_base + 0x18}ULL, {ccmr[0]}U) == 0);",
+            f"\tCHECK(mmio_write32({first.timer_base + 0x1c}ULL, {ccmr[1]}U) == 0);",
+            f"\tCHECK(mmio_write32({first.timer_base + 0x20}ULL, {ccer}U) == 0);",
+        ])
+        if first.timer_base in (0x40010000, 0x40010400):
+            lines.append(f"\tCHECK(mmio_write32({first.timer_base + 0x44}ULL, 32768U) == 0);")
+        lines.extend([
+            f"\tCHECK(mmio_write32({first.timer_base + 0x14}ULL, 1U) == 0);",
+            f"\tCHECK(mmio_write32({first.timer_base}ULL, 1U) == 0);",
+        ])
+    return lines
+
+
 def c_windows(values: list[MmioWindow]) -> str:
     return ", ".join(f"{{{value.address}ULL, {value.size}ULL}}" for value in values)
 
@@ -956,6 +1046,19 @@ def render_case(case: dict[str, object]) -> str:
             f"\tCHECK(find_adapter({c_string(card.controller.path)}, \"stm32-sdmmc\"));",
             f"\tCHECK(find_adapter({c_string(card.node.path)}, \"sdcard\"));",
         ])
+    elif case["kind"] == "pwm-map":
+        pwm_map = case["pwm_map"]
+        assert isinstance(pwm_map, PwmMap)
+        lines.extend(pwm_setup_lines(pwm_map))
+        lines.extend([
+            "\t{ AthrillDeviceTickResult tick;",
+            "\t  CHECK(athrill_device_tick(runtime, 1U, &tick) == 0); }",
+        ])
+        for index, entry in enumerate(pwm_map.entries):
+            pulse = 1100 + 100 * index
+            lines.append(
+                f"\tCHECK(trace_contains({c_string(f'output={index + 1} channel={entry.channel} pulse_us={pulse} ')}));"
+            )
     else:
         raise ValueError(f"unknown generated case kind {case['kind']}")
     lines.extend(["\tdestroy_board();", "\treturn 0;", "}"])
@@ -963,7 +1066,7 @@ def render_case(case: dict[str, object]) -> str:
 
 
 def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
-                  use_plugin: bool) -> str:
+                  use_plugin: bool, pwm_trace_path: Path) -> str:
     compatibles = sorted({item for node in fdt.nodes if enabled(node) for item in compatible(node)})
     compatibility_lines = "\n".join(f"\t{c_string(item)}," for item in compatibles)
     case_functions = "\n\n".join(render_case(case) for case in cases)
@@ -978,6 +1081,8 @@ def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
 \t\toptions.plugin_count = 1U;
 \t}
 """ if use_plugin else "\t(void)plugin_path;\n"
+    time_frequency_hz = 480_000_000 if any(
+        "athrill,stm32h7-timer" in node.properties for node in fdt.nodes) else 216_000_000
     return f'''/* Generated by tools/dt_testgen.py; do not edit. */
 #include "athrill_device_if.h"
 
@@ -1025,7 +1130,11 @@ typedef struct {{
 }} DmaResolution;
 
 typedef struct {{ uint64 address; uint64 size; }} ExpectedWindow;
-typedef struct {{ uint64 address; uint64 size; }} MmioResolution;
+typedef struct {{
+\tuint64 address; uint64 size;
+\tconst AthrillDeviceMmioOps *ops;
+\tvoid *instance;
+}} MmioResolution;
 typedef struct {{
 \tchar provider[192];
 \tuint32 cell_count;
@@ -1049,6 +1158,8 @@ typedef struct {{
 \tuint32 irq_count;
 \tAdapterConnection adapters[MAX_ADAPTERS];
 \tuint32 adapter_count;
+\tfloat32 actuator_values[16];
+\tuint32 actuator_count;
 \tuint64 next_handle;
 }} TestTarget;
 
@@ -1056,6 +1167,7 @@ static TestTarget target;
 static AthrillDeviceRuntime *runtime;
 static const char *plugin_path;
 static const char *const board_dtb_path = {c_string(str(dtb.resolve()))};
+static const char *const pwm_trace_path = {c_string(str(pwm_trace_path.resolve()))};
 static char *captured_stderr;
 
 static void copy_text(char *to, size_t size, const char *from)
@@ -1072,6 +1184,8 @@ static sint32 mmio_register(void *context, uint64 address, uint64 size,
 \tif (value->mmio_count >= MAX_MMIO) return -1;
 \tvalue->mmio[value->mmio_count].address = address;
 \tvalue->mmio[value->mmio_count].size = size;
+\tvalue->mmio[value->mmio_count].ops = ops;
+\tvalue->mmio[value->mmio_count].instance = instance;
 \tvalue->mmio_count++;
 \ttoken->value = ++value->next_handle;
 \treturn 0;
@@ -1099,7 +1213,7 @@ static sint32 irq_set(void *context, AthrillDeviceIrqLine line, std_bool asserte
 static std_bool irq_is_active(void *context, AthrillDeviceIrqLine line)
 {{ (void)context; (void)line; return FALSE; }}
 static uint64 time_now(void *context) {{ (void)context; return 0U; }}
-static uint64 time_frequency(void *context) {{ (void)context; return 480000000U; }}
+static uint64 time_frequency(void *context) {{ (void)context; return {time_frequency_hz}U; }}
 static sint32 clock_frequency(void *context, AthrillDeviceNodeId node,
 \tconst char *name, uint64 *frequency)
 {{ (void)context; (void)node; (void)name; *frequency = 240000000U; return 0; }}
@@ -1107,6 +1221,13 @@ static sint32 memory_read(void *context, uint64 address, void *data, uint32 size
 {{ (void)context; (void)address; memset(data, 0, size); return 0; }}
 static sint32 memory_write(void *context, uint64 address, const void *data, uint32 size)
 {{ (void)context; (void)address; (void)data; (void)size; return 0; }}
+static sint32 host_value(void *context, const char *key, const char **value)
+{{
+\t(void)context;
+\tif (strcmp(key, "DEVICE_CONFIG_STM32_ACTUATOR_FILE") != 0) return -1;
+\t*value = pwm_trace_path;
+\treturn 0;
+}}
 
 static sint32 spi_bind_node(void *context, const AthrillDeviceNode *controller,
 \tuint32 chip_select, const AthrillDeviceSpecifier *gpio,
@@ -1224,7 +1345,13 @@ static sint32 sensor_sample(void *context, AthrillDeviceSensorSample *sample)
 static sint32 gps_sample(void *context, AthrillDeviceGpsSample *sample)
 {{ (void)context; memset(sample, 0, sizeof(*sample)); return 0; }}
 static sint32 actuator_output(void *context, const float32 *values, uint32 count)
-{{ (void)context; (void)values; (void)count; return 0; }}
+{{
+\tTestTarget *value = context;
+\tif (count > 16U) return -1;
+\tmemcpy(value->actuator_values, values, count * sizeof(*values));
+\tvalue->actuator_count = count;
+\treturn 0;
+}}
 
 static const AthrillDeviceTargetOps target_ops = {{
 \t.abi_major = ATHRILL_DEVICE_ABI_MAJOR,
@@ -1235,6 +1362,7 @@ static const AthrillDeviceTargetOps target_ops = {{
 \t.time_now = time_now, .time_frequency_hz = time_frequency,
 \t.clock_frequency_hz = clock_frequency,
 \t.memory_read = memory_read, .memory_write = memory_write,
+\t.host_value = host_value,
 \t.spi_bind = spi_bind, .spi_bind_node = spi_bind_node,
 \t.spi_set_chip_select = spi_set_cs, .spi_exchange_byte = spi_exchange,
 \t.i2c_bind_node = i2c_bind_node, .i2c_transfer = i2c_transfer,
@@ -1260,12 +1388,15 @@ static void destroy_board(void)
 static int raw_build_board(const char *dtb_path)
 {{
 \tAthrillDeviceBuildOptions options;
+\tAthrillDeviceHostValue host = {{"DEVICE_CONFIG_STM32_ACTUATOR_FILE", pwm_trace_path}};
 \tmemset(&target, 0, sizeof(target));
 \tmemset(&options, 0, sizeof(options));
 \toptions.dtb_path = dtb_path;
 \toptions.target_compatibles = target_compatibles;
 \toptions.target_compatible_count = sizeof(target_compatibles) / sizeof(target_compatibles[0]);
 \toptions.maximum_dtb_size = 16U * 1024U * 1024U;
+\toptions.host_values = &host;
+\toptions.host_value_count = 1U;
 {plugin_code}
 \treturn athrill_device_build(&options, &target_ops, &target, &runtime);
 }}
@@ -1460,6 +1591,28 @@ static int find_adapter(const char *node, const char *name)
 \treturn 0;
 }}
 
+static int mmio_write32(uint64 address, uint32 value)
+{{
+\tuint32 index;
+\tfor (index = 0U; index < target.mmio_count; index++)
+\t\tif (address >= target.mmio[index].address &&
+\t\t    address + 4U <= target.mmio[index].address + target.mmio[index].size)
+\t\t\treturn target.mmio[index].ops->write(target.mmio[index].instance,
+\t\t\t\taddress, 4U, value);
+\treturn -1;
+}}
+
+static int trace_contains(const char *needle)
+{{
+\tFILE *stream = fopen(pwm_trace_path, "r");
+\tchar line[512];
+\tif (stream == NULL) return 0;
+\twhile (fgets(line, sizeof(line), stream) != NULL)
+\t\tif (strstr(line, needle) != NULL) {{ fclose(stream); return 1; }}
+\tfclose(stream);
+\treturn 0;
+}}
+
 {case_functions}
 
 int main(int argc, char **argv)
@@ -1521,6 +1674,7 @@ def main() -> int:
         uart_controllers = find_uart(fdt)
         dma_controllers = find_dma_controllers(fdt)
         sd_cards = find_sd_cards(fdt)
+        pwm_maps = find_pwm_maps(fdt)
         relative = dtb.as_posix().split("/boards/", 1)[-1]
         board = relative.replace("/", "__").removesuffix(".dtb")
         negative_path = args.out / f"{c_identifier(board)}__unknown-compatible.dtb"
@@ -1530,7 +1684,8 @@ def main() -> int:
                  generated_uart_cases(board, uart_controllers) +
                  generated_dt_cases(board, fdt, negative_path, negative_node) +
                  generated_dma_cases(board, dma_controllers) +
-                 generated_sd_cases(board, sd_cards))
+                 generated_sd_cases(board, sd_cards) +
+                 generated_pwm_cases(board, pwm_maps))
         dt_instances = [node for node in fdt.nodes if is_model_instance(node)]
         dt_mmio_nodes = [node for node in fdt.nodes
                          if enabled(node) and MMIO_MODEL_COMPATIBLES.intersection(compatible(node))
@@ -1549,10 +1704,14 @@ def main() -> int:
             "dma_controllers": len(dma_controllers),
             "dma_references": sum(len(value.references) for value in dma_controllers),
             "sd_cards": len(sd_cards),
+            "pwm_maps": len(pwm_maps),
+            "pwm_entries": sum(len(value.entries) for value in pwm_maps),
         })
         use_plugin = "hakoniwa" in dtb.stem
         source = args.out / f"{c_identifier(board)}.c"
-        source.write_text(render_source(dtb, fdt, cases, use_plugin), encoding="utf-8")
+        pwm_trace_path = args.out / f"{c_identifier(board)}__pwm.trace"
+        source.write_text(render_source(dtb, fdt, cases, use_plugin, pwm_trace_path),
+                          encoding="utf-8")
         target = "trace_bus_" + c_identifier(board)
         targets.append({
             "target": target,

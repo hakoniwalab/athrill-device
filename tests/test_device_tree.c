@@ -664,6 +664,7 @@ int main(int argc, char **argv)
 	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
 
 	path(dtb, sizeof(dtb), "timer-pwm.dtb");
+	/* [ADV-PWM-002.T1] F765 timer PWM pulse conversion */
 	target.registered = 0U;
 	target.irq_resolved = 0U;
 	target.actuator_count = 0U;
@@ -686,6 +687,7 @@ int main(int argc, char **argv)
 	target.irq_resolved = 0U;
 
 	path(dtb, sizeof(dtb), "timer-h7-pwm.dtb");
+	/* [ADV-PWM-002.T1] H743 timer PWM pulse conversion */
 	target.registered = 0U;
 	target.irq_resolved = 0U;
 	target.actuator_count = 0U;
