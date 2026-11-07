@@ -365,6 +365,11 @@ def case_name(board: str, path: str, test_id: str) -> str:
     return f"{board}__{path_name}__{test_id}"
 
 
+def dma_name_at(names: list[str], index: int) -> str:
+    """Return the same-index dma-names entry, or the ABI's unnamed value."""
+    return names[index] if index < len(names) else ""
+
+
 def gpio_check(binding_index: int, gpio: Specifier | None) -> str:
     if gpio is None:
         return f"CHECK(!target.bindings[{binding_index}].has_gpio);"
@@ -501,8 +506,6 @@ def generated_uart_cases(board: str, controllers: list[UartController]) -> list[
                 "kind": "uart-dma",
                 "area": "uart",
                 "controller": controller,
-                "will_fail": True,
-                "known_defect": "UART controller dmas are not resolved through the public dma_resolve callback",
             })
     return result
 
@@ -530,11 +533,12 @@ def render_case(case: dict[str, object]) -> str:
             )
     elif case["kind"] == "dma":
         assert isinstance(controller, SpiController)
-        for dma in controller.dmas:
+        for index, dma in enumerate(controller.dmas):
             cell_values = ", ".join(f"{value}U" for value in dma.cells) or "0U"
             lines.extend([
                 f"\t{{ static const uint32 wanted[] = {{{cell_values}}};",
-                f"\t  CHECK(find_dma({c_string(dma.provider_path)}, wanted, {len(dma.cells)}U)); }}",
+                f"\t  CHECK(find_dma({c_string(dma.provider_path)}, wanted, {len(dma.cells)}U,",
+                f"\t                 {index}U, {c_string(dma_name_at(controller.dma_names, index))})); }}",
             ])
     elif case["kind"] == "i2c-child":
         assert isinstance(controller, I2cController)
@@ -576,21 +580,12 @@ def render_case(case: dict[str, object]) -> str:
             )
     elif case["kind"] == "uart-dma":
         assert isinstance(controller, UartController)
-        lines.append(f"\tCHECK({len(controller.dma_names)}U == {len(controller.dmas)}U);")
-        first = controller.dmas[0]
-        first_values = ", ".join(f"{value}U" for value in first.cells) or "0U"
-        lines.extend([
-            f"\t{{ static const uint32 wanted[] = {{{first_values}}};",
-            "\t  index = 0U;",
-            f"\t  while (index + {len(controller.dmas)}U <= target.dma_count &&",
-            f"\t         !dma_matches(index, {c_string(first.provider_path)}, wanted, {len(first.cells)}U)) index++; }}",
-            f"\tCHECK(index + {len(controller.dmas)}U <= target.dma_count);",
-        ])
-        for offset, dma in enumerate(controller.dmas):
+        for index, dma in enumerate(controller.dmas):
             cell_values = ", ".join(f"{value}U" for value in dma.cells) or "0U"
             lines.extend([
                 f"\t{{ static const uint32 wanted[] = {{{cell_values}}};",
-                f"\t  CHECK(dma_matches(index + {offset}U, {c_string(dma.provider_path)}, wanted, {len(dma.cells)}U)); }}",
+                f"\t  CHECK(find_dma({c_string(dma.provider_path)}, wanted, {len(dma.cells)}U,",
+                f"\t                 {index}U, {c_string(dma_name_at(controller.dma_names, index))})); }}",
             ])
     else:
         raise ValueError(f"unknown generated case kind {case['kind']}")
@@ -652,6 +647,8 @@ typedef struct {{
 \tchar provider[192];
 \tuint32 cell_count;
 \tuint32 cells[ATHRILL_DEVICE_MAX_SPEC_CELLS];
+\tuint32 tuple_index;
+\tchar name[192];
 }} DmaResolution;
 
 typedef struct {{
@@ -799,6 +796,8 @@ static sint32 dma_resolve(void *context, const AthrillDeviceSpecifier *spec,
 \tcopy_text(resolution->provider, sizeof(resolution->provider), spec->provider_path);
 \tresolution->cell_count = spec->cell_count;
 \tfor (index = 0; index < spec->cell_count; index++) resolution->cells[index] = spec->cells[index];
+\tresolution->tuple_index = spec->index;
+\tcopy_text(resolution->name, sizeof(resolution->name), spec->name);
 \tchannel->value = ++value->next_handle;
 \treturn 0;
 }}
@@ -917,18 +916,21 @@ static uint32 find_uart_binding(const char *controller, const char *peripheral)
 }}
 
 static int dma_matches(uint32 index, const char *provider,
-\tconst uint32 *wanted, uint32 count)
+\tconst uint32 *wanted, uint32 count, uint32 tuple_index, const char *name)
 {{
 \treturn index < target.dma_count && target.dmas[index].cell_count == count &&
 \t\tstrcmp(target.dmas[index].provider, provider) == 0 &&
-\t\tmemcmp(target.dmas[index].cells, wanted, count * sizeof(*wanted)) == 0;
+\t\tmemcmp(target.dmas[index].cells, wanted, count * sizeof(*wanted)) == 0 &&
+\t\ttarget.dmas[index].tuple_index == tuple_index &&
+\t\tstrcmp(target.dmas[index].name, name) == 0;
 }}
 
-static int find_dma(const char *provider, const uint32 *wanted, uint32 count)
+static int find_dma(const char *provider, const uint32 *wanted, uint32 count,
+\tuint32 tuple_index, const char *name)
 {{
 \tuint32 index;
 \tfor (index = 0; index < target.dma_count; index++)
-\t\tif (dma_matches(index, provider, wanted, count)) return 1;
+\t\tif (dma_matches(index, provider, wanted, count, tuple_index, name)) return 1;
 \treturn 0;
 }}
 
