@@ -2168,6 +2168,7 @@ static void log_runtime(AthrillDeviceRuntime *runtime,
                         const AthrillDeviceBuildOptions *options)
 {
 	uint32 i;
+	uint32 ticked;
 	printf("DEVICE_TREE sha256=%s size=%u\n", runtime->hash, runtime->dtb_size);
 	for (i = 0U; i < options->host_value_count; i++) {
 		fprintf(stderr, "DEVICE_TREE_HOST sha256=%s key=", runtime->hash);
@@ -2188,6 +2189,18 @@ static void log_runtime(AthrillDeviceRuntime *runtime,
 		fprint_escaped(stderr, node->model->model_name);
 		fprintf(stderr, " version=");
 		fprint_escaped(stderr, node->model->model_version);
+		fputc('\n', stderr);
+	}
+	/* The order athrill_device_tick() calls the models' tick hooks in
+	 * (models whose tick does nothing are left out). */
+	for (i = 0U, ticked = 0U; i < runtime->tick_order_count; i++) {
+		NodeRecord *node = &runtime->nodes[runtime->tick_order[i]];
+		if (!node->created || node->model->tick == NULL ||
+		    node->model->tick == noop_tick) {
+			continue;
+		}
+		fprintf(stderr, "DEVICE_TICK index=%u path=", ticked++);
+		fprint_escaped(stderr, node->path);
 		fputc('\n', stderr);
 	}
 }

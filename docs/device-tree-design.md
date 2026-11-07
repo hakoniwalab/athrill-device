@@ -142,8 +142,8 @@ During `device_init`, a supporting target reads
 `DEVICE_CONFIG_DEVICE_TREE`. If it is present, it fills
 `AthrillDeviceTargetOps`, constructs `AthrillDeviceBuildOptions`, and calls
 `athrill_device_build`. Failure is fatal and is reported before guest code
-runs. If the key is absent, the target calls its legacy reset and
-`board_attach()` path exactly as it does today.
+runs. If the key is absent, no board devices are built; the STM32 target has
+no other board path.
 
 During `device_supply_clock`, the target calls `athrill_device_tick` with the
 current virtual clock. athrill-device normally ticks models in the immutable
@@ -529,7 +529,14 @@ The start-up log records, in stable node order:
 ```text
 DEVICE_TREE sha256=<64 hex digits> size=<bytes>
 DEVICE_MODEL path=<full path> compatible=<string> provider=<plugin-or-builtin> version=<version>
+DEVICE_TICK index=<n> path=<full path>
 ```
+
+`DEVICE_TICK` lines give the order `athrill_device_tick()` calls the models'
+tick hooks in, from index 0; models whose tick does nothing (structural
+nodes, adapters) are left out. A board's regression references record this
+order, so a change of tick order (a moved model, a reordered DTS or SoC
+include) is reported instead of passing unnoticed.
 
 Model versions describe behaviour and must change when behaviour changes in
 a way that could change a run. Build IDs may be logged in addition, but do
