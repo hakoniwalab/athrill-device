@@ -1068,6 +1068,24 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__imu_2__ADV_SPI
 	return 0;
 }
 
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_40005400__ADV_I2C_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_i2c_bindings("/soc/i2c@40005400") == 0U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_40005800__ADV_I2C_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_i2c_bindings("/soc/i2c@40005800") == 0U);
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_58001c00__ADV_I2C_002_T1(void)
 {
 	uint32 index;
@@ -1137,7 +1155,7 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__root__ADV_DT_002_T1(void)
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 75U);
+	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 77U);
 	CHECK(count_model_path(captured_stderr, "/") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000000") == 1U);
@@ -1148,6 +1166,8 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000c00/pwm") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40003800") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40003800/fram@0") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005400") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005800") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/can@4000a000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/can@4000a400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40010000") == 1U);
@@ -1526,6 +1546,30 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40003800__ADV_DT_004_T1(
 	uint32 index;
 	CHECK(build_board() == 0);
 	{ static const uint32 wanted[] = {36U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_40005400__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {31U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	{ static const uint32 wanted[] = {32U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_40005800__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {33U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	{ static const uint32 wanted[] = {34U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	destroy_board();
 	return 0;
@@ -2143,6 +2187,8 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40013000__accelerometer@0__ADV-SPI-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__accelerometer_0__ADV_SPI_001_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40013000__gyroscope@1__ADV-SPI-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__gyroscope_1__ADV_SPI_001_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40013000__imu@2__ADV-SPI-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40013000__imu_2__ADV_SPI_001_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@40005400__ADV-I2C-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_40005400__ADV_I2C_002_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@40005800__ADV-I2C-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_40005800__ADV_I2C_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@58001c00__ADV-I2C-002.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_58001c00__ADV_I2C_002_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@58001c00__pressure@77__ADV-I2C-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_58001c00__pressure_77__ADV_I2C_001_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@58001c00__magnetometer@c__ADV-I2C-001.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_58001c00__magnetometer_c__ADV_I2C_001_T1();
@@ -2179,6 +2225,8 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__timers@40000800__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__timers_40000800__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__timers@40000c00__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__timers_40000c00__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40003800__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__spi_40003800__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@40005400__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_40005400__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__i2c@40005800__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__i2c_40005800__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__can@4000a000__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__can_4000a000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__can@4000a400__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__can_4000a400__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk6c__pixhawk6c-hakoniwa__soc__timers@40010000__ADV-DT-004.T1") == 0) return case_pixhawk6c__pixhawk6c_hakoniwa__soc__timers_40010000__ADV_DT_004_T1();

@@ -1052,6 +1052,24 @@ static int case_pixhawk4__pixhawk4__soc__spi_40013400__pressure_0__ADV_SPI_001_T
 	return 0;
 }
 
+static int case_pixhawk4__pixhawk4__soc__i2c_40005400__ADV_I2C_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_i2c_bindings("/soc/i2c@40005400") == 0U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4__soc__i2c_40005800__ADV_I2C_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_i2c_bindings("/soc/i2c@40005800") == 0U);
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk4__pixhawk4__soc__i2c_40005c00__ADV_I2C_002_T1(void)
 {
 	uint32 index;
@@ -1068,6 +1086,15 @@ static int case_pixhawk4__pixhawk4__soc__i2c_40005c00__magnetometer_e__ADV_I2C_0
 	CHECK(build_board() == 0);
 	index = find_i2c_binding("/soc/i2c@40005c00", 14U);
 	CHECK(index < target.i2c_binding_count);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4__soc__i2c_40006000__ADV_I2C_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(count_i2c_bindings("/soc/i2c@40006000") == 0U);
 	destroy_board();
 	return 0;
 }
@@ -1110,7 +1137,7 @@ static int case_pixhawk4__pixhawk4__root__ADV_DT_002_T1(void)
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 52U);
+	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 55U);
 	CHECK(count_model_path(captured_stderr, "/") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000000") == 1U);
@@ -1122,6 +1149,8 @@ static int case_pixhawk4__pixhawk4__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40001800/pwm") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40003800") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40003800/fram@0") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005400") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005800") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005c00") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005c00/magnetometer@e") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40010000") == 1U);
@@ -1156,6 +1185,7 @@ static int case_pixhawk4__pixhawk4__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/soc/flash-controller@40023c00/flash@1ff0f400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/flash-controller@40023c00/flash@1ff0f400/nvmem-layout") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/dma@40026400") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/i2c@40006000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/system-config@40013800") == 1U);
 	CHECK(count_model_path(captured_stderr, "/otghs_fs_phy") == 1U);
 	CHECK(count_model_path(captured_stderr, "/otgfs_phy") == 1U);
@@ -1458,6 +1488,30 @@ static int case_pixhawk4__pixhawk4__soc__spi_40003800__ADV_DT_004_T1(void)
 	return 0;
 }
 
+static int case_pixhawk4__pixhawk4__soc__i2c_40005400__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {31U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	{ static const uint32 wanted[] = {32U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4__soc__i2c_40005800__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {33U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	{ static const uint32 wanted[] = {34U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk4__pixhawk4__soc__i2c_40005c00__ADV_DT_004_T1(void)
 {
 	uint32 index;
@@ -1603,6 +1657,18 @@ static int case_pixhawk4__pixhawk4__soc__dma_40026400__ADV_DT_004_T1(void)
 	{ static const uint32 wanted[] = {69U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	{ static const uint32 wanted[] = {70U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4__soc__i2c_40006000__ADV_DT_004_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	{ static const uint32 wanted[] = {95U, 0U};
+	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	{ static const uint32 wanted[] = {96U, 0U};
 	  CHECK(find_irq("/soc/interrupt-controller@e000e100", wanted, 2U)); }
 	destroy_board();
 	return 0;
@@ -1824,8 +1890,11 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__spi@40013000__ADV-SPI-006.T1") == 0) return case_pixhawk4__pixhawk4__soc__spi_40013000__ADV_SPI_006_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__spi@40013400__ADV-SPI-002.T1") == 0) return case_pixhawk4__pixhawk4__soc__spi_40013400__ADV_SPI_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__spi@40013400__pressure@0__ADV-SPI-001.T1") == 0) return case_pixhawk4__pixhawk4__soc__spi_40013400__pressure_0__ADV_SPI_001_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__i2c@40005400__ADV-I2C-002.T1") == 0) return case_pixhawk4__pixhawk4__soc__i2c_40005400__ADV_I2C_002_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__i2c@40005800__ADV-I2C-002.T1") == 0) return case_pixhawk4__pixhawk4__soc__i2c_40005800__ADV_I2C_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__i2c@40005c00__ADV-I2C-002.T1") == 0) return case_pixhawk4__pixhawk4__soc__i2c_40005c00__ADV_I2C_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__i2c@40005c00__magnetometer@e__ADV-I2C-001.T1") == 0) return case_pixhawk4__pixhawk4__soc__i2c_40005c00__magnetometer_e__ADV_I2C_001_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__i2c@40006000__ADV-I2C-002.T1") == 0) return case_pixhawk4__pixhawk4__soc__i2c_40006000__ADV_I2C_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__serial@40011000__ADV-UART-002.T1") == 0) return case_pixhawk4__pixhawk4__soc__serial_40011000__ADV_UART_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__serial@40011000__gnss__ADV-UART-001.T1") == 0) return case_pixhawk4__pixhawk4__soc__serial_40011000__gnss__ADV_UART_001_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__ADV-DT-001.T1") == 0) return case_pixhawk4__pixhawk4__soc__ADV_DT_001_T1();
@@ -1857,6 +1926,8 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__timers@40001000__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__timers_40001000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__timers@40001800__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__timers_40001800__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__spi@40003800__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__spi_40003800__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__i2c@40005400__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__i2c_40005400__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__i2c@40005800__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__i2c_40005800__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__i2c@40005c00__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__i2c_40005c00__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__timers@40010000__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__timers_40010000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__timers@40010400__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__timers_40010400__ADV_DT_004_T1();
@@ -1868,6 +1939,7 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__timers@40014000__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__timers_40014000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__flash-controller@40023c00__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__flash_controller_40023c00__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__dma@40026400__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__dma_40026400__ADV_DT_004_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__i2c@40006000__ADV-DT-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__i2c_40006000__ADV_DT_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__root__ADV-DT-005.T1") == 0) return case_pixhawk4__pixhawk4__root__ADV_DT_005_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__dma@40026400__ADV-DMA-005.T1") == 0) return case_pixhawk4__pixhawk4__soc__dma_40026400__ADV_DMA_005_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4__soc__sdmmc@40012c00__sd-card__ADV-SD-004.T1") == 0) return case_pixhawk4__pixhawk4__soc__sdmmc_40012c00__sd_card__ADV_SD_004_T1();
