@@ -50,7 +50,7 @@
 - id: ADV-DMA-005
   statement: A DMA controller node is instantiated with the request lines its consumers' dmas reference.
   source:
-    devicetree: Devicetree Specification v0.4 DMA binding
+    devicetree: Zephyr DMA binding (dmas, dma-names) and st,stm32-dma-v1 / st,stm32-dmamux bindings
     manual: RM0433 section 17.3 (DMAMUX request lines); RM0410 table 27
   scope: Peripherals reach the DMA stream the board wires.
   verification: generated

@@ -2,7 +2,8 @@
   statement: A chip's int-gpios line raises the EXTI line of that pin, which raises the interrupt the board connects to it.
   source:
     devicetree: Devicetree Specification v0.4; Zephyr gpio binding (int-gpios)
-    manual: RM0410 sections 11.3 and 11.9 (EXTI, SYSCFG EXTICR); RM0433 sections 20.4 and 12.3
+    manual: RM0410 Rev 5 sections 11.8, 11.9 and 7.2.4-7.2.7 (EXTI line mapping, EXTI and SYSCFG EXTICR registers); RM0433
+      Rev 8 sections 20.4 and 12.3
   scope: IMU data-ready interrupts reach the driver.
   verification: generated
   applies_to: gpio-int-consumer

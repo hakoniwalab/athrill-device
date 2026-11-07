@@ -26,19 +26,19 @@
   statement: Accelerometer BGW_CHIPID (0x00) reads 0xFA.
   source:
     devicetree: bosch,bma280
-    manual: BMI055 datasheet section 7 (accelerometer register map)
+    manual: BMI055 datasheet BST-BMI055-DS000-06 section 6.2 (accelerometer register map) and SPI read protocol
   scope: Driver probe.
   verification: generated
   applies_to: chip:bosch,bma280
   tests:
   - id: ADV-CHIP-BMI055A-001.T1
-    stimulus: Read register 0x00 (SPI read, first dummy byte as the datasheet requires).
+    stimulus: Read register 0x00 over SPI as the BMI055 accelerometer SPI read protocol specifies (no dummy byte; unlike BMI088).
     expect: 0xFA.
 - id: ADV-CHIP-BMI055G-001
   statement: Gyroscope CHIP_ID (0x00) reads 0x0F.
   source:
     devicetree: bosch,bmg160
-    manual: BMI055 datasheet section 9 (gyroscope register map)
+    manual: BMI055 datasheet BST-BMI055-DS000-06 section 8.2 (gyroscope register map)
   scope: Driver probe.
   verification: generated
   applies_to: chip:bosch,bmg160

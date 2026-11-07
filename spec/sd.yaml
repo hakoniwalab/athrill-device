@@ -2,7 +2,7 @@
   statement: Commands get the response type of the SD specification (R1, R2, R3, R6, R7) with the card's answer.
   source:
     devicetree: none
-    manual: SD Physical Layer Simplified Specification 4.7 and 4.9; RM0410 section 35; RM0433 section 55
+    manual: SD Physical Layer Simplified Specification Version 9.10 4.7 and 4.9; RM0410 Rev 5 section 39; RM0433 section 55
   scope: The firmware's SD driver initialises the card.
   verification: unit
   applies_to: sd-protocol
@@ -14,7 +14,7 @@
   statement: Single-block read and write move exactly 512 bytes of the addressed block.
   source:
     devicetree: none
-    manual: SD Physical Layer Simplified Specification 4.3.3 and 7.2
+    manual: SD Physical Layer Simplified Specification Version 9.10 4.3.3 and 7.2
   scope: Parameters and logs on the SD card are read and written correctly.
   verification: unit
   applies_to: sd-protocol
@@ -26,7 +26,7 @@
   statement: Multi-block read and write move consecutive blocks in order until stopped.
   source:
     devicetree: none
-    manual: SD Physical Layer Simplified Specification 4.3.3 (CMD18, CMD25, CMD12)
+    manual: SD Physical Layer Simplified Specification Version 9.10 4.3.3 (CMD18, CMD25, CMD12)
   scope: File system throughput paths work.
   verification: unit
   applies_to: sd-protocol
@@ -35,10 +35,10 @@
     stimulus: CMD25 two blocks, CMD12, then CMD18 two blocks, CMD12.
     expect: Both blocks read back in order.
 - id: ADV-SD-004
-  statement: An SD card node is attached to its SDMMC controller and backed by the image named in the host configuration.
+  statement: An SD card node is attached to its SDMMC controller.
   source:
     devicetree: Devicetree Specification v0.4; Zephyr sdmmc binding
-    manual: RM0410 section 35; RM0433 section 55
+    manual: RM0410 Rev 5 section 39; RM0433 Rev 8 section 55
   scope: The firmware mounts the board's card.
   verification: generated
   applies_to: sd-card
