@@ -15,3 +15,39 @@ instructions 2131907110
 sha256 fram.bin 00ee14df6986fc5baf43fdc3ea53db8088ed207dd2bd588b842d53053e7947fe
 sha256 sd.img 12e2df7d9124ac9839d1c37a203a30b0c50eb7178cfd1c1988d60cc974e5d921
 sha256 console.norm df750846364a87e9b08984f49d32f07cdba8b1f953590a4e208badd5dd6d9cd6
+# tick: the order the devices are ticked in (target TARGET_TICK lines, with
+# "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
+# 2026-11-08 with athrill-target-stm32 0050bb4 + the tick-order log.
+tick arm_m_scs
+tick stm32_uart_tcp
+tick stm32_uart
+tick stm32_i2c
+tick stm32_sdmmc
+tick stm32h7_sdmmc
+tick /soc/i2c@40005c00/magnetometer@e
+tick /soc/interrupt-controller@40013c00
+tick /soc/pin-controller@40020000/gpio@40020000
+tick /soc/pin-controller@40020000/gpio@40020400
+tick /soc/pin-controller@40020000/gpio@40020800
+tick /soc/pin-controller@40020000/gpio@40020c00
+tick /soc/pin-controller@40020000/gpio@40021000
+tick /soc/pin-controller@40020000/gpio@40021400
+tick /soc/spi@40003800/fram@0
+tick /soc/spi@40013400/pressure@0
+tick /soc/pin-controller@40020000/gpio@40021800
+tick /soc/pin-controller@40020000/gpio@40021c00
+tick /soc/pin-controller@40020000/gpio@40022000
+tick /soc/pin-controller@40020000/gpio@40022400
+tick /soc/pin-controller@40020000/gpio@40022800
+tick /soc/timers@40000000
+tick /soc/timers@40000800
+tick /soc/timers@40000c00
+tick /soc/timers@40001000
+tick /soc/timers@40001800
+tick /soc/timers@40010000
+tick /soc/timers@40010400
+tick /soc/serial@40011000/gnss
+tick /soc/timers@40014000
+tick /soc/spi@40013000/imu@0
+tick /soc/system-config@40013800
+tick /pwm-actuator-map
