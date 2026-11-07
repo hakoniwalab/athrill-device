@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-i2c-v2.yaml, the pinned ST SVD (STM32H743.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-i2c-v2
 compatible:
 - st,stm32-i2c-v2
@@ -54,6 +55,8 @@ svd_source:
 bindings:
   enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -66,6 +69,8 @@ bindings:
   target_address:
     access: rw
     note: 7-bit address in SADD[7:1]; the H7 SVD splits SADD into single bits SADD0..SADD9 (concatenated in bit order)
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -133,6 +138,8 @@ bindings:
           n: 9
   direction:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -144,6 +151,8 @@ bindings:
         svd_access: read-write
   byte_count:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -155,6 +164,8 @@ bindings:
         svd_access: read-write
   auto_end:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -166,6 +177,8 @@ bindings:
         svd_access: read-write
   reload:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -177,6 +190,8 @@ bindings:
         svd_access: read-write
   start:
     access: w1s
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -188,6 +203,8 @@ bindings:
         svd_access: read-write
   stop:
     access: w1s
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -199,18 +216,24 @@ bindings:
         svd_access: read-write
   tx_data:
     access: fifo
+    encoding:
+      kind: identity
     registers:
     - reg: TXDR
       offset: '0x28'
       size: 32
   rx_data:
     access: fifo
+    encoding:
+      kind: identity
     registers:
     - reg: RXDR
       offset: '0x24'
       size: 32
   tx_space:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x18'
@@ -222,6 +245,8 @@ bindings:
         svd_access: read-write
   rx_available:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x18'
@@ -233,6 +258,8 @@ bindings:
         svd_access: read-only
   transfer_complete:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x18'
@@ -244,6 +271,8 @@ bindings:
         svd_access: read-only
   reload_complete:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x18'
@@ -255,6 +284,8 @@ bindings:
         svd_access: read-only
   stop_detected:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x18'
@@ -266,6 +297,8 @@ bindings:
         svd_access: read-only
   nack:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x18'
@@ -277,6 +310,8 @@ bindings:
         svd_access: read-only
   busy:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: ISR
       offset: '0x18'
@@ -288,6 +323,8 @@ bindings:
         svd_access: read-only
   status_ack:
     access: w1c
+    encoding:
+      kind: identity
     registers:
     - reg: ICR
       offset: '0x1C'
@@ -303,6 +340,8 @@ bindings:
         svd_access: write-only
   irq_enables:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -336,6 +375,8 @@ bindings:
     devicetree: interrupts (event, error)
   tx_dma_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -347,6 +388,8 @@ bindings:
         svd_access: read-write
   rx_dma_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'

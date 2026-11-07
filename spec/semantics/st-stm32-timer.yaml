@@ -153,3 +153,6 @@ unmodelled:
   - TISEL
   - OR
   answer: stored / reset value (offsets 0x50-0x68 differ F7/H7)
+instances:
+  TIM2: TIM2
+  TIM5: TIM5

@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-exti-v1.yaml, the pinned ST SVD (STM32F765.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-exti-v1
 compatible:
 - st,stm32-exti
@@ -22,6 +23,8 @@ bindings:
   line_source:
     access: rw
     note: SYSCFG EXTICR1-4, 4 bits per line 0-15
+    encoding:
+      kind: identity
     registers:
     - reg: EXTICR1
       offset: '0x08'
@@ -149,6 +152,8 @@ bindings:
           n: 15
   rising_trigger:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: RTSR
       offset: '0x08'
@@ -294,6 +299,8 @@ bindings:
           n: 22
   falling_trigger:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: FTSR
       offset: '0x0C'
@@ -439,6 +446,8 @@ bindings:
           n: 22
   line_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: IMR
       offset: '0x00'
@@ -584,6 +593,8 @@ bindings:
           n: 22
   software_trigger:
     access: w1s
+    encoding:
+      kind: identity
     registers:
     - reg: SWIER
       offset: '0x10'
@@ -729,6 +740,8 @@ bindings:
           n: 22
   pending:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: PR
       offset: '0x14'
@@ -874,6 +887,8 @@ bindings:
           n: 22
   pending_ack:
     access: w1c
+    encoding:
+      kind: identity
     registers:
     - reg: PR
       offset: '0x14'
@@ -1746,3 +1761,172 @@ registers:
         width: 1
         access: read-write
         bound: true
+other_peripherals:
+  SYSCFG:
+    MEMRM:
+      offset: '0x00'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        MEM_MODE:
+          lsb: 0
+          width: 3
+          access: read-write
+          bound: false
+        FB_MODE:
+          lsb: 8
+          width: 1
+          access: read-write
+          bound: false
+        SWP_FMC:
+          lsb: 10
+          width: 2
+          access: read-write
+          bound: false
+    PMC:
+      offset: '0x04'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        ADC1DC2:
+          lsb: 16
+          width: 1
+          access: read-write
+          bound: false
+        ADC2DC2:
+          lsb: 17
+          width: 1
+          access: read-write
+          bound: false
+        ADC3DC2:
+          lsb: 18
+          width: 1
+          access: read-write
+          bound: false
+        MII_RMII_SEL:
+          lsb: 23
+          width: 1
+          access: read-write
+          bound: false
+    EXTICR1:
+      offset: '0x08'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        EXTI0:
+          lsb: 0
+          width: 4
+          access: read-write
+          bound: true
+        EXTI1:
+          lsb: 4
+          width: 4
+          access: read-write
+          bound: true
+        EXTI2:
+          lsb: 8
+          width: 4
+          access: read-write
+          bound: true
+        EXTI3:
+          lsb: 12
+          width: 4
+          access: read-write
+          bound: true
+    EXTICR2:
+      offset: '0x0C'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        EXTI4:
+          lsb: 0
+          width: 4
+          access: read-write
+          bound: true
+        EXTI5:
+          lsb: 4
+          width: 4
+          access: read-write
+          bound: true
+        EXTI6:
+          lsb: 8
+          width: 4
+          access: read-write
+          bound: true
+        EXTI7:
+          lsb: 12
+          width: 4
+          access: read-write
+          bound: true
+    EXTICR3:
+      offset: '0x10'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        EXTI8:
+          lsb: 0
+          width: 4
+          access: read-write
+          bound: true
+        EXTI9:
+          lsb: 4
+          width: 4
+          access: read-write
+          bound: true
+        EXTI10:
+          lsb: 8
+          width: 4
+          access: read-write
+          bound: true
+        EXTI11:
+          lsb: 12
+          width: 4
+          access: read-write
+          bound: true
+    EXTICR4:
+      offset: '0x14'
+      size: 32
+      reset: '0x00000000'
+      access: read-write
+      fields:
+        EXTI12:
+          lsb: 0
+          width: 4
+          access: read-write
+          bound: true
+        EXTI13:
+          lsb: 4
+          width: 4
+          access: read-write
+          bound: true
+        EXTI14:
+          lsb: 8
+          width: 4
+          access: read-write
+          bound: true
+        EXTI15:
+          lsb: 12
+          width: 4
+          access: read-write
+          bound: true
+    CMPCR:
+      offset: '0x20'
+      size: 32
+      reset: '0x00000000'
+      access: read-only
+      fields:
+        CMP_PD:
+          lsb: 0
+          width: 1
+          access: read-only
+          bound: false
+        READY:
+          lsb: 8
+          width: 1
+          access: read-only
+          bound: false

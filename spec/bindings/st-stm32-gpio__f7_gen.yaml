@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-gpio.yaml, the pinned ST SVD (STM32F765.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-gpio
 compatible:
 - st,stm32-gpio
@@ -23,6 +24,8 @@ bindings:
   pin_mode:
     access: rw
     note: 00 input, 01 output, 10 alternate, 11 analog
+    encoding:
+      kind: identity
     registers:
     - reg: MODER
       offset: '0x00'
@@ -126,6 +129,8 @@ bindings:
           n: 15
   output_level:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: ODR
       offset: '0x14'
@@ -229,6 +234,8 @@ bindings:
           n: 15
   set_reset:
     access: wo
+    encoding:
+      kind: identity
     registers:
     - reg: BSRR
       offset: '0x18'
@@ -428,6 +435,8 @@ bindings:
           n: 15
   input_level:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: IDR
       offset: '0x10'
@@ -532,6 +541,8 @@ bindings:
   pin_config:
     access: rw
     note: stored only
+    encoding:
+      kind: identity
     registers:
     - reg: OTYPER
       offset: '0x04'

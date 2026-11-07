@@ -34,11 +34,15 @@ bindings:
     field: DS
     access: rw
     note: DS = bits - 1
+    encoding:
+      kind: minus_one
   baud_divider:
     reg: CR1
     field: BR
     access: rw
     note: divider = 2^(BR+1)
+    encoding:
+      kind: pow2_plus_one
   tx_data:
     reg: DR
     access: fifo

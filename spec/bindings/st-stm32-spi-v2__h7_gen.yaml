@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-spi-v2.yaml, the pinned ST SVD (STM32H743.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-spi-v2
 compatible:
 - st,stm32h7-spi
@@ -85,6 +86,8 @@ svd_source:
 bindings:
   enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -96,6 +99,8 @@ bindings:
         svd_access: read-write
   master:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CFG2
       offset: '0x0C'
@@ -107,6 +112,8 @@ bindings:
         svd_access: read-write
   clock_mode:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CFG2
       offset: '0x0C'
@@ -122,6 +129,8 @@ bindings:
         svd_access: read-write
   bit_order:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CFG2
       offset: '0x0C'
@@ -134,6 +143,8 @@ bindings:
   frame_size:
     access: rw
     note: DSIZE = bits - 1
+    encoding:
+      kind: minus_one
     registers:
     - reg: CFG1
       offset: '0x08'
@@ -146,6 +157,8 @@ bindings:
   baud_divider:
     access: rw
     note: divider = 2^(MBR+1)
+    encoding:
+      kind: pow2_plus_one
     registers:
     - reg: CFG1
       offset: '0x08'
@@ -157,18 +170,24 @@ bindings:
         svd_access: read-write
   tx_data:
     access: fifo
+    encoding:
+      kind: identity
     registers:
     - reg: TXDR
       offset: '0x20'
       size: 32
   rx_data:
     access: fifo
+    encoding:
+      kind: identity
     registers:
     - reg: RXDR
       offset: '0x30'
       size: 32
   tx_space:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x14'
@@ -180,6 +199,8 @@ bindings:
         svd_access: read-only
   rx_available:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x14'
@@ -194,6 +215,8 @@ bindings:
     note: v2 has no BSY bit; the model reports activity through TXC/EOT
   overrun:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x14'
@@ -205,6 +228,8 @@ bindings:
         svd_access: read-only
   overrun_ack:
     access: w1c
+    encoding:
+      kind: identity
     registers:
     - reg: IFCR
       offset: '0x18'
@@ -217,6 +242,8 @@ bindings:
   tx_irq_enable:
     access: rs
     note: 'TXPIE is rs: set by software, cleared by hardware at EOT (RM0433 50.11.5)'
+    encoding:
+      kind: identity
     registers:
     - reg: IER
       offset: '0x10'
@@ -228,6 +255,8 @@ bindings:
         svd_access: read-write
   rx_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: IER
       offset: '0x10'
@@ -239,6 +268,8 @@ bindings:
         svd_access: read-write
   error_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: IER
       offset: '0x10'
@@ -252,6 +283,8 @@ bindings:
     devicetree: interrupts
   tx_dma_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CFG1
       offset: '0x08'
@@ -263,6 +296,8 @@ bindings:
         svd_access: read-write
   rx_dma_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CFG1
       offset: '0x08'
@@ -279,6 +314,8 @@ bindings:
   fifo_threshold:
     access: rw
     note: 'frames = FTHLV + 1; the SVD spells the field FTHVL (RM0433: FTHLV)'
+    encoding:
+      kind: identity
     registers:
     - reg: CFG1
       offset: '0x08'
@@ -290,6 +327,8 @@ bindings:
         svd_access: read-write
   transfer_size:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR2
       offset: '0x04'
@@ -301,6 +340,8 @@ bindings:
         svd_access: read-write
   start:
     access: rs
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -312,6 +353,8 @@ bindings:
         svd_access: read-write
   end_of_transfer:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x14'
@@ -323,6 +366,8 @@ bindings:
         svd_access: read-only
   end_of_transfer_ack:
     access: w1c
+    encoding:
+      kind: identity
     registers:
     - reg: IFCR
       offset: '0x18'
@@ -334,6 +379,8 @@ bindings:
         svd_access: write-only
   eot_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: IER
       offset: '0x10'

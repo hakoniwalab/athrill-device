@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-timer.yaml, the pinned ST SVD (STM32H743.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-timer
 compatible:
 - st,stm32-timers
@@ -55,6 +56,8 @@ svd_source:
 bindings:
   counter_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -66,6 +69,8 @@ bindings:
         svd_access: read-write
   prescaler:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: PSC
       offset: '0x28'
@@ -78,6 +83,8 @@ bindings:
   auto_reload:
     access: rw
     note: 16 bits except TIM2/TIM5 (32)
+    encoding:
+      kind: identity
     registers:
     - reg: ARR
       offset: '0x2C'
@@ -89,6 +96,8 @@ bindings:
         svd_access: read-write
   counter:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CNT
       offset: '0x24'
@@ -100,6 +109,8 @@ bindings:
         svd_access: read-write
   update_event:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x10'
@@ -111,6 +122,8 @@ bindings:
         svd_access: read-write
   force_update:
     access: w1s
+    encoding:
+      kind: identity
     registers:
     - reg: EGR
       offset: '0x14'
@@ -122,6 +135,8 @@ bindings:
         svd_access: write-only
   preload:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -165,6 +180,8 @@ bindings:
           n: 4
   one_pulse:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CR1
       offset: '0x00'
@@ -177,6 +194,8 @@ bindings:
   flag_ack:
     access: w0c
     note: write 0 to clear
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x10'
@@ -236,6 +255,8 @@ bindings:
         svd_access: read-write
   update_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: DIER
       offset: '0x0C'
@@ -249,6 +270,8 @@ bindings:
     devicetree: interrupts
   compare_value:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CCR1
       offset: '0x34'
@@ -282,6 +305,8 @@ bindings:
         n: 6
   output_mode:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CCMR1_Output
       offset: '0x18'
@@ -336,6 +361,8 @@ bindings:
   output_enable:
     access: rw
     note: MOE on advanced timers (TIM1/8)
+    encoding:
+      kind: identity
     registers:
     - reg: CCER
       offset: '0x20'
@@ -387,6 +414,8 @@ bindings:
         svd_access: read-write
   output_polarity:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CCER
       offset: '0x20'
@@ -430,6 +459,8 @@ bindings:
           n: 6
   compare_event:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x10'
@@ -473,6 +504,8 @@ bindings:
           n: 6
   compare_irq_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: DIER
       offset: '0x0C'
@@ -506,6 +539,8 @@ bindings:
     devicetree: athrill,pwm-actuator-map pwms
   capture_select:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: CCMR1_Input
       offset: '0x18'
@@ -541,6 +576,8 @@ bindings:
           n: 4
   capture_value:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: CCR1
       offset: '0x34'
@@ -574,6 +611,8 @@ bindings:
         n: 6
   capture_event:
     access: ro
+    encoding:
+      kind: identity
     registers:
     - reg: SR
       offset: '0x10'
@@ -617,6 +656,8 @@ bindings:
           n: 6
   update_dma_enable:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: DIER
       offset: '0x0C'
@@ -1727,3 +1768,1454 @@ registers:
         width: 4
         access: read-write
         bound: false
+instances:
+  TIM2:
+    svd_peripheral: TIM2
+    registers:
+      CR1:
+        offset: '0x00'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CEN:
+            lsb: 0
+            width: 1
+            access: read-write
+            bound: false
+          UDIS:
+            lsb: 1
+            width: 1
+            access: read-write
+            bound: false
+          URS:
+            lsb: 2
+            width: 1
+            access: read-write
+            bound: false
+          OPM:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          DIR:
+            lsb: 4
+            width: 1
+            access: read-write
+            bound: false
+          CMS:
+            lsb: 5
+            width: 2
+            access: read-write
+            bound: false
+          ARPE:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+          CKD:
+            lsb: 8
+            width: 2
+            access: read-write
+            bound: false
+          UIFREMAP:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+      CR2:
+        offset: '0x04'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CCDS:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          MMS:
+            lsb: 4
+            width: 3
+            access: read-write
+            bound: false
+          TI1S:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+      SMCR:
+        offset: '0x08'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          SMS:
+            lsb: 0
+            width: 3
+            access: read-write
+            bound: false
+          TS:
+            lsb: 4
+            width: 3
+            access: read-write
+            bound: false
+          MSM:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+          ETF:
+            lsb: 8
+            width: 4
+            access: read-write
+            bound: false
+          ETPS:
+            lsb: 12
+            width: 2
+            access: read-write
+            bound: false
+          ECE:
+            lsb: 14
+            width: 1
+            access: read-write
+            bound: false
+          ETP:
+            lsb: 15
+            width: 1
+            access: read-write
+            bound: false
+          SMS_3:
+            lsb: 16
+            width: 1
+            access: read-write
+            bound: false
+          TS_4_3:
+            lsb: 20
+            width: 2
+            access: read-write
+            bound: false
+      DIER:
+        offset: '0x0C'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          UIE:
+            lsb: 0
+            width: 1
+            access: read-write
+            bound: false
+          CC1IE:
+            lsb: 1
+            width: 1
+            access: read-write
+            bound: false
+          CC2IE:
+            lsb: 2
+            width: 1
+            access: read-write
+            bound: false
+          CC3IE:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          CC4IE:
+            lsb: 4
+            width: 1
+            access: read-write
+            bound: false
+          TIE:
+            lsb: 6
+            width: 1
+            access: read-write
+            bound: false
+          UDE:
+            lsb: 8
+            width: 1
+            access: read-write
+            bound: false
+          CC1DE:
+            lsb: 9
+            width: 1
+            access: read-write
+            bound: false
+          CC2DE:
+            lsb: 10
+            width: 1
+            access: read-write
+            bound: false
+          CC3DE:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+          CC4DE:
+            lsb: 12
+            width: 1
+            access: read-write
+            bound: false
+          TDE:
+            lsb: 14
+            width: 1
+            access: read-write
+            bound: false
+      SR:
+        offset: '0x10'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          UIF:
+            lsb: 0
+            width: 1
+            access: read-write
+            bound: false
+          CC1IF:
+            lsb: 1
+            width: 1
+            access: read-write
+            bound: false
+          CC2IF:
+            lsb: 2
+            width: 1
+            access: read-write
+            bound: false
+          CC3IF:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          CC4IF:
+            lsb: 4
+            width: 1
+            access: read-write
+            bound: false
+          TIF:
+            lsb: 6
+            width: 1
+            access: read-write
+            bound: false
+          CC1OF:
+            lsb: 9
+            width: 1
+            access: read-write
+            bound: false
+          CC2OF:
+            lsb: 10
+            width: 1
+            access: read-write
+            bound: false
+          CC3OF:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+          CC4OF:
+            lsb: 12
+            width: 1
+            access: read-write
+            bound: false
+      EGR:
+        offset: '0x14'
+        size: 32
+        reset: '0x00000000'
+        access: write-only
+        fields:
+          UG:
+            lsb: 0
+            width: 1
+            access: write-only
+            bound: false
+          CC1G:
+            lsb: 1
+            width: 1
+            access: write-only
+            bound: false
+          CC2G:
+            lsb: 2
+            width: 1
+            access: write-only
+            bound: false
+          CC3G:
+            lsb: 3
+            width: 1
+            access: write-only
+            bound: false
+          CC4G:
+            lsb: 4
+            width: 1
+            access: write-only
+            bound: false
+          TG:
+            lsb: 6
+            width: 1
+            access: write-only
+            bound: false
+      CCMR1_Output:
+        offset: '0x18'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CC1S:
+            lsb: 0
+            width: 2
+            access: read-write
+            bound: false
+          OC1FE:
+            lsb: 2
+            width: 1
+            access: read-write
+            bound: false
+          OC1PE:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          OC1M:
+            lsb: 4
+            width: 3
+            access: read-write
+            bound: false
+          OC1CE:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+          CC2S:
+            lsb: 8
+            width: 2
+            access: read-write
+            bound: false
+          OC2FE:
+            lsb: 10
+            width: 1
+            access: read-write
+            bound: false
+          OC2PE:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+          OC2M:
+            lsb: 12
+            width: 3
+            access: read-write
+            bound: false
+          OC2CE:
+            lsb: 15
+            width: 1
+            access: read-write
+            bound: false
+          OC1M_3:
+            lsb: 16
+            width: 1
+            access: read-write
+            bound: false
+          OC2M_3:
+            lsb: 24
+            width: 1
+            access: read-write
+            bound: false
+      CCMR1_Input:
+        offset: '0x18'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CC1S:
+            lsb: 0
+            width: 2
+            access: read-write
+            bound: false
+          ICPCS:
+            lsb: 2
+            width: 2
+            access: read-write
+            bound: false
+          IC1F:
+            lsb: 4
+            width: 4
+            access: read-write
+            bound: false
+          CC2S:
+            lsb: 8
+            width: 2
+            access: read-write
+            bound: false
+          IC2PCS:
+            lsb: 10
+            width: 2
+            access: read-write
+            bound: false
+          IC2F:
+            lsb: 12
+            width: 4
+            access: read-write
+            bound: false
+      CCMR2_Output:
+        offset: '0x1C'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CC3S:
+            lsb: 0
+            width: 2
+            access: read-write
+            bound: false
+          OC3FE:
+            lsb: 2
+            width: 1
+            access: read-write
+            bound: false
+          OC3PE:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          OC3M:
+            lsb: 4
+            width: 3
+            access: read-write
+            bound: false
+          OC3CE:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+          CC4S:
+            lsb: 8
+            width: 2
+            access: read-write
+            bound: false
+          OC4FE:
+            lsb: 10
+            width: 1
+            access: read-write
+            bound: false
+          OC4PE:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+          OC4M:
+            lsb: 12
+            width: 3
+            access: read-write
+            bound: false
+          O24CE:
+            lsb: 15
+            width: 1
+            access: read-write
+            bound: false
+          OC3M_3:
+            lsb: 16
+            width: 1
+            access: read-write
+            bound: false
+          OC4M_3:
+            lsb: 24
+            width: 1
+            access: read-write
+            bound: false
+      CCMR2_Input:
+        offset: '0x1C'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CC3S:
+            lsb: 0
+            width: 2
+            access: read-write
+            bound: false
+          IC3PSC:
+            lsb: 2
+            width: 2
+            access: read-write
+            bound: false
+          IC3F:
+            lsb: 4
+            width: 4
+            access: read-write
+            bound: false
+          CC4S:
+            lsb: 8
+            width: 2
+            access: read-write
+            bound: false
+          IC4PSC:
+            lsb: 10
+            width: 2
+            access: read-write
+            bound: false
+          IC4F:
+            lsb: 12
+            width: 4
+            access: read-write
+            bound: false
+      CCER:
+        offset: '0x20'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CC1E:
+            lsb: 0
+            width: 1
+            access: read-write
+            bound: false
+          CC1P:
+            lsb: 1
+            width: 1
+            access: read-write
+            bound: false
+          CC1NP:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          CC2E:
+            lsb: 4
+            width: 1
+            access: read-write
+            bound: false
+          CC2P:
+            lsb: 5
+            width: 1
+            access: read-write
+            bound: false
+          CC2NP:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+          CC3E:
+            lsb: 8
+            width: 1
+            access: read-write
+            bound: false
+          CC3P:
+            lsb: 9
+            width: 1
+            access: read-write
+            bound: false
+          CC3NP:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+          CC4E:
+            lsb: 12
+            width: 1
+            access: read-write
+            bound: false
+          CC4P:
+            lsb: 13
+            width: 1
+            access: read-write
+            bound: false
+          CC4NP:
+            lsb: 15
+            width: 1
+            access: read-write
+            bound: false
+      CNT:
+        offset: '0x24'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CNT_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          CNT_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      PSC:
+        offset: '0x28'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          PSC:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+      ARR:
+        offset: '0x2C'
+        size: 32
+        reset: '0xFFFFFFFF'
+        access: read-write
+        fields:
+          ARR_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          ARR_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      CCR1:
+        offset: '0x34'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CCR1_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          CCR1_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      CCR2:
+        offset: '0x38'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CCR2_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          CCR2_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      CCR3:
+        offset: '0x3C'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CCR3_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          CCR3_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      CCR4:
+        offset: '0x40'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CCR4_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          CCR4_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      DCR:
+        offset: '0x48'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          DBA:
+            lsb: 0
+            width: 5
+            access: read-write
+            bound: false
+          DBL:
+            lsb: 8
+            width: 5
+            access: read-write
+            bound: false
+      DMAR:
+        offset: '0x4C'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          DMAB:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+      AF1:
+        offset: '0x60'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          ETRSEL:
+            lsb: 14
+            width: 4
+            access: read-write
+            bound: false
+      TISEL:
+        offset: '0x68'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          TI1SEL:
+            lsb: 0
+            width: 4
+            access: read-write
+            bound: false
+          TI2SEL:
+            lsb: 8
+            width: 4
+            access: read-write
+            bound: false
+          TI3SEL:
+            lsb: 16
+            width: 4
+            access: read-write
+            bound: false
+          TI4SEL:
+            lsb: 24
+            width: 4
+            access: read-write
+            bound: false
+  TIM5:
+    svd_peripheral: TIM5
+    registers:
+      CR1:
+        offset: '0x00'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CEN:
+            lsb: 0
+            width: 1
+            access: read-write
+            bound: false
+          UDIS:
+            lsb: 1
+            width: 1
+            access: read-write
+            bound: false
+          URS:
+            lsb: 2
+            width: 1
+            access: read-write
+            bound: false
+          OPM:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          DIR:
+            lsb: 4
+            width: 1
+            access: read-write
+            bound: false
+          CMS:
+            lsb: 5
+            width: 2
+            access: read-write
+            bound: false
+          ARPE:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+          CKD:
+            lsb: 8
+            width: 2
+            access: read-write
+            bound: false
+          UIFREMAP:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+      CR2:
+        offset: '0x04'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CCDS:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          MMS:
+            lsb: 4
+            width: 3
+            access: read-write
+            bound: false
+          TI1S:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+      SMCR:
+        offset: '0x08'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          SMS:
+            lsb: 0
+            width: 3
+            access: read-write
+            bound: false
+          TS:
+            lsb: 4
+            width: 3
+            access: read-write
+            bound: false
+          MSM:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+          ETF:
+            lsb: 8
+            width: 4
+            access: read-write
+            bound: false
+          ETPS:
+            lsb: 12
+            width: 2
+            access: read-write
+            bound: false
+          ECE:
+            lsb: 14
+            width: 1
+            access: read-write
+            bound: false
+          ETP:
+            lsb: 15
+            width: 1
+            access: read-write
+            bound: false
+          SMS_3:
+            lsb: 16
+            width: 1
+            access: read-write
+            bound: false
+          TS_4_3:
+            lsb: 20
+            width: 2
+            access: read-write
+            bound: false
+      DIER:
+        offset: '0x0C'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          UIE:
+            lsb: 0
+            width: 1
+            access: read-write
+            bound: false
+          CC1IE:
+            lsb: 1
+            width: 1
+            access: read-write
+            bound: false
+          CC2IE:
+            lsb: 2
+            width: 1
+            access: read-write
+            bound: false
+          CC3IE:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          CC4IE:
+            lsb: 4
+            width: 1
+            access: read-write
+            bound: false
+          TIE:
+            lsb: 6
+            width: 1
+            access: read-write
+            bound: false
+          UDE:
+            lsb: 8
+            width: 1
+            access: read-write
+            bound: false
+          CC1DE:
+            lsb: 9
+            width: 1
+            access: read-write
+            bound: false
+          CC2DE:
+            lsb: 10
+            width: 1
+            access: read-write
+            bound: false
+          CC3DE:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+          CC4DE:
+            lsb: 12
+            width: 1
+            access: read-write
+            bound: false
+          TDE:
+            lsb: 14
+            width: 1
+            access: read-write
+            bound: false
+      SR:
+        offset: '0x10'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          UIF:
+            lsb: 0
+            width: 1
+            access: read-write
+            bound: false
+          CC1IF:
+            lsb: 1
+            width: 1
+            access: read-write
+            bound: false
+          CC2IF:
+            lsb: 2
+            width: 1
+            access: read-write
+            bound: false
+          CC3IF:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          CC4IF:
+            lsb: 4
+            width: 1
+            access: read-write
+            bound: false
+          TIF:
+            lsb: 6
+            width: 1
+            access: read-write
+            bound: false
+          CC1OF:
+            lsb: 9
+            width: 1
+            access: read-write
+            bound: false
+          CC2OF:
+            lsb: 10
+            width: 1
+            access: read-write
+            bound: false
+          CC3OF:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+          CC4OF:
+            lsb: 12
+            width: 1
+            access: read-write
+            bound: false
+      EGR:
+        offset: '0x14'
+        size: 32
+        reset: '0x00000000'
+        access: write-only
+        fields:
+          UG:
+            lsb: 0
+            width: 1
+            access: write-only
+            bound: false
+          CC1G:
+            lsb: 1
+            width: 1
+            access: write-only
+            bound: false
+          CC2G:
+            lsb: 2
+            width: 1
+            access: write-only
+            bound: false
+          CC3G:
+            lsb: 3
+            width: 1
+            access: write-only
+            bound: false
+          CC4G:
+            lsb: 4
+            width: 1
+            access: write-only
+            bound: false
+          TG:
+            lsb: 6
+            width: 1
+            access: write-only
+            bound: false
+      CCMR1_Output:
+        offset: '0x18'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CC1S:
+            lsb: 0
+            width: 2
+            access: read-write
+            bound: false
+          OC1FE:
+            lsb: 2
+            width: 1
+            access: read-write
+            bound: false
+          OC1PE:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          OC1M:
+            lsb: 4
+            width: 3
+            access: read-write
+            bound: false
+          OC1CE:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+          CC2S:
+            lsb: 8
+            width: 2
+            access: read-write
+            bound: false
+          OC2FE:
+            lsb: 10
+            width: 1
+            access: read-write
+            bound: false
+          OC2PE:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+          OC2M:
+            lsb: 12
+            width: 3
+            access: read-write
+            bound: false
+          OC2CE:
+            lsb: 15
+            width: 1
+            access: read-write
+            bound: false
+          OC1M_3:
+            lsb: 16
+            width: 1
+            access: read-write
+            bound: false
+          OC2M_3:
+            lsb: 24
+            width: 1
+            access: read-write
+            bound: false
+      CCMR1_Input:
+        offset: '0x18'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CC1S:
+            lsb: 0
+            width: 2
+            access: read-write
+            bound: false
+          ICPCS:
+            lsb: 2
+            width: 2
+            access: read-write
+            bound: false
+          IC1F:
+            lsb: 4
+            width: 4
+            access: read-write
+            bound: false
+          CC2S:
+            lsb: 8
+            width: 2
+            access: read-write
+            bound: false
+          IC2PCS:
+            lsb: 10
+            width: 2
+            access: read-write
+            bound: false
+          IC2F:
+            lsb: 12
+            width: 4
+            access: read-write
+            bound: false
+      CCMR2_Output:
+        offset: '0x1C'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CC3S:
+            lsb: 0
+            width: 2
+            access: read-write
+            bound: false
+          OC3FE:
+            lsb: 2
+            width: 1
+            access: read-write
+            bound: false
+          OC3PE:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          OC3M:
+            lsb: 4
+            width: 3
+            access: read-write
+            bound: false
+          OC3CE:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+          CC4S:
+            lsb: 8
+            width: 2
+            access: read-write
+            bound: false
+          OC4FE:
+            lsb: 10
+            width: 1
+            access: read-write
+            bound: false
+          OC4PE:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+          OC4M:
+            lsb: 12
+            width: 3
+            access: read-write
+            bound: false
+          O24CE:
+            lsb: 15
+            width: 1
+            access: read-write
+            bound: false
+          OC3M_3:
+            lsb: 16
+            width: 1
+            access: read-write
+            bound: false
+          OC4M_3:
+            lsb: 24
+            width: 1
+            access: read-write
+            bound: false
+      CCMR2_Input:
+        offset: '0x1C'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CC3S:
+            lsb: 0
+            width: 2
+            access: read-write
+            bound: false
+          IC3PSC:
+            lsb: 2
+            width: 2
+            access: read-write
+            bound: false
+          IC3F:
+            lsb: 4
+            width: 4
+            access: read-write
+            bound: false
+          CC4S:
+            lsb: 8
+            width: 2
+            access: read-write
+            bound: false
+          IC4PSC:
+            lsb: 10
+            width: 2
+            access: read-write
+            bound: false
+          IC4F:
+            lsb: 12
+            width: 4
+            access: read-write
+            bound: false
+      CCER:
+        offset: '0x20'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CC1E:
+            lsb: 0
+            width: 1
+            access: read-write
+            bound: false
+          CC1P:
+            lsb: 1
+            width: 1
+            access: read-write
+            bound: false
+          CC1NP:
+            lsb: 3
+            width: 1
+            access: read-write
+            bound: false
+          CC2E:
+            lsb: 4
+            width: 1
+            access: read-write
+            bound: false
+          CC2P:
+            lsb: 5
+            width: 1
+            access: read-write
+            bound: false
+          CC2NP:
+            lsb: 7
+            width: 1
+            access: read-write
+            bound: false
+          CC3E:
+            lsb: 8
+            width: 1
+            access: read-write
+            bound: false
+          CC3P:
+            lsb: 9
+            width: 1
+            access: read-write
+            bound: false
+          CC3NP:
+            lsb: 11
+            width: 1
+            access: read-write
+            bound: false
+          CC4E:
+            lsb: 12
+            width: 1
+            access: read-write
+            bound: false
+          CC4P:
+            lsb: 13
+            width: 1
+            access: read-write
+            bound: false
+          CC4NP:
+            lsb: 15
+            width: 1
+            access: read-write
+            bound: false
+      CNT:
+        offset: '0x24'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CNT_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          CNT_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      PSC:
+        offset: '0x28'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          PSC:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+      ARR:
+        offset: '0x2C'
+        size: 32
+        reset: '0xFFFFFFFF'
+        access: read-write
+        fields:
+          ARR_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          ARR_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      CCR1:
+        offset: '0x34'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CCR1_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          CCR1_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      CCR2:
+        offset: '0x38'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CCR2_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          CCR2_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      CCR3:
+        offset: '0x3C'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CCR3_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          CCR3_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      CCR4:
+        offset: '0x40'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          CCR4_L:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+          CCR4_H:
+            lsb: 16
+            width: 16
+            access: read-write
+            bound: false
+      DCR:
+        offset: '0x48'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          DBA:
+            lsb: 0
+            width: 5
+            access: read-write
+            bound: false
+          DBL:
+            lsb: 8
+            width: 5
+            access: read-write
+            bound: false
+      DMAR:
+        offset: '0x4C'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          DMAB:
+            lsb: 0
+            width: 16
+            access: read-write
+            bound: false
+      AF1:
+        offset: '0x60'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          ETRSEL:
+            lsb: 14
+            width: 4
+            access: read-write
+            bound: false
+      TISEL:
+        offset: '0x68'
+        size: 32
+        reset: '0x00000000'
+        access: read-write
+        fields:
+          TI1SEL:
+            lsb: 0
+            width: 4
+            access: read-write
+            bound: false
+          TI2SEL:
+            lsb: 8
+            width: 4
+            access: read-write
+            bound: false
+          TI3SEL:
+            lsb: 16
+            width: 4
+            access: read-write
+            bound: false
+          TI4SEL:
+            lsb: 24
+            width: 4
+            access: read-write
+            bound: false

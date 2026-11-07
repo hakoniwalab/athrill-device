@@ -1,5 +1,6 @@
 # AUTO-GENERATED bindings by tools/bindings_gen.py from spec/semantics/st-stm32-dmamux.yaml, the pinned ST SVD (STM32H743.svd) and
 # spec/svd-patches.yaml. Do not edit; edit the semantics or record an SVD patch.
+bindings_format: 1
 ip: st-stm32-dmamux
 compatible:
 - st,stm32-dmamux
@@ -35,6 +36,8 @@ svd_source:
 bindings:
   mux_request_id:
     access: rw
+    encoding:
+      kind: identity
     registers:
     - reg: DMAMUX_C0CR
       offset: '0x00'

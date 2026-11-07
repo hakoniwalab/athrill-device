@@ -41,6 +41,22 @@ WRITE_KINDS = {"rw", "wo", "w1c", "w1s", "w0c", "rs"}
 READ_KINDS = {"rw", "ro", "rc", "rs"}
 
 
+BINDINGS_FORMAT = 1
+ENCODINGS = {"identity", "minus_one", "pow2_plus_one", "table"}
+
+
+def registers_of(svd, peripheral: str, bound: set) -> dict:
+    out = {}
+    for rn, r in sorted(svd.registers(peripheral).items(), key=lambda kv: kv[1]["offset"]):
+        out[rn] = {
+            "offset": f"0x{r['offset']:02X}", "size": r["size"], "reset": f"0x{r['reset']:08X}", "access": r["access"],
+            "fields": {fn: {"lsb": f["lsb"], "width": f["width"], "access": f["access"],
+                            "bound": (peripheral, rn, fn) in bound or (peripheral, rn, None) in bound}
+                       for fn, f in sorted(r["fields"].items(), key=lambda kv: kv[1]["lsb"])},
+        }
+    return out
+
+
 def short(soc: str) -> str:
     return soc.split(",")[-1].replace("stm32", "")
 
@@ -150,6 +166,10 @@ def resolve(binding_path: Path, soc: str, svd: svd_map.Svd, src: dict) -> dict:
         if fields is not None and not out_regs and not any(e.startswith(term + ":") for e in errors):
             errors.append(f"{term}: no field {fields} in {reg_names} of SVD {peripheral}")
         resolved[term] = {k: v for k, v in spec.items() if k not in ("reg", "field", "svd_peripheral")}
+        enc = spec.get("encoding", {"kind": "identity"})
+        if enc.get("kind") not in ENCODINGS:
+            errors.append(f"{term}: unknown encoding {enc}")
+        resolved[term]["encoding"] = enc
         resolved[term]["registers"] = out_regs
     terms = model_terms(b["model"])
     for name, t in terms.items():
@@ -160,25 +180,35 @@ def resolve(binding_path: Path, soc: str, svd: svd_map.Svd, src: dict) -> dict:
             errors.append(f"binding {name}: not a term of model {b['model']}")
     if errors:
         raise SystemExit(f"{binding_path.relative_to(ROOT)} [{soc}]:\n  " + "\n  ".join(errors))
-    bound = {(r["reg"], f["field"]) for v in resolved.values() for r in v.get("registers", []) for f in r.get("fields", [])}
-    bound |= {(r["reg"], None) for v in resolved.values() for r in v.get("registers", []) if not r.get("fields")}
-    gen_regs = {}
-    for rn, r in sorted(regs.items(), key=lambda kv: kv[1]["offset"]):
-        gen_regs[rn] = {
-            "offset": f"0x{r['offset']:02X}", "size": r["size"], "reset": f"0x{r['reset']:08X}", "access": r["access"],
-            "fields": {fn: {"lsb": f["lsb"], "width": f["width"], "access": f["access"],
-                            "bound": (rn, fn) in bound or (rn, None) in bound}
-                       for fn, f in sorted(r["fields"].items(), key=lambda kv: kv[1]["lsb"])},
-        }
+    bound = {(r.get("peripheral", peripheral), r["reg"], f["field"])
+             for v in resolved.values() for r in v.get("registers", []) for f in r.get("fields", [])}
+    bound |= {(r.get("peripheral", peripheral), r["reg"], None)
+              for v in resolved.values() for r in v.get("registers", []) if not r.get("fields")}
+    gen_regs = registers_of(svd, peripheral, bound)
+    others = sorted({r["peripheral"] for v in resolved.values() for r in v.get("registers", []) if "peripheral" in r})
+    other_regs = {o: registers_of(svd, o, bound) for o in others}
+    instances = {}
+    for inst, per in (b.get("instances") or {}).items():
+        if per not in svd.periph:
+            errors.append(f"instance {inst}: SVD has no peripheral {per}")
+        else:
+            instances[inst] = {"svd_peripheral": per, "registers": registers_of(svd, per, set())}
+    if errors:
+        raise SystemExit(f"{binding_path.relative_to(ROOT)} [{soc}]:\n  " + "\n  ".join(errors))
     svd_info = src["svd"][soc]
     patches = [f"{p['peripheral']}.{p['register']}" for p in svd_map.load_patches(soc)
                if p["peripheral"] == peripheral or p["peripheral"] in (svd.periph[peripheral].get("derivedFrom") or "",)]
-    out = {k: v for k, v in b.items() if k not in ("bindings", "svd")}
+    out = {"bindings_format": BINDINGS_FORMAT}
+    out.update({k: v for k, v in b.items() if k not in ("bindings", "svd", "instances")})
     out["soc"] = soc
     out["svd_source"] = {"file": svd_info["file"], "repository": svd_info["repository"],
                          "revision": svd_info["revision"], "peripheral": peripheral, "patches_applied": patches}
     out["bindings"] = resolved
     out["registers"] = gen_regs
+    if other_regs:
+        out["other_peripherals"] = other_regs
+    if instances:
+        out["instances"] = instances
     return out
 
 
