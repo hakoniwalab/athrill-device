@@ -70,6 +70,7 @@ static void actuator_destroy(void *instance)
 	free(actuator);
 }
 
+/* [ADV-PWM-001] preserve pwms order as actuator output order */
 static sint32 actuator_connect(void *instance,
 	const AthrillDeviceConnectArgs *args)
 {

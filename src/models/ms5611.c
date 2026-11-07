@@ -44,6 +44,7 @@ static const float32 temperature_noise_c[5] = {
 	0.012F, 0.008F, 0.005F, 0.003F, 0.002F
 };
 
+/* [ADV-CHIP-MS5611-001] generate PROM coefficients with a valid CRC-4 */
 static uint16 prom_crc4(const uint16 *prom)
 {
 	uint16 rem = 0U;

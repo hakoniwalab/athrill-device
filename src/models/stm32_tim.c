@@ -635,6 +635,7 @@ static void write_register(TimType *t, uint32 offset, uint32 value, uint32 mask)
 	}
 }
 
+/* [ADV-PWM-002] report PWM high time and period with the timer prescaler */
 static sint32 timer_pwm_sample(void *instance, uint32 channel,
 	AthrillDevicePwmSample *pwm)
 {

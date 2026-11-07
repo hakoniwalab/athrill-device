@@ -15,6 +15,7 @@ extern const AthrillDeviceModelOps athrill_device_icm20689_model;
 extern const AthrillDeviceModelOps athrill_device_icm42688p_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_gpio_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_exti_model;
+extern const AthrillDeviceModelOps athrill_device_stm32_syscfg_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_tim_model;
 extern const AthrillDeviceModelOps athrill_device_pwm_actuator_model;
 

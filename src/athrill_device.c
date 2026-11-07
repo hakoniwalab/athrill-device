@@ -162,6 +162,7 @@ static sint32 adapter_create(const AthrillDeviceCreateArgs *args, void **instanc
 	return 0;
 }
 
+/* [ADV-SD-004] attach each SD card and controller adapter at its DT node */
 static sint32 adapter_connect_named(void *instance,
 	const AthrillDeviceConnectArgs *args, const char *adapter_name)
 {
@@ -360,6 +361,9 @@ static const char *const structural_compatibles[] = {
 static const char *const stm32f7_soc_compatibles[] = { "st,stm32f765", "st,stm32f7" };
 static const char *const stm32f7_gpio_compatibles[] = { "st,stm32-gpio" };
 static const char *const stm32f7_exti_compatibles[] = { "st,stm32-exti" };
+static const char *const stm32_syscfg_compatibles[] = {
+	"st,stm32f7-syscfg", "st,stm32h7-syscfg"
+};
 static const char *const stm32_dma_compatibles[] = { "st,stm32-dma-v1" };
 static const char *const stm32f7_spi_compatibles[] = { "st,stm32-spi-fifo", "st,stm32-spi" };
 static const char *const stm32f7_i2c_compatibles[] = { "st,stm32-i2c-v2" };
@@ -391,7 +395,7 @@ static const char *const stm32h7_pwr_compatibles[] = { "st,stm32h7-pwr" };
 static const char *const stm32h7_spi_compatibles[] = { "st,stm32h7-spi" };
 static const char *const stm32h7_dmamux_compatibles[] = { "st,stm32-dmamux" };
 static const char *const stm32h7_boot_register_compatibles[] = {
-	"st,stm32-bdma", "st,stm32-watchdog", "st,stm32h7-syscfg",
+	"st,stm32-bdma", "st,stm32-watchdog",
 	"st,stm32h7-axi-target", "st,stm32h7-dbgmcu",
 	"st,stm32h7-system-memory", "st,stm32h7-fdcan"
 };
@@ -413,6 +417,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_soc_compatibles, 2U, &stm32f7_soc_model },
 	{ stm32f7_gpio_compatibles, 1U, &athrill_device_stm32_gpio_model },
 	{ stm32f7_exti_compatibles, 1U, &athrill_device_stm32_exti_model },
+	{ stm32_syscfg_compatibles, 2U, &athrill_device_stm32_syscfg_model },
 	{ stm32_dma_compatibles, 1U, &stm32_dma_model },
 	{ stm32f7_spi_compatibles, 2U, &stm32f7_spi_model },
 	{ stm32f7_i2c_compatibles, 1U, &stm32f7_i2c_model },
@@ -440,7 +445,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32h7_pwr_compatibles, 1U, &stm32h7_pwr_model },
 	{ stm32h7_spi_compatibles, 1U, &stm32h7_spi_model },
 	{ stm32h7_dmamux_compatibles, 1U, &stm32h7_dmamux_model },
-	{ stm32h7_boot_register_compatibles, 7U, &stm32h7_boot_register_model },
+	{ stm32h7_boot_register_compatibles, 6U, &stm32h7_boot_register_model },
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
 	{ bmi055_gyro_compatibles, 1U, &athrill_device_bmi055_model },
 	{ icm42688p_compatibles, 2U, &athrill_device_icm42688p_model },
@@ -814,6 +819,7 @@ static int inventory_nodes(AthrillDeviceRuntime *runtime,
 	return 0;
 }
 
+/* [ADV-DT-001] reject enabled compatible nodes that have no selected model */
 static int select_models(AthrillDeviceRuntime *runtime,
                          const AthrillDeviceBuildOptions *options)
 {
@@ -984,6 +990,7 @@ static int string_list_index(NodeRecord *node, const char *property,
 	return -1;
 }
 
+/* [ADV-DMA-005] decode each consumer DMA request against its controller */
 static int decode_dma_specifier(NodeRecord *node, uint32 index,
 	AthrillDeviceSpecifier *spec)
 {
@@ -1069,6 +1076,7 @@ static sint32 resource_get_interrupt(void *context, const char *name,
 		runtime->target_ops->irq_resolve(runtime->target, &spec, line) : -1;
 }
 
+/* [ADV-GPIO-002] resolve the indexed GPIO tuple used for SPI chip select */
 static sint32 resource_get_gpio(void *context, const char *property,
 	uint32 index, AthrillDeviceGpioLine *line)
 {
@@ -1403,6 +1411,7 @@ static int build_dependencies(AthrillDeviceRuntime *runtime)
 	return 0;
 }
 
+/* [ADV-DT-002] instantiate enabled modeled nodes once in stable graph order */
 static int stable_topological_sort(AthrillDeviceRuntime *runtime)
 {
 	uint8 *done;
@@ -1588,6 +1597,46 @@ static int specifier_count(NodeRecord *node, const char *property,
 		count++;
 	}
 	*result = count;
+	return 0;
+}
+
+/* [ADV-DT-004] resolve every adapter interrupt through the public target API */
+static int resolve_adapter_interrupts(NodeRecord *node)
+{
+	const fdt32_t *cells;
+	uint32 count = 0U, index;
+	int length, provider, provider_cell_count;
+
+	if (node->model->create != adapter_create) {
+		return 0;
+	}
+	if (fdt_getprop(node->runtime->dtb, node->offset,
+		"interrupts-extended", NULL) != NULL) {
+		if (specifier_count(node, "interrupts-extended", "#interrupt-cells",
+			&count) != 0) {
+			return -1;
+		}
+	} else {
+		cells = fdt_getprop(node->runtime->dtb, node->offset, "interrupts",
+			&length);
+		if (cells == NULL) {
+			return 0;
+		}
+		provider = inherited_phandle_provider(node, "interrupt-parent");
+		provider_cell_count = provider_cells(node->runtime, provider,
+			"#interrupt-cells");
+		if (provider < 0 || provider_cell_count <= 0 || length <= 0 ||
+		    length % (provider_cell_count * 4) != 0) {
+			return -1;
+		}
+		count = (uint32)(length / (provider_cell_count * 4));
+	}
+	for (index = 0U; index < count; index++) {
+		AthrillDeviceIrqLine line;
+		if (resource_get_interrupt(node, NULL, index, &line) != 0) {
+			return -1;
+		}
+	}
 	return 0;
 }
 
@@ -1843,6 +1892,7 @@ static int translate_address(AthrillDeviceRuntime *runtime, int bus,
 	return 0;
 }
 
+/* [ADV-DT-003] derive a model's only MMIO windows from its translated reg */
 static int reg_windows(AthrillDeviceRuntime *runtime, NodeRecord *node,
                        uint64 addresses[MAX_MMIO_WINDOWS], uint64 sizes[MAX_MMIO_WINDOWS], uint32 *count)
 {
@@ -2090,6 +2140,11 @@ static int register_and_connect(AthrillDeviceRuntime *runtime)
 	}
 	for (oi = 0U; oi < runtime->order_count; oi++) {
 		NodeRecord *node = &runtime->nodes[runtime->order[oi]];
+		if (resolve_adapter_interrupts(node) != 0) {
+			error_line("interrupt-resolve", node->path, "interrupts",
+				"target-rejected");
+			return -1;
+		}
 		if (resolve_node_dmas(node) != 0) {
 			error_line(is_uart_controller(node) ? "uart-dma-resolve" :
 				is_spi_controller(node) ? "spi-dma-resolve" : "dma-resolve",
@@ -2136,6 +2191,7 @@ static void log_runtime(AthrillDeviceRuntime *runtime,
 	}
 }
 
+/* [ADV-DT-005] build the same stable graph and description from identical input */
 sint32 athrill_device_build(const AthrillDeviceBuildOptions *options,
                             const AthrillDeviceTargetOps *target_ops, void *target,
                             AthrillDeviceRuntime **result)
