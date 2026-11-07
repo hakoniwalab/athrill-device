@@ -1,0 +1,62 @@
+- id: ADV-DT-001
+  statement: An enabled node whose compatible has no model stops board construction with an error naming the node.
+  source:
+    devicetree: Devicetree Specification v0.4 2.3.1 (compatible), 2.3.4 (status)
+    manual: none
+  scope: A board cannot silently run with a part missing.
+  verification: generated
+  applies_to: dt-negative
+  tests:
+  - id: ADV-DT-001.T1
+    stimulus: Build a copy of each board DTB with one enabled node's compatible replaced by an unknown string.
+    expect: Construction fails and the error names that node path.
+- id: ADV-DT-002
+  statement: Every enabled node with a model is instantiated exactly once; disabled nodes are not instantiated.
+  source:
+    devicetree: Devicetree Specification v0.4 2.3.4
+    manual: none
+  scope: Firmware sees exactly the parts the board declares.
+  verification: generated
+  applies_to: dt-node
+  tests:
+  - id: ADV-DT-002.T1
+    stimulus: Build the board and list instantiated nodes.
+    expect: The set equals the enabled nodes with a known compatible, each once; no disabled node appears.
+- id: ADV-DT-003
+  statement: Each instantiated node owns exactly the address windows given by its reg (translated through ranges), and no
+    two windows overlap.
+  source:
+    devicetree: Devicetree Specification v0.4 2.3.6 (reg), 2.3.8 (ranges)
+    manual: RM0410 section 2.2.2; RM0433 section 2.3
+  scope: Drivers reach a peripheral at its documented address and nothing else answers there.
+  verification: generated
+  applies_to: dt-mmio-node
+  tests:
+  - id: ADV-DT-003.T1
+    stimulus: Build the board and list registered address windows.
+    expect: Base and size equal reg decoded independently from the DTB; windows are pairwise disjoint.
+- id: ADV-DT-004
+  statement: Each interrupts entry of an instantiated node is connected to that interrupt line of its interrupt parent.
+  source:
+    devicetree: Devicetree Specification v0.4 2.4 (interrupts, interrupt-parent)
+    manual: RM0410 table 46; RM0433 table 145 (vector tables)
+  scope: Drivers' interrupt handlers run for their own peripheral.
+  verification: generated
+  applies_to: dt-irq-node
+  tests:
+  - id: ADV-DT-004.T1
+    stimulus: Build the board and list interrupt connections.
+    expect: Each node's lines equal its interrupts decoded independently from the DTB.
+- id: ADV-DT-005
+  statement: 'Board construction from the same DTB and configuration is deterministic: same instances, same order, same description
+    hash.'
+  source:
+    devicetree: Devicetree Specification v0.4
+    manual: none
+  scope: Runs are reproducible.
+  verification: generated
+  applies_to: dt-board
+  tests:
+  - id: ADV-DT-005.T1
+    stimulus: Build the board twice from the same DTB.
+    expect: Instance list, order and recorded DTB hash are identical.
