@@ -1,81 +1,165 @@
 model: spi-controller
-version: 1.0.0
+version: 1.1.0
 summary: Master-mode SPI controller as used by PX4 and ArduPilot sensor drivers (full duplex, software or GPIO chip select).
-
 terms:
-  # base
-  - {name: enable,            kind: control, feature: base, meaning: "The controller takes part in transfers; while off, no frame starts."}
-  - {name: master,            kind: control, feature: base, meaning: "Controller drives the clock. Only master mode is modelled."}
-  - {name: clock_mode,        kind: control, feature: base, meaning: "CPOL/CPHA. Stored and reported; does not change data in the model."}
-  - {name: bit_order,         kind: control, feature: base, meaning: "MSB or LSB first. Stored; the byte value exchanged is the frame value."}
-  - {name: frame_size,        kind: control, feature: base, meaning: "Bits per frame (8 or 16 used by the firmwares)."}
-  - {name: baud_divider,      kind: control, feature: base, meaning: "Clock divider; with the kernel clock it gives the frame time."}
-  - {name: tx_data,           kind: data,    feature: base, meaning: "Writing a frame queues it for transmission."}
-  - {name: rx_data,           kind: data,    feature: base, meaning: "Reading returns the oldest received frame."}
-  - {name: tx_space,          kind: status,  feature: base, meaning: "Another frame can be queued for transmission."}
-  - {name: rx_available,      kind: status,  feature: base, meaning: "At least one received frame (or packet, with fifo_threshold) can be read."}
-  - {name: busy,              kind: status,  feature: base, meaning: "A frame is being shifted."}
-  - {name: overrun,           kind: status,  feature: base, meaning: "A frame was received while the receive storage was full; that frame is lost."}
-  - {name: overrun_ack,       kind: ack,     feature: base, meaning: "Driver action that clears overrun."}
-  - {name: tx_irq_enable,     kind: control, feature: base, meaning: "tx_space raises the interrupt request."}
-  - {name: rx_irq_enable,     kind: control, feature: base, meaning: "rx_available raises the interrupt request."}
-  - {name: error_irq_enable,  kind: control, feature: base, meaning: "overrun raises the interrupt request."}
-  - {name: irq,               kind: event,   feature: base, meaning: "The controller's interrupt line (from the Devicetree interrupts)."}
-  # feature dma
-  - {name: tx_dma_enable,     kind: control, feature: dma, meaning: "tx_space raises the transmit DMA request."}
-  - {name: rx_dma_enable,     kind: control, feature: dma, meaning: "rx_available raises the receive DMA request."}
-  - {name: tx_dma_request,    kind: event,   feature: dma, meaning: "Transmit DMA request line (dmas entry named tx)."}
-  - {name: rx_dma_request,    kind: event,   feature: dma, meaning: "Receive DMA request line (dmas entry named rx)."}
-  # feature fifo_threshold
-  - {name: fifo_threshold,    kind: control, feature: fifo_threshold, meaning: "Frames per packet; rx_available/tx_space refer to whole packets."}
-  # feature transfer_size
-  - {name: transfer_size,     kind: control, feature: transfer_size, meaning: "Number of frames in the transfer; 0 = endless."}
-  - {name: start,             kind: control, feature: transfer_size, meaning: "Starts the transfer (master)."}
-  - {name: end_of_transfer,   kind: status,  feature: transfer_size, meaning: "All transfer_size frames have been exchanged."}
-  - {name: end_of_transfer_ack, kind: ack,   feature: transfer_size, meaning: "Clears end_of_transfer."}
-  - {name: eot_irq_enable,    kind: control, feature: transfer_size, meaning: "end_of_transfer raises the interrupt request."}
-
+- name: enable
+  kind: control
+  feature: base
+  meaning: The controller takes part in transfers; while off, no frame starts.
+- name: master
+  kind: control
+  feature: base
+  meaning: Controller drives the clock. Only master mode is modelled.
+- name: clock_mode
+  kind: control
+  feature: base
+  meaning: CPOL/CPHA. Stored and reported; does not change data in the model.
+- name: bit_order
+  kind: control
+  feature: base
+  meaning: MSB or LSB first. Stored; the byte value exchanged is the frame value.
+- name: frame_size
+  kind: control
+  feature: base
+  meaning: Bits per frame (8 or 16 used by the firmwares).
+- name: baud_divider
+  kind: control
+  feature: base
+  meaning: Clock divider; with the kernel clock it gives the frame time.
+- name: tx_data
+  kind: data
+  feature: base
+  meaning: Writing a frame queues it for transmission.
+- name: rx_data
+  kind: data
+  feature: base
+  meaning: Reading returns the oldest received frame.
+- name: tx_space
+  kind: status
+  feature: base
+  meaning: Another frame can be queued for transmission.
+- name: rx_available
+  kind: status
+  feature: base
+  meaning: At least one received frame (or packet, with fifo_threshold) can be read.
+- name: busy
+  kind: status
+  feature: base
+  meaning: A frame is being shifted.
+- name: overrun
+  kind: status
+  feature: base
+  meaning: A frame was received while the receive storage was full; that frame is lost.
+- name: overrun_ack
+  kind: ack
+  feature: base
+  meaning: Driver action that clears overrun.
+- name: tx_irq_enable
+  kind: control
+  feature: base
+  meaning: tx_space raises the interrupt request.
+- name: rx_irq_enable
+  kind: control
+  feature: base
+  meaning: rx_available raises the interrupt request.
+- name: error_irq_enable
+  kind: control
+  feature: base
+  meaning: overrun raises the interrupt request.
+- name: irq
+  kind: event
+  feature: base
+  meaning: The controller's interrupt line (from the Devicetree interrupts).
+- name: tx_dma_enable
+  kind: control
+  feature: dma
+  meaning: tx_space raises the transmit DMA request.
+- name: rx_dma_enable
+  kind: control
+  feature: dma
+  meaning: rx_available raises the receive DMA request.
+- name: tx_dma_request
+  kind: event
+  feature: dma
+  meaning: Transmit DMA request line (dmas entry named tx).
+- name: rx_dma_request
+  kind: event
+  feature: dma
+  meaning: Receive DMA request line (dmas entry named rx).
+- name: fifo_threshold
+  kind: control
+  feature: fifo_threshold
+  meaning: Frames per packet; rx_available/tx_space refer to whole packets.
+- name: transfer_size
+  kind: control
+  feature: transfer_size
+  meaning: Number of frames in the transfer; 0 = endless.
+- name: start
+  kind: control
+  feature: transfer_size
+  meaning: Starts the transfer (master).
+- name: end_of_transfer
+  kind: status
+  feature: transfer_size
+  meaning: All transfer_size frames have been exchanged.
+- name: end_of_transfer_ack
+  kind: ack
+  feature: transfer_size
+  meaning: Clears end_of_transfer.
+- name: eot_irq_enable
+  kind: control
+  feature: transfer_size
+  meaning: end_of_transfer raises the interrupt request.
 features:
   base: Single-frame full-duplex master transfers.
   dma: DMA requests for transmit and receive.
   fifo_threshold: Packet-based status with a programmable FIFO threshold.
   transfer_size: Counted transfers with an end-of-transfer status.
-
+  frame_timing: 'Future (not implemented by any map): frames take frame_size bit times at the baud_divider clock, busy is
+    on while a frame is in flight, transfer_size is enforced.'
 behaviour:
-  - id: ADV-SPI-B001
-    feature: base
-    rule: When enable is off, writing tx_data starts no frame and busy stays off.
-  - id: ADV-SPI-B002
-    feature: base
-    rule: When enable is on and tx_data holds a frame, the controller exchanges it with the selected child; the child's frame becomes readable at rx_data and rx_available turns on at the frame's completion clock.
-  - id: ADV-SPI-B003
-    feature: base
-    rule: Frames are exchanged one at a time in the order written; each completes one frame time (frame_size bits at the clock given by baud_divider) after the previous one ends or after it is written, whichever is later.
-  - id: ADV-SPI-B004
-    feature: base
-    rule: busy is on from the start of a frame until its completion clock.
-  - id: ADV-SPI-B005
-    feature: base
-    rule: tx_space is on whenever another frame can be queued; rx_available turns off when the last readable frame is read from rx_data.
-  - id: ADV-SPI-B006
-    feature: base
-    rule: When a frame completes while the receive storage is full, the frame is lost and overrun turns on until overrun_ack.
-  - id: ADV-SPI-B007
-    feature: base
-    rule: irq is raised while (tx_irq_enable and tx_space) or (rx_irq_enable and rx_available) or (error_irq_enable and overrun).
-  - id: ADV-SPI-B008
-    feature: dma
-    rule: rx_dma_request is raised while rx_dma_enable and rx_available; tx_dma_request while tx_dma_enable and tx_space.
-  - id: ADV-SPI-B009
-    feature: fifo_threshold
-    rule: rx_available is on only when at least fifo_threshold frames can be read; tx_space only when fifo_threshold frames can be queued.
-  - id: ADV-SPI-B010
-    feature: transfer_size
-    rule: After start, exactly transfer_size frames are exchanged (when transfer_size > 0); then end_of_transfer turns on and stays on until end_of_transfer_ack; irq is also raised while eot_irq_enable and end_of_transfer.
-  - id: ADV-SPI-B011
-    feature: base
-    rule: The controller never selects a child itself; chip select is a GPIO driven by the firmware (Devicetree cs-gpios), and frames go to the child selected at the frame's start.
-
+- id: ADV-SPI-B001
+  feature: base
+  rule: When enable is off, writing tx_data starts no frame and busy stays off.
+- id: ADV-SPI-B002
+  feature: base
+  rule: When enable is on and a frame is written to tx_data, the controller exchanges it with the selected child; the child's
+    frame becomes readable at rx_data and rx_available turns on at the clock of the write (instant exchange).
+- id: ADV-SPI-B003
+  feature: base
+  rule: 'Frames are exchanged one at a time in the order written, each at the clock it is written (instant exchange: frame_size
+    and baud_divider are stored but take no time). A timed exchange is the future feature frame_timing.'
+- id: ADV-SPI-B004
+  feature: base
+  rule: 'busy reads off: under instant exchange no frame is ever in flight when the driver reads the status.'
+- id: ADV-SPI-B005
+  feature: base
+  rule: tx_space is on whenever another frame can be queued; rx_available turns off when the last readable frame is read from
+    rx_data.
+- id: ADV-SPI-B006
+  feature: base
+  rule: When a frame completes while the receive storage is full, the frame is lost and overrun turns on until overrun_ack.
+- id: ADV-SPI-B007
+  feature: base
+  rule: irq is raised while (tx_irq_enable and tx_space) or (rx_irq_enable and rx_available) or (error_irq_enable and overrun).
+- id: ADV-SPI-B008
+  feature: dma
+  rule: rx_dma_request is raised while rx_dma_enable and rx_available; tx_dma_request while tx_dma_enable and tx_space.
+- id: ADV-SPI-B009
+  feature: fifo_threshold
+  rule: rx_available is on only when at least fifo_threshold frames can be read; tx_space only when fifo_threshold frames
+    can be queued.
+- id: ADV-SPI-B010
+  feature: transfer_size
+  rule: With transfer_size, end_of_transfer reads on whenever no frame is in flight, which under instant exchange is always;
+    transfer_size and start are stored, and frames written after transfer_size are still exchanged (the count is not enforced;
+    enforcing it belongs to frame_timing). irq is raised while eot_irq_enable and end_of_transfer.
+- id: ADV-SPI-B011
+  feature: base
+  rule: The controller never selects a child itself; chip select is a GPIO driven by the firmware (Devicetree cs-gpios), and
+    frames go to the child selected at the frame's start.
 timing: Completion clocks and same-clock order follow the timing rules of docs/device-tree-design.md.
 out_of_scope:
-  - slave mode, TI mode, CRC calculation, bidirectional (half-duplex) mode, I2S
+- slave mode, TI mode, CRC calculation, bidirectional (half-duplex) mode, I2S
+fidelity_note: Athrill reproduces RTOS-level behaviour (docs/device-tree-design.md). SPI uses instant exchange; PX4 (NuttX)
+  and ArduPilot (ChibiOS) drivers work with it, including NuttX waiting for the end-of-transfer interrupt after DMA on STM32H7.
