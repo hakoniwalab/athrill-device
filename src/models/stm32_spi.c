@@ -12,6 +12,10 @@
  * What changed with the move: the base comes from the node, the chips are
  * per controller (stm32_spi_bus.c), and a register read ends the CPU batch
  * through end_batch (the target's read barrier did it by address).
+ * DMA (step 4-5): the controller raises its "tx" request while CR2 TXDMAEN
+ * is set and SR TXE, its "rx" request while RXDMAEN is set and SR RXNE
+ * (RM0410 35.5.8), on its dmas tuples (ABI 1.14 dma_request); the DMA
+ * reads and writes DR on the bus as the CPU does.
  *
  * Copyright 2026 Hakoniwa Laboratory
  * SPDX-License-Identifier: MIT
@@ -34,7 +38,8 @@
 static uint32 CR1_OFFSET, CR2_OFFSET, SR_OFFSET, DR_OFFSET, CRCPR_OFFSET;
 static uint32 spi_regs;				/* register window (bytes) */
 static uint32 reset_values[SPI_WORDS];	/* by word */
-static uint32 CR1_SPE, CR2_DS_SHIFT, CR2_FRXTH, SR_RXNE, SR_TXE, SR_FRLVL_SHIFT;
+static uint32 CR1_SPE, CR2_DS_SHIFT, CR2_FRXTH, CR2_TXDMAEN, CR2_RXDMAEN, SR_RXNE, SR_TXE,
+	SR_FRLVL_SHIFT;
 static std_bool bound;
 
 static void bind_registers(void)
@@ -48,6 +53,8 @@ static void bind_registers(void)
 		BIND_MASK(CR1, SPE),
 		BIND_SHIFT(CR2, DS),
 		BIND_MASK(CR2, FRXTH),
+		BIND_MASK(CR2, TXDMAEN),
+		BIND_MASK(CR2, RXDMAEN),
 		BIND_MASK(SR, RXNE),
 		BIND_MASK(SR, TXE),
 		BIND_SHIFT(SR, FRLVL),
@@ -68,6 +75,10 @@ typedef struct {
 	uint32 rx_head;
 	uint32 rx_count;
 	AthrillDeviceIrqLine irq;	/* connected, never raised (as before) */
+	const AthrillDeviceResourceOps *resources;
+	void *context;
+	std_bool tx_request;		/* the levels last told to the DMA */
+	std_bool rx_request;
 } SpiType;
 
 static uint32 reg(const SpiType *s, uint32 offset)
@@ -137,6 +148,27 @@ static uint32 status(const SpiType *s)
 	return sr | (level << SR_FRLVL_SHIFT);
 }
 
+/* The DMA requests follow TXDMAEN/TXE and RXDMAEN/RXNE; the DMA is told
+ * each change (it may move items, and so come back here, at once). */
+static void update_requests(SpiType *s)
+{
+	uint32 sr = status(s);
+	std_bool tx = ((reg(s, CR2_OFFSET) & CR2_TXDMAEN) != 0U) && ((sr & SR_TXE) != 0U);
+	std_bool rx = ((reg(s, CR2_OFFSET) & CR2_RXDMAEN) != 0U) && ((sr & SR_RXNE) != 0U);
+
+	if (s->resources == NULL) {
+		return;
+	}
+	if (rx != s->rx_request) {
+		s->rx_request = rx;
+		(void)s->resources->dma_request(s->context, "rx", rx);
+	}
+	if (tx != s->tx_request) {
+		s->tx_request = tx;
+		(void)s->resources->dma_request(s->context, "tx", tx);
+	}
+}
+
 /* The target's stm32_spi_read: the value of an aligned access at addr. */
 static uint32 spi_read_value(SpiType *s, uint32 addr, uint32 size)
 {
@@ -189,6 +221,7 @@ static sint32 spi_read(void *instance, uint64 address, uint32 size, uint64 *resu
 	 * must see the effect (the target's read barrier did this for SPI). */
 	s->bus.target_ops->end_batch(s->bus.target);
 	*result = spi_read_value(s, (uint32)address, size);
+	update_requests(s);
 	return 0;
 }
 
@@ -200,6 +233,7 @@ static sint32 spi_write(void *instance, uint64 address, uint32 size, uint64 valu
 		return -1;
 	}
 	spi_write_value(s, (uint32)address, size, (uint32)value);
+	update_requests(s);
 	return 0;
 }
 
@@ -207,22 +241,6 @@ static const AthrillDeviceMmioOps spi_mmio = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceMmioOps), spi_read, spi_write
 };
-
-/* TO BE REMOVED with the target's DMA (athrill_device_spi_dma.h). */
-std_bool stm32_spi_f7_dma(void *instance, uint32 address, uint32 tx_size, uint32 value,
-	uint32 rx_size, uint32 *rx_address, uint32 *response)
-{
-	SpiType *s = instance;
-	if (((address - s->base) & 0x3FFU) != DR_OFFSET) {
-		return FALSE;
-	}
-	*rx_address = address;
-	if (tx_size != 0U) {
-		spi_write_value(s, address, tx_size, value);
-		*response = spi_read_value(s, address, rx_size);
-	}
-	return TRUE;
-}
 
 static sint32 spi_validate(const AthrillDeviceNode *node, char *error, uint32 error_size)
 {
@@ -248,7 +266,6 @@ static sint32 spi_create(const AthrillDeviceCreateArgs *args, void **instance)
 	bind_registers();
 	s->bus.target_ops = args->target_ops;
 	s->bus.target = args->target;
-	stm32_spi_dma_register(s, s->base, 0U);
 	*instance = s;
 	return 0;
 }
@@ -256,7 +273,6 @@ static sint32 spi_create(const AthrillDeviceCreateArgs *args, void **instance)
 static void spi_destroy(void *instance)
 {
 	SpiType *s = instance;
-	stm32_spi_dma_unregister(s);
 	stm32_spi_bus_destroy(&s->bus);
 	free(s);
 }
@@ -268,6 +284,8 @@ static sint32 spi_connect(void *instance, const AthrillDeviceConnectArgs *args)
 	    args->resources->get_interrupt(args->context, NULL, 0U, &s->irq) != 0) {
 		return -1;
 	}
+	s->resources = args->resources;
+	s->context = args->context;
 	return stm32_spi_bus_connect(&s->bus, args);
 }
 
@@ -280,6 +298,8 @@ static sint32 spi_reset(void *instance)
 	}
 	s->rx_head = 0U;
 	s->rx_count = 0U;
+	s->tx_request = FALSE;
+	s->rx_request = FALSE;
 	stm32_spi_bus_reset(&s->bus);
 	return 0;
 }

@@ -2,12 +2,13 @@
  * The STM32 SPI controller models (src/models/stm32_spi.c, stm32h7_spi.c)
  * with a chip selected through watch_gpio, ported from athrill-target-stm32's
  * test_spi_ms5611.c (test_spi), test_stm32h7_spi.c and, run with the argument
- * "spec-gaps" (WILL_FAIL), test_stm32h7_spi_frontend.c. Plus the TO BE
- * REMOVED DMA bridge (athrill_device_spi_dma.h).
+ * "spec-gaps" (WILL_FAIL), test_stm32h7_spi_frontend.c. Plus the DMA
+ * request lines (ABI 1.14 dma_request): F7 "tx" = TXDMAEN and TXE, "rx" =
+ * RXDMAEN and RXNE (RM0410 35.5.8); H7 "tx" = TXDMAEN and TXP, "rx" =
+ * RXDMAEN and RXP (RM0433 52.4.14).
  * SPDX-License-Identifier: MIT
  */
 #include "models.h"
-#include "athrill_device_spi_dma.h"
 #include "test_check.h"
 
 #include <stdio.h>
@@ -28,6 +29,23 @@ static sint32 irq_set(void *t, AthrillDeviceIrqLine line, std_bool on)
 }
 static std_bool irq_is_active(void *t, AthrillDeviceIrqLine line) { (void)t; (void)line; return FALSE; }
 static void end_batch(void *t) { (void)t; batches++; }
+
+/* The DMA request levels the model last told (and how often). */
+static std_bool tx_level, rx_level;
+static uint32 request_calls;
+static sint32 dma_request(void *c, const char *name, std_bool asserted)
+{
+	(void)c;
+	request_calls++;
+	if (strcmp(name, "tx") == 0) {
+		tx_level = asserted;
+	} else if (strcmp(name, "rx") == 0) {
+		rx_level = asserted;
+	} else {
+		return -1;
+	}
+	return 0;
+}
 
 /* The chip: answers MOSI ^ 0xFF; the FRAM-like command 0x9F returns an ID. */
 typedef struct {
@@ -136,6 +154,10 @@ static void make(const AthrillDeviceModelOps *model, uint32 at)
 	resources.get_gpio = get_gpio;
 	resources.get_spi_peripheral = get_spi_peripheral;
 	resources.watch_gpio = watch_gpio;
+	resources.dma_request = dma_request;
+	tx_level = FALSE;
+	rx_level = FALSE;
+	request_calls = 0U;
 	node.ops = &node_ops;
 	node.path = "/soc/spi";
 	reg_cells[0] = at;
@@ -182,7 +204,6 @@ static uint8 f7_send(uint8 b)
 
 static void test_f7(void)
 {
-	uint32 rx = 0U, response = 0U;
 	make(&athrill_device_stm32_spi_model, 0x40013400U);
 	wr(F7_CR2, 4U, (7U << 8) | (1U << 12));	/* 8-bit, FRXTH */
 	wr(F7_CR1, 4U, (1U << 6) | (1U << 2));	/* SPE, MSTR */
@@ -212,15 +233,28 @@ static void test_f7(void)
 	batches = 0U;
 	(void)rd(F7_SR, 4U);
 	TEST_CHECK(batches == 1U);
-	/* the DMA bridge: DR, written then read */
+	/* DMA requests: none without TXDMAEN/RXDMAEN */
 	wr(F7_CR1, 4U, (1U << 6) | (1U << 2));
 	wr(F7_CR2, 4U, (7U << 8) | (1U << 12));
 	cs(FALSE);
-	TEST_CHECK(athrill_device_stm32_spi_dma(base + F7_DR, 0U, 0U, 0U, &rx, &response) && rx == base + F7_DR);
-	TEST_CHECK(athrill_device_stm32_spi_dma(base + F7_DR, 1U, 0x0FU, 1U, &rx, &response) && response == 0xF0U);
-	TEST_CHECK(!athrill_device_stm32_spi_dma(base + F7_SR, 1U, 0x0FU, 1U, &rx, &response));
+	TEST_CHECK(!tx_level && !rx_level);
+	/* TXDMAEN (bit 1) with TXE: "tx"; RXDMAEN (bit 0) and RX empty: no "rx" */
+	wr(F7_CR2, 4U, (7U << 8) | (1U << 12) | 3U);
+	TEST_CHECK(tx_level && !rx_level);
+	/* a DR write (as the DMA does): the frame received, RXNE: "rx" */
+	wr(F7_DR, 1U, 0x0FU);
+	TEST_CHECK(tx_level && rx_level);
+	/* a DR read (as the DMA does): RX empty again, "rx" low */
+	TEST_CHECK(rd(F7_DR, 1U) == 0xF0U);
+	TEST_CHECK(tx_level && !rx_level);
+	/* changes only: another SR read tells nothing */
+	request_calls = 0U;
+	(void)rd(F7_SR, 4U);
+	TEST_CHECK(request_calls == 0U);
+	/* TXDMAEN cleared: "tx" low */
+	wr(F7_CR2, 4U, (7U << 8) | (1U << 12) | 1U);
+	TEST_CHECK(!tx_level);
 	m->destroy(dev);
-	TEST_CHECK(!athrill_device_stm32_spi_dma(base + F7_DR, 0U, 0U, 0U, &rx, &response));
 }
 
 /* ---- H7 (test_stm32h7_spi.c) ---- */
@@ -233,7 +267,7 @@ static void test_f7(void)
 static void test_h7(void)
 {
 	uint8 id[9];
-	uint32 i, rx = 0U, response = 0U;
+	uint32 i;
 	make(&athrill_device_stm32h7_spi_model, 0x40003800U);
 	cs(TRUE);
 	cs(FALSE);					/* chip select low */
@@ -249,11 +283,17 @@ static void test_h7(void)
 	TEST_CHECK((rd(H7_SR, 4U) & ((1U << 1) | (1U << 12))) == ((1U << 1) | (1U << 12)));
 	wr(H7_IER, 4U, 1U << 3);			/* EOTIE after DMA completion */
 	TEST_CHECK(raised[36] == 1U);			/* the global IRQ */
-	/* the DMA bridge: TXDR, received data outside the RX FIFO */
+	/* DMA requests (CFG1 TXDMAEN bit 15, RXDMAEN bit 14): the received
+	 * byte passes through the RX FIFO */
 	cs(FALSE);
-	TEST_CHECK(athrill_device_stm32_spi_dma(base + H7_TXDR, 1U, 0x5AU, 1U, &rx, &response));
-	TEST_CHECK(rx == base + H7_RXDR && response == 0xA5U);
-	TEST_CHECK((rd(H7_SR, 4U) & 1U) == 0U);	/* no RXP: not queued */
+	TEST_CHECK(!tx_level && !rx_level);
+	wr(0x08U, 4U, 0x00070007U | (1U << 15) | (1U << 14));
+	TEST_CHECK(tx_level && !rx_level);		/* TXP */
+	wr(H7_TXDR, 1U, 0x5AU);
+	TEST_CHECK(rx_level && (rd(H7_SR, 4U) & 1U) == 1U);	/* RXP */
+	TEST_CHECK(rd(H7_RXDR, 1U) == 0xA5U && !rx_level);
+	wr(0x08U, 4U, 0x00070007U);
+	TEST_CHECK(!tx_level);
 	m->destroy(dev);
 }
 
@@ -294,6 +334,8 @@ static uint32 r4(uint32 offset) { return rd(offset, 4U); }
 static void gaps_reset(void)
 {
 	TEST_CHECK(m->reset(dev) == 0);
+	tx_level = FALSE;	/* a reset resets the DMA too: every line low */
+	rx_level = FALSE;
 	cs(TRUE);
 	cs(FALSE);
 }
@@ -363,18 +405,16 @@ static void gaps_fifo_threshold(void)
 
 static void gaps_dma_requests(void)
 {
-	uint32 rxdr = 0U, response = 0U;
 	gaps_reset();
 	w4(H7_CR1, SPE);
-	CHECK_EQ("TX DMA disabled: no request",
-		athrill_device_stm32_spi_dma(base + H7_TXDR, 1U, 0x5AU, 1U, &rxdr, &response), FALSE);
+	CHECK_EQ("TX DMA disabled: no request", tx_level, FALSE);
 	gaps_reset();
 	w4(CFG1, CFG1_RESET | TXDMAEN | RXDMAEN);
 	w4(H7_CR1, SPE);
-	CHECK_EQ("TXP with TXDMAEN produces request",
-		athrill_device_stm32_spi_dma(base + H7_TXDR, 1U, 0x5AU, 1U, &rxdr, &response), TRUE);
-	CHECK_EQ("paired RX DMA address", rxdr, base + H7_RXDR);
-	CHECK_EQ("paired RX DMA datum", response, 0xA5U);
+	CHECK_EQ("TXP with TXDMAEN produces request", tx_level, TRUE);
+	w4(H7_TXDR, 0x5AU);
+	CHECK_EQ("RXP with RXDMAEN produces request", rx_level, TRUE);
+	CHECK_EQ("the RX stream's datum", rd(H7_RXDR, 1U) & 0xFFU, 0xA5U);
 }
 
 int main(int argc, char **argv)

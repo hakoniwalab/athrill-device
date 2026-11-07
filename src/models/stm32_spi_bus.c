@@ -4,7 +4,6 @@
  * SPDX-License-Identifier: MIT
  */
 #include "stm32_spi_bus.h"
-#include "athrill_device_spi_dma.h"
 
 #include <string.h>
 
@@ -149,51 +148,4 @@ uint8 stm32_spi_bus_exchange(Stm32SpiBus *bus, uint8 mosi)
 		}
 	}
 	return 0xFFU;
-}
-
-/* TO BE REMOVED with the target's DMA (see stm32_spi_bus.h). */
-#define DMA_BRIDGE_MAX	16U
-static struct {
-	void *instance;
-	uint32 base;
-	uint32 kind;
-} dma_bridge[DMA_BRIDGE_MAX];
-
-void stm32_spi_dma_register(void *instance, uint32 base, uint32 kind)
-{
-	uint32 i;
-	for (i = 0U; i < DMA_BRIDGE_MAX; i++) {
-		if (dma_bridge[i].instance == NULL) {
-			dma_bridge[i].instance = instance;
-			dma_bridge[i].base = base;
-			dma_bridge[i].kind = kind;
-			return;
-		}
-	}
-}
-
-void stm32_spi_dma_unregister(void *instance)
-{
-	uint32 i;
-	for (i = 0U; i < DMA_BRIDGE_MAX; i++) {
-		if (dma_bridge[i].instance == instance) {
-			dma_bridge[i].instance = NULL;
-		}
-	}
-}
-
-std_bool athrill_device_stm32_spi_dma(uint32 address, uint32 tx_size, uint32 value,
-	uint32 rx_size, uint32 *rx_address, uint32 *response)
-{
-	uint32 i;
-	for (i = 0U; i < DMA_BRIDGE_MAX; i++) {
-		if (dma_bridge[i].instance == NULL || address < dma_bridge[i].base ||
-		    address >= dma_bridge[i].base + 0x400U) {
-			continue;
-		}
-		return (dma_bridge[i].kind == 0U ? stm32_spi_f7_dma : stm32_spi_h7_dma)(
-			dma_bridge[i].instance, address, tx_size, value, rx_size,
-			rx_address, response);
-	}
-	return FALSE;
 }

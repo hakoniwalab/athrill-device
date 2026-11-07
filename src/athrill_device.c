@@ -350,7 +350,6 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 	}
 
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
-NAMED_ADAPTER(stm32_dma_model, "stm32-dma-adapter", "stm32-dma");
 NAMED_ADAPTER(stm32_sdmmc_model, "stm32-sdmmc-adapter", "stm32-sdmmc");
 NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter", "stm32f7-flash");
 NAMED_ADAPTER(stm32f7_rtc_model, "stm32f7-rtc-adapter", "stm32f7-rtc");
@@ -438,7 +437,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_gpio_compatibles, 1U, &athrill_device_stm32_gpio_model },
 	{ stm32f7_exti_compatibles, 1U, &athrill_device_stm32_exti_model },
 	{ stm32_syscfg_compatibles, 2U, &athrill_device_stm32_syscfg_model },
-	{ stm32_dma_compatibles, 1U, &stm32_dma_model },
+	{ stm32_dma_compatibles, 1U, &athrill_device_stm32_dma_model },
 	{ stm32f7_spi_compatibles, 2U, &athrill_device_stm32_spi_model },
 	{ stm32f7_i2c_compatibles, 1U, &athrill_device_stm32_i2c_model },
 	{ stm32f7_timer_compatibles, 1U, &athrill_device_stm32_tim_model },

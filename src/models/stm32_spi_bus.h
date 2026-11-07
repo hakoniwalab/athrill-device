@@ -44,19 +44,4 @@ void stm32_spi_bus_reset(Stm32SpiBus *bus);
 /* One byte with the selected chip; 0xFF when none is selected. */
 uint8 stm32_spi_bus_exchange(Stm32SpiBus *bus, uint8 mosi);
 
-/*
- * TO BE REMOVED (hakoniwalab/athrill-device#13 step 4-5): the target's DMA
- * still calls the SPI controllers directly for memory-to-SPI streams; the
- * SPI models register here so that it finds them by address. When the DMA
- * is an athrill-device model driven by the controllers' request lines, this
- * goes. kind: 0 F7 (DR), 1 H7 (TXDR/RXDR).
- */
-void stm32_spi_dma_register(void *instance, uint32 base, uint32 kind);
-void stm32_spi_dma_unregister(void *instance);
-/* The models' halves of that bridge (stm32_spi.c, stm32h7_spi.c). */
-std_bool stm32_spi_f7_dma(void *instance, uint32 address, uint32 tx_size, uint32 value,
-	uint32 rx_size, uint32 *rx_address, uint32 *response);
-std_bool stm32_spi_h7_dma(void *instance, uint32 address, uint32 tx_size, uint32 value,
-	uint32 rx_size, uint32 *rx_address, uint32 *response);
-
 #endif
