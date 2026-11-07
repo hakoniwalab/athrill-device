@@ -171,8 +171,11 @@ def report(args: argparse.Namespace) -> str:
         elif any(status == "FAIL" for status in statuses.values()):
             gaps.append(f"{entry['test_spec_id']}: failing generated test {entry['name']}")
 
+    item_areas = Counter(item.id.split("-")[1] for item in items_list)
+    test_areas = Counter(test_id.split("-")[1] for test_id in tests)
+    generated_areas = Counter(entry["item_id"].split("-")[1] for entry in generated)
     output = [
-        "# SPI traceability pilot report",
+        "# SPI and I2C traceability report",
         "",
         f"Generated from {', '.join(str(path) for path in args.spec)}, `{args.trace_map}`, code tags, and {len(args.junit)} CTest JUnit run(s).",
         "",
@@ -184,6 +187,11 @@ def report(args: argparse.Namespace) -> str:
         f"- Implementation tags: {sum(len(value) for value in implementation_tags.values())}",
         f"- Traceability gaps: {len(gaps)}",
     ]
+    for area in sorted(item_areas):
+        output.append(
+            f"- {area}: {item_areas[area]} items, {test_areas[area]} test specifications, "
+            f"{generated_areas[area]} generated board tests"
+        )
     junit_labels = sorted({label for statuses in junit.values() for label in statuses})
     for label in junit_labels:
         counts = Counter(statuses[label] for statuses in junit.values() if label in statuses)
@@ -242,14 +250,16 @@ def report(args: argparse.Namespace) -> str:
         "",
         "## Generated coverage by board DTB",
         "",
-        "| Board DTB | Generated tests | Ordinary | WILL_FAIL |",
-        "|---|---:|---:|---:|",
+        "| Board DTB | Generated tests | SPI | I2C | Ordinary | WILL_FAIL |",
+        "|---|---:|---:|---:|---:|---:|",
     ])
     for board, count in sorted(counts.items()):
         known = sum(1 for entry in generated if entry["board"] == board and entry.get("will_fail"))
-        output.append(f"| {board} | {count} | {count - known} | {known} |")
+        spi = sum(1 for entry in generated if entry["board"] == board and entry["item_id"].startswith("ADV-SPI-"))
+        i2c = sum(1 for entry in generated if entry["board"] == board and entry["item_id"].startswith("ADV-I2C-"))
+        output.append(f"| {board} | {count} | {spi} | {i2c} | {count - known} | {known} |")
 
-    output.extend(["", "## Pilot cost", ""])
+    output.extend(["", "## Second-area cost", ""])
     if args.time:
         output.append("Time recorded by the tester:")
         output.append("")
@@ -258,18 +268,22 @@ def report(args: argparse.Namespace) -> str:
     output.extend([
         "Lines of maintained pilot material (generated C and maps excluded):",
         "",
-        f"- SPI specification YAML: {sum(lines(path) for path in args.spec)}",
+        *(f"- {path.stem.upper()} specification YAML: {lines(path)}" for path in args.spec),
         f"- DTB test generator: {lines(args.generator)}",
         f"- Trace report tool: {lines(Path(__file__))}",
         "",
-        f"The pilot has {len(items_list)} items, {len(tests)} test specifications, and {len(generated)} generated cases. "
-        "Per-DTB counts are shown above; the base and Hakoniwa variants exercise the same physical SPI wiring independently.",
+        f"The combined rollout has {len(items_list)} items, {len(tests)} test specifications, and {len(generated)} generated cases. "
+        "Per-DTB counts are shown above; the base and Hakoniwa variants exercise the same physical wiring independently.",
         "",
-        "## Cost to add I2C next",
+        "## Comparison with the SPI pilot",
         "",
-        "Reusable without change: the stdlib FDT structure reader, status/compatible/phandle decoding, YAML/report model, trace-map schema, CTest/JUnit result merge, gap rules, code-tag scan, generated-source placement, and CMake auto-discovery of board DTBs.",
+        "The SPI pilot recorded 6 items, 6 test specifications, 26 generated cases, 77 specification lines, a 721-line generator, and a 293-line report tool. "
+        f"I2C adds {item_areas['I2C']} items, {test_areas['I2C']} test specifications, and {generated_areas['I2C']} generated cases; "
+        f"the combined totals are {len(items_list)}, {len(tests)}, and {len(generated)} respectively.",
         "",
-        "New I2C work: about one coarse binding spec (7-bit `reg` addresses, exact child inventory, ordered message vectors, repeated-start/stop boundaries), an I2C controller/child selector in the generator, generated checks through `i2c_bind_node`, unit tags for `tests/test_i2c_protocol.c`, and evidence from the STM32 reference manuals plus the Zephyr I2C binding. Any I2C-specific known defects would need explicit `WILL_FAIL` entries after the first run.",
+        "Reused: the stdlib FDT parser, status/compatible decoding, node walking, board discovery, generated C harness, public loader build path, trace-map schema, CTest/JUnit merge, gap rules, code-tag scan, and multi-spec report parser.",
+        "",
+        "New for I2C: the coarse I2C specification, controller/child selection and 7-bit `reg` decoding, public `i2c_bind_node` capture and inventory checks, I2C CTest labels, and unit tags for address ACK/NACK, ordered reads/writes, repeated START, and STOP. The report gained per-area and per-board SPI/I2C splits while retaining one combined trace table and gap list.",
     ])
     return "\n".join(output) + "\n"
 
