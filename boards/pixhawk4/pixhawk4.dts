@@ -11,6 +11,8 @@
  *   PX4-Autopilot boards/px4/fmu-v5/init/rc.board_sensors
  *   PX4-Autopilot boards/px4/fmu-v5/default.px4board
  *   PX4-Autopilot boards/px4/fmu-v5/nuttx-config/include/board.h
+ *   PX4-Autopilot boards/px4/fmu-v5/src/board_config.h
+ *   PX4-Autopilot src/drivers/uavcan/uavcan_drivers/stm32/driver/src/uc_stm32_clock.cpp
  * Those PX4 files are BSD-3-Clause.  This file records the V500 baseline
  * devices currently instantiated by Athrill, not every alternate hardware
  * revision or unmodelled external connector.
@@ -174,3 +176,15 @@
 		status = "okay";
 	};
 };
+
+/*
+ * The other timers PX4 v1.17.0 drives on FMUv5 (board_config.h,
+ * timer_config.cpp, uc_stm32_clock.cpp): TIM2 is an input-capture I/O
+ * timer, TIM5 the UI LED PWM, TIM6 the UAVCAN clock, TIM8 the HRT
+ * (HRT_TIMER 8) and TIM9 the tone alarm (TONE_ALARM_TIMER 9).
+ */
+&timers2 { status = "okay"; };
+&timers5 { status = "okay"; };
+&timers6 { status = "okay"; };
+&timers8 { status = "okay"; };
+&timers9 { status = "okay"; };
