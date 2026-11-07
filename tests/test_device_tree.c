@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+extern const AthrillDeviceModelOps athrill_device_stm32_tim_model;
+
 typedef struct {
 	uint64 addresses[16];
 	uint64 sizes[16];
@@ -577,6 +579,21 @@ static int build(const char *dtb, const AthrillDevicePluginPath *plugins,
 	return athrill_device_build(&options, ops, target, runtime);
 }
 
+static void check_pwm_timing(TestTarget *target, uint32 pulse_us,
+	uint64 target_frequency)
+{
+	AthrillDevicePwmSample sample;
+	const AthrillDevicePwmProviderOps *pwm =
+		athrill_device_stm32_tim_model.pwm;
+	TEST_CHECK(pwm != NULL && pwm->sample != NULL);
+	TEST_CHECK(pwm->sample(target->instance, 1U, &sample) == 0);
+	TEST_CHECK(sample.enabled);
+	TEST_CHECK(sample.high_clocks ==
+		target_frequency * (uint64)pulse_us / 1000000U);
+	TEST_CHECK(sample.period_clocks ==
+		target_frequency * 20000U / 1000000U);
+}
+
 static void expect_failure(const char *name, TestTarget *target)
 {
 	char dtb[1024];
@@ -644,14 +661,16 @@ int main(int argc, char **argv)
 	target.irq_set_count = 0U;
 	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
 	TEST_CHECK(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
-	TEST_CHECK(target.registered == 2U && target.irq_resolved == 7U &&
+	/* [ADV-DT-003.T1] EXTI owns only the window declared by its reg. */
+	TEST_CHECK(target.registered == 1U &&
+		target.addresses[0] == 0x40013c00U &&
+		target.sizes[0] == 0x400U && target.irq_resolved == 7U &&
 		target.gpio_resolved == 176U);
-	/* Route line 4 to GPIOB, enable its rising edge and drive PB4 high. */
-	TEST_CHECK(target.ops->write(target.instance, 0x4001380cU, 4U, 1U) == 0);
+	/* The reset-default route for line 4 is GPIOA; enable and drive PA4 high. */
 	TEST_CHECK(target.ops->write(target.instance, 0x40013c00U, 4U, 1U << 4) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40013c08U, 4U, 1U << 4) == 0);
 	{
-		AthrillDeviceGpioLine line = {16U + 4U + 1U};
+		AthrillDeviceGpioLine line = {4U + 1U};
 		TEST_CHECK(gpio_drive(&target, line, TRUE) == 0);
 	}
 	TEST_CHECK(target.irq_set_count == 1U && target.last_irq == 10U);
@@ -664,6 +683,7 @@ int main(int argc, char **argv)
 	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
 
 	path(dtb, sizeof(dtb), "timer-pwm.dtb");
+	/* [ADV-PWM-002.T1] F765 TIM4: 108 MHz timer, PSC=107, ARR=19999. */
 	target.registered = 0U;
 	target.irq_resolved = 0U;
 	target.actuator_count = 0U;
@@ -672,20 +692,26 @@ int main(int argc, char **argv)
 	TEST_CHECK(target.registered == 1U && target.irq_resolved == 1U);
 	TEST_CHECK(target.ops->write(target.instance, 0x40000828U, 4U, 107U) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x4000082cU, 4U, 19999U) == 0);
-	TEST_CHECK(target.ops->write(target.instance, 0x40000834U, 4U, 1500U) == 0);
+	TEST_CHECK(target.ops->write(target.instance, 0x40000834U, 4U, 1000U) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40000818U, 4U, 6U << 4) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40000820U, 4U, 1U) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40000814U, 4U, 1U) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40000800U, 4U, 1U) == 0);
+	check_pwm_timing(&target, 1000U, 216000000U);
+	TEST_CHECK(target.ops->write(target.instance, 0x40000834U, 4U, 1500U) == 0);
+	check_pwm_timing(&target, 1500U, 216000000U);
 	TEST_CHECK(athrill_device_tick(runtime, 1U, &tick) == 0);
 	TEST_CHECK(target.actuator_count == 1U &&
 		target.actuator_values[0] > 0.499F &&
 		target.actuator_values[0] < 0.501F);
+	TEST_CHECK(target.ops->write(target.instance, 0x40000834U, 4U, 2000U) == 0);
+	check_pwm_timing(&target, 2000U, 216000000U);
 	athrill_device_destroy(runtime);
 	runtime = NULL;
 	target.irq_resolved = 0U;
 
 	path(dtb, sizeof(dtb), "timer-h7-pwm.dtb");
+	/* [ADV-PWM-002.T1] H743 TIM1: 240 MHz timer, PSC=239, ARR=19999. */
 	target.registered = 0U;
 	target.irq_resolved = 0U;
 	target.actuator_count = 0U;
@@ -695,16 +721,21 @@ int main(int argc, char **argv)
 	TEST_CHECK(target.registered == 1U && target.irq_resolved == 4U);
 	TEST_CHECK(target.ops->write(target.instance, 0x40010028U, 4U, 239U) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x4001002cU, 4U, 19999U) == 0);
-	TEST_CHECK(target.ops->write(target.instance, 0x40010034U, 4U, 1500U) == 0);
+	TEST_CHECK(target.ops->write(target.instance, 0x40010034U, 4U, 1000U) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40010018U, 4U, 6U << 4) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40010020U, 4U, 1U) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40010014U, 4U, 1U) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40010044U, 4U, 1U << 15) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40010000U, 4U, 1U) == 0);
+	check_pwm_timing(&target, 1000U, 480000000U);
+	TEST_CHECK(target.ops->write(target.instance, 0x40010034U, 4U, 1500U) == 0);
+	check_pwm_timing(&target, 1500U, 480000000U);
 	TEST_CHECK(athrill_device_tick(runtime, 1U, &tick) == 0);
 	TEST_CHECK(target.actuator_count == 1U &&
 		target.actuator_values[0] > 0.499F &&
 		target.actuator_values[0] < 0.501F);
+	TEST_CHECK(target.ops->write(target.instance, 0x40010034U, 4U, 2000U) == 0);
+	check_pwm_timing(&target, 2000U, 480000000U);
 	athrill_device_destroy(runtime);
 	runtime = NULL;
 	target.irq_resolved = 0U;

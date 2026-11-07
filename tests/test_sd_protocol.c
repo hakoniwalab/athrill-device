@@ -10,8 +10,8 @@
 
 typedef struct {
 	uint8 storage[BLOCK_SIZE * BLOCK_COUNT];
-	uint32 command_index;
-	uint32 command_argument;
+	uint32 command_indices[16];
+	uint32 command_arguments[16];
 	uint32 commands;
 	uint32 reads;
 	uint32 writes;
@@ -22,18 +22,40 @@ static sint32 command(void *context, uint32 index, uint32 argument,
 	AthrillSdResponse *response)
 {
 	Card *card = context;
-	card->command_index = index;
-	card->command_argument = argument;
+	TEST_CHECK(card->commands < 16U);
+	card->command_indices[card->commands] = index;
+	card->command_arguments[card->commands] = argument;
 	card->commands++;
 	if (index == 0U) {
 		response->kind = ATHRILL_SD_RESPONSE_NONE;
+	} else if (index == 8U) {
+		/* R7: command index, voltage-accepted field and check pattern. */
+		response->kind = ATHRILL_SD_RESPONSE_SHORT;
+		response->has_index = TRUE;
+		response->words[0] = 0x1aaU;
+	} else if (index == 55U) {
+		/* R1: APP_CMD is accepted before ACMD41. */
+		response->kind = ATHRILL_SD_RESPONSE_SHORT;
+		response->has_index = TRUE;
+		response->words[0] = 0x120U;
+	} else if (index == 41U) {
+		/* R3: OCR has no command-index field. */
+		response->kind = ATHRILL_SD_RESPONSE_SHORT;
+		response->has_index = FALSE;
+		response->words[0] = 0xc0ff8000U;
 	} else if (index == 2U) {
+		/* R2: the 128-bit CID response has no command-index field. */
 		response->kind = ATHRILL_SD_RESPONSE_LONG;
 		response->has_index = FALSE;
 		response->words[0] = 0x11223344U;
 		response->words[1] = 0x55667788U;
 		response->words[2] = 0x99aabbccU;
 		response->words[3] = 0xddeeff00U;
+	} else if (index == 3U) {
+		/* R6: assigned RCA plus card status, with command index. */
+		response->kind = ATHRILL_SD_RESPONSE_SHORT;
+		response->has_index = TRUE;
+		response->words[0] = 0x12340700U;
 	} else {
 		response->kind = ATHRILL_SD_RESPONSE_SHORT;
 		response->has_index = TRUE;
@@ -52,7 +74,8 @@ static sint32 command(void *context, uint32 index, uint32 argument,
 static sint32 read_data(void *context, uint8 *data, uint32 length)
 {
 	Card *card = context;
-	TEST_CHECK(length <= sizeof(card->storage));
+	TEST_CHECK(length == (card->command_indices[card->commands - 1U] == 17U ?
+		BLOCK_SIZE : BLOCK_SIZE * BLOCK_COUNT));
 	card->reads++;
 	memcpy(data, card->storage, length);
 	return 0;
@@ -61,7 +84,8 @@ static sint32 read_data(void *context, uint8 *data, uint32 length)
 static sint32 write_data(void *context, const uint8 *data, uint32 length)
 {
 	Card *card = context;
-	TEST_CHECK(length <= sizeof(card->storage));
+	TEST_CHECK(length == (card->command_indices[card->commands - 1U] == 24U ?
+		BLOCK_SIZE : BLOCK_SIZE * BLOCK_COUNT));
 	card->writes++;
 	memcpy(card->storage, data, length);
 	return 0;
@@ -93,106 +117,143 @@ static void fill_blocks(uint8 *data)
 	}
 }
 
-static void test_command_response_is_returned_unchanged(void)
+static void test_initialisation_response_types_and_fields(void)
 {
+	/* [ADV-SD-001.T1] CMD0/CMD8/CMD55+ACMD41/CMD2/CMD3; R1/R2/R3/R6/R7 */
 	Card card = {0};
 	AthrillSdProtocol *protocol = create_protocol(&card);
 	AthrillSdResponse response;
+	static const uint32 sequence[] = {0U, 8U, 55U, 41U, 2U, 3U};
+	uint32 index;
+
 	TEST_CHECK(athrill_sd_command(protocol, 0U, 0U, &response) == 0);
 	TEST_CHECK(response.kind == ATHRILL_SD_RESPONSE_NONE);
 	TEST_CHECK(response.data == ATHRILL_SD_DATA_NONE);
-	TEST_CHECK(athrill_sd_command(protocol, 2U, 0x12345678U,
+
+	TEST_CHECK(athrill_sd_command(protocol, 8U, 0x1aaU, &response) == 0);
+	TEST_CHECK(response.kind == ATHRILL_SD_RESPONSE_SHORT);
+	TEST_CHECK(response.has_index && response.words[0] == 0x1aaU);
+
+	TEST_CHECK(athrill_sd_command(protocol, 55U, 0U, &response) == 0);
+	TEST_CHECK(response.kind == ATHRILL_SD_RESPONSE_SHORT);
+	TEST_CHECK(response.has_index && response.words[0] == 0x120U);
+
+	TEST_CHECK(athrill_sd_command(protocol, 41U, 0x40300000U,
 		&response) == 0);
-	TEST_CHECK(card.command_index == 2U);
-	TEST_CHECK(card.command_argument == 0x12345678U);
+	TEST_CHECK(response.kind == ATHRILL_SD_RESPONSE_SHORT);
+	TEST_CHECK(!response.has_index && response.words[0] == 0xc0ff8000U);
+
+	TEST_CHECK(athrill_sd_command(protocol, 2U, 0U,
+		&response) == 0);
 	TEST_CHECK(response.kind == ATHRILL_SD_RESPONSE_LONG);
 	TEST_CHECK(!response.has_index);
 	TEST_CHECK(response.words[0] == 0x11223344U);
 	TEST_CHECK(response.words[1] == 0x55667788U);
 	TEST_CHECK(response.words[2] == 0x99aabbccU);
 	TEST_CHECK(response.words[3] == 0xddeeff00U);
-	athrill_sd_protocol_destroy(protocol);
-}
 
-static void test_single_block_read_uses_cmd17(void)
-{
-	Card card = {0};
-	AthrillSdProtocol *protocol = create_protocol(&card);
-	AthrillSdResponse response;
-	uint8 data[BLOCK_SIZE];
-	fill_blocks(card.storage);
-	TEST_CHECK(athrill_sd_command(protocol, 17U, 7U, &response) == 0);
+	TEST_CHECK(athrill_sd_command(protocol, 3U, 0U, &response) == 0);
 	TEST_CHECK(response.kind == ATHRILL_SD_RESPONSE_SHORT);
-	TEST_CHECK(response.has_index && response.words[0] == 0x900U);
-	TEST_CHECK(response.data == ATHRILL_SD_DATA_READ);
-	TEST_CHECK(athrill_sd_pending(protocol) == ATHRILL_SD_DATA_READ);
-	TEST_CHECK(athrill_sd_read(protocol, data, sizeof(data)) == 0);
-	TEST_CHECK(memcmp(data, card.storage, BLOCK_SIZE) == 0);
-	TEST_CHECK(athrill_sd_transfer_done(protocol) == 0);
-	TEST_CHECK(athrill_sd_pending(protocol) == ATHRILL_SD_DATA_NONE);
+	TEST_CHECK(response.has_index && response.words[0] == 0x12340700U);
+	TEST_CHECK(response.data == ATHRILL_SD_DATA_NONE);
+
+	TEST_CHECK(card.commands == sizeof(sequence) / sizeof(sequence[0]));
+	for (index = 0U; index < card.commands; index++) {
+		TEST_CHECK(card.command_indices[index] == sequence[index]);
+	}
+	TEST_CHECK(card.command_arguments[1] == 0x1aaU);
+	TEST_CHECK(card.command_arguments[3] == 0x40300000U);
+	TEST_CHECK(card.command_arguments[4] == 0U);
 	athrill_sd_protocol_destroy(protocol);
 }
 
-static void test_single_block_write_uses_cmd24(void)
+static void test_single_block_write_then_read_round_trip(void)
 {
+	/* [ADV-SD-002.T1] CMD24 then CMD17 on the same 512-byte block */
 	Card card = {0};
 	AthrillSdProtocol *protocol = create_protocol(&card);
 	AthrillSdResponse response;
-	uint8 data[BLOCK_SIZE];
+	uint8 written[BLOCK_SIZE];
+	uint8 read_back[BLOCK_SIZE];
 	uint32 i;
 	for (i = 0U; i < BLOCK_SIZE; i++) {
-		data[i] = (uint8)(i ^ 0x5aU);
+		written[i] = (uint8)(i ^ 0x5aU);
 	}
-	TEST_CHECK(athrill_sd_command(protocol, 24U, 8U, &response) == 0);
+	TEST_CHECK(athrill_sd_command(protocol, 24U, 7U, &response) == 0);
+	TEST_CHECK(response.kind == ATHRILL_SD_RESPONSE_SHORT);
+	TEST_CHECK(response.has_index && response.words[0] == 0x900U);
 	TEST_CHECK(response.data == ATHRILL_SD_DATA_WRITE);
-	TEST_CHECK(athrill_sd_write(protocol, data, sizeof(data)) == 0);
-	TEST_CHECK(memcmp(card.storage, data, BLOCK_SIZE) == 0);
+	TEST_CHECK(athrill_sd_write(protocol, written, sizeof(written)) == 0);
 	TEST_CHECK(athrill_sd_transfer_done(protocol) == 0);
-	athrill_sd_protocol_destroy(protocol);
-}
 
-static void test_multi_block_read_preserves_block_order(void)
-{
-	Card card = {0};
-	AthrillSdProtocol *protocol = create_protocol(&card);
-	AthrillSdResponse response;
-	uint8 data[BLOCK_SIZE * BLOCK_COUNT];
-	fill_blocks(card.storage);
-	TEST_CHECK(athrill_sd_command(protocol, 18U, 0U, &response) == 0);
+	memset(read_back, 0, sizeof(read_back));
+	TEST_CHECK(athrill_sd_command(protocol, 17U, 7U, &response) == 0);
 	TEST_CHECK(response.data == ATHRILL_SD_DATA_READ);
-	TEST_CHECK(athrill_sd_read(protocol, data, sizeof(data)) == 0);
-	TEST_CHECK(memcmp(data, card.storage, sizeof(data)) == 0);
-	TEST_CHECK(data[0] == 0U && data[BLOCK_SIZE - 1U] == 0xffU);
-	TEST_CHECK(data[BLOCK_SIZE] == 0xffU &&
-		data[2U * BLOCK_SIZE - 1U] == 0U);
+	TEST_CHECK(athrill_sd_read(protocol, read_back, sizeof(read_back)) == 0);
 	TEST_CHECK(athrill_sd_transfer_done(protocol) == 0);
+	TEST_CHECK(memcmp(read_back, written, sizeof(written)) == 0);
+	TEST_CHECK(card.commands == 2U);
+	TEST_CHECK(card.command_indices[0] == 24U &&
+		card.command_indices[1] == 17U);
+	TEST_CHECK(card.command_arguments[0] == 7U &&
+		card.command_arguments[1] == 7U);
+	TEST_CHECK(card.writes == 1U && card.reads == 1U &&
+		card.completions == 2U);
 	athrill_sd_protocol_destroy(protocol);
 }
 
-static void test_multi_block_write_preserves_block_order(void)
+static void test_multi_block_write_stop_read_stop(void)
 {
+	/* [ADV-SD-003.T1] CMD25/CMD12/CMD18/CMD12, preserving block order */
 	Card card = {0};
 	AthrillSdProtocol *protocol = create_protocol(&card);
 	AthrillSdResponse response;
-	uint8 data[BLOCK_SIZE * BLOCK_COUNT];
-	fill_blocks(data);
-	TEST_CHECK(athrill_sd_command(protocol, 25U, 0U, &response) == 0);
+	uint8 written[BLOCK_SIZE * BLOCK_COUNT];
+	uint8 read_back[BLOCK_SIZE * BLOCK_COUNT];
+	static const uint32 sequence[] = {25U, 12U, 18U, 12U};
+	uint32 index;
+
+	fill_blocks(written);
+	TEST_CHECK(athrill_sd_command(protocol, 25U, 9U, &response) == 0);
 	TEST_CHECK(response.data == ATHRILL_SD_DATA_WRITE);
-	TEST_CHECK(athrill_sd_write(protocol, data, sizeof(data)) == 0);
-	TEST_CHECK(memcmp(card.storage, data, sizeof(data)) == 0);
-	TEST_CHECK(card.writes == 1U);
+	TEST_CHECK(athrill_sd_write(protocol, written, sizeof(written)) == 0);
 	TEST_CHECK(athrill_sd_transfer_done(protocol) == 0);
-	TEST_CHECK(card.completions == 1U);
+
+	TEST_CHECK(athrill_sd_command(protocol, 12U, 0U, &response) == 0);
+	TEST_CHECK(response.kind == ATHRILL_SD_RESPONSE_SHORT);
+	TEST_CHECK(response.has_index && response.data == ATHRILL_SD_DATA_NONE);
+
+	memset(read_back, 0, sizeof(read_back));
+	TEST_CHECK(athrill_sd_command(protocol, 18U, 9U, &response) == 0);
+	TEST_CHECK(response.data == ATHRILL_SD_DATA_READ);
+	TEST_CHECK(athrill_sd_read(protocol, read_back, sizeof(read_back)) == 0);
+	TEST_CHECK(athrill_sd_transfer_done(protocol) == 0);
+
+	TEST_CHECK(athrill_sd_command(protocol, 12U, 0U, &response) == 0);
+	TEST_CHECK(response.kind == ATHRILL_SD_RESPONSE_SHORT);
+	TEST_CHECK(response.has_index && response.data == ATHRILL_SD_DATA_NONE);
+
+	TEST_CHECK(memcmp(read_back, written, sizeof(written)) == 0);
+	TEST_CHECK(read_back[0] == 0U &&
+		read_back[BLOCK_SIZE - 1U] == 0xffU);
+	TEST_CHECK(read_back[BLOCK_SIZE] == 0xffU &&
+		read_back[2U * BLOCK_SIZE - 1U] == 0U);
+	TEST_CHECK(card.commands == sizeof(sequence) / sizeof(sequence[0]));
+	for (index = 0U; index < card.commands; index++) {
+		TEST_CHECK(card.command_indices[index] == sequence[index]);
+	}
+	TEST_CHECK(card.command_arguments[0] == 9U &&
+		card.command_arguments[2] == 9U);
+	TEST_CHECK(card.writes == 1U && card.reads == 1U &&
+		card.completions == 2U);
 	athrill_sd_protocol_destroy(protocol);
 }
 
 int main(void)
 {
-	test_command_response_is_returned_unchanged();
-	test_single_block_read_uses_cmd17();
-	test_single_block_write_uses_cmd24();
-	test_multi_block_read_preserves_block_order();
-	test_multi_block_write_preserves_block_order();
+	test_initialisation_response_types_and_fields();
+	test_single_block_write_then_read_round_trip();
+	test_multi_block_write_stop_read_stop();
 	puts("SD protocol tests passed");
 	return 0;
 }

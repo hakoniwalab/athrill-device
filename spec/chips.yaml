@@ -1,0 +1,72 @@
+- id: ADV-CHIP-ICM42688-001
+  statement: WHO_AM_I (0x75) reads 0x47.
+  source:
+    devicetree: invensense,icm42688
+    manual: ICM-42688-P datasheet section 14 (WHO_AM_I)
+  scope: PX4 icm42688p driver probe.
+  verification: generated
+  applies_to: chip:invensense,icm42688
+  tests:
+  - id: ADV-CHIP-ICM42688-001.T1
+    stimulus: Read register 0x75 over the bus at the node's chip select.
+    expect: 0x47.
+- id: ADV-CHIP-ICM20689-001
+  statement: WHO_AM_I (0x75) reads 0x98.
+  source:
+    devicetree: invensense,icm20689
+    manual: ICM-20689 register map (WHO_AM_I)
+  scope: Driver probe.
+  verification: generated
+  applies_to: chip:invensense,icm20689
+  tests:
+  - id: ADV-CHIP-ICM20689-001.T1
+    stimulus: Read register 0x75.
+    expect: 0x98.
+- id: ADV-CHIP-BMI055A-001
+  statement: Accelerometer BGW_CHIPID (0x00) reads 0xFA.
+  source:
+    devicetree: bosch,bma280
+    manual: BMI055 datasheet BST-BMI055-DS000-06 section 6.2 (accelerometer register map) and SPI read protocol
+  scope: Driver probe.
+  verification: generated
+  applies_to: chip:bosch,bma280
+  tests:
+  - id: ADV-CHIP-BMI055A-001.T1
+    stimulus: Read register 0x00 over SPI as the BMI055 accelerometer SPI read protocol specifies (no dummy byte; unlike BMI088).
+    expect: 0xFA.
+- id: ADV-CHIP-BMI055G-001
+  statement: Gyroscope CHIP_ID (0x00) reads 0x0F.
+  source:
+    devicetree: bosch,bmg160
+    manual: BMI055 datasheet BST-BMI055-DS000-06 section 8.2 (gyroscope register map)
+  scope: Driver probe.
+  verification: generated
+  applies_to: chip:bosch,bmg160
+  tests:
+  - id: ADV-CHIP-BMI055G-001.T1
+    stimulus: Read register 0x00.
+    expect: 0x0F.
+- id: ADV-CHIP-IST8310-001
+  statement: WAI (0x00) reads 0x10.
+  source:
+    devicetree: isentek,ist8310
+    manual: IST8310 datasheet register map (WAI)
+  scope: Driver probe.
+  verification: generated
+  applies_to: chip:isentek,ist8310
+  tests:
+  - id: ADV-CHIP-IST8310-001.T1
+    stimulus: Read register 0x00 at the node's I2C address.
+    expect: 0x10.
+- id: ADV-CHIP-MS5611-001
+  statement: After reset the PROM reads back coefficients whose CRC-4 is valid.
+  source:
+    devicetree: meas,ms5611
+    manual: MS5611-01BA03 datasheet (PROM read, CRC application note AN520)
+  scope: Driver accepts the device.
+  verification: generated
+  applies_to: chip:meas,ms5611
+  tests:
+  - id: ADV-CHIP-MS5611-001.T1
+    stimulus: Send reset, read PROM words 0-7.
+    expect: CRC-4 computed per AN520 equals the stored CRC nibble.

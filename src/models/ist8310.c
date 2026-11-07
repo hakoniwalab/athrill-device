@@ -122,6 +122,7 @@ static void write_register(Ist8310 *chip, uint8 value)
 	}
 }
 
+/* [ADV-CHIP-IST8310-001] expose WAI value 0x10 at register 0x00 */
 static uint8 read_register(Ist8310 *chip)
 {
 	uint8 address = chip->pointer++;

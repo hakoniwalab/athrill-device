@@ -1,0 +1,25 @@
+- id: ADV-GPIO-001
+  statement: A chip's int-gpios line raises the EXTI line of that pin, which raises the interrupt the board connects to it.
+  source:
+    devicetree: Devicetree Specification v0.4; Zephyr gpio binding (int-gpios)
+    manual: RM0410 Rev 5 sections 11.8, 11.9 and 7.2.4-7.2.7 (EXTI line mapping, EXTI and SYSCFG EXTICR registers); RM0433
+      Rev 8 sections 20.4 and 12.3
+  scope: IMU data-ready interrupts reach the driver.
+  verification: generated
+  applies_to: gpio-int-consumer
+  tests:
+  - id: ADV-GPIO-001.T1
+    stimulus: Build the board; toggle each chip's int-gpios line with EXTI configured for that pin.
+    expect: The EXTI line of that pin number is pending and its interrupt is raised.
+- id: ADV-GPIO-002
+  statement: A cs-gpios entry drives the chip select of the child at the same index, with the declared active level.
+  source:
+    devicetree: Devicetree Specification v0.4; Zephyr spi-controller binding (cs-gpios)
+    manual: RM0410 section 6.4; RM0433 section 11.4
+  scope: The driver selects one sensor at a time.
+  verification: generated
+  applies_to: spi-cs-gpio
+  tests:
+  - id: ADV-GPIO-002.T1
+    stimulus: Write the GPIO pin of each cs-gpios entry to its active level.
+    expect: Exactly the child at that index is selected.

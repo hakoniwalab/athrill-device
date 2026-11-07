@@ -31,6 +31,13 @@
 		gnss0 = &gps1;
 	};
 
+	soc {
+		syscfg: system-config@40013800 {
+			compatible = "st,stm32f7-syscfg";
+			reg = <0x40013800 0x400>;
+		};
+	};
+
 	hakoniwa_sensor: sensor-device {
 		compatible = "hakoniwa,sensor-device";
 		status = "disabled";

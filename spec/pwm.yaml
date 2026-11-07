@@ -1,0 +1,25 @@
+- id: ADV-PWM-001
+  statement: Each actuator output of the pwm-actuator map is taken from the timer channel at the same index in pwms.
+  source:
+    devicetree: Devicetree Specification v0.4; Zephyr pwms binding
+    manual: RM0410 Rev 5 section 26.3.9; RM0433 Rev 8 section 39.3.9 (PWM mode)
+  scope: Motor N of the airframe receives the firmware's output N.
+  verification: generated
+  applies_to: pwm-map
+  tests:
+  - id: ADV-PWM-001.T1
+    stimulus: Build the board and list the actuator map.
+    expect: Index i maps to the timer and channel of pwms entry i decoded independently from the DTB.
+- id: ADV-PWM-002
+  statement: In edge-aligned PWM mode 1 a channel's high time is CCR x (PSC+1) / timer clock and its period (ARR+1) x (PSC+1)
+    / timer clock, with the timer clock of the board's MCU.
+  source:
+    devicetree: none
+    manual: RM0410 Rev 5 section 26.3.9 and section 5.2 (timer clocks); RM0433 Rev 8 sections 39.3.9 and 8.5 (timer clocks)
+  scope: A 1.5 ms command is read as 1.5 ms on both F7 and H7.
+  verification: unit
+  applies_to: pwm-timer
+  tests:
+  - id: ADV-PWM-002.T1
+    stimulus: Program PSC, ARR and CCR for 1000, 1500 and 2000 us on F765 and H743 clock settings.
+    expect: Measured pulse widths equal the programmed ones.

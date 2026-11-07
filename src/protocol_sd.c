@@ -39,6 +39,7 @@ void athrill_sd_protocol_destroy(AthrillSdProtocol *protocol)
 	free(protocol);
 }
 
+/* [ADV-SD-001] preserve each command's card-supplied response form and value */
 sint32 athrill_sd_command(AthrillSdProtocol *protocol, uint32 index,
 	uint32 argument, AthrillSdResponse *response)
 {
@@ -58,6 +59,7 @@ sint32 athrill_sd_command(AthrillSdProtocol *protocol, uint32 index,
 	return 0;
 }
 
+/* [ADV-SD-002] transfer the requested single-block payload exactly once */
 sint32 athrill_sd_read(AthrillSdProtocol *protocol, uint8 *data,
 	uint32 length)
 {
@@ -82,6 +84,7 @@ sint32 athrill_sd_write(AthrillSdProtocol *protocol, const uint8 *data,
 	return 0;
 }
 
+/* [ADV-SD-003] complete each block before the next multi-block operation */
 sint32 athrill_sd_transfer_done(AthrillSdProtocol *protocol)
 {
 	if (protocol == NULL || protocol->pending == ATHRILL_SD_DATA_NONE ||

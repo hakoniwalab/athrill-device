@@ -29,6 +29,7 @@ static void advance_memory(AthrillDmaProtocol *protocol, uint8 width)
 	}
 }
 
+/* [ADV-DMA-004] pack source-width items into destination-width items */
 static sint32 append(AthrillDmaProtocol *protocol, uint64 value, uint8 width)
 {
 	if (protocol->packed_bytes > 8U - width) {
@@ -172,6 +173,17 @@ static sint32 peripheral_to_memory(AthrillDmaProtocol *protocol,
 	return drain_peripheral_fifo(protocol, time, final);
 }
 
+/* [ADV-DMA-003] reload circular transfers at the initial buffer address */
+static void reload_circular_cycle(AthrillDmaProtocol *protocol, uint64 cycles)
+{
+	protocol->cycles = cycles;
+	protocol->memory_address = protocol->initial_address;
+	protocol->packed = 0U;
+	protocol->packed_bytes = 0U;
+	athrill_channel_clear(protocol->channel, ATHRILL_CHANNEL_TO_CHILD);
+	athrill_channel_clear(protocol->channel, ATHRILL_CHANNEL_TO_OWNER);
+}
+
 sint32 athrill_dma_protocol_create(AthrillChannel *channel,
 	const AthrillDmaEndpointOps *endpoint_ops, void *endpoint_context,
 	AthrillDmaProtocol **protocol)
@@ -239,6 +251,7 @@ sint32 athrill_dma_start(AthrillDmaProtocol *protocol, uint64 memory_address,
 	return 0;
 }
 
+/* [ADV-DMA-001] move one requested item in order between memory and peripheral */
 sint32 athrill_dma_request(AthrillDmaProtocol *protocol, uint32 request,
 	uint64 completion_time)
 {
@@ -274,12 +287,7 @@ sint32 athrill_dma_request(AthrillDmaProtocol *protocol, uint32 request,
 	}
 	athrill_channel_status(protocol->channel, &after);
 	if (after.cycles != protocol->cycles) {
-		protocol->cycles = after.cycles;
-		protocol->memory_address = protocol->initial_address;
-		protocol->packed = 0U;
-		protocol->packed_bytes = 0U;
-		athrill_channel_clear(protocol->channel, ATHRILL_CHANNEL_TO_CHILD);
-		athrill_channel_clear(protocol->channel, ATHRILL_CHANNEL_TO_OWNER);
+		reload_circular_cycle(protocol, after.cycles);
 	}
 	return 1;
 }
@@ -303,6 +311,7 @@ uint64 athrill_dma_remaining(const AthrillDmaProtocol *protocol)
 	return status.remaining;
 }
 
+/* [ADV-DMA-002] expose the clock recorded for half and complete events */
 uint64 athrill_dma_completion_time(const AthrillDmaProtocol *protocol)
 {
 	AthrillChannelStatus status;

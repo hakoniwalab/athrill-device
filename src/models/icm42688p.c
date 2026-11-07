@@ -265,6 +265,7 @@ static uint8 direct_data(Icm42688p *chip, uint8 address)
 	return (((offset & 1U) == 0U) == big_endian) ? (uint8)((uint16)value >> 8) : (uint8)value;
 }
 
+/* [ADV-CHIP-ICM42688-001] expose WHO_AM_I value 0x47 at register 0x75 */
 static uint8 read_register(Icm42688p *chip, uint8 address)
 {
 	uint16 count;

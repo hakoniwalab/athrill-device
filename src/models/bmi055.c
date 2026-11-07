@@ -210,10 +210,23 @@ static uint8 data_register(Bmi055 *chip, uint8 address)
 	return (offset & 1U) == 0U ? (uint8)value : (uint8)(value >> 8);
 }
 
+/* [ADV-CHIP-BMI055A-001] expose the accelerometer 0xFA chip identity */
+static uint8 accelerometer_chip_id(void)
+{
+	return ACC_ID;
+}
+
+/* [ADV-CHIP-BMI055G-001] expose the gyroscope 0x0F chip identity */
+static uint8 gyroscope_chip_id(void)
+{
+	return GYRO_ID;
+}
+
 static uint8 read_register(Bmi055 *chip, uint8 address)
 {
 	if (address == REG_CHIP_ID) {
-		return chip->kind == BMI055_ACCEL ? ACC_ID : GYRO_ID;
+		return chip->kind == BMI055_ACCEL ? accelerometer_chip_id() :
+			gyroscope_chip_id();
 	}
 	if (address >= REG_DATA_X_L && address < REG_DATA_X_L + 6U) {
 		return data_register(chip, address);

@@ -248,6 +248,7 @@ static uint8 data_register(const Icm20689 *chip, uint8 address)
 		(uint8)((uint16)value >> 8) : (uint8)value;
 }
 
+/* [ADV-CHIP-ICM20689-001] expose WHO_AM_I value 0x98 at register 0x75 */
 static uint8 read_register(Icm20689 *chip, uint8 address)
 {
 	switch (address) {

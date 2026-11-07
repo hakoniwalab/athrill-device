@@ -1,0 +1,48 @@
+- id: ADV-SD-001
+  statement: Commands get the response type of the SD specification (R1, R2, R3, R6, R7) with the card's answer.
+  source:
+    devicetree: none
+    manual: SD Physical Layer Simplified Specification Version 9.10 4.7 and 4.9; RM0410 Rev 5 section 39; RM0433 section 55
+  scope: The firmware's SD driver initialises the card.
+  verification: unit
+  applies_to: sd-protocol
+  tests:
+  - id: ADV-SD-001.T1
+    stimulus: Send the initialisation sequence (CMD0, CMD8, ACMD41, CMD2, CMD3).
+    expect: Each response has the specified type and fields.
+- id: ADV-SD-002
+  statement: Single-block read and write move exactly 512 bytes of the addressed block.
+  source:
+    devicetree: none
+    manual: SD Physical Layer Simplified Specification Version 9.10 4.3.3 and 7.2
+  scope: Parameters and logs on the SD card are read and written correctly.
+  verification: unit
+  applies_to: sd-protocol
+  tests:
+  - id: ADV-SD-002.T1
+    stimulus: CMD24 then CMD17 on one block.
+    expect: The read data equals the written 512 bytes.
+- id: ADV-SD-003
+  statement: Multi-block read and write move consecutive blocks in order until stopped.
+  source:
+    devicetree: none
+    manual: SD Physical Layer Simplified Specification Version 9.10 4.3.3 (CMD18, CMD25, CMD12)
+  scope: File system throughput paths work.
+  verification: unit
+  applies_to: sd-protocol
+  tests:
+  - id: ADV-SD-003.T1
+    stimulus: CMD25 two blocks, CMD12, then CMD18 two blocks, CMD12.
+    expect: Both blocks read back in order.
+- id: ADV-SD-004
+  statement: An SD card node is attached to its SDMMC controller.
+  source:
+    devicetree: Devicetree Specification v0.4; Zephyr sdmmc binding
+    manual: RM0410 Rev 5 section 39; RM0433 Rev 8 section 55
+  scope: The firmware mounts the board's card.
+  verification: generated
+  applies_to: sd-card
+  tests:
+  - id: ADV-SD-004.T1
+    stimulus: Build the board and observe the SD binding.
+    expect: The card is bound to the parent controller decoded independently from the DTB.

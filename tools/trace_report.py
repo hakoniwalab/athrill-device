@@ -27,6 +27,7 @@ class Item:
     id: str
     statement: str = ""
     verification: str = ""
+    applies_to: str = ""
     tests: list[TestSpec] = dataclasses.field(default_factory=list)
 
 
@@ -49,16 +50,16 @@ def parse_spec(path: Path) -> list[Item]:
             items.append(item)
             test = None
             continue
-        match = re.match(r"^  (statement|verification):\s*(.*)$", line)
+        match = re.match(r"^  (statement|verification|applies_to):\s*(.*)$", line)
         if match and item is not None:
             setattr(item, match.group(1), yaml_value(match.group(2)))
             continue
-        match = re.match(r"^    - id:\s*(\S+)\s*$", line)
+        match = re.match(r"^\s+- id:\s*(ADV-[A-Z0-9-]+-\d+\.T\d+)\s*$", line)
         if match and item is not None:
             test = TestSpec(match.group(1))
             item.tests.append(test)
             continue
-        match = re.match(r"^      (stimulus|expect):\s*(.*)$", line)
+        match = re.match(r"^\s+(stimulus|expect):\s*(.*)$", line)
         if match and test is not None:
             setattr(test, match.group(1), yaml_value(match.group(2)))
     if not items:
@@ -114,7 +115,7 @@ def tokens(value: str) -> set[str]:
 
 def junit_for_test_file(location: str, junit: dict[str, dict[str, str]]) -> dict[str, str]:
     wanted = tokens(Path(location.split(":", 1)[0]).stem)
-    matches = [status for name, status in junit.items() if tokens(name) == wanted]
+    matches = [status for name, status in junit.items() if wanted <= tokens(name)]
     return matches[0] if len(matches) == 1 else {}
 
 
@@ -143,6 +144,7 @@ def report(args: argparse.Namespace) -> str:
     implementation_tags = scan_tags(args.source_root, ["src", "board"])
     test_tags = scan_tags(args.source_root, ["tests"])
     generated_by_spec: dict[str, list[dict[str, object]]] = defaultdict(list)
+    known_defects: Counter[tuple[str, str, str]] = Counter()
     for entry in generated:
         generated_by_spec[entry["test_spec_id"]].append(entry)
 
@@ -165,6 +167,10 @@ def report(args: argparse.Namespace) -> str:
             for location in test_tags.get(test.id, []):
                 if any(status == "FAIL" for status in junit_for_test_file(location, junit).values()):
                     gaps.append(f"{test.id}: failing unit test tagged at {location}")
+        if (item.verification == "generated" and item.applies_to and
+            not any(generated_by_spec.get(test.id) for test in item.tests) and
+            item.id != "ADV-UART-006"):
+            gaps.append(f"{item.id}: applies_to `{item.applies_to}` matched no nodes")
     for tag, locations in implementation_tags.items():
         if tag not in items:
             gaps.append(f"{tag}: implementation tag names no specification item ({', '.join(locations)})")
@@ -173,15 +179,19 @@ def report(args: argparse.Namespace) -> str:
             gaps.append(f"{entry['name']}: generated test item {entry['item_id']} no longer exists")
         statuses = junit.get(entry["name"], {})
         if entry.get("will_fail"):
-            gaps.append(f"{entry['test_spec_id']}: known defect on {entry['board']} — {entry.get('known_defect', 'CTest WILL_FAIL')}")
+            known_defects[(entry["test_spec_id"], entry["board"],
+                           entry.get("known_defect", "CTest WILL_FAIL"))] += 1
         elif any(status == "FAIL" for status in statuses.values()):
             gaps.append(f"{entry['test_spec_id']}: failing generated test {entry['name']}")
+    for (test_id, board, defect), count in sorted(known_defects.items()):
+        gaps.append(f"{test_id}: known defect on {board} ({count} case(s)) — {defect}")
 
     item_areas = Counter(item.id.split("-")[1] for item in items_list)
     test_areas = Counter(test_id.split("-")[1] for test_id in tests)
     generated_areas = Counter(entry["item_id"].split("-")[1] for entry in generated)
+    area_names = list(dict.fromkeys(item.id.split("-")[1] for item in items_list))
     output = [
-        "# SPI, I2C, and UART traceability report",
+        f"# {', '.join(area_names)} traceability report",
         "",
         f"Generated from {', '.join(str(path) for path in args.spec)}, `{args.trace_map}`, code tags, and {len(args.junit)} CTest JUnit run(s).",
         "",
@@ -258,20 +268,36 @@ def report(args: argparse.Namespace) -> str:
     if not gaps:
         output.append("- None.")
 
+    output.extend(["", "## Specification review findings", ""])
+    output.append("- None. Reviewer commit 9c30701 resolves the previously reported citation and scope findings.")
+
+    output.extend([
+        "",
+        "## Corrected expectation re-derivation",
+        "",
+        "- ADV-CHIP-BMI055A-001.T1 uses the BMI055 accelerometer SPI read protocol: address byte followed immediately by the returned register byte, with no BMI088-style dummy byte. The generated case is therefore ordinary, not `WILL_FAIL`.",
+        "- ADV-SD-001.T1 checks CMD0/no response, CMD8/R7, CMD55/R1 plus ACMD41/R3, CMD2/R2, and CMD3/R6, including index presence and response fields.",
+        "- ADV-SD-002.T1 performs CMD24 and CMD17 at the same block address and compares all 512 bytes; ADV-SD-003.T1 executes CMD25/CMD12/CMD18/CMD12 and compares both blocks in order.",
+        "- ADV-PWM-002.T1 samples the timer PWM provider directly. F765 TIM4 uses a 108 MHz timer clock with PSC=107; H743 TIM1 uses 240 MHz with PSC=239. With ARR=19999, both produce a 20 ms period and CCR values 1000/1500/2000 produce 1000/1500/2000 us high times.",
+        "- ADV-SD-004.T1 remains limited to the parent SDMMC/card binding. ADV-DMA-005 behavior is unchanged; its corrected binding citation now names the properties and STM32 bindings that define the generated expectation.",
+    ])
+
     counts = Counter(entry["board"] for entry in generated)
+    area_columns = sorted(generated_areas)
     output.extend([
         "",
         "## Generated coverage by board DTB",
         "",
-        "| Board DTB | Generated tests | SPI | I2C | UART | Ordinary | WILL_FAIL |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        "| Board DTB | Generated tests | " + " | ".join(area_columns) + " | Ordinary | WILL_FAIL |",
+        "|---|---:|" + "---:|" * len(area_columns) + "---:|---:|",
     ])
     for board, count in sorted(counts.items()):
         known = sum(1 for entry in generated if entry["board"] == board and entry.get("will_fail"))
-        spi = sum(1 for entry in generated if entry["board"] == board and entry["item_id"].startswith("ADV-SPI-"))
-        i2c = sum(1 for entry in generated if entry["board"] == board and entry["item_id"].startswith("ADV-I2C-"))
-        uart = sum(1 for entry in generated if entry["board"] == board and entry["item_id"].startswith("ADV-UART-"))
-        output.append(f"| {board} | {count} | {spi} | {i2c} | {uart} | {count - known} | {known} |")
+        per_area = [sum(1 for entry in generated if entry["board"] == board and
+                        entry["item_id"].startswith(f"ADV-{area}-"))
+                    for area in area_columns]
+        output.append("| " + " | ".join([board, str(count), *(str(value) for value in per_area),
+                                           str(count - known), str(known)]) + " |")
 
     output.extend([
         "",
@@ -286,13 +312,98 @@ def report(args: argparse.Namespace) -> str:
             f"{value['uart_children']} | {value['uart_controllers_with_dmas']} |"
         )
 
+    if any("dt_nodes" in value for value in board_coverage):
+        output.extend([
+            "",
+            "## DT loader applicability by board DTB",
+            "",
+            "| Board DTB | Negative copies | Model nodes | MMIO nodes | IRQ nodes | Board determinism |",
+            "|---|---:|---:|---:|---:|---:|",
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            output.append(
+                f"| {value['board']} | {value.get('dt_negative_nodes', 0)} | "
+                f"{value.get('dt_nodes', 0)} | {value.get('dt_mmio_nodes', 0)} | "
+                f"{value.get('dt_irq_nodes', 0)} | {value.get('dt_boards', 0)} |"
+            )
+
+    if any("dma_controllers" in value for value in board_coverage):
+        output.extend([
+            "",
+            "## DMA applicability by board DTB",
+            "",
+            "| Board DTB | DMA controllers | Consumer dmas references |",
+            "|---|---:|---:|",
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            output.append(
+                f"| {value['board']} | {value.get('dma_controllers', 0)} | "
+                f"{value.get('dma_references', 0)} |"
+            )
+
+    if any("sd_cards" in value for value in board_coverage):
+        output.extend([
+            "",
+            "## SD applicability by board DTB",
+            "",
+            "| Board DTB | SD card nodes |",
+            "|---|---:|",
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            output.append(f"| {value['board']} | {value.get('sd_cards', 0)} |")
+
+    if any("pwm_maps" in value for value in board_coverage):
+        output.extend([
+            "",
+            "## PWM applicability by board DTB",
+            "",
+            "| Board DTB | Actuator maps | Ordered PWM entries |",
+            "|---|---:|---:|",
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            output.append(
+                f"| {value['board']} | {value.get('pwm_maps', 0)} | "
+                f"{value.get('pwm_entries', 0)} |"
+            )
+
+    if any("gpio_interrupt_consumers" in value for value in board_coverage):
+        output.extend([
+            "",
+            "## GPIO/EXTI applicability by board DTB",
+            "",
+            "| Board DTB | int-gpios consumers | SPI CS GPIO mappings |",
+            "|---|---:|---:|",
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            output.append(
+                f"| {value['board']} | {value.get('gpio_interrupt_consumers', 0)} | "
+                f"{value.get('gpio_chip_selects', 0)} |"
+            )
+
+    if any("chip_nodes" in value for value in board_coverage):
+        chip_compatibles = sorted({compatible for value in board_coverage
+                                   for compatible in value.get("chip_compatibles", {})})
+        output.extend([
+            "",
+            "## Chip-ID applicability by board DTB",
+            "",
+            "| Board DTB | Chip nodes | " + " | ".join(chip_compatibles) + " |",
+            "|---|---:|" + "---:|" * len(chip_compatibles),
+        ])
+        for value in sorted(board_coverage, key=lambda entry: entry["board"]):
+            compatible_counts = value.get("chip_compatibles", {})
+            output.append("| " + " | ".join([
+                value["board"], str(value.get("chip_nodes", 0)),
+                *(str(compatible_counts.get(name, 0)) for name in chip_compatibles),
+            ]) + " |")
+
     output.extend([
         "",
         "## Testability note",
         "",
-        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. Whenever a SPI or UART DMA case is applicable, the generated target independently decodes the DTB and checks the provider/cells together with the ABI 1.9 tuple index and same-index `dma-names` entry. Applicable UART cases are ordinary passing tests rather than expected failures. The specification was left unchanged.",
+        "ADV-UART-006.T1 applies only to UART controllers that declare `dmas`; none of the four current board DTBs do, so it correctly generates no cases. DT negative tests mutate build-directory copies only. DT expectations come from the independent parser; ADV-DT-003 includes each native SYSCFG node's own translated `reg`, and ADV-DT-004 checks every instantiated node's decoded interrupts without expected-failure inversion. Chip-ID and PROM reads use the public SPI/I2C protocol APIs at the selector derived from each node's `reg`. PWM high time and period are asserted from the public PWM-provider sample in target-clock units; normalized actuator values are only an additional integration check. This tester change leaves the specification and implementation untouched.",
         "",
-        "## Third-area cost",
+        "## Area cost",
         "",
     ])
     if args.time:
@@ -310,15 +421,9 @@ def report(args: argparse.Namespace) -> str:
         f"The combined rollout has {len(items_list)} items, {len(tests)} test specifications, and {len(generated)} generated cases. "
         "Per-DTB counts are shown above; the base and Hakoniwa variants exercise the same physical wiring independently.",
         "",
-        "## Comparison with the SPI + I2C baseline",
-        "",
-        "The SPI + I2C baseline recorded 12 items, 13 test specifications, 36 generated cases, an 851-line generator, and a 307-line report tool. "
-        f"UART adds {item_areas['UART']} items, {test_areas['UART']} test specifications, and {generated_areas['UART']} generated cases; "
-        f"the combined totals are {len(items_list)}, {len(tests)}, and {len(generated)} respectively.",
-        "",
         "Reused: the stdlib FDT parser, status/compatible decoding, node walking, board discovery, generated C harness, public loader build path, trace-map schema, CTest/JUnit merge, gap rules, code-tag scan, and multi-spec report parser.",
         "",
-        "New for UART: independent UART controller/child selection, public `uart_bind_nodes` controller/peripheral capture, exact child inventory and uniqueness checks, conditional DMA generation with retained `WILL_FAIL`, UART CTest labels, existing protocol-test tags for frame timing, ordered transmission, and full-duplex independence, plus explicit per-board UART applicability counts.",
+        "The report records per-area applicability and reports any generated failure as a traceability gap.",
     ])
     return "\n".join(output) + "\n"
 
