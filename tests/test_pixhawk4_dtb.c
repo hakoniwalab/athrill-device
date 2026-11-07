@@ -23,10 +23,11 @@ static void *read_dtb(const char *path, size_t *size)
 	return blob;
 }
 
-/* expected[0] and expected[5] are 0: those cells must name the controller. */
+/* expected has count 5-cell tuples; each first cell is 0: it must name the
+ * controller. */
 static void expect_dmas(const void *blob, const char *path,
-	uint32_t controller, const uint32_t *expected, const char *names,
-	int names_length)
+	uint32_t controller, const uint32_t *expected, uint32_t count,
+	const char *names, int names_length)
 {
 	int node = fdt_path_offset(blob, path);
 	int length;
@@ -35,8 +36,9 @@ static void expect_dmas(const void *blob, const char *path,
 	uint32_t i;
 	TEST_CHECK(node >= 0);
 	cells = fdt_getprop(blob, node, "dmas", &length);
-	TEST_CHECK(cells != NULL && length == 10 * (int)sizeof(*cells));
-	for (i = 0U; i < 10U; i++) {
+	TEST_CHECK(cells != NULL &&
+		length == (int)(5U * count * sizeof(*cells)));
+	for (i = 0U; cells != NULL && i < 5U * count; i++) {
 		TEST_CHECK(fdt32_to_cpu(cells[i]) ==
 			((i % 5U) == 0U ? controller : expected[i]));
 	}
@@ -91,14 +93,18 @@ static int sensor_node(const void *blob, const char *status)
 
 int main(void)
 {
+	/* RM0410 request mapping: SPI1 TX DMA2 S3/S5 C3, RX S0/S2 C3; SDMMC1
+	 * DMA2 S6/S3 C4 (the PX4 stream first). */
 	static const uint32_t spi_dmas[] = {
-		0U, 3U, 3U, 0x440U, 3U, 0U, 0U, 3U, 0x480U, 3U
+		0U, 3U, 3U, 0x440U, 3U, 0U, 0U, 3U, 0x480U, 3U,
+		0U, 5U, 3U, 0x440U, 3U, 0U, 2U, 3U, 0x480U, 3U
 	};
 	static const uint32_t sd_dmas[] = {
-		0U, 6U, 4U, 0x5480U, 3U, 0U, 6U, 4U, 0x5440U, 3U
+		0U, 6U, 4U, 0x5480U, 3U, 0U, 6U, 4U, 0x5440U, 3U,
+		0U, 3U, 4U, 0x5480U, 3U, 0U, 3U, 4U, 0x5440U, 3U
 	};
-	static const char spi_names[] = "tx\0rx";
-	static const char sd_names[] = "rx\0tx";
+	static const char spi_names[] = "tx\0rx\0tx\0rx";
+	static const char sd_names[] = "rx\0tx\0rx\0tx";
 	size_t size;
 	void *blob = read_dtb(PIXHAWK4_DTB, &size);
 	int dma2;
@@ -114,9 +120,9 @@ int main(void)
 	TEST_CHECK(dma2_phandle != 0U);
 	status = fdt_getprop(blob, dma2, "status", &length);
 	TEST_CHECK(status != NULL && length == 5 && strcmp(status, "okay") == 0);
-	expect_dmas(blob, "/soc/spi@40013000", dma2_phandle, spi_dmas,
+	expect_dmas(blob, "/soc/spi@40013000", dma2_phandle, spi_dmas, 4U,
 		spi_names, sizeof(spi_names));
-	expect_dmas(blob, "/soc/sdmmc@40012c00", dma2_phandle, sd_dmas,
+	expect_dmas(blob, "/soc/sdmmc@40012c00", dma2_phandle, sd_dmas, 4U,
 		sd_names, sizeof(sd_names));
 	(void)sensor_node(blob, "disabled");
 	expect_no_value_source(blob, "/pwm-actuator-map");

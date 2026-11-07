@@ -8,10 +8,34 @@
         "meas,ms5611": 1
       },
       "chip_nodes": 3,
-      "dma_controllers": 1,
-      "dma_references": 4,
+      "dma_controllers": 2,
+      "dma_references": 35,
       "dt_boards": 1,
-      "dt_irq_nodes": 26,
+      "dt_irq_nodes": 27,
+      "dt_mmio_nodes": 35,
+      "dt_negative_nodes": 1,
+      "dt_nodes": 63,
+      "gpio_chip_selects": 3,
+      "gpio_interrupt_consumers": 1,
+      "pwm_entries": 8,
+      "pwm_maps": 1,
+      "sd_cards": 1,
+      "uart_children": 1,
+      "uart_controllers": 7,
+      "uart_controllers_with_dmas": 7
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "chip_compatibles": {
+        "invensense,icm20689": 1,
+        "isentek,ist8310": 1,
+        "meas,ms5611": 1
+      },
+      "chip_nodes": 3,
+      "dma_controllers": 2,
+      "dma_references": 35,
+      "dt_boards": 1,
+      "dt_irq_nodes": 27,
       "dt_mmio_nodes": 35,
       "dt_negative_nodes": 1,
       "dt_nodes": 62,
@@ -22,31 +46,7 @@
       "sd_cards": 1,
       "uart_children": 1,
       "uart_controllers": 7,
-      "uart_controllers_with_dmas": 0
-    },
-    {
-      "board": "pixhawk4/pixhawk4.dtb",
-      "chip_compatibles": {
-        "invensense,icm20689": 1,
-        "isentek,ist8310": 1,
-        "meas,ms5611": 1
-      },
-      "chip_nodes": 3,
-      "dma_controllers": 1,
-      "dma_references": 4,
-      "dt_boards": 1,
-      "dt_irq_nodes": 26,
-      "dt_mmio_nodes": 35,
-      "dt_negative_nodes": 1,
-      "dt_nodes": 61,
-      "gpio_chip_selects": 3,
-      "gpio_interrupt_consumers": 1,
-      "pwm_entries": 8,
-      "pwm_maps": 1,
-      "sd_cards": 1,
-      "uart_children": 1,
-      "uart_controllers": 7,
-      "uart_controllers_with_dmas": 0
+      "uart_controllers_with_dmas": 7
     },
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
@@ -59,7 +59,7 @@
       },
       "chip_nodes": 5,
       "dma_controllers": 5,
-      "dma_references": 0,
+      "dma_references": 18,
       "dt_boards": 1,
       "dt_irq_nodes": 34,
       "dt_mmio_nodes": 36,
@@ -72,7 +72,7 @@
       "sd_cards": 1,
       "uart_children": 1,
       "uart_controllers": 7,
-      "uart_controllers_with_dmas": 0
+      "uart_controllers_with_dmas": 7
     },
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
@@ -85,7 +85,7 @@
       },
       "chip_nodes": 5,
       "dma_controllers": 5,
-      "dma_references": 0,
+      "dma_references": 18,
       "dt_boards": 1,
       "dt_irq_nodes": 34,
       "dt_mmio_nodes": 36,
@@ -98,7 +98,7 @@
       "sd_cards": 1,
       "uart_children": 1,
       "uart_controllers": 7,
-      "uart_controllers_with_dmas": 0
+      "uart_controllers_with_dmas": 7
     }
   ],
   "generated_tests": [
@@ -137,6 +137,66 @@
       "node_path": "/soc/spi@40003800/fram@0",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
       "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx",
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              4,
+              0,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              3,
+              0,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              6,
+              9,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              1,
+              9,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-SPI-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40003800__ADV-SPI-006.T1",
+      "node_path": "/soc/spi@40003800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-SPI-006.T1",
       "will_fail": false
     },
     {
@@ -181,6 +241,8 @@
       "derived_properties": {
         "dma-names": [
           "tx",
+          "rx",
+          "tx",
           "rx"
         ],
         "dmas": [
@@ -197,6 +259,26 @@
           {
             "cells": [
               0,
+              3,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              5,
+              3,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              2,
               3,
               1152,
               3
@@ -249,6 +331,77 @@
       "node_path": "/soc/spi@40013400/pressure@0",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
       "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx",
+          "tx",
+          "rx",
+          "tx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              1,
+              4,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              0,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              4,
+              5,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              3,
+              5,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              2,
+              9,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          }
+        ]
+      },
+      "item_id": "ADV-SPI-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013400__ADV-SPI-006.T1",
+      "node_path": "/soc/spi@40013400",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-SPI-006.T1",
       "will_fail": false
     },
     {
@@ -339,6 +492,44 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              6,
+              4,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              5,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__serial@40004400__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004400",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -348,6 +539,55 @@
       "node_path": "/soc/serial@40004800",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx",
+          "tx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              3,
+              4,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              1,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              4,
+              7,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__serial@40004800__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -367,6 +607,44 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              4,
+              4,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              2,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__serial@40004c00__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004c00",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -381,6 +659,44 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              1,
+              5,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              3,
+              5,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__serial@40007800__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40007800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -390,6 +706,44 @@
       "node_path": "/soc/serial@40007c00",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              5,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              6,
+              5,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__serial@40007c00__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40007c00",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -424,6 +778,55 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              7,
+              4,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              5,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              2,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__serial@40011000__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40011000",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -433,6 +836,66 @@
       "node_path": "/soc/serial@40011400",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx",
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              6,
+              5,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              2,
+              5,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              7,
+              5,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              1,
+              5,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__serial@40011400__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -505,6 +968,7 @@
           "/soc/flash-controller@40023c00/flash@8000000",
           "/soc/flash-controller@40023c00/flash@1ff0f400",
           "/soc/flash-controller@40023c00/flash@1ff0f400/nvmem-layout",
+          "/soc/dma@40026000",
           "/soc/dma@40026400",
           "/soc/i2c@40006000",
           "/soc/system-config@40013800",
@@ -1770,6 +2234,76 @@
         "interrupts": [
           {
             "cells": [
+              11,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              12,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              13,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              14,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              15,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              16,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              17,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              47,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__dma@40026000__ADV-DT-004.T1",
+      "node_path": "/soc/dma@40026000",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
               56,
               0
             ],
@@ -1865,7 +2399,7 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 24356
+        "dtb_size": 25308
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -1879,6 +2413,350 @@
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
         "references": [
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                4,
+                0,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                3,
+                0,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 2,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                6,
+                9,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 3,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                1,
+                9,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                6,
+                4,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                5,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                3,
+                4,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                1,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 2,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                4,
+                7,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004c00",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                4,
+                4,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004c00",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                2,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                1,
+                5,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                3,
+                5,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007c00",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                5,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007c00",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                6,
+                5,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          }
+        ]
+      },
+      "item_id": "ADV-DMA-005",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__dma@40026000__ADV-DMA-005.T1",
+      "node_path": "/soc/dma@40026000",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-DMA-005.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "references": [
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                7,
+                4,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                5,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 2,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                2,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                6,
+                5,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                2,
+                5,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 2,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                7,
+                5,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 3,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                1,
+                5,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
           {
             "consumer_path": "/soc/sdmmc@40012c00",
             "index": 0,
@@ -1901,6 +2779,36 @@
             "provider": {
               "cells": [
                 6,
+                4,
+                21568,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/sdmmc@40012c00",
+            "index": 2,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                3,
+                4,
+                21632,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/sdmmc@40012c00",
+            "index": 3,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                3,
                 4,
                 21568,
                 3
@@ -1933,6 +2841,111 @@
                 0,
                 3,
                 1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013000",
+            "index": 2,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                5,
+                3,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013000",
+            "index": 3,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                2,
+                3,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                1,
+                4,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013400",
+            "index": 2,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                4,
+                5,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013400",
+            "index": 3,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                3,
+                5,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013400",
+            "index": 4,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                2,
+                9,
+                1088,
                 3
               ],
               "provider_compatible": "st,stm32-dma-v1",
@@ -2219,6 +3232,66 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx",
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              4,
+              0,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              3,
+              0,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              6,
+              9,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              1,
+              9,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-SPI-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__spi@40003800__ADV-SPI-006.T1",
+      "node_path": "/soc/spi@40003800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-SPI-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
         "child_count": 1,
         "reg": [
           0
@@ -2258,6 +3331,8 @@
       "derived_properties": {
         "dma-names": [
           "tx",
+          "rx",
+          "tx",
           "rx"
         ],
         "dmas": [
@@ -2274,6 +3349,26 @@
           {
             "cells": [
               0,
+              3,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              5,
+              3,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              2,
               3,
               1152,
               3
@@ -2326,6 +3421,77 @@
       "node_path": "/soc/spi@40013400/pressure@0",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
       "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx",
+          "tx",
+          "rx",
+          "tx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              1,
+              4,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              0,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              4,
+              5,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              3,
+              5,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              2,
+              9,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          }
+        ]
+      },
+      "item_id": "ADV-SPI-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__spi@40013400__ADV-SPI-006.T1",
+      "node_path": "/soc/spi@40013400",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-SPI-006.T1",
       "will_fail": false
     },
     {
@@ -2416,6 +3582,44 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              6,
+              4,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              5,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__serial@40004400__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004400",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -2425,6 +3629,55 @@
       "node_path": "/soc/serial@40004800",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx",
+          "tx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              3,
+              4,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              1,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              4,
+              7,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__serial@40004800__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -2444,6 +3697,44 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              4,
+              4,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              2,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__serial@40004c00__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004c00",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -2458,6 +3749,44 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              1,
+              5,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              3,
+              5,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__serial@40007800__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40007800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -2467,6 +3796,44 @@
       "node_path": "/soc/serial@40007c00",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              5,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          },
+          {
+            "cells": [
+              6,
+              5,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026000"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__serial@40007c00__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40007c00",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -2501,6 +3868,55 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              7,
+              4,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              5,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              2,
+              4,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__serial@40011000__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40011000",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -2510,6 +3926,66 @@
       "node_path": "/soc/serial@40011400",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx",
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              6,
+              5,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              2,
+              5,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              7,
+              5,
+              1088,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          },
+          {
+            "cells": [
+              1,
+              5,
+              1152,
+              3
+            ],
+            "provider_compatible": "st,stm32-dma-v1",
+            "provider_path": "/soc/dma@40026400"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__serial@40011400__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -2582,6 +4058,7 @@
           "/soc/flash-controller@40023c00/flash@8000000",
           "/soc/flash-controller@40023c00/flash@1ff0f400",
           "/soc/flash-controller@40023c00/flash@1ff0f400/nvmem-layout",
+          "/soc/dma@40026000",
           "/soc/dma@40026400",
           "/soc/i2c@40006000",
           "/soc/system-config@40013800",
@@ -3846,6 +5323,76 @@
         "interrupts": [
           {
             "cells": [
+              11,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              12,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              13,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              14,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              15,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              16,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              17,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              47,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__dma@40026000__ADV-DT-004.T1",
+      "node_path": "/soc/dma@40026000",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
               56,
               0
             ],
@@ -3941,7 +5488,7 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
-        "dtb_size": 24158
+        "dtb_size": 25110
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -3955,6 +5502,350 @@
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
         "references": [
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                4,
+                0,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                3,
+                0,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 2,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                6,
+                9,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 3,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                1,
+                9,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                6,
+                4,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                5,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                3,
+                4,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                1,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 2,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                4,
+                7,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004c00",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                4,
+                4,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004c00",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                2,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                1,
+                5,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                3,
+                5,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007c00",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                5,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007c00",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                6,
+                5,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026000"
+            }
+          }
+        ]
+      },
+      "item_id": "ADV-DMA-005",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__dma@40026000__ADV-DMA-005.T1",
+      "node_path": "/soc/dma@40026000",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-DMA-005.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "references": [
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                7,
+                4,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                5,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 2,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                2,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                6,
+                5,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                2,
+                5,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 2,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                7,
+                5,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 3,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                1,
+                5,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
           {
             "consumer_path": "/soc/sdmmc@40012c00",
             "index": 0,
@@ -3977,6 +5868,36 @@
             "provider": {
               "cells": [
                 6,
+                4,
+                21568,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/sdmmc@40012c00",
+            "index": 2,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                3,
+                4,
+                21632,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/sdmmc@40012c00",
+            "index": 3,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                3,
                 4,
                 21568,
                 3
@@ -4009,6 +5930,111 @@
                 0,
                 3,
                 1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013000",
+            "index": 2,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                5,
+                3,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013000",
+            "index": 3,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                2,
+                3,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                1,
+                4,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                4,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013400",
+            "index": 2,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                4,
+                5,
+                1088,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013400",
+            "index": 3,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                3,
+                5,
+                1152,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013400",
+            "index": 4,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                2,
+                9,
+                1088,
                 3
               ],
               "provider_compatible": "st,stm32-dma-v1",
@@ -4295,6 +6321,42 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              40,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              39,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-SPI-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40003800__ADV-SPI-006.T1",
+      "node_path": "/soc/spi@40003800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-SPI-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
         "child_count": 3,
         "reg": [
           0,
@@ -4371,6 +6433,42 @@
       "node_path": "/soc/spi@40013000/imu@2",
       "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
       "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              38,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              37,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-SPI-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__spi@40013000__ADV-SPI-006.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-SPI-006.T1",
       "will_fail": false
     },
     {
@@ -4461,6 +6559,42 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              44,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              43,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40004400__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -4470,6 +6604,42 @@
       "node_path": "/soc/serial@40004800",
       "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              46,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              45,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40004800__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -4489,6 +6659,42 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              66,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              65,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40005000__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40005000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -4503,6 +6709,42 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              80,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              79,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40007800__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40007800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -4512,6 +6754,42 @@
       "node_path": "/soc/serial@40007c00",
       "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              82,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              81,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40007c00__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40007c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -4546,6 +6824,42 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              42,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              41,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40011000__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40011000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -4555,6 +6869,42 @@
       "node_path": "/soc/serial@40011400",
       "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              72,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              71,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__serial@40011400__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -6327,7 +8677,7 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 29834
+        "dtb_size": 30410
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -6366,7 +8716,260 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
-        "references": []
+        "references": [
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                40,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                39,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                44,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                43,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                46,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                45,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40005000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                66,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40005000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                65,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                80,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                79,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007c00",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                82,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007c00",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                81,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                42,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                41,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                72,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                71,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                38,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                37,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          }
+        ]
       },
       "item_id": "ADV-DMA-005",
       "known_defect": null,
@@ -6784,6 +9387,42 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              40,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              39,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-SPI-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__spi@40003800__ADV-SPI-006.T1",
+      "node_path": "/soc/spi@40003800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-SPI-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
         "child_count": 3,
         "reg": [
           0,
@@ -6860,6 +9499,42 @@
       "node_path": "/soc/spi@40013000/imu@2",
       "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
       "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              38,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              37,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-SPI-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__spi@40013000__ADV-SPI-006.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-SPI-006.T1",
       "will_fail": false
     },
     {
@@ -6950,6 +9625,42 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              44,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              43,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__serial@40004400__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -6959,6 +9670,42 @@
       "node_path": "/soc/serial@40004800",
       "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              46,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              45,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__serial@40004800__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -6978,6 +9725,42 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              66,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              65,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__serial@40005000__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40005000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -6992,6 +9775,42 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              80,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              79,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__serial@40007800__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40007800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -7001,6 +9820,42 @@
       "node_path": "/soc/serial@40007c00",
       "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              82,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              81,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__serial@40007c00__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40007c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -7035,6 +9890,42 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              42,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              41,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__serial@40011000__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40011000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
         "child_count": 0,
         "children": []
       },
@@ -7044,6 +9935,42 @@
       "node_path": "/soc/serial@40011400",
       "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              72,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              71,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__serial@40011400__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-UART-006.T1",
       "will_fail": false
     },
     {
@@ -8815,7 +11742,7 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
-        "dtb_size": 29580
+        "dtb_size": 30156
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -8854,7 +11781,260 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
-        "references": []
+        "references": [
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                40,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                39,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                44,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                43,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                46,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                45,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40005000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                66,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40005000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                65,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                80,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                79,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007c00",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                82,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007c00",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                81,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                42,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                41,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                72,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                71,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                38,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                37,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          }
+        ]
       },
       "item_id": "ADV-DMA-005",
       "known_defect": null,

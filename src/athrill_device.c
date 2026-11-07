@@ -2342,7 +2342,7 @@ static int bind_bus_children(AthrillDeviceRuntime *runtime)
 static int resolve_node_dmas(NodeRecord *node)
 {
 	const char *names;
-	int names_length, names_at = 0;
+	int names_length;
 	uint32 count, index;
 
 	if (specifier_count(node, "dmas", "#dma-cells", &count) != 0) {
@@ -2361,17 +2361,16 @@ static int resolve_node_dmas(NodeRecord *node)
 	    string_list_count(names, names_length) != count)) {
 		return -1;
 	}
+	/* By tuple index, not by name: a name appears once per stream its
+	 * request reaches (dma-names "tx", "rx", "tx"), and a lookup by name
+	 * would give every later tuple of a name the first one's channel.
+	 * decode_dma_specifier still reports each tuple's own name. */
 	for (index = 0U; index < count; index++) {
-		const char *name = names != NULL ? names + names_at : NULL;
-
-		if (resource_get_dma(node, name, index,
+		if (resource_get_dma(node, NULL, index,
 			&node->dma_channels[index]) != 0) {
 			return -1;
 		}
 		node->dma_channel_count++;
-		if (names != NULL) {
-			names_at += (int)strlen(name) + 1;
-		}
 	}
 	return 0;
 }

@@ -35,6 +35,12 @@ sha256 console.norm 3a63ac490233fe8996f0ef022b37f984f6acef4d6ef8897e4a8858c225ed
 # Tick order re-recorded 2026-11-08 when the USART/UARTs became athrill-device
 # models (#13 step 4-4; the TCP links tick with their UART): the order alone
 # changed.
+# Tick order re-recorded 2026-11-08 when the DMA request wiring (dmas) was
+# added to the Devicetree (#13 step 4-5): the SPI and UART controllers now
+# depend on DMA1/DMA2, so the runtime places them after those controllers
+# (each device follows the ones it references, else Devicetree order). The
+# order alone changed; every other value above is unchanged and the PX4 SIH
+# flight checks give the published run.
 tick arm_m_scs
 tick stm32_sdmmc
 tick stm32h7_sdmmc
@@ -49,8 +55,6 @@ tick /soc/pin-controller@40020000/gpio@40020800
 tick /soc/pin-controller@40020000/gpio@40020c00
 tick /soc/pin-controller@40020000/gpio@40021000
 tick /soc/pin-controller@40020000/gpio@40021400
-tick /soc/spi@40003800/fram@0
-tick /soc/spi@40013400/pressure@0
 tick /soc/pin-controller@40020000/gpio@40021800
 tick /soc/pin-controller@40020000/gpio@40021c00
 tick /soc/pin-controller@40020000/gpio@40022000
@@ -61,18 +65,20 @@ tick /soc/timers@40000800
 tick /soc/timers@40000c00
 tick /soc/timers@40001000
 tick /soc/timers@40001800
+tick /soc/timers@40010000
+tick /soc/timers@40010400
+tick /soc/timers@40014000
+tick /soc/spi@40003800/fram@0
 tick /soc/serial@40004400
 tick /soc/serial@40004800
 tick /soc/serial@40004c00
 tick /soc/serial@40007800
 tick /soc/serial@40007c00
-tick /soc/timers@40010000
-tick /soc/timers@40010400
 tick /soc/serial@40011000
 tick /soc/serial@40011000/gnss
 tick /soc/serial@40011400
-tick /soc/timers@40014000
 tick /soc/spi@40013000/imu@0
+tick /soc/spi@40013400/pressure@0
 tick /soc/i2c@40006000
 tick /soc/system-config@40013800
 tick /pwm-actuator-map
