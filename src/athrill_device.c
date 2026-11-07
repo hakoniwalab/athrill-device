@@ -1134,6 +1134,7 @@ static sint32 resource_get_spi_child(void *context, uint32 index,
 	return -1;
 }
 
+/* [ADV-I2C-002] expose only enabled children bound at this controller address */
 static sint32 resource_get_i2c_child(void *context, uint16 address,
 	AthrillDeviceI2cEndpoint *endpoint)
 {
@@ -1888,6 +1889,8 @@ static int validate_and_create(AthrillDeviceRuntime *runtime)
 
 /* [ADV-SPI-001] bind each SPI child at its reg and matching cs-gpios index */
 /* [ADV-SPI-002] bind the controller's exact enabled SPI child inventory */
+/* [ADV-I2C-001] bind each I2C child only at its 7-bit reg address */
+/* [ADV-I2C-002] bind the controller's exact enabled I2C child inventory */
 static int bind_bus_children(AthrillDeviceRuntime *runtime)
 {
 	uint32 oi;

@@ -156,6 +156,8 @@ void athrill_channel_destroy(AthrillChannel *channel)
 }
 
 /* [ADV-SPI-001] match an SPI channel only to its configured chip select */
+/* [ADV-I2C-001] match an I2C channel only to its configured bus address */
+/* [ADV-I2C-003] select only the child at the requested address */
 std_bool athrill_channel_matches(const AthrillChannel *channel,
 	const AthrillChannelSelection *selection)
 {
@@ -172,6 +174,7 @@ std_bool athrill_channel_matches(const AthrillChannel *channel,
 }
 
 /* [ADV-SPI-004] open a single chip-select-delimited frame */
+/* [ADV-I2C-006] open the initial addressed transaction */
 sint32 athrill_channel_open(AthrillChannel *channel,
 	const AthrillChannelSelection *selection, uint64 time)
 {
@@ -196,6 +199,7 @@ sint32 athrill_channel_open(AthrillChannel *channel,
 }
 
 /* [ADV-SPI-004] close the active frame before the next selection */
+/* [ADV-I2C-006] close the transaction at STOP */
 sint32 athrill_channel_close(AthrillChannel *channel, uint64 time)
 {
 	if (channel == NULL || !channel->open) {
@@ -212,6 +216,8 @@ sint32 athrill_channel_close(AthrillChannel *channel, uint64 time)
 }
 
 /* [ADV-SPI-003] preserve byte order entering each side of an exchange */
+/* [ADV-I2C-004] preserve controller-write byte order */
+/* [ADV-I2C-005] preserve child-read byte order */
 sint32 athrill_channel_push(AthrillChannel *channel,
 	AthrillChannelDirection direction, uint64 item, uint64 time)
 {
@@ -242,6 +248,8 @@ sint32 athrill_channel_push(AthrillChannel *channel,
 }
 
 /* [ADV-SPI-003] preserve byte order leaving each side of an exchange */
+/* [ADV-I2C-004] preserve controller-write byte order */
+/* [ADV-I2C-005] preserve child-read byte order */
 sint32 athrill_channel_pop(AthrillChannel *channel,
 	AthrillChannelDirection direction, uint64 *item, uint64 time)
 {
@@ -332,6 +340,8 @@ sint32 athrill_channel_set_count(AthrillChannel *channel, uint64 count,
 }
 
 /* [ADV-SPI-005] record completion at the controller-supplied clock */
+/* [ADV-I2C-004] record controller-write completion at its supplied clock */
+/* [ADV-I2C-005] record controller-read completion at its supplied clock */
 sint32 athrill_channel_report_completion(AthrillChannel *channel,
 	uint64 time)
 {
