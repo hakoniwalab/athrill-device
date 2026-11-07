@@ -1,7 +1,7 @@
 /*
  * The SDHC memory card (see sdcard.h).
  */
-#include "sdcard.h"
+#include "sdcard_card.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>

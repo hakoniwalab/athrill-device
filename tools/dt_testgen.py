@@ -172,7 +172,7 @@ MMIO_MODEL_COMPATIBLES = {
     "st,stm32-gpio", "st,stm32-exti", "st,stm32f7-syscfg",
     "st,stm32h7-syscfg", "st,stm32-timers", "st,stm32-dmamux",
     "st,stm32-i2c-v2", "st,stm32-spi-fifo", "st,stm32-spi", "st,stm32h7-spi",
-    "st,stm32-usart", "st,stm32-uart", "st,stm32-dma-v1",
+    "st,stm32-usart", "st,stm32-uart", "st,stm32-dma-v1", "st,stm32-sdmmc",
 }
 # I2C controllers that are athrill-device models: their children are bound to
 # the controller, not to the target, so the harness finds them by driving the
@@ -1228,8 +1228,7 @@ def render_case(case: dict[str, object]) -> str:
         card = case["card"]
         assert isinstance(card, SdCard)
         lines.extend([
-            f"\tCHECK(find_adapter({c_string(card.controller.path)}, \"stm32-sdmmc\"));",
-            f"\tCHECK(find_adapter({c_string(card.node.path)}, \"sdcard\"));",
+            f"\tCHECK(stderr_contains({c_string(f'DEVICE_SD_CARD controller={card.controller.path} card={card.node.path}')}));",
         ])
     elif case["kind"] == "pwm-map":
         pwm_map = case["pwm_map"]
@@ -2035,6 +2034,12 @@ static int native_uart_bind(void)
 \t\tat += 1;
 \t}}
 \treturn 0;
+}}
+
+/* The runtime's log of the last build contains needle (DEVICE_SD_CARD). */
+static int stderr_contains(const char *needle)
+{{
+\treturn captured_stderr != NULL && strstr(captured_stderr, needle) != NULL;
 }}
 
 static int build_board(void)

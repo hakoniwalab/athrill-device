@@ -29,14 +29,10 @@
  * - SxNDTR, SxPAR, SxM0AR and SxM1AR writes are ignored while EN=1
  *   (RM0410 8.5.6-8.5.8; RM0433 15.5.6-15.5.8).
  *
- * TO BE REMOVED at step 4-6 (hakoniwalab/athrill-device#13): the block
- * transfers the target's F7 SDMMC still calls (athrill_device_stm32_sdmmc_dma.h).
- *
  * Copyright 2026 Hakoniwa Laboratory
  * SPDX-License-Identifier: MIT
  */
 #include "models.h"
-#include "athrill_device_stm32_sdmmc_dma.h"
 #include "athrill_protocol_dma.h"
 
 #include <stdio.h>
@@ -83,8 +79,6 @@ typedef struct DmaType DmaType;
 typedef struct {
 	DmaType *controller;
 	uint32 stream;
-	uint64 peripheral_value;
-	std_bool peripheral_valid;
 } DmaEndpoint;
 
 struct DmaType {
@@ -96,20 +90,13 @@ struct DmaType {
 	uint32 stream[STREAMS][6];
 	uint32 ndtr_start[STREAMS];	/* NDTR when the stream was enabled (circular reload) */
 	uint32 transferred[STREAMS];
-	std_bool block[STREAMS];
 	AthrillChannel *channel[STREAMS];
 	AthrillDmaProtocol *protocol[STREAMS];
 	DmaEndpoint endpoint[STREAMS];
 	/* request lines: bit c of requested[s] is the request on channel c of stream s */
 	uint32 requested[STREAMS];
 	std_bool servicing;
-	/* the SDMMC bridge's block transfer: the peripheral side is its data */
-	std_bool bridge;
 };
-
-/* ---- TO BE REMOVED at step 4-6: the instances, for the SDMMC bridge ---- */
-#define DMA_INSTANCES	4U
-static DmaType *instances[DMA_INSTANCES];
 
 static uint64 clock_now(const DmaType *d)
 {
@@ -194,8 +181,7 @@ static sint32 endpoint_memory_write(void *context, uint64 address, uint8 width,
 	return 0;
 }
 
-/* The peripheral side: the register at PAR on the bus, or (SDMMC bridge)
- * the datum the bridge handed over. */
+/* The peripheral side: the register at PAR on the bus. */
 static sint32 endpoint_peripheral_read(void *context, uint32 request,
 	uint8 width, uint64 *value)
 {
@@ -205,14 +191,6 @@ static sint32 endpoint_peripheral_read(void *context, uint32 request,
 
 	if (value == NULL || request != ((st[SxCR] >> CR_CHSEL_SHIFT) & 7U)) {
 		return -1;
-	}
-	if (d->bridge) {
-		if (!endpoint->peripheral_valid) {
-			return -1;
-		}
-		*value = endpoint->peripheral_value;
-		endpoint->peripheral_valid = FALSE;
-		return 0;
 	}
 	*value = bus_read(d, st[SxPAR], width);
 	return 0;
@@ -227,11 +205,6 @@ static sint32 endpoint_peripheral_write(void *context, uint32 request,
 
 	if (request != ((st[SxCR] >> CR_CHSEL_SHIFT) & 7U)) {
 		return -1;
-	}
-	if (d->bridge) {
-		endpoint->peripheral_value = value;
-		endpoint->peripheral_valid = TRUE;
-		return 0;
 	}
 	bus_write(d, st[SxPAR], width, (uint32)value);
 	return 0;
@@ -254,7 +227,6 @@ static void stream_destroy(DmaType *d, uint32 s)
 		athrill_channel_destroy(d->channel[s]);
 		d->channel[s] = NULL;
 	}
-	d->endpoint[s].peripheral_valid = FALSE;
 }
 
 static void stream_notify(void *context, AthrillChannelNotification notification,
@@ -270,7 +242,7 @@ static void stream_notify(void *context, AthrillChannelNotification notification
 	if (!asserted || notification != ATHRILL_CHANNEL_NOTIFY_COMPLETE) {
 		return;
 	}
-	flags = FLAG_TC | (d->block[s] ? FLAG_HT : 0U);
+	flags = FLAG_TC;
 	d->isr[s / 4U] |= flags << flag_shift(s);
 	if ((st[SxCR] & CR_CIRC) != 0U) {
 		st[SxNDTR] = d->ndtr_start[s];
@@ -280,8 +252,7 @@ static void stream_notify(void *context, AthrillChannelNotification notification
 		st[SxNDTR] = 0U;
 		st[SxCR] &= ~CR_EN;
 	}
-	if ((((flags & FLAG_HT) != 0U) && ((st[SxCR] & CR_HTIE) != 0U)) ||
-	    ((st[SxCR] & CR_TCIE) != 0U)) {
+	if ((st[SxCR] & CR_TCIE) != 0U) {
 		raise(d, s);
 	}
 }
@@ -314,7 +285,6 @@ static std_bool stream_create(DmaType *d, uint32 s)
 	config.notify_context = &d->endpoint[s];
 	d->endpoint[s].controller = d;
 	d->endpoint[s].stream = s;
-	d->endpoint[s].peripheral_valid = FALSE;
 	if (athrill_channel_create(&config, &d->channel[s]) != 0 ||
 	    athrill_dma_protocol_create(d->channel[s], &endpoint_ops,
 		&d->endpoint[s], &d->protocol[s]) != 0 ||
@@ -324,7 +294,6 @@ static std_bool stream_create(DmaType *d, uint32 s)
 		return FALSE;
 	}
 	d->transferred[s] = 0U;
-	d->block[s] = FALSE;
 	return TRUE;
 }
 
@@ -341,7 +310,7 @@ static void stream_half(DmaType *d, uint32 s)
 	}
 }
 
-/* One item of stream s (its request, or the bridge's datum). */
+/* One item of stream s. */
 static std_bool stream_move(DmaType *d, uint32 s)
 {
 	uint32 request = (d->stream[s][SxCR] >> CR_CHSEL_SHIFT) & 7U;
@@ -528,11 +497,6 @@ static sint32 dma_create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	d->target_ops = args->target_ops;
 	d->target = args->target;
-	for (i = 0U; i < DMA_INSTANCES && instances[i] != NULL; i++) {
-	}
-	if (i < DMA_INSTANCES) {
-		instances[i] = d;
-	}
 	*instance = d;
 	return 0;
 }
@@ -544,11 +508,6 @@ static void dma_destroy(void *instance)
 
 	for (i = 0U; i < STREAMS; i++) {
 		stream_destroy(d, i);
-	}
-	for (i = 0U; i < DMA_INSTANCES; i++) {
-		if (instances[i] == d) {
-			instances[i] = NULL;
-		}
 	}
 	free(d);
 }
@@ -582,7 +541,6 @@ static sint32 dma_reset(void *instance)
 		d->stream[s][SxFCR] = 0x21U;
 		d->ndtr_start[s] = 0U;
 		d->transferred[s] = 0U;
-		d->block[s] = FALSE;
 		d->requested[s] = 0U;
 	}
 	d->servicing = FALSE;
@@ -595,90 +553,3 @@ const AthrillDeviceModelOps athrill_device_stm32_dma_model = {
 	dma_create, dma_destroy, &dma_mmio, NULL, NULL, NULL,
 	dma_connect, dma_reset, NULL
 };
-
-/* ---- TO BE REMOVED at step 4-6: the SDMMC bridge (block transfers) ---- */
-
-/* The enabled stream of direction dir whose PAR is par, if any. */
-static std_bool find_stream(uint32 par, uint32 dir, DmaType **found, uint32 *stream)
-{
-	uint32 i, s;
-
-	for (i = 0U; i < DMA_INSTANCES; i++) {
-		DmaType *d = instances[i];
-
-		for (s = 0U; d != NULL && s < STREAMS; s++) {
-			uint32 *st = d->stream[s];
-
-			if (((st[SxCR] & CR_EN) != 0U) && (((st[SxCR] >> CR_DIR_SHIFT) & 3U) == dir) &&
-			    (st[SxPAR] == par)) {
-				*found = d;
-				*stream = s;
-				return TRUE;
-			}
-		}
-	}
-	return FALSE;
-}
-
-std_bool athrill_device_stm32_dma_ready(uint32 par, std_bool to_memory)
-{
-	DmaType *d = NULL;
-	uint32 s = 0U;
-
-	return find_stream(par, to_memory ? DIR_P2M : DIR_M2P, &d, &s);
-}
-
-std_bool athrill_device_stm32_dma_block_rx(uint32 par, const uint8 *data, uint32 len)
-{
-	DmaType *d = NULL;
-	uint32 s = 0U;
-	uint32 i;
-	std_bool ok = TRUE;
-
-	if (!find_stream(par, DIR_P2M, &d, &s)) {
-		return FALSE;
-	}
-	d->block[s] = TRUE;
-	d->bridge = TRUE;
-	for (i = 0U; ok && i < len;) {
-		uint32 width = unit(d->stream[s][SxCR], CR_PSIZE_SHIFT);
-		uint64 value = 0U;
-		uint32 amount = (len - i < width) ? len - i : width;
-
-		memcpy(&value, &data[i], amount);
-		d->endpoint[s].peripheral_value = value;
-		d->endpoint[s].peripheral_valid = TRUE;
-		ok = stream_move(d, s);
-		i += amount;
-	}
-	d->bridge = FALSE;
-	return ok;
-}
-
-std_bool athrill_device_stm32_dma_block_tx(uint32 par, uint8 *data, uint32 len)
-{
-	DmaType *d = NULL;
-	uint32 s = 0U;
-	uint32 i;
-	std_bool ok = TRUE;
-
-	if (!find_stream(par, DIR_M2P, &d, &s)) {
-		return FALSE;
-	}
-	d->block[s] = TRUE;
-	d->bridge = TRUE;
-	for (i = 0U; ok && i < len;) {
-		uint32 width = unit(d->stream[s][SxCR], CR_PSIZE_SHIFT);
-		uint32 amount = (len - i < width) ? len - i : width;
-
-		d->endpoint[s].peripheral_valid = FALSE;
-		ok = stream_move(d, s) && d->endpoint[s].peripheral_valid;
-		if (ok) {
-			memcpy(&data[i], &d->endpoint[s].peripheral_value, amount);
-			d->endpoint[s].peripheral_valid = FALSE;
-		}
-		i += amount;
-	}
-	d->bridge = FALSE;
-	return ok;
-}

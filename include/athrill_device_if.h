@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       14U
+#define ATHRILL_DEVICE_ABI_MINOR       15U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -429,6 +429,14 @@ typedef struct AthrillDeviceResourceOps {
 	                         const AthrillDeviceDmaProviderOps **ops,
 	                         void **instance, AthrillDeviceNodeId *master,
 	                         uint32 *request_count);
+	/* Added in ABI 1.15; an SD card and its controller, both models.
+	 * ops is a const AthrillSdCardOps * (athrill_protocol_sd.h).
+	 * sd_card_provide: a card model (a child of its controller's node)
+	 * offers its card operations; called from connect.
+	 * get_sd_card: for a controller, the card of an enabled child; -1 when
+	 * none. Children connect after their controller: call it from reset. */
+	sint32 (*sd_card_provide)(void *context, const void *ops, void *instance);
+	sint32 (*get_sd_card)(void *context, const void **ops, void **instance);
 } AthrillDeviceResourceOps;
 
 typedef struct {
