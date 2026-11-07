@@ -183,12 +183,20 @@ def report(args: argparse.Namespace) -> str:
         f"- Generated board tests: {len(generated)}",
         f"- Implementation tags: {sum(len(value) for value in implementation_tags.values())}",
         f"- Traceability gaps: {len(gaps)}",
+    ]
+    junit_labels = sorted({label for statuses in junit.values() for label in statuses})
+    for label in junit_labels:
+        counts = Counter(statuses[label] for statuses in junit.values() if label in statuses)
+        output.append(
+            f"- CTest {label}: {counts['PASS']} passed, {counts['FAIL']} failed, {counts['SKIP']} skipped"
+        )
+    output.extend([
         "",
         "## Trace table",
         "",
         "| Item | Test specs | Generated / unit / system tests | Result | Code |",
         "|---|---|---|---|---|",
-    ]
+    ])
     for item in items_list:
         test_descriptions: list[str] = []
         test_results: list[str] = []
