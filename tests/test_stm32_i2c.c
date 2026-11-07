@@ -141,18 +141,6 @@ static sint32 get_u32(void *context, const char *name, uint32 index, uint32 *val
 	return 0;
 }
 
-static std_bool h7_marker;
-static sint32 get_property(void *context, const char *name, const void **data, uint32 *size)
-{
-	(void)context;
-	if (!h7_marker || strcmp(name, "athrill,stm32h7-i2c") != 0) {
-		return -1;
-	}
-	*data = NULL;
-	*size = 0U;
-	return 0;
-}
-
 static const AthrillDeviceModelOps *m = &athrill_device_stm32_i2c_model;
 static void *dev;
 
@@ -225,10 +213,11 @@ static void test_flags(void)
 	/* PE = 0 resets the flags */
 	wr(CR1, 4U, 0U);
 	TEST_CHECK(rd(ISR) == 1U);
-	/* without athrill,stm32h7-i2c (F7) a register read does not end the CPU batch */
+	/* every register read ends the CPU batch, on every board */
 	batches = 0U;
 	(void)rd(ISR);
-	TEST_CHECK(batches == 0U);
+	(void)rd(RXDR);
+	TEST_CHECK(batches == 2U);
 }
 
 /* A chip without byte operations: written bytes as one message, reads one at a time. */
@@ -254,7 +243,7 @@ int main(void)
 	AthrillDeviceTargetOps target_ops;
 	AthrillDeviceNodeOps node_ops = {
 		ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR, sizeof(AthrillDeviceNodeOps),
-		get_property, get_u32, NULL, NULL
+		NULL, get_u32, NULL, NULL
 	};
 	AthrillDeviceResourceOps resources;
 	AthrillDeviceNode node = { 0U, "/soc/i2c@40005c00", "st,stm32-i2c-v2", &node_ops, NULL };
@@ -283,17 +272,6 @@ int main(void)
 	TEST_CHECK(m->connect(dev, &connect) == 0);
 	test_flags();
 	test_transfer_only_chip();
-	m->destroy(dev);
-
-	/* athrill,stm32h7-i2c (H7): every register read ends the CPU batch */
-	h7_marker = TRUE;
-	TEST_CHECK(m->create(&args, &dev) == 0);
-	TEST_CHECK(m->connect(dev, &connect) == 0);
-	TEST_CHECK(m->reset(dev) == 0);
-	batches = 0U;
-	(void)rd(ISR);
-	(void)rd(RXDR);
-	TEST_CHECK(batches == 2U);
 	m->destroy(dev);
 	printf("stm32-i2c: ok\n");
 	return 0;

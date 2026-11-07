@@ -37,13 +37,3 @@
 &timers15 { athrill,stm32h7-timer; };
 &timers16 { athrill,stm32h7-timer; };
 &timers17 { athrill,stm32h7-timer; };
-
-/*
- * The generic STM32 I2C v2 compatible is shared with F7 too.  Mark the H743
- * instances: a register read ends the CPU's instruction batch there, as the
- * target's H7 I2C path did before the controller moved to athrill-device.
- */
-&i2c1 { athrill,stm32h7-i2c; };
-&i2c2 { athrill,stm32h7-i2c; };
-&i2c3 { athrill,stm32h7-i2c; };
-&i2c4 { athrill,stm32h7-i2c; };
