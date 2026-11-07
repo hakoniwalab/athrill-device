@@ -489,7 +489,7 @@ registers:
     fields:
       CNT:
         lsb: 0
-        width: 32
+        width: 16
   PSC:
     offset: '0x28'
     reset: '0x00000000'
@@ -499,46 +499,46 @@ registers:
         width: 16
   ARR:
     offset: '0x2C'
-    reset: '0xFFFFFFFF'
+    reset: disputed
     fields:
       ARR:
         lsb: 0
-        width: 32
+        width: 16
   RCR:
     offset: '0x30'
     reset: '0x00000000'
     fields:
       REP:
         lsb: 0
-        width: 16
+        width: 8
   CCR1:
     offset: '0x34'
     reset: '0x00000000'
     fields:
       CCR1:
         lsb: 0
-        width: 32
+        width: 16
   CCR2:
     offset: '0x38'
     reset: '0x00000000'
     fields:
       CCR2:
         lsb: 0
-        width: 32
+        width: 16
   CCR3:
     offset: '0x3C'
     reset: '0x00000000'
     fields:
       CCR3:
         lsb: 0
-        width: 32
+        width: 16
   CCR4:
     offset: '0x40'
     reset: '0x00000000'
     fields:
       CCR4:
         lsb: 0
-        width: 32
+        width: 16
   BDTR:
     offset: '0x44'
     reset: '0x00000000'
@@ -595,9 +595,13 @@ registers:
     fields:
       DMAB:
         lsb: 0
-        width: 32
+        width: 16
 register_notes:
 - SMS is 4 bits split over [2:0] and [16]; OCxM is 4 bits split over [6:4]/[14:12] and [16]/[24] (OCxM_3); TS[4:3] at [21:20]
   exists on H7 only.
 - CCRx, ARR, CNT are 32 bits on TIM2/TIM5 and 16 bits on the other timers (CMSIS states 16).
 - RCR.REP is 8 bits on most timers, 16 on TIM1/TIM8 (H7 CMSIS states 8); DMAR access width 16 or 32.
+- RCR.REP is 8 bits on TIM1/TIM8 here (16 bits only on some advanced timers of other families).
+wide_instances:
+  TIM2: 'CNT, ARR, CCR1-4 are 32 bits (SVD: *_H at 16:16 and *_L at 0:16)'
+  TIM5: same as TIM2

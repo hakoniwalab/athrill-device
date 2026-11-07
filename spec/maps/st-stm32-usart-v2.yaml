@@ -412,7 +412,7 @@ registers:
         width: 1
   ISR:
     offset: '0x1C'
-    reset: '0x008000C0'
+    reset: disputed
     fields:
       PE:
         lsb: 0

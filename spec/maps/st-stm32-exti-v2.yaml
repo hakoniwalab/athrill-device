@@ -266,7 +266,7 @@ registers:
         width: 1
   CPUIMR1:
     offset: '0x80'
-    reset: '0x00000000'
+    reset: '0xFFC00000'
     fields:
       IM0:
         lsb: 0
