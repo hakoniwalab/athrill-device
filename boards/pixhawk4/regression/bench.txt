@@ -21,11 +21,18 @@
 # configuration echo lines ("DEVICE_CONFIG_<KEY> = <value>", which depend on
 # who reads a key); the firmware's console is unchanged (the same hash for the
 # target's UART and the athrill-device UART).
+# Re-recorded 2026-11-08 (instructions, F-RAM, SD card, console.norm): the
+# UART receives whenever UE and RE are set, as on the chip (before, only with
+# RXNEIE or DMAR), and the bench now types its NSH commands from 1 s on
+# (DEVICE_CONFIG_STM32_UART_RX_DELAY_MS 1000): from 0 s PX4's console setup
+# drops the first character, as it would on the board. Every bench check
+# passes; the PX4 SIH flight checks pass; the ArduPilot bench and full bench
+# and the 6C armed reference are unchanged.
 firmware_sha256 f8a78a13f3a545305cce45eeef677e4d436325ee6a6065b1753c387283f3d05e
-instructions 2135921900
-sha256 fram.bin 00ee14df6986fc5baf43fdc3ea53db8088ed207dd2bd588b842d53053e7947fe
-sha256 sd.img 4eafd1bc40bd0e9b3045282c87c7b34f2e420a59689c09d487e74cd8d06d2a97
-sha256 console.norm 3a63ac490233fe8996f0ef022b37f984f6acef4d6ef8897e4a8858c225ed9636
+instructions 2137231336
+sha256 fram.bin a9f7538d4454302d63b47b7ccc189df91d210adf3d1a06e019e82a437db8890a
+sha256 sd.img 145e32f6500903e397808a4ada6946ce2cb3c3456e0f7b0936f9d49dbfbd17c2
+sha256 console.norm 05e209fedc4118f5b794b62a8e9d7ab70d6528481205433d89860fbb1f7b023f
 # tick: the order the devices are ticked in (target TARGET_TICK lines, with
 # "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
 # 2026-11-08 with athrill-target-stm32 0050bb4 + the tick-order log.

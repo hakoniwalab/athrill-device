@@ -7,7 +7,7 @@
  * Ported unchanged from athrill-target-stm32's stm32_uart.c
  * (hakoniwalab/athrill-device#13 step 4-4): the transmitter (TDR, shift
  * register, TC at the end of a frame of the BRR baud rate), the receiver
- * (RDR, RXNE, characters a frame apart, input waiting for a listening
+ * (RDR, RXNE, characters a frame apart, input waiting for an enabled
  * receiver), TX/RX DMA (CR3 DMAT/DMAR), the console (its output to the host
  * console and DEVICE_CONFIG_STM32_UART_TX_FILE, its input from the debugger
  * and DEVICE_CONFIG_STM32_UART_RX_FILE after DEVICE_CONFIG_STM32_UART_RX_DELAY_MS),
@@ -288,14 +288,14 @@ static void shift_out(Uart *u, uint8 data, uint64 start)
 }
 
 /*
- * Input waits for a reader: the receiver enabled with its interrupt or DMA
- * request on. A driver resets its UART when it opens it, and a character
- * waiting in RDR then would be lost, as when typing before the prompt.
+ * Input waits for an enabled receiver (UE and RE). Reception does not depend
+ * on RXNEIE or DMAR (RM0410 34.5.3, RM0433 48.5.6), so a polling driver
+ * receives too. Input that comes before RE is set waits in the queue, as when
+ * typing before the prompt.
  */
 static std_bool listening(const Uart *u)
 {
-	return enabled(u, CR1_RE)
-		&& (((reg(u, USART_CR1) & CR1_RXNEIE) != 0U) || ((reg(u, USART_CR3) & CR3_DMAR) != 0U));
+	return enabled(u, CR1_RE);
 }
 
 static std_bool input_available(const Uart *u)
