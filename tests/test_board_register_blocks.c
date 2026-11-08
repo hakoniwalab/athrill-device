@@ -166,6 +166,43 @@ static void test_h7(void)
 	write32(0x58004800U, 0xAAAAU);
 	TEST_CHECK(read32(0x58004800U) == 0xAAAAU);
 	close_node();
+	/* DBGMCU IDCODE: DEV_ID 0x450; the unique ID and the flash size */
+	open_node("/soc/debug@5c001000");
+	TEST_CHECK((read32(0x5C001000U) & 0xFFFU) == 0x450U && read32(0x5C001000U) == 0x20030450U);
+	close_node();
+	open_node("/soc/system-memory@1ff1e800");
+	TEST_CHECK(read32(0x1FF1E800U) == 0x52485441U && read32(0x1FF1E808U) == 0x33343748U);
+	TEST_CHECK((read32(0x1FF1E880U) & 0xFFFFU) == 2048U);
+	close_node();
+	/* AXI target 7, BDMA, FDCAN1/2 and the message RAM keep what is written */
+	open_node("/soc/axi-target@51008000");
+	write32(0x51008108U, 1U);
+	TEST_CHECK(read32(0x51008108U) == 1U);
+	close_node();
+	open_node("/soc/bdma@58025400");
+	write32(0x58025408U, 0xFFU);
+	TEST_CHECK(read32(0x58025408U) == 0xFFU);
+	close_node();
+	open_node("/soc/can@4000a000");
+	write32(0x4000A018U, 0x3U);
+	TEST_CHECK(read32(0x4000A018U) == 0x3U);
+	write32(0x4000A3FCU, 0x89ABCDEFU);
+	TEST_CHECK(read32(0x4000A3FCU) == 0x89ABCDEFU);
+	write32(0x4000AC00U, 0x11223344U);
+	TEST_CHECK(read32(0x4000AC00U) == 0x11223344U);
+	write32(0x4000D3FCU, 0x55667788U);
+	TEST_CHECK(read32(0x4000D3FCU) == 0x55667788U);
+	{
+		uint64 v;
+		TEST_CHECK(m->mmio->read(dev, 0x4000D400U, 4U, &v) != 0);	/* past the RAM */
+	}
+	close_node();
+	open_node("/soc/can@4000a400");
+	write32(0x4000A418U, 0x4U);
+	TEST_CHECK(read32(0x4000A418U) == 0x4U);
+	write32(0x4000A7FCU, 0x89ABCDEFU);
+	TEST_CHECK(read32(0x4000A7FCU) == 0x89ABCDEFU);
+	close_node();
 	/* RNG: DRDY; DR the target's sequence from 0x7436c001 */
 	open_node("/soc/rng@48021800");
 	TEST_CHECK((read32(0x48021804U) & 1U) != 0U);
@@ -211,6 +248,26 @@ static void test_f7(void)
 	TEST_CHECK(read32(0x40012000U) == 2U);
 	write32(0x40012304U, 0x30000U);
 	TEST_CHECK(read32(0x40012304U) == 0x30000U);
+	close_node();
+	/* DBGMCU IDCODE (F76x/77x, revision Z); unique ID; 2048 KiB of flash */
+	open_node("/soc/debug@e0042000");
+	TEST_CHECK(read32(0xE0042000U) == 0x10016451U);
+	close_node();
+	open_node("/soc/system-memory@1ff0f400");
+	TEST_CHECK(read32(0x1FF0F420U) == 0x52485441U && read32(0x1FF0F428U) == 0x374D5453U);
+	{
+		uint64 v = 0U;
+		TEST_CHECK(m->mmio->read(dev, 0x1FF0F442U, 2U, &v) == 0 && v == 0x0800U);
+	}
+	close_node();
+	/* CAN1 and the backup SRAM keep what is written */
+	open_node("/soc/can@40006400");
+	write32(0x40006400U, 0x1U);
+	TEST_CHECK(read32(0x40006400U) == 0x1U);
+	close_node();
+	open_node("/soc/memory@40024000");
+	write32(0x40024FFCU, 0xCAFEF00DU);
+	TEST_CHECK(read32(0x40024FFCU) == 0xCAFEF00DU);
 	close_node();
 	/* USB OTG FS: GRSTCTL resets complete, AHB idle */
 	open_node("/soc/usb@50000000");

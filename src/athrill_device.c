@@ -354,11 +354,8 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
 NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter", "stm32f7-crc");
-NAMED_ADAPTER(stm32f7_backup_sram_model, "stm32f7-backup-sram-adapter", "stm32f7-backup-sram");
 NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-source");
 NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
-NAMED_ADAPTER(stm32h7_boot_register_model, "stm32h7-boot-register-adapter",
-	"stm32h7-boot-register");
 
 static const char *const structural_compatibles[] = {
 	"holybro,pixhawk4", "holybro,pixhawk6c",
@@ -395,7 +392,6 @@ static const char *const register_block_compatibles[] = {
 	"zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog"
 };
 static const char *const stm32f7_crc_compatibles[] = { "zephyr,crc" };
-static const char *const stm32f7_backup_sram_compatibles[] = { "st,stm32-backup-sram" };
 static const char *const icm20689_compatibles[] = { "invensense,icm20689" };
 static const char *const fm25v02_compatibles[] = { "infineon,fm25xxx", "ramtron,fm25v02a" };
 static const char *const ist8310_compatibles[] = { "isentek,ist8310" };
@@ -407,11 +403,6 @@ static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-so
 static const char *const stm32h7_soc_compatibles[] = { "st,stm32h743", "st,stm32h7" };
 static const char *const stm32h7_spi_compatibles[] = { "st,stm32h7-spi" };
 static const char *const stm32h7_dmamux_compatibles[] = { "st,stm32-dmamux" };
-static const char *const stm32h7_boot_register_compatibles[] = {
-	"st,stm32-bdma",
-	"st,stm32h7-axi-target", "st,stm32h7-dbgmcu",
-	"st,stm32h7-system-memory", "st,stm32h7-fdcan"
-};
 static const char *const bmi055_accel_compatibles[] = { "bosch,bma280" };
 static const char *const bmi055_gyro_compatibles[] = { "bosch,bmg160" };
 static const char *const icm42688p_compatibles[] = {
@@ -440,7 +431,6 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32_sdmmc_compatibles, 1U, &athrill_device_stm32_sdmmc_model },
 	{ register_block_compatibles, sizeof(register_block_compatibles) / sizeof(register_block_compatibles[0]), &athrill_device_register_block_model },
 	{ stm32f7_crc_compatibles, 1U, &stm32f7_crc_model },
-	{ stm32f7_backup_sram_compatibles, 1U, &stm32f7_backup_sram_model },
 	{ icm20689_compatibles, 1U, &athrill_device_icm20689_model },
 	{ fm25v02_compatibles, 2U, &athrill_device_fm25v02_model },
 	{ ist8310_compatibles, 1U, &athrill_device_ist8310_model },
@@ -452,7 +442,6 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32h7_soc_compatibles, 2U, &stm32h7_soc_model },
 	{ stm32h7_spi_compatibles, 1U, &athrill_device_stm32h7_spi_model },
 	{ stm32h7_dmamux_compatibles, 1U, &athrill_device_stm32_dmamux_model },
-	{ stm32h7_boot_register_compatibles, 5U, &stm32h7_boot_register_model },
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
 	{ bmi055_gyro_compatibles, 1U, &athrill_device_bmi055_model },
 	{ icm42688p_compatibles, 2U, &athrill_device_icm42688p_model },

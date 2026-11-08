@@ -197,17 +197,18 @@ static void check_common(const void *blob, int hakoniwa)
 	expect_status(blob, "/soc/dmamux@40020800", "okay");
 	expect_status(blob, "/soc/bdma@58025400", "okay");
 	expect_status(blob, "/soc/dmamux@58025800", "okay");
-	expect_compatible(blob, "/soc/bdma@58025400", "st,stm32-bdma");
+	/* register blocks (4-7): the athrill compatible first */
+	expect_compatible(blob, "/soc/bdma@58025400", "athrill,register-block");
 	expect_compatible(blob, "/soc/watchdog@58004800", "st,stm32-watchdog");
 	expect_compatible(blob, "/soc/system-config@58000400", "st,stm32h7-syscfg");
-	expect_compatible(blob, "/soc/axi-target@51008000", "st,stm32h7-axi-target");
-	expect_compatible(blob, "/soc/debug@5c001000", "st,stm32h7-dbgmcu");
-	expect_compatible(blob, "/soc/system-memory@1ff1e800", "st,stm32h7-system-memory");
-	expect_compatible(blob, "/soc/can@4000a000", "st,stm32h7-fdcan");
+	expect_compatible(blob, "/soc/axi-target@51008000", "athrill,register-block");
+	expect_compatible(blob, "/soc/debug@5c001000", "athrill,register-block");
+	expect_compatible(blob, "/soc/system-memory@1ff1e800", "athrill,register-block");
+	expect_compatible(blob, "/soc/can@4000a000", "athrill,register-block");
 	expect_status(blob, "/soc/can@4000a000", "okay");
 	expect_reg_windows(blob, "/soc/can@4000a000", fdcan1_addresses,
 		fdcan1_sizes, 2U);
-	expect_compatible(blob, "/soc/can@4000a400", "st,stm32h7-fdcan");
+	expect_compatible(blob, "/soc/can@4000a400", "athrill,register-block");
 	expect_status(blob, "/soc/can@4000a400", "okay");
 	expect_reg_windows(blob, "/soc/can@4000a400", fdcan2_addresses,
 		fdcan2_sizes, 1U);
