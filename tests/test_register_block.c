@@ -51,9 +51,20 @@ static sint32 get_u32(void *c, const char *name, uint32 index, uint32 *value)
 	*value = p->cells[index];
 	return 0;
 }
+/* reg as the runtime decodes it on these 32-bit buses: <address size> pairs */
+static sint32 get_reg(void *c, uint32 index, uint64 *address, uint64 *size)
+{
+	uint32 a, s;
+	if (get_u32(c, "reg", 2U * index, &a) != 0 || get_u32(c, "reg", 2U * index + 1U, &s) != 0) {
+		return -1;
+	}
+	*address = a;
+	*size = s;
+	return 0;
+}
 static const AthrillDeviceNodeOps node_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR, sizeof(AthrillDeviceNodeOps),
-	get_property, get_u32, NULL, NULL
+	get_property, get_u32, NULL, NULL, get_reg
 };
 static uint32 batches;
 static void end_batch(void *t) { (void)t; batches++; }

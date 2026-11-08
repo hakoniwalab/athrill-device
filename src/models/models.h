@@ -21,6 +21,8 @@ extern const AthrillDeviceModelOps athrill_device_stm32_dma_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_sdmmc_model;
 extern const AthrillDeviceModelOps athrill_device_sdcard_model;
 extern const AthrillDeviceModelOps athrill_device_register_block_model;
+extern const AthrillDeviceModelOps athrill_device_riscv_mtimer_model;
+extern const AthrillDeviceModelOps athrill_device_shakti_uart_model;
 extern const AthrillDeviceModelOps athrill_device_bench_sensor_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_i2c_model;
 extern const AthrillDeviceModelOps athrill_device_stm32_spi_model;

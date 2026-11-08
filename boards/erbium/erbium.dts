@@ -1,0 +1,28 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Athrill Erbium board description.
+ *
+ * SoC description: Zephyr openhwgroup/erbium.dtsi, Apache-2.0 (board files
+ * boards/openhwgroup/erbium/erbium.dts: console on UART0 at 115200 baud).
+ */
+
+/dts-v1/;
+
+#include "erbium-athrill.dtsi"
+
+/ {
+	model = "OpenHW Foundation Erbium (Athrill)";
+	compatible = "openhwgroup,erbium";
+
+	chosen {
+		zephyr,console = &uart0;
+	};
+};
+
+/* the console (Zephyr's board file: 115200 baud, 400 MHz UART clock) */
+&uart0 {
+	status = "okay";
+	clock-frequency = <400000000>;
+	current-speed = <115200>;
+};

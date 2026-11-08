@@ -166,6 +166,8 @@ not board interfaces.
 | Transitional target adapters | `holybro,pixhawk4`; `st,stm32f765`; `st,stm32f7`; `st,stm32-dma-v1`; `st,stm32-spi-fifo`; `st,stm32-spi`; `st,stm32-i2c-v2`; `st,stm32-usart`; `st,stm32-uart`; `st,stm32-sdmmc`; `st,stm32-flash-controller`; `st,stm32f7-flash-controller`; `zephyr,flash-controller`; `st,stm32-rtc`; `st,stm32-adc`; `st,stm32-rng`; `zephyr,entropy`; `st,stm32-otgfs`; `zephyr,crc`; `st,stm32-backup-sram`; `zephyr,sdmmc-disk`; `athrill,bench-sensor-source` |
 | Structural models | `simple-bus`; `simple-mfd`; `syscon`; `fixed-clock`; `zephyr,memory-region`; `zephyr,memory-attr`; `mmio-sram`; `st,stm32f7-pinctrl`; `st,stm32-pinctrl`; `st,stm32-reset`; `st,stm32-rcc`; `st,stm32f4-rcc`; `st,stm32-rcc-rctl`; `st,stm32-nv-flash`; `soc-nv-flash`; `st,stm32-nvm-otp`; `fixed-layout`; `usb-nop-xceiv`; `st,stm32-smbus`; `st,stm32-pwm` |
 | STM32 target-owned architectural nodes | `arm,cortex-m7`; `arm,v7m-nvic`; `arm,armv7m-systick`; `arm,armv7m-mpu`; `arm,armv7m-dwt`; `arm,dtcm` |
+| RISC-V (Erbium) models | `openhwgroup,shakti-uart-v1`; `riscv,machine-timer`; `openhwgroup,erbium-mram-controller` (register block); `openhwgroup,erbium` (structural) |
+| RISC-V target-owned architectural nodes | `riscv`; `riscv,cpu-intc`; `sifive,plic-1.0.0` |
 
 ### Add a missing built-in chip model
 

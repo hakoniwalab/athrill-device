@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       17U
+#define ATHRILL_DEVICE_ABI_MINOR       18U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -101,6 +101,12 @@ typedef struct AthrillDeviceNodeOps {
 	                  uint64 *value);
 	sint32 (*get_string)(void *node_context, const char *name, uint32 index,
 	                     const char **value);
+	/* Added in ABI 1.18: the node's index-th register window as the
+	 * runtime maps it (reg decoded with the parent's #address-cells and
+	 * #size-cells and the buses' ranges); -1 past the last window or for a
+	 * node without registers. Check struct_size before calling. */
+	sint32 (*get_reg)(void *node_context, uint32 index, uint64 *address,
+	                  uint64 *size);
 } AthrillDeviceNodeOps;
 
 typedef struct {

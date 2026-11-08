@@ -178,6 +178,8 @@ MMIO_MODEL_COMPATIBLES = {
     "st,stm32h7-flash-controller", "zephyr,flash-controller",
     "st,stm32-rtc", "st,stm32-adc", "st,stm32f4-adc", "st,stm32-rng",
     "zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog", "zephyr,crc",
+    "openhwgroup,erbium-mram-controller", "riscv,machine-timer",
+    "openhwgroup,shakti-uart-v1",
 }
 # I2C controllers that are athrill-device models: their children are bound to
 # the controller, not to the target, so the harness finds them by driving the
@@ -190,6 +192,8 @@ NATIVE_I2C_COMPATIBLES = {"st,stm32-i2c-v2"}
 NATIVE_SPI_COMPATIBLES = {"st,stm32-spi-fifo": 0, "st,stm32-spi": 0, "st,stm32h7-spi": 1}
 TARGET_ARCHITECTURAL_COMPATIBLES = {
     "arm,armv7m-systick", "arm,v7m-nvic", "arm,cortex-m7", "arm,armv7m-mpu",
+    # RISC-V (Erbium): the hart, its local interrupt controller and the PLIC
+    "riscv", "riscv,cpu-intc", "sifive,plic-1.0.0",
 }
 
 
@@ -604,6 +608,10 @@ def node_at(fdt: Fdt, path: str) -> Node:
 def find_gpio_interrupt_consumers(fdt: Fdt) -> list[GpioInterruptConsumer]:
     exti_nodes = [node for node in fdt.nodes
                   if enabled(node) and "st,stm32-exti" in compatible(node)]
+    # A board without GPIO interrupt consumers (e.g. Erbium) needs no EXTI.
+    if not exti_nodes and not any(enabled(node) and "int-gpios" in node.properties
+                                  for node in fdt.nodes):
+        return []
     if len(exti_nodes) != 1:
         raise ValueError("board must have exactly one enabled STM32 EXTI controller")
     exti = exti_nodes[0]
