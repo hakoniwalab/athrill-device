@@ -102,7 +102,10 @@ if(BUILD_TESTING)
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/pwm.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/gpio.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/chips.yaml"
-    "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py")
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py"
+    # The tests are generated at configure time: a changed board DTB must
+    # re-run it (the glob above only sees DTBs added or removed, #59).
+    ${TRACE_BOARD_DTBS})
   execute_process(
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py"
             --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/spi.yaml"
