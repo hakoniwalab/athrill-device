@@ -10,13 +10,26 @@
 #
 # Recorded 2026-11-07 with athrill-target-stm32 014c1b0 and athrill-device
 # 934895f; the C path and the Devicetree path give the same values.
+# Re-recorded 2026-11-08 (athrill-target-stm32#62 work): the reference was
+# only reproducible with seed images (fram.bin, sd.img) left from an earlier
+# first boot, because prepare.sh makes them only when they are absent. A
+# first boot with the current models gives different seeds: the gyro
+# offsets PX4 commits during it differ ([0.000 0.000 0.000] before,
+# [-0.000 -0.000 0.000] now), so F-RAM parameters and the whole armed run
+# differ. The first boot is deterministic (same seeds twice; the same
+# with athrill-target-stm32 at devicetree-only and with the old core), and
+# the armed run with these seeds gave the same values with five builds,
+# each "armed and took off". The verification now makes the seeds anew
+# every time and checks them first (seed_sha256).
+seed_sha256 fram.bin b2325cf2b36ad1118b5076ae07efaff67098b23454693beaff985ca9c2cf277f
+seed_sha256 sd.img 1006b9fa1ed50fa2729932b482753fc64003b141600853da8d96ed7d46bb017e
 firmware_sha256 8719b2ea764d3185bbf4fbda7d7031763b03eac700d2fe355967eea57c4ffe78
-instructions 5265357395
-sha256 console.raw d5d8684fc36d6c43baddfe8442efe3893fba56c7499ace77736dccf3ca31cf11
-sha256 pwm.trace e665400e757ddf38e6fe7a6bb16c7209a20aab197541c7faff4e02476cf94f10
-sha256 sensor-device.trace 3941cc3f448906f2f33ba556407352dc17641093c0425823d9519c079e1deaf9
-sha256 fram.bin 67e3abfd8acef2aa873578409cb6afa198fc0d767facf3c4a815d4594942af3b
-sha256 sd.img dc35488e318a92d58e16840ae7dacbc79b30a84b3e353be6b6fe76f4d59884d8
+instructions 5248904847
+sha256 console.raw abe45c05b078454a3885d725a99d21e7af4741872b78c924777d7f71b687d70b
+sha256 pwm.trace 72244d73872b67884721bdb2a98a6a17e3a0535bef9436005938515e2e5be8c1
+sha256 sensor-device.trace 6a928ca49166fec8c07e0c39ccbddf4b23ed8e71b336519bf8351393e1e362f7
+sha256 fram.bin 6eb5c99119c5982c82c01da336d8d290f8adca1ee04973ebb92453d0efccc6e9
+sha256 sd.img 3ae38aba71cf7ab6a0d64de3b6d92221ac389dd0a63a1e83a85f27e924b04053
 # tick: the order the devices are ticked in (target TARGET_TICK lines, with
 # "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
 # 2026-11-08 with athrill-target-stm32 0050bb4 + the tick-order log.

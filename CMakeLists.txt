@@ -66,18 +66,30 @@ target_include_directories(athrill_device PRIVATE targets/stm32/config)
 # Bindings (spec/bindings/*_gen.yaml) are read at start-up with libyaml.
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-0.1)
+# A release links libyaml statically, so its athrill3 runs without libyaml installed.
+option(ATHRILL_DEVICE_STATIC_YAML "Link libyaml statically" OFF)
+if(ATHRILL_DEVICE_STATIC_YAML)
+  find_library(ATHRILL_DEVICE_YAML_STATIC NAMES libyaml.a HINTS ${YAML_LIBRARY_DIRS} REQUIRED)
+endif()
 set(ATHRILL_DEVICE_BINDINGS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/spec/bindings" CACHE PATH
   "Default directory of the generated bindings (override at run time with ATHRILL_DEVICE_BINDINGS_DIR)")
 target_compile_definitions(athrill_device PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
   ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR="${ATHRILL_DEVICE_BINDINGS_DIR}")
 find_package(Threads REQUIRED)
-target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m PkgConfig::YAML Threads::Threads)
+if(ATHRILL_DEVICE_STATIC_YAML)
+  target_include_directories(athrill_device PRIVATE ${YAML_INCLUDE_DIRS})
+  target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m ${ATHRILL_DEVICE_YAML_STATIC} Threads::Threads)
+else()
+  target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m PkgConfig::YAML Threads::Threads)
+endif()
 
 # Dependency-free reference plugin used by board/boot checks.  Production
 # Hakoniwa and in-process variants are built from board/common and use the
 # same model implementation with their respective link backends.
 add_library(athrill_hakoniwa_sensor MODULE
-  board/common/src/hako_sensor_device_model.c)
+  board/common/src/hako_sensor_device_model.c
+  board/common/src/hako_sensor_registers_model.c
+  board/common/src/hako_sensor_device.c)
 target_include_directories(athrill_hakoniwa_sensor PRIVATE
   include board/common/src board/common/include)
 target_compile_definitions(athrill_hakoniwa_sensor PRIVATE
@@ -100,7 +112,10 @@ if(BUILD_TESTING)
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/pwm.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/gpio.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/chips.yaml"
-    "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py")
+    "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py"
+    # The tests are generated at configure time: a changed board DTB must
+    # re-run it (the glob above only sees DTBs added or removed, #59).
+    ${TRACE_BOARD_DTBS})
   execute_process(
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py"
             --spec "${CMAKE_CURRENT_SOURCE_DIR}/spec/spi.yaml"
@@ -194,6 +209,13 @@ if(BUILD_TESTING)
   target_include_directories(test_shakti_uart PRIVATE src/models)
   target_link_libraries(test_shakti_uart PRIVATE athrill_device)
   add_test(NAME shakti-uart COMMAND test_shakti_uart)
+  add_executable(test_hako_sensor_registers tests/test_hako_sensor_registers.c
+    board/common/src/hako_sensor_registers_model.c board/common/src/hako_sensor_device.c)
+  target_compile_definitions(test_hako_sensor_registers PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES ATHRILL_HAKONIWA_PASSIVE)
+  target_include_directories(test_hako_sensor_registers PRIVATE
+    include board/common/src board/common/include tests)
+  add_test(NAME hako-sensor-registers COMMAND test_hako_sensor_registers)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"

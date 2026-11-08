@@ -1,0 +1,98 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Athrill's facts for an STM32F76x/F77x that Zephyr's SoC DTSI does not hold,
+ * such as the start-up read rules of the register blocks
+ * (src/models/register_block.c). Included after Zephyr's SoC (or board) DTS
+ * by every F7 board here: Pixhawk 4 and the NUCLEO-F767ZI.
+ */
+
+/*
+ * Register blocks: what the start-up code polls (RM0410). Rules read the
+ * stored words; offsets from the block's base.
+ */
+/* RCC: HSIRDY, HSERDY, PLLRDY, PLLI2SRDY, PLLSAIRDY follow their ON
+ * bits; SWS = SW; LSERDY = LSEON (BDCR), LSIRDY = LSION (CSR). */
+&rcc {
+	athrill,read-follow = <0x00 0x00 0x15010001 1>,
+			      <0x70 0x70 0x00000001 1>,
+			      <0x74 0x74 0x00000001 1>;
+	athrill,read-copy = <0x08 0x08 0 2 2>;
+};
+
+/* FLASH: never busy (SR BSY). */
+&flash {
+	athrill,read-clear = <0x0c 0x00010000>;
+};
+
+/* RTC: RSF (registers synchronised) set; INITF follows INIT. */
+&rtc {
+	athrill,read-set = <0x0c 0x00000020>;
+	athrill,read-follow = <0x0c 0x0c 0x00000080 (-1)>;
+};
+
+/* ADC: the whole block (ADC1-3 and the common registers at 0x300; Zephyr's
+ * node covers ADC1 only); ADC1 SR EOC: a conversion is always done. */
+&adc123_common {
+	reg = <0x40012000 0x400>;
+	athrill,read-set = <0x00 0x00000002>;
+};
+
+/* USB OTG FS: GRSTCTL core and FIFO resets complete, AHB idle. */
+&usbotg_fs {
+	athrill,read-clear = <0x10 0x00000031>;
+	athrill,read-set = <0x10 0x80000000>;
+};
+
+/* CAN1 (bxCAN): keeps what is written (PX4's UAVCAN probes it). */
+&can1 {
+	compatible = "athrill,register-block", "st,stm32-bxcan";
+};
+
+/* Backup SRAM: a register block (it keeps its bytes) before the memory
+ * region compatibles, which describe no registers. */
+&backup_sram {
+	compatible = "athrill,register-block", "zephyr,memory-region",
+		     "st,stm32-backup-sram";
+};
+
+/ {
+	soc {
+		/* PWR (Zephyr has no F7 PWR node): VOSRDY; ODRDY and ODSWRDY
+		 * follow CR1 ODEN and ODSWEN; BRR follows BRE. */
+		/* DBGMCU IDCODE: REV_ID 0x1001 (revision Z), DEV_ID 0x451 (F76x/77x). */
+		dbgmcu: debug@e0042000 {
+			compatible = "athrill,register-block";
+			reg = <0xe0042000 0x1000>;
+			athrill,reset-values = <0x00 0x10016451>;
+		};
+
+		/* System memory: the 96-bit unique ID ("ATHRILL STM7") and the flash
+		 * size (2048 KiB, at 0x1ff0f442). */
+		system_memory: system-memory@1ff0f400 {
+			compatible = "athrill,register-block";
+			reg = <0x1ff0f400 0x100>;
+			athrill,reset-values = <0x20 0x52485441>, <0x24 0x204c4c49>,
+					       <0x28 0x374d5453>, <0x40 0x08000000>;
+		};
+
+		pwr: power@40007000 {
+			compatible = "athrill,register-block";
+			reg = <0x40007000 0x400>;
+			athrill,read-set = <0x04 0x00004000>;
+			athrill,read-follow = <0x04 0x00 0x00030000 0>,
+					      <0x04 0x04 0x00000200 (-6)>;
+		};
+	};
+};
+
+/*
+ * The NVIC's external interrupt lines (STM32F76x/F77x: 110, the value
+ * the target used to hard-code); the Zephyr DTSI has the priority bits but not the line count
+ * (Zephyr takes it from Kconfig). The target sizes its NVIC, and ICTR, from
+ * this.
+ */
+&nvic {
+	athrill,num-irqs = <110>;
+};
+

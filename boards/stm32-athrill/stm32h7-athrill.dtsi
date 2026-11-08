@@ -1,0 +1,173 @@
+/*
+ * Copyright (c) 2019 Linaro Limited
+ * Copyright (c) 2019 Centaur Analytics, Inc
+ * Copyright (c) 2020 Teslabs Engineering S.L.
+ * Copyright (c) 2024 STMicroelectronics
+ * Copyright (c) 2025 Brill Power
+ * Copyright (c) 2025 ZAL Zentrum fuer Angewandte Luftfahrtforschung GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * Athrill's facts for an STM32H743 that Zephyr's SoC DTSI does not hold.
+ * Included after Zephyr's SoC (or board) DTS by every H7 board here:
+ * Pixhawk 6C and the NUCLEO-H743ZI.
+ */
+
+/*
+ * The generic STM32 timer compatible is shared with F7, but H743 runs every
+ * enabled timer kernel at 240 MHz from a 480 MHz CPU.  Mark the instances so
+ * the common model selects the H7 clock/IRQ table instead of the F7 table.
+ */
+&timers1 { athrill,stm32h7-timer; };
+&timers2 { athrill,stm32h7-timer; };
+&timers3 { athrill,stm32h7-timer; };
+&timers4 { athrill,stm32h7-timer; };
+&timers5 { athrill,stm32h7-timer; };
+&timers6 { athrill,stm32h7-timer; };
+&timers7 { athrill,stm32h7-timer; };
+&timers8 { athrill,stm32h7-timer; };
+&timers12 { athrill,stm32h7-timer; };
+&timers13 { athrill,stm32h7-timer; };
+&timers14 { athrill,stm32h7-timer; };
+&timers15 { athrill,stm32h7-timer; };
+&timers16 { athrill,stm32h7-timer; };
+&timers17 { athrill,stm32h7-timer; };
+
+/*
+ * The USART/UART compatibles are shared with F7 too, but every H743 USART
+ * runs from D2PCLK (120 MHz, CPU / 4).  Mark the instances so the model takes
+ * the H7 kernel clock divider instead of the F7 one.
+ */
+&usart1 { athrill,stm32h7-uart; };
+&usart2 { athrill,stm32h7-uart; };
+&usart3 { athrill,stm32h7-uart; };
+&uart4 { athrill,stm32h7-uart; };
+&uart5 { athrill,stm32h7-uart; };
+&usart6 { athrill,stm32h7-uart; };
+&uart7 { athrill,stm32h7-uart; };
+&uart8 { athrill,stm32h7-uart; };
+
+/*
+ * The DMA controllers each DMAMUX feeds (RM0433: DMAMUX1 channels 0-7 drive
+ * DMA1 streams 0-7, channels 8-15 DMA2 streams 0-7; DMAMUX2 drives BDMA).
+ * Zephyr's STM32 DMAMUX driver ties them by dma-offset; this is the Linux
+ * st,stm32-dmamux dma-masters property, read by the DMAMUX model to pass
+ * each channel's request to its stream.
+ */
+&dmamux1 { dma-masters = <&dma1>, <&dma2>; };
+&dmamux2 { dma-masters = <&bdma1>; };
+
+/*
+ * Zephyr names the F7 and H7 SDMMC st,stm32-sdmmc, but the H7 IP is the
+ * SDMMC v2 with its internal DMA (RM0433 chapter 55), not the F7 v1: mark
+ * the H7 instances so the model takes the v2 registers.
+ */
+&sdmmc1 { athrill,stm32h7-sdmmc; };
+&sdmmc2 { athrill,stm32h7-sdmmc; };
+
+/*
+ * Register blocks (athrill-device src/models/register_block.c): what the
+ * start-up code polls (RM0433). Rules read the stored words; offsets from
+ * the block's base.
+ */
+/* RCC: HSI on and ready after reset; HSIRDY follows HSION; CSIRDY,
+ * HSI48RDY, HSERDY and PLL1/2/3RDY follow their ON bits; SWS = SW;
+ * LSERDY = LSEON (BDCR), LSIRDY = LSION (CSR). */
+&rcc {
+	athrill,reset-values = <0x00 0x00000005>;
+	athrill,read-follow = <0x00 0x00 0x00000001 2>,
+			      <0x00 0x00 0x15011080 1>,
+			      <0x70 0x70 0x00000001 1>,
+			      <0x74 0x74 0x00000001 1>;
+	athrill,read-copy = <0x10 0x10 0 3 3>;
+};
+
+/* PWR: ACTVOSRDY (CSR1) and VOSRDY (D3CR) set; USB33RDY follows USB33DEN. */
+&pwr {
+	athrill,read-set = <0x04 0x00002000>, <0x18 0x00002000>;
+	athrill,read-follow = <0x0c 0x0c 0x01000000 2>;
+};
+
+/* FLASH: the bank status registers never busy (SR1, SR2 high half). */
+&flash {
+	athrill,read-clear = <0x10 0xffff0000>, <0x90 0xffff0000>;
+};
+
+/* RTC: RSF set; INITF follows INIT (ICSR). */
+&rtc {
+	athrill,read-set = <0x0c 0x00000020>;
+	athrill,read-follow = <0x0c 0x0c 0x00000080 (-1)>;
+};
+
+/* ADC1/2 and ADC3 (the rules on the first ADC of each block): ADRDY
+ * follows ADEN; EOC and EOS follow ADSTART; ADCAL and ADDIS read done;
+ * DR reads 0 (a low board-ID voltage: the baseline board revision). */
+&adc12_common {
+	athrill,read-follow = <0x00 0x08 0x00000001 0>,
+			      <0x00 0x08 0x00000004 0>,
+			      <0x00 0x08 0x00000004 1>;
+	athrill,read-clear = <0x08 0x80000002>, <0x40 0xffffffff>;
+};
+&adc3_common {
+	athrill,read-follow = <0x00 0x08 0x00000001 0>,
+			      <0x00 0x08 0x00000004 0>,
+			      <0x00 0x08 0x00000004 1>;
+	athrill,read-clear = <0x08 0x80000002>, <0x40 0xffffffff>;
+};
+
+/* RNG: DRDY set; DR a fixed sequence of numbers. */
+&rng {
+	athrill,read-set = <0x04 0x00000001>;
+	athrill,read-random = <0x08>;
+};
+
+/* USB OTG FS: GRSTCTL core and FIFO resets complete, AHB idle. */
+&usbotg_fs {
+	athrill,read-clear = <0x10 0x00000031>;
+	athrill,read-set = <0x10 0x80000000>;
+};
+
+/* FDCAN1 (with the shared message RAM, see the board) and FDCAN2, BDMA:
+ * keep what is written. */
+&fdcan1 { compatible = "athrill,register-block", "st,stm32h7-fdcan"; };
+&fdcan2 { compatible = "athrill,register-block", "st,stm32h7-fdcan"; };
+&bdma1 { compatible = "athrill,register-block", "st,stm32-bdma"; };
+
+/ {
+	soc {
+		/* AXI interconnect target 7 (GPV): keeps what is written. */
+		axi_target7: axi-target@51008000 {
+			compatible = "athrill,register-block";
+			reg = <0x51008000 0x400>;
+		};
+
+		/* DBGMCU IDCODE: REV_ID 0x2003 (revision V), DEV_ID 0x450 (H742/743). */
+		dbgmcu: debug@5c001000 {
+			compatible = "athrill,register-block";
+			reg = <0x5c001000 0x1000>;
+			athrill,reset-values = <0x00 0x20030450>;
+		};
+
+		/* System memory: the 96-bit unique ID ("ATHRILL H743") and the flash
+		 * size (2048 KiB, at 0x1ff1e880). */
+		system_memory: system-memory@1ff1e800 {
+			compatible = "athrill,register-block";
+			reg = <0x1ff1e800 0x100>;
+			athrill,reset-values = <0x00 0x52485441>, <0x04 0x204c4c49>,
+					       <0x08 0x33343748>, <0x80 0x00000800>;
+		};
+	};
+};
+
+/*
+ * The NVIC's external interrupt lines (STM32H743: 150, the value the target
+ * used to hard-code);
+ * the Zephyr DTSI has the priority bits but not the line count (Zephyr takes
+ * it from Kconfig). The target sizes its NVIC, and ICTR, from this.
+ */
+&nvic {
+	athrill,num-irqs = <150>;
+};
+

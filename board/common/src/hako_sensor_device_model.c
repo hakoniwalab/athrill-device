@@ -1,6 +1,7 @@
 /* Copyright 2026 Hakoniwa Laboratory; SPDX-License-Identifier: MIT */
 #include "athrill_device_if.h"
 #include "hako_sensor_device.h"
+#include "hako_sensor_registers_model.h"
 
 #ifndef ATHRILL_HAKONIWA_PASSIVE
 #include "hako_sensor_device_link.h"
@@ -464,8 +465,10 @@ static const AthrillDeviceModelOps model_ops = {
 };
 
 static const char *const compatibles[] = { "hakoniwa,sensor-device" };
+static const char *const register_compatibles[] = { "hakoniwa,sensor-registers" };
 static const AthrillDeviceModelRegistration registrations[] = {
-	{compatibles, 1U, &model_ops}
+	{compatibles, 1U, &model_ops},
+	{register_compatibles, 1U, &hako_sensor_registers_model_ops}
 };
 
 #if defined(_WIN32)
@@ -477,5 +480,5 @@ static const AthrillDeviceModelRegistration registrations[] = {
 ATHRILL_PLUGIN_EXPORT const AthrillDevicePlugin athrill_device_plugin_v1 = {
 	ATHRILL_DEVICE_PLUGIN_MAGIC, ATHRILL_DEVICE_ABI_MAJOR,
 	ATHRILL_DEVICE_ABI_MINOR, sizeof(AthrillDevicePlugin),
-	"hakoniwa-sensor-device", "2", registrations, 1U
+	"hakoniwa-sensor-device", "2", registrations, 2U
 };

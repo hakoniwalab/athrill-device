@@ -7,10 +7,18 @@ The graph is validated and built once at startup, so Devicetree is not parsed
 in the instruction loop.
 
 Every board is built only from its DTB; no target builds a board in C code.
-The STM32 target runs Pixhawk 4 (`boards/pixhawk4/`) and Pixhawk 6C
-(`boards/pixhawk6c/`), and the RISC-V target runs Erbium (`boards/erbium/`).
-Every peripheral of those boards is an athrill-device model; the targets keep
-only the CPU's architectural devices (section 4).
+The STM32 target runs Pixhawk 4 (`boards/pixhawk4/`), Pixhawk 6C
+(`boards/pixhawk6c/`), NUCLEO-F767ZI (`boards/nucleo-f767zi/`) and
+NUCLEO-H743ZI (`boards/nucleo-h743zi/`), and the RISC-V target runs Erbium
+(`boards/erbium/`). Every peripheral of those boards is an athrill-device
+model; the targets keep only the CPU's architectural devices (section 4).
+
+The STM32 boards share Athrill's per-family facts (start-up read rules of the
+register blocks, the NVIC line count) in `boards/stm32-athrill/stm32f7-athrill.dtsi`
+and `stm32h7-athrill.dtsi`. The NUCLEO boards include Zephyr's own board DTS
+unchanged, so a Zephyr application built for that board runs on the board
+Athrill builds from the same description; peripherals without a model are
+switched off in the Athrill layer (see each board README).
 
 This guide uses Pixhawk 6C as the running example. Its files in
 `boards/pixhawk6c/` are the result of the steps below and can be compared
@@ -173,16 +181,25 @@ not board interfaces.
 
 | Kind | Registered compatible strings |
 | --- | --- |
-| Board and SoC roots (structural) | `holybro,pixhawk4`; `holybro,pixhawk6c`; `openhwgroup,erbium`; `st,stm32f765`; `st,stm32f7`; `st,stm32h743`; `st,stm32h7` |
-| Structural nodes | `simple-bus`; `simple-mfd`; `syscon`; `fixed-clock`; `zephyr,memory-region`; `zephyr,memory-attr`; `mmio-sram`; `st,stm32f7-pinctrl`; `st,stm32-pinctrl`; `st,stm32-reset`; `st,stm32-rcc`; `st,stm32-rcc-rctl`; `st,stm32-nv-flash`; `soc-nv-flash`; `st,stm32-nvm-otp`; `fixed-layout`; `usb-nop-xceiv`; `st,stm32-smbus`; `st,stm32-pwm` |
+| Board and SoC roots (structural) | `holybro,pixhawk4`; `holybro,pixhawk6c`; `st,stm32f767zi-nucleo`; `st,stm32h743zi-nucleo`; `openhwgroup,erbium`; `st,stm32f765`; `st,stm32f767`; `st,stm32f7`; `st,stm32h743`; `st,stm32h7` |
+| Structural nodes | `simple-bus`; `simple-mfd`; `syscon`; `fixed-clock`; `zephyr,memory-region`; `zephyr,memory-attr`; `mmio-sram`; `st,stm32f7-pinctrl`; `st,stm32-pinctrl`; `st,stm32-reset`; `st,stm32-rcc`; `st,stm32-rcc-rctl`; `st,stm32-nv-flash`; `soc-nv-flash`; `st,stm32-nvm-otp`; `fixed-layout`; `usb-nop-xceiv`; `st,stm32-smbus`; `st,stm32-pwm`; Zephyr's description-only nodes `zephyr,mapped-partition`; `fixed-partitions`; `gpio-leds`; `pwm-leds`; `gpio-keys`; `arduino-header-r3`; `st,stm32-hse-clock`; `st,stm32fx-pll-clock`; `st,stm32h7-pll-clock`; `st,stm32-vref`; `st,stm32-vbat`; `st,stm32-temp-cal` |
 | STM32 on-chip models | `st,stm32-gpio`; `st,stm32-exti`; `st,stm32f7-syscfg`; `st,stm32h7-syscfg`; `st,stm32-dma-v1`; `st,stm32-dmamux`; `st,stm32-spi-fifo`; `st,stm32-spi`; `st,stm32h7-spi`; `st,stm32-i2c-v2`; `st,stm32-timers`; `st,stm32-usart`; `st,stm32-uart`; `st,stm32-sdmmc` |
 | Register blocks (start-up registers whose read rules are in the DTS) | `athrill,register-block`; `st,stm32f4-rcc`; `st,stm32h7-rcc`; `st,stm32h7-pwr`; `st,stm32-flash-controller`; `st,stm32f7-flash-controller`; `st,stm32h7-flash-controller`; `zephyr,flash-controller`; `st,stm32-rtc`; `st,stm32-adc`; `st,stm32f4-adc`; `st,stm32-rng`; `zephyr,entropy`; `st,stm32-otgfs`; `st,stm32-watchdog`; `zephyr,crc`; `openhwgroup,erbium-mram-controller` |
 | RISC-V (Erbium) on-chip models | `riscv,machine-timer`; `openhwgroup,shakti-uart-v1` |
 | Off-chip chip models | `invensense,icm20689`; `invensense,icm42688`; `invensense,icm4268x`; `bosch,bma280` (BMI055 accelerometer); `bosch,bmg160` (BMI055 gyroscope); `infineon,fm25xxx`; `ramtron,fm25v02a`; `isentek,ist8310`; `meas,ms5611`; `u-blox,m8`; `zephyr,sdmmc-disk` |
 | Value sources and sinks | `athrill,bench-sensor-source`; `athrill,pwm-actuator-map` |
-| Plugin (not built in) | `hakoniwa,sensor-device`, from the `board/common/` library (`libhako_sensor_device`) |
+| Plugin (not built in) | `hakoniwa,sensor-device` (STM32 boards) and `hakoniwa,sensor-registers` (Erbium), from the `board/common/` library (`libhako_sensor_device`) |
 | STM32 target-owned architectural nodes | `arm,cortex-m7`; `arm,v7m-nvic`; `arm,armv7m-systick`; `arm,armv7m-mpu`; `arm,armv7m-dwt`; `arm,dtcm` |
 | RISC-V target-owned architectural nodes | `riscv`; `riscv,cpu-intc`; `sifive,plic-1.0.0` |
+
+An enabled node whose own compatible has no model can still be kept in two
+ways, both visible in the DTS. Put `athrill,register-block` first in its
+`compatible` list and give its start-up read rules, as the Athrill layers do
+for `st,stm32-lpuart`, `st,stm32-bxcan`, `st,stm32h7-fdcan` and `st,stm32-bdma`;
+or, for a node without registers of its own, add the empty property
+`athrill,structural`. Otherwise switch it off with `status = "disabled"`; an
+enabled node that matches nothing stops the start-up with
+`DEVICE_TREE_ERROR code=unmodelled`.
 
 ### Add a missing built-in chip model
 
@@ -262,6 +279,9 @@ DEVICE_CONFIG_STM32_ACTUATOR_FILE actuators.txt
 On STM32, `DEVICE_CONFIG_STM32_BOARD` selects only the SoC profile: `fmu-v5`
 for STM32F7 and `fmu-v6c` for STM32H7. The devices and wiring come from the
 DTB. Pixhawk 6C uses `fmu-v6c` with `boards/pixhawk6c/pixhawk6c.dtb`.
+The NUCLEO boards run Zephyr applications without this key; their complete
+`device_config.txt` and memory map are written by athrill-target-stm32
+`examples/zephyr/run.sh`.
 
 A Hakoniwa run uses the `-hakoniwa` DTB, the plugin mapping from section 4,
 and the `HAKO_SENSOR_DEVICE_*` keys described in this repository's
@@ -273,11 +293,14 @@ and size. The checked-in blobs produce:
 
 | DTB | Startup line |
 | --- | --- |
-| `boards/pixhawk4/pixhawk4.dtb` | `DEVICE_TREE sha256=12a90e39245c4066bf50eab62d3a187eb59d3ddb9cf769650adda25cdf87ec3f size=26059` |
-| `boards/pixhawk4/pixhawk4-hakoniwa.dtb` | `DEVICE_TREE sha256=dd98f4513752892e7040bd74c79f4d10052ae4c7f64001971603cdb91f6d6e32 size=26148` |
-| `boards/pixhawk6c/pixhawk6c.dtb` | `DEVICE_TREE sha256=937d2eccc787e68d39fddba085c29d9adf69151e269ab87104a9ac3232d13dd8 size=31246` |
-| `boards/pixhawk6c/pixhawk6c-hakoniwa.dtb` | `DEVICE_TREE sha256=8a54728ab89e625569035fe4bb604c61d6cc233ad3e4f90ef76a7b64abf2aa27 size=31359` |
+| `boards/pixhawk4/pixhawk4.dtb` | `DEVICE_TREE sha256=234cbb779e476eb3f614f365df8e2262dd33af91118fa812d49efab9918d6089 size=26092` |
+| `boards/pixhawk4/pixhawk4-hakoniwa.dtb` | `DEVICE_TREE sha256=7627a4f12a4a2b84f937811736d2d2ec9abc4ac4c032ab9191eeed4506cb84c2 size=26181` |
+| `boards/pixhawk6c/pixhawk6c.dtb` | `DEVICE_TREE sha256=6dbeeac9caf225be3f87ac340430124831d63557d7783bea390f5147e5079b2d size=31279` |
+| `boards/pixhawk6c/pixhawk6c-hakoniwa.dtb` | `DEVICE_TREE sha256=bb8dd3a9ed85c731434949eddebadec51a972c28693ad89be61bd31ea8837dfa size=31392` |
+| `boards/nucleo-f767zi/nucleo-f767zi.dtb` | `DEVICE_TREE sha256=6a72e8dccf8e54f2c65f53beaa706622d7834a437920e77f0e8fa962ef6474e3 size=29491` |
+| `boards/nucleo-h743zi/nucleo-h743zi.dtb` | `DEVICE_TREE sha256=f14668b555edd421fe21b99294b854a47c676fd7d19c1f7730de2102b6f10c0f size=34742` |
 | `boards/erbium/erbium.dtb` | `DEVICE_TREE sha256=74d0308a9d6ded43a601f10e6b6be893b77acb5bee4a89259b111a15ee1afda8 size=1969` |
+| `boards/erbium/erbium-hakoniwa.dtb` | `DEVICE_TREE sha256=1f27925e82d2a2441860445af2747aff41544a94dd7376e30305f16dcbd8176f size=2097` |
 
 Each present host-only value is then logged as
 `DEVICE_TREE_HOST sha256=... key=... value=...`, followed by one stable

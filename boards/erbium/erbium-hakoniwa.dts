@@ -1,0 +1,27 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Erbium with the Hakoniwa sensor device: the base board and the device's
+ * registers (board/common/include/hako_sensor_device_regs.h), which PX4's
+ * driver hako_sensor_device reads (board/erbium/px4). Erbium hardware has no
+ * such device; it is Athrill's, at 0x20000000 with PLIC source 5.
+ *
+ * The model is a plugin (board/common, libhako_sensor_device): map it with
+ *   DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa%2Csensor-registers=<library>
+ * The Hakoniwa link, the in-process aircraft, the test vehicle and the trace
+ * are host values of the device configuration (HAKO_SENSOR_DEVICE_*,
+ * HAKO_AIRCRAFT_*).
+ */
+
+#include "erbium.dts"
+
+/ {
+	soc {
+		hako_sensor: sensor@20000000 {
+			compatible = "hakoniwa,sensor-registers";
+			reg = <0x0 0x20000000 0x0 0x1000>;
+			interrupt-parent = <&plic>;
+			interrupts = <5 1>;
+		};
+	};
+};

@@ -619,10 +619,10 @@ static void test_receive(void)
 	(void)stm32_uart_console_input('h');
 	(void)stm32_uart_console_input('i');
 	wr(USART3, BRR, 469U);
-	wr(USART3, CR1, UE | RE);
-	CHECK_EQ("REACK follows RE", rd(USART3, ISR) & (1U << 22), 1U << 22);
-	CHECK_EQ("no reader (RXNEIE, DMAR): no input", rd(USART3, ISR) & RXNE, 0U);
+	wr(USART3, CR1, UE);
+	CHECK_EQ("RE clear: no input", rd(USART3, ISR) & RXNE, 0U);
 	wr(USART3, CR1, UE | RE | RXNEIE);
+	CHECK_EQ("REACK follows RE", rd(USART3, ISR) & (1U << 22), 1U << 22);
 	until = tick();
 	CHECK_EQ("a reader: the first character", rd(USART3, ISR) & RXNE, RXNE);
 	CHECK_EQ("RXNE interrupt", raised[39], 1U);
@@ -838,13 +838,10 @@ static void test_delayed_rx_file(void)
 }
 
 /*
- * Known front-end defects, kept as a CTest WILL_FAIL case:
- * - RM0410 34.5.3 and RM0433 48.5.6 set RXNE/RXFNE on reception independent
- *   of RXNEIE, so a polling driver needs no interrupt enable.
- * - RM0410 34.5.3/34.8.8 and RM0433 48.5.6/48.8.9 require ORE when a
- *   second character completes while unread data is still in RDR (FIFO off).
+ * RM0410 34.5.3 and RM0433 48.5.6 set RXNE/RXFNE on reception independent of
+ * RXNEIE, so a polling driver needs no interrupt enable.
  */
-static void test_spec_gaps(void)
+static void test_polling_receive(void)
 {
 	const char *path = "test_stm32_uart_poll_rx.txt";
 	FILE *f = fopen(path, "wb");
@@ -862,11 +859,41 @@ static void test_spec_gaps(void)
 		setup_family(path, h7, 19000U);	/* >= 1 frame, ms * 1000 clocks */
 		wr(USART3, BRR, 469U);
 		wr(USART3, CR1, UE | RE); /* polling: RXNEIE deliberately clear */
-		now = FRAME_115200;
+		now = 19000U;
 		CHECK_EQ(h7 ? "H7 polling sets RXFNE" : "F7 polling sets RXNE",
 			rd(USART3, ISR) & RXNE, RXNE);
 		CHECK_EQ(h7 ? "H7 polling reads file byte" : "F7 polling reads file byte",
 			rd(USART3, RDR), 'p');
+
+		/* input before RE is set waits for the receiver */
+		setup_family(NULL, h7, 0U);
+		(void)stm32_uart_console_input('w');
+		wr(USART3, BRR, 469U);
+		wr(USART3, CR1, UE);
+		now = FRAME_115200;
+		CHECK_EQ(h7 ? "H7 no RXFNE with RE clear" : "F7 no RXNE with RE clear",
+			rd(USART3, ISR) & RXNE, 0U);
+		wr(USART3, CR1, UE | RE);
+		(void)tick();
+		CHECK_EQ(h7 ? "H7 waiting input after RE" : "F7 waiting input after RE",
+			rd(USART3, RDR), 'w');
+	}
+	setup(NULL);
+	remove(path);
+}
+
+/*
+ * Known front-end defect, kept as a CTest WILL_FAIL case: RM0410 34.5.3/34.8.8
+ * and RM0433 48.5.6/48.8.9 require ORE when a second character completes while
+ * unread data is still in RDR (FIFO off). The model holds the next character
+ * back until RDR is read instead.
+ */
+static void test_spec_gaps(void)
+{
+	uint32 family;
+
+	for (family = 0U; family < 2U; family++) {
+		std_bool h7 = (family != 0U) ? TRUE : FALSE;
 
 		setup_family(NULL, h7, 0U);
 		(void)stm32_uart_console_input('1');
@@ -885,7 +912,6 @@ static void test_spec_gaps(void)
 			rd(USART3, ISR) & ORE, 0U);
 	}
 	setup(NULL);
-	remove(path);
 }
 
 static void test_transmit_file(void)
@@ -939,6 +965,7 @@ int main(int argc, char **argv)
 	test_transmit_interrupts();
 	test_receive();
 	test_receive_file();
+	test_polling_receive();
 	test_transmit_file();
 	test_console_attachment();
 	test_h7_clock_table();

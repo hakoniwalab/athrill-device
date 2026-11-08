@@ -394,8 +394,17 @@ static const char *const structural_compatibles[] = {
 	"st,stm32-rcc", "st,stm32-rcc-rctl",
 	"st,stm32-nv-flash", "soc-nv-flash", "st,stm32-nvm-otp",
 	"fixed-layout", "usb-nop-xceiv", "st,stm32-smbus",
+	/* Zephyr board descriptions without registers of their own: flash
+	 * partitions, LEDs and buttons on GPIOs or PWM, the Arduino header, the
+	 * clock sources and PLLs (RCC registers), the ADC's internal channels */
+	"zephyr,mapped-partition", "fixed-partitions", "gpio-leds", "pwm-leds",
+	"gpio-keys", "arduino-header-r3", "st,stm32-hse-clock",
+	"st,stm32fx-pll-clock", "st,stm32h7-pll-clock", "st,stm32-vref",
+	"st,stm32-vbat", "st,stm32-temp-cal",
+	/* the nucleo boards (Zephyr's board files) */
+	"st,stm32f767zi-nucleo", "st,stm32h743zi-nucleo",
 	/* the SoC nodes: their blocks are their children's models */
-	"st,stm32f765", "st,stm32f7", "st,stm32h743", "st,stm32h7"
+	"st,stm32f765", "st,stm32f767", "st,stm32f7", "st,stm32h743", "st,stm32h7"
 };
 
 /* FMUv5 registrations are deliberately per model; there is no catch-all. */
@@ -3006,6 +3015,43 @@ sint32 athrill_device_gpio_level(AthrillDeviceRuntime *runtime,
 }
 
 /* ABI 1.17: a character of the host's console input to its listener. */
+sint32 athrill_device_target_node_u32(AthrillDeviceRuntime *runtime,
+                                      const char *compatible, const char *property,
+                                      uint32 index, uint32 *value)
+{
+	uint32 i;
+	if (runtime == NULL || compatible == NULL || property == NULL || value == NULL) {
+		return -1;
+	}
+	for (i = 0U; i < runtime->node_count; i++) {
+		const NodeRecord *node = &runtime->nodes[i];
+		const fdt32_t *cells;
+		const char *list;
+		int length, at;
+		std_bool found = FALSE;
+		if (!node->enabled) {
+			continue;
+		}
+		list = fdt_getprop(runtime->dtb, node->offset, "compatible", &length);
+		if (!string_property_valid(list, length)) {
+			continue;
+		}
+		for (at = 0; at < length && !found; at += (int)strlen(list + at) + 1) {
+			found = (strcmp(list + at, compatible) == 0) ? TRUE : FALSE;
+		}
+		if (!found) {
+			continue;
+		}
+		cells = fdt_getprop(runtime->dtb, node->offset, property, &length);
+		if (cells == NULL || length < 0 || (uint32)length / 4U <= index) {
+			return -1;
+		}
+		*value = fdt32_to_cpu(cells[index]);
+		return 0;
+	}
+	return -1;
+}
+
 sint32 athrill_device_console_input(AthrillDeviceRuntime *runtime, uint32 channel,
 	uint8 data)
 {
