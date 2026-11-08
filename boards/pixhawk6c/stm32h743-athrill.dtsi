@@ -163,3 +163,14 @@
 		};
 	};
 };
+
+/*
+ * The NVIC's external interrupt lines (STM32H743: 150, the value the target
+ * used to hard-code);
+ * the Zephyr DTSI has the priority bits but not the line count (Zephyr takes
+ * it from Kconfig). The target sizes its NVIC, and ICTR, from this.
+ */
+&nvic {
+	athrill,num-irqs = <150>;
+};
+

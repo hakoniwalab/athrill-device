@@ -566,5 +566,11 @@ sint32 athrill_device_gpio_level(AthrillDeviceRuntime *runtime,
  * is the console) to its listener; -1 when there is none or it is full. */
 sint32 athrill_device_console_input(AthrillDeviceRuntime *runtime, uint32 channel,
                                     uint8 data);
+/* A 32-bit cell of a property of the first enabled node with the
+ * compatible (for a target's own nodes, e.g. the NVIC's line count);
+ * -1 when there is no such node, property or cell. */
+sint32 athrill_device_target_node_u32(AthrillDeviceRuntime *runtime,
+                                      const char *compatible, const char *property,
+                                      uint32 index, uint32 *value);
 
 #endif /* ATHRILL_DEVICE_IF_H */
