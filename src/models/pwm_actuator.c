@@ -43,7 +43,6 @@ static sint32 actuator_create(const AthrillDeviceCreateArgs *args,
 	uint64 frequency;
 	const char *trace_path;
 	if (actuator == NULL || args->target_ops->time_frequency_hz == NULL ||
-	    args->target_ops->actuator_output == NULL ||
 	    (frequency = args->target_ops->time_frequency_hz(args->target)) < 1000000U) {
 		free(actuator);
 		return -1;
@@ -141,12 +140,12 @@ static sint32 actuator_tick(void *instance, uint64 now,
 	if (!changed) {
 		return 0;
 	}
+	/* the value-source takes the outputs; without one they are only traced */
 	if (actuator->sink.ops != NULL) {
 		return actuator->sink.ops->actuator_output(actuator->sink.instance,
 			actuator->commands, actuator->output_count);
 	}
-	return actuator->target_ops->actuator_output(actuator->target,
-		actuator->commands, actuator->output_count);
+	return 0;
 }
 
 const AthrillDeviceModelOps athrill_device_pwm_actuator_model = {

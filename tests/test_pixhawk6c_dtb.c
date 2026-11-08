@@ -310,7 +310,9 @@ static void check_common(const void *blob, int hakoniwa)
 	}
 	expect_status(blob, "/sensor-device", hakoniwa ? "okay" : "disabled");
 	for (i = 0U; i < sizeof(value_paths) / sizeof(value_paths[0]); i++) {
-		expect_value_source(blob, value_paths[i], sensor_phandle, hakoniwa);
+		/* without Hakoniwa: the bench sensor source */
+		expect_value_source(blob, value_paths[i], hakoniwa ? sensor_phandle :
+			fdt_get_phandle(blob, node(blob, "/bench-sensor-source")), 1);
 		if (hakoniwa) {
 			expect_boolean(blob, value_paths[i],
 				"athrill,tick-before-value-source");

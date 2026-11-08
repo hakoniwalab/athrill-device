@@ -27,6 +27,7 @@ PROPERTY_NAMES = [
     "athrill,test-uart-child", "status", "size",
     "int-gpios", "axis-align-x", "pwms", "pwm-names",
     "athrill,stm32h7-timer", "dma-channels", "dma-masters", "dma-requests",
+    "value-source",
 ]
 STRING_BLOCK = strings(*PROPERTY_NAMES)
 STRING_OFFSETS: dict[str, int] = {}
@@ -150,9 +151,14 @@ def main() -> None:
         ], [])]),
     ])
     magnetometer = board([
+        node("bench-sensor-source", [
+            ("compatible", strings("athrill,bench-sensor-source")),
+            ("phandle", be32(9)),
+        ], []),
         bus_controller("i2c", 0x3000, [node("magnetometer@e", [
             ("compatible", strings("isentek,ist8310")),
             ("reg", be32(0x0e)),
+            ("value-source", be32(9)),
         ], [])]),
     ])
     gps = board([

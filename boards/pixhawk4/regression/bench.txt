@@ -52,11 +52,15 @@ sha256 console.norm 3a63ac490233fe8996f0ef022b37f984f6acef4d6ef8897e4a8858c225ed
 # 203499); console.norm and fram.bin are unchanged, every bench check passes,
 # and the PX4 SIH flight checks pass in 3 runs. Tick order: the controllers
 # tick as Devicetree models (DEVICE_TICK) instead of first in the target's list.
+# Tick order re-recorded 2026-11-08 when the bench sensor source became an
+# athrill-device model (#13 step 4-8c): the chips name it as value-source,
+# so they tick after the nodes before it in Devicetree order (the
+# magnetometer, the GPS and the SPI chips move to the end). Every other
+# value above is unchanged.
 tick arm_m_scs
 tick /soc/i2c@40005400
 tick /soc/i2c@40005800
 tick /soc/i2c@40005c00
-tick /soc/i2c@40005c00/magnetometer@e
 tick /soc/interrupt-controller@40013c00
 tick /soc/pin-controller@40020000/gpio@40020000
 tick /soc/pin-controller@40020000/gpio@40020400
@@ -84,11 +88,12 @@ tick /soc/serial@40004c00
 tick /soc/serial@40007800
 tick /soc/serial@40007c00
 tick /soc/serial@40011000
-tick /soc/serial@40011000/gnss
 tick /soc/serial@40011400
 tick /soc/sdmmc@40012c00
-tick /soc/spi@40013000/imu@0
-tick /soc/spi@40013400/pressure@0
 tick /soc/i2c@40006000
 tick /soc/system-config@40013800
+tick /soc/i2c@40005c00/magnetometer@e
+tick /soc/serial@40011000/gnss
+tick /soc/spi@40013000/imu@0
+tick /soc/spi@40013400/pressure@0
 tick /pwm-actuator-map

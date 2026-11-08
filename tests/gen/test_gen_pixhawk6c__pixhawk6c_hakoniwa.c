@@ -432,6 +432,7 @@ static const char *const target_compatibles[] = {
 	"arm,dtcm",
 	"arm,itcm",
 	"arm,v7m-nvic",
+	"athrill,bench-sensor-source",
 	"athrill,pwm-actuator-map",
 	"athrill,register-block",
 	"bosch,bma280",
@@ -1559,7 +1560,7 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__root__ADV_DT_002_T1(void)
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 83U);
+	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 84U);
 	CHECK(count_model_path(captured_stderr, "/") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000000") == 1U);
@@ -1641,6 +1642,7 @@ static int case_pixhawk6c__pixhawk6c_hakoniwa__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/memory@30020000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/memory@38000000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/memory@30040000") == 1U);
+	CHECK(count_model_path(captured_stderr, "/bench-sensor-source") == 1U);
 	CHECK(count_model_path(captured_stderr, "/sensor-device") == 1U);
 	CHECK(count_model_path(captured_stderr, "/pwm-actuator-map") == 1U);
 	destroy_board();

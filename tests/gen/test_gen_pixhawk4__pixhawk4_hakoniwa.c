@@ -431,6 +431,7 @@ static const char *const target_compatibles[] = {
 	"arm,cortex-m7",
 	"arm,dtcm",
 	"arm,v7m-nvic",
+	"athrill,bench-sensor-source",
 	"athrill,pwm-actuator-map",
 	"athrill,register-block",
 	"fixed-layout",
@@ -1592,7 +1593,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__root__ADV_DT_002_T1(void)
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 72U);
+	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 73U);
 	CHECK(count_model_path(captured_stderr, "/") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000000") == 1U);
@@ -1663,6 +1664,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/memory-placeholder@90000000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/memory@20000000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/memory@20020000") == 1U);
+	CHECK(count_model_path(captured_stderr, "/bench-sensor-source") == 1U);
 	CHECK(count_model_path(captured_stderr, "/sensor-device") == 1U);
 	CHECK(count_model_path(captured_stderr, "/pwm-actuator-map") == 1U);
 	destroy_board();

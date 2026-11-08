@@ -33,6 +33,7 @@ add_library(athrill_device STATIC
   src/models/sdcard.c
   src/models/sdcard_card.c
   src/models/register_block.c
+  src/models/bench_sensor.c
   src/models/stm32_i2c.c
   src/models/stm32_spi.c
   src/models/stm32_spi_bindings.c
