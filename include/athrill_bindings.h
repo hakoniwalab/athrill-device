@@ -92,7 +92,7 @@ typedef struct AthrillBindings AthrillBindings;
 /* The bindings set whose `compatible` list contains `compatible`; `soc`
  * (e.g. "st,stm32h7") selects between sets sharing a compatible and may be
  * NULL when the compatible is unique. Directory: ATHRILL_DEVICE_BINDINGS_DIR,
- * else the build-time default. NULL with a message in `error` otherwise. */
+ * else "bindings" next to the executable, else the build-time default. NULL with a message in `error` otherwise. */
 const AthrillBindings *athrill_bindings_for(const char *compatible, const char *soc,
                                             char *error, uint32 error_size);
 

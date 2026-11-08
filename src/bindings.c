@@ -10,6 +10,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>
+#elif defined(__linux__)
+#include <unistd.h>
+#endif
 
 #ifndef ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR
 #define ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR "spec/bindings"
@@ -81,8 +87,47 @@ static uint32 file_format(const char *path)
 	return format;
 }
 
+/*
+ * "bindings" next to the running executable, as a release ships them (the
+ * tarball's athrill3 and bindings/); FALSE when there is none.
+ */
+static std_bool executable_bindings_dir(char *dir, size_t size)
+{
+	char exe[400];
+	char *slash;
+	struct stat st;
+#if defined(__APPLE__)
+	uint32_t length = (uint32_t)sizeof(exe);
+	if (_NSGetExecutablePath(exe, &length) != 0) {
+		return FALSE;
+	}
+#elif defined(__linux__)
+	ssize_t length = readlink("/proc/self/exe", exe, sizeof(exe) - 1U);
+	if (length <= 0) {
+		return FALSE;
+	}
+	exe[length] = '\0';
+#else
+	return FALSE;
+#endif
+	slash = strrchr(exe, '/');
+	if (slash == NULL) {
+		return FALSE;
+	}
+	*slash = '\0';
+	if ((size_t)snprintf(dir, size, "%s/bindings", exe) >= size) {
+		return FALSE;
+	}
+	return (stat(dir, &st) == 0 && S_ISDIR(st.st_mode)) ? TRUE : FALSE;
+}
+
+/*
+ * The bindings directory: ATHRILL_DEVICE_BINDINGS_DIR, else "bindings" next to
+ * the executable, else the build-time default (the source tree's).
+ */
 static void load_all(void)
 {
+	static char exe_dir[420];
 	const char *dir = getenv("ATHRILL_DEVICE_BINDINGS_DIR");
 	DIR *d;
 	struct dirent *e;
@@ -91,7 +136,7 @@ static void load_all(void)
 	}
 	loaded_done = TRUE;
 	if (dir == NULL || dir[0] == '\0') {
-		dir = ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR;
+		dir = executable_bindings_dir(exe_dir, sizeof(exe_dir)) ? exe_dir : ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR;
 	}
 	d = opendir(dir);
 	if (d == NULL) {
@@ -100,7 +145,7 @@ static void load_all(void)
 	}
 	while ((e = readdir(d)) != NULL) {
 		size_t n = strlen(e->d_name);
-		char path[600];
+		char path[1024];
 		uint32 format, i;
 		AthrillBindings *b = NULL;
 		if (n < 9U || strcmp(e->d_name + n - 9U, "_gen.yaml") != 0) {

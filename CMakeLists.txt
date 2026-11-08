@@ -66,12 +66,22 @@ target_include_directories(athrill_device PRIVATE targets/stm32/config)
 # Bindings (spec/bindings/*_gen.yaml) are read at start-up with libyaml.
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(YAML REQUIRED IMPORTED_TARGET yaml-0.1)
+# A release links libyaml statically, so its athrill3 runs without libyaml installed.
+option(ATHRILL_DEVICE_STATIC_YAML "Link libyaml statically" OFF)
+if(ATHRILL_DEVICE_STATIC_YAML)
+  find_library(ATHRILL_DEVICE_YAML_STATIC NAMES libyaml.a HINTS ${YAML_LIBRARY_DIRS} REQUIRED)
+endif()
 set(ATHRILL_DEVICE_BINDINGS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/spec/bindings" CACHE PATH
   "Default directory of the generated bindings (override at run time with ATHRILL_DEVICE_BINDINGS_DIR)")
 target_compile_definitions(athrill_device PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
   ATHRILL_DEVICE_BINDINGS_DEFAULT_DIR="${ATHRILL_DEVICE_BINDINGS_DIR}")
 find_package(Threads REQUIRED)
-target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m PkgConfig::YAML Threads::Threads)
+if(ATHRILL_DEVICE_STATIC_YAML)
+  target_include_directories(athrill_device PRIVATE ${YAML_INCLUDE_DIRS})
+  target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m ${ATHRILL_DEVICE_YAML_STATIC} Threads::Threads)
+else()
+  target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m PkgConfig::YAML Threads::Threads)
+endif()
 
 # Dependency-free reference plugin used by board/boot checks.  Production
 # Hakoniwa and in-process variants are built from board/common and use the
