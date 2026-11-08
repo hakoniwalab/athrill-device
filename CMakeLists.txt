@@ -77,7 +77,9 @@ target_link_libraries(athrill_device PUBLIC ${CMAKE_DL_LIBS} m PkgConfig::YAML T
 # Hakoniwa and in-process variants are built from board/common and use the
 # same model implementation with their respective link backends.
 add_library(athrill_hakoniwa_sensor MODULE
-  board/common/src/hako_sensor_device_model.c)
+  board/common/src/hako_sensor_device_model.c
+  board/common/src/hako_sensor_registers_model.c
+  board/common/src/hako_sensor_device.c)
 target_include_directories(athrill_hakoniwa_sensor PRIVATE
   include board/common/src board/common/include)
 target_compile_definitions(athrill_hakoniwa_sensor PRIVATE
@@ -194,6 +196,13 @@ if(BUILD_TESTING)
   target_include_directories(test_shakti_uart PRIVATE src/models)
   target_link_libraries(test_shakti_uart PRIVATE athrill_device)
   add_test(NAME shakti-uart COMMAND test_shakti_uart)
+  add_executable(test_hako_sensor_registers tests/test_hako_sensor_registers.c
+    board/common/src/hako_sensor_registers_model.c board/common/src/hako_sensor_device.c)
+  target_compile_definitions(test_hako_sensor_registers PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES ATHRILL_HAKONIWA_PASSIVE)
+  target_include_directories(test_hako_sensor_registers PRIVATE
+    include board/common/src board/common/include tests)
+  add_test(NAME hako-sensor-registers COMMAND test_hako_sensor_registers)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"

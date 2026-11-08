@@ -504,10 +504,16 @@ static int raw_build_board(const char *dtb_path)
 	options.host_values = &host;
 	options.host_value_count = 1U;
 
-	AthrillDevicePluginPath plugin = {"hakoniwa,sensor-device", plugin_path};
+	AthrillDevicePluginPath plugins[] = {
+		{"hakoniwa,sensor-device", NULL},
+	};
 	if (plugin_path != NULL) {
-		options.plugins = &plugin;
-		options.plugin_count = 1U;
+		uint32 plugin_index;
+		for (plugin_index = 0U; plugin_index < sizeof(plugins) / sizeof(plugins[0]); plugin_index++) {
+			plugins[plugin_index].library_path = plugin_path;
+		}
+		options.plugins = plugins;
+		options.plugin_count = sizeof(plugins) / sizeof(plugins[0]);
 	}
 
 	return athrill_device_build(&options, &target_ops, &target, &runtime);
