@@ -424,6 +424,7 @@ static const char *const register_block_compatibles[] = {
 };
 /* RISC-V (Erbium) */
 static const char *const riscv_mtimer_compatibles[] = { "riscv,machine-timer" };
+static const char *const shakti_uart_compatibles[] = { "openhwgroup,shakti-uart-v1" };
 static const char *const icm20689_compatibles[] = { "invensense,icm20689" };
 static const char *const fm25v02_compatibles[] = { "infineon,fm25xxx", "ramtron,fm25v02a" };
 static const char *const ist8310_compatibles[] = { "isentek,ist8310" };
@@ -461,6 +462,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32_sdmmc_compatibles, 1U, &athrill_device_stm32_sdmmc_model },
 	{ register_block_compatibles, sizeof(register_block_compatibles) / sizeof(register_block_compatibles[0]), &athrill_device_register_block_model },
 	{ riscv_mtimer_compatibles, 1U, &athrill_device_riscv_mtimer_model },
+	{ shakti_uart_compatibles, 1U, &athrill_device_shakti_uart_model },
 	{ icm20689_compatibles, 1U, &athrill_device_icm20689_model },
 	{ fm25v02_compatibles, 2U, &athrill_device_fm25v02_model },
 	{ ist8310_compatibles, 1U, &athrill_device_ist8310_model },

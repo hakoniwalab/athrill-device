@@ -19,3 +19,10 @@
 		zephyr,console = &uart0;
 	};
 };
+
+/* the console (Zephyr's board file: 115200 baud, 400 MHz UART clock) */
+&uart0 {
+	status = "okay";
+	clock-frequency = <400000000>;
+	current-speed = <115200>;
+};

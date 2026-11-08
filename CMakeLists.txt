@@ -34,6 +34,8 @@ add_library(athrill_device STATIC
   src/models/sdcard_card.c
   src/models/register_block.c
   src/models/riscv_mtimer.c
+  src/models/shakti_uart.c
+  src/models/shakti_uart_tcp.c
   src/models/bench_sensor.c
   src/models/stm32_i2c.c
   src/models/stm32_spi.c
@@ -187,6 +189,11 @@ if(BUILD_TESTING)
   target_include_directories(test_riscv_mtimer PRIVATE src/models)
   target_link_libraries(test_riscv_mtimer PRIVATE athrill_device)
   add_test(NAME riscv-mtimer COMMAND test_riscv_mtimer)
+  add_executable(test_shakti_uart tests/test_shakti_uart.c)
+  target_compile_definitions(test_shakti_uart PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_shakti_uart PRIVATE src/models)
+  target_link_libraries(test_shakti_uart PRIVATE athrill_device)
+  add_test(NAME shakti-uart COMMAND test_shakti_uart)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
