@@ -368,10 +368,6 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 		noop_reset, noop_tick \
 	}
 
-NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
-NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter", "stm32f7-crc");
-NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-source");
-NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
 
 static const char *const structural_compatibles[] = {
 	"holybro,pixhawk4", "holybro,pixhawk6c",
@@ -380,11 +376,12 @@ static const char *const structural_compatibles[] = {
 	"st,stm32f7-pinctrl", "st,stm32-pinctrl", "st,stm32-reset",
 	"st,stm32-rcc", "st,stm32-rcc-rctl",
 	"st,stm32-nv-flash", "soc-nv-flash", "st,stm32-nvm-otp",
-	"fixed-layout", "usb-nop-xceiv", "st,stm32-smbus"
+	"fixed-layout", "usb-nop-xceiv", "st,stm32-smbus",
+	/* the SoC nodes: their blocks are their children's models */
+	"st,stm32f765", "st,stm32f7", "st,stm32h743", "st,stm32h7"
 };
 
 /* FMUv5 registrations are deliberately per model; there is no catch-all. */
-static const char *const stm32f7_soc_compatibles[] = { "st,stm32f765", "st,stm32f7" };
 static const char *const stm32f7_gpio_compatibles[] = { "st,stm32-gpio" };
 static const char *const stm32f7_exti_compatibles[] = { "st,stm32-exti" };
 static const char *const stm32_syscfg_compatibles[] = {
@@ -405,9 +402,8 @@ static const char *const register_block_compatibles[] = {
 	"st,stm32h7-pwr", "st,stm32-flash-controller", "st,stm32f7-flash-controller",
 	"st,stm32h7-flash-controller", "zephyr,flash-controller",
 	"st,stm32-rtc", "st,stm32-adc", "st,stm32f4-adc", "st,stm32-rng",
-	"zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog"
+	"zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog", "zephyr,crc"
 };
-static const char *const stm32f7_crc_compatibles[] = { "zephyr,crc" };
 static const char *const icm20689_compatibles[] = { "invensense,icm20689" };
 static const char *const fm25v02_compatibles[] = { "infineon,fm25xxx", "ramtron,fm25v02a" };
 static const char *const ist8310_compatibles[] = { "isentek,ist8310" };
@@ -416,7 +412,6 @@ static const char *const ublox_m8_compatibles[] = { "u-blox,m8" };
 static const char *const sdcard_compatibles[] = { "zephyr,sdmmc-disk" };
 static const char *const pwm_actuator_compatibles[] = { "athrill,pwm-actuator-map" };
 static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-source" };
-static const char *const stm32h7_soc_compatibles[] = { "st,stm32h743", "st,stm32h7" };
 static const char *const stm32h7_spi_compatibles[] = { "st,stm32h7-spi" };
 static const char *const stm32h7_dmamux_compatibles[] = { "st,stm32-dmamux" };
 static const char *const bmi055_accel_compatibles[] = { "bosch,bma280" };
@@ -434,7 +429,6 @@ static const char *const test_peripheral_compatibles[] = {
 
 static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ structural_compatibles, sizeof(structural_compatibles) / sizeof(structural_compatibles[0]), &structural_model },
-	{ stm32f7_soc_compatibles, 2U, &stm32f7_soc_model },
 	{ stm32f7_gpio_compatibles, 1U, &athrill_device_stm32_gpio_model },
 	{ stm32f7_exti_compatibles, 1U, &athrill_device_stm32_exti_model },
 	{ stm32_syscfg_compatibles, 2U, &athrill_device_stm32_syscfg_model },
@@ -446,7 +440,6 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_uart_compatibles, 2U, &athrill_device_stm32_uart_model },
 	{ stm32_sdmmc_compatibles, 1U, &athrill_device_stm32_sdmmc_model },
 	{ register_block_compatibles, sizeof(register_block_compatibles) / sizeof(register_block_compatibles[0]), &athrill_device_register_block_model },
-	{ stm32f7_crc_compatibles, 1U, &stm32f7_crc_model },
 	{ icm20689_compatibles, 1U, &athrill_device_icm20689_model },
 	{ fm25v02_compatibles, 2U, &athrill_device_fm25v02_model },
 	{ ist8310_compatibles, 1U, &athrill_device_ist8310_model },
@@ -454,8 +447,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ ublox_m8_compatibles, 1U, &athrill_device_ublox_m8_model },
 	{ sdcard_compatibles, 1U, &athrill_device_sdcard_model },
 	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
-	{ bench_sensor_compatibles, 1U, &bench_sensor_model },
-	{ stm32h7_soc_compatibles, 2U, &stm32h7_soc_model },
+	{ bench_sensor_compatibles, 1U, &athrill_device_bench_sensor_model },
 	{ stm32h7_spi_compatibles, 1U, &athrill_device_stm32h7_spi_model },
 	{ stm32h7_dmamux_compatibles, 1U, &athrill_device_stm32_dmamux_model },
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },

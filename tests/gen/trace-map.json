@@ -14,7 +14,7 @@
       "dt_irq_nodes": 30,
       "dt_mmio_nodes": 49,
       "dt_negative_nodes": 1,
-      "dt_nodes": 72,
+      "dt_nodes": 73,
       "gpio_chip_selects": 3,
       "gpio_interrupt_consumers": 1,
       "pwm_entries": 8,
@@ -38,7 +38,7 @@
       "dt_irq_nodes": 30,
       "dt_mmio_nodes": 49,
       "dt_negative_nodes": 1,
-      "dt_nodes": 71,
+      "dt_nodes": 72,
       "gpio_chip_selects": 3,
       "gpio_interrupt_consumers": 1,
       "pwm_entries": 8,
@@ -64,7 +64,7 @@
       "dt_irq_nodes": 34,
       "dt_mmio_nodes": 54,
       "dt_negative_nodes": 1,
-      "dt_nodes": 83,
+      "dt_nodes": 84,
       "gpio_chip_selects": 4,
       "gpio_interrupt_consumers": 3,
       "pwm_entries": 8,
@@ -90,7 +90,7 @@
       "dt_irq_nodes": 34,
       "dt_mmio_nodes": 54,
       "dt_negative_nodes": 1,
-      "dt_nodes": 82,
+      "dt_nodes": 83,
       "gpio_chip_selects": 4,
       "gpio_interrupt_consumers": 3,
       "pwm_entries": 8,
@@ -986,6 +986,7 @@
           "/memory-placeholder@90000000",
           "/memory@20000000",
           "/memory@20020000",
+          "/bench-sensor-source",
           "/sensor-device",
           "/pwm-actuator-map"
         ]
@@ -2744,7 +2745,7 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 26080
+        "dtb_size": 26148
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -4421,6 +4422,7 @@
           "/memory-placeholder@90000000",
           "/memory@20000000",
           "/memory@20020000",
+          "/bench-sensor-source",
           "/pwm-actuator-map"
         ]
       },
@@ -6178,7 +6180,7 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
-        "dtb_size": 25882
+        "dtb_size": 26059
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -7696,6 +7698,7 @@
           "/memory@30020000",
           "/memory@38000000",
           "/memory@30040000",
+          "/bench-sensor-source",
           "/sensor-device",
           "/pwm-actuator-map"
         ]
@@ -9695,7 +9698,7 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 31291
+        "dtb_size": 31359
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -11090,6 +11093,7 @@
           "/memory@30020000",
           "/memory@38000000",
           "/memory@30040000",
+          "/bench-sensor-source",
           "/pwm-actuator-map"
         ]
       },
@@ -13088,7 +13092,7 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
-        "dtb_size": 31037
+        "dtb_size": 31246
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,

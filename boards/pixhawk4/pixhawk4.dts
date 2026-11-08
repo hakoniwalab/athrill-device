@@ -42,6 +42,15 @@
 		};
 	};
 
+	/* The values of the chips, the GPS and the actuator outputs when no
+	 * simulator feeds them: constant, or the bench at Tokyo Station with
+	 * DEVICE_CONFIG_STM32_SENSOR_BENCH 1 (athrill-device
+	 * src/models/bench_sensor.c). The Hakoniwa board file points them at
+	 * the Hakoniwa sensor device instead. */
+	bench_sensor: bench-sensor-source {
+		compatible = "athrill,bench-sensor-source";
+	};
+
 	hakoniwa_sensor: sensor-device {
 		compatible = "hakoniwa,sensor-device";
 		status = "disabled";
@@ -289,3 +298,10 @@
 &timers6 { status = "okay"; };
 &timers8 { status = "okay"; };
 &timers9 { status = "okay"; };
+
+/* Their values: the bench sensor source above. */
+&pwm_actuators { value-source = <&bench_sensor>; };
+&icm20689 { value-source = <&bench_sensor>; };
+&magnetometer { value-source = <&bench_sensor>; };
+&barometer { value-source = <&bench_sensor>; };
+&gps1 { value-source = <&bench_sensor>; };

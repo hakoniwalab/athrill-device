@@ -171,8 +171,6 @@ static void command(Ms5611 *chip, uint8 value)
 		if (chip->source.ops != NULL) {
 			(void)chip->source.ops->sensor_sample(chip->source.instance,
 				&sample);
-		} else if (chip->target_ops->sensor_sample != NULL) {
-			(void)chip->target_ops->sensor_sample(chip->target, &sample);
 		}
 		if (chip->noise && osr < 5U) {
 			if (d1) {

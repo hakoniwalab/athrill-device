@@ -258,10 +258,8 @@ static void measure(UbloxM8 *gps, uint64 clock)
 	time_of(gps, clock, pvt, &itow);
 	put32(&pvt[0], itow);
 	put32(&pvt[12], 50U);
-	fix = ((gps->source.ops != NULL &&
-		gps->source.ops->gps_sample(gps->source.instance, &sample) == 0) ||
-		(gps->source.ops == NULL && gps->target_ops->gps_sample != NULL &&
-		gps->target_ops->gps_sample(gps->target, &sample) == 0)) &&
+	fix = (gps->source.ops != NULL &&
+		gps->source.ops->gps_sample(gps->source.instance, &sample) == 0) &&
 		sample.fix_type >= 2U;
 	if (fix) {
 		pvt[20] = (uint8)sample.fix_type;

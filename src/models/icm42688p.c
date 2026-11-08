@@ -119,8 +119,6 @@ static void raw_sample(const Icm42688p *chip, std_bool hires, Raw20 *raw)
 
 	if (chip->source.ops != NULL) {
 		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
-	} else if (chip->target_ops->sensor_sample != NULL) {
-		(void)chip->target_ops->sensor_sample(chip->target, &sample);
 	}
 	to_chip_axes(chip, sample.acceleration, acc);
 	to_chip_axes(chip, sample.angular_velocity, gyro);

@@ -699,9 +699,9 @@ int main(int argc, char **argv)
 	TEST_CHECK(target.ops->write(target.instance, 0x40000834U, 4U, 1500U) == 0);
 	check_pwm_timing(&target, 1500U, 216000000U);
 	TEST_CHECK(athrill_device_tick(runtime, 1U, &tick) == 0);
-	TEST_CHECK(target.actuator_count == 1U &&
-		target.actuator_values[0] > 0.499F &&
-		target.actuator_values[0] < 0.501F);
+	/* no value-source here: the outputs reach no sink (the target's
+	 * actuator operation is gone with its sensor source) */
+	TEST_CHECK(target.actuator_count == 0U);
 	TEST_CHECK(target.ops->write(target.instance, 0x40000834U, 4U, 2000U) == 0);
 	check_pwm_timing(&target, 2000U, 216000000U);
 	athrill_device_destroy(runtime);
@@ -729,9 +729,9 @@ int main(int argc, char **argv)
 	TEST_CHECK(target.ops->write(target.instance, 0x40010034U, 4U, 1500U) == 0);
 	check_pwm_timing(&target, 1500U, 480000000U);
 	TEST_CHECK(athrill_device_tick(runtime, 1U, &tick) == 0);
-	TEST_CHECK(target.actuator_count == 1U &&
-		target.actuator_values[0] > 0.499F &&
-		target.actuator_values[0] < 0.501F);
+	/* no value-source here: the outputs reach no sink (the target's
+	 * actuator operation is gone with its sensor source) */
+	TEST_CHECK(target.actuator_count == 0U);
 	TEST_CHECK(target.ops->write(target.instance, 0x40010034U, 4U, 2000U) == 0);
 	check_pwm_timing(&target, 2000U, 480000000U);
 	athrill_device_destroy(runtime);
@@ -863,9 +863,11 @@ int main(int argc, char **argv)
 		TEST_CHECK(i2c_transfer_messages(&connection, 0x0eU,
 			messages, 2U) == 0);
 		TEST_CHECK((result[0] & 1U) != 0U);
-		TEST_CHECK(result[1] == 0xefU && result[2] == 0xffU);
-		TEST_CHECK(result[3] == 0x43U && result[4] == 0U);
-		TEST_CHECK(result[5] == 0x85U && result[6] == 0U);
+		/* the bench source's constant field (0.21, 0, 0.43) gauss at
+		 * 0.003 gauss per count: X 70, Y 0, Z -143 (the chip's Z is up) */
+		TEST_CHECK(result[1] == 0x46U && result[2] == 0x00U);
+		TEST_CHECK(result[3] == 0x00U && result[4] == 0U);
+		TEST_CHECK(result[5] == 0x71U && result[6] == 0xffU);
 
 		command[0] = 0x0dU;
 		command[1] = 0xd0U;
@@ -892,9 +894,11 @@ int main(int argc, char **argv)
 		messages[1].size = sizeof(result);
 		TEST_CHECK(i2c_transfer_messages(&connection, 0x0eU,
 			messages, 2U) == 0);
-		TEST_CHECK(result[1] == 0xbeU && result[2] == 0xffU);
-		TEST_CHECK(result[3] == 0x43U && result[4] == 0U);
-		TEST_CHECK(result[5] == 0x10U && result[6] == 0x02U);
+		/* the same field in the high-resolution mode (X and Z 1320 counts
+		 * per gauss): X 277, Y 0, Z -568 */
+		TEST_CHECK(result[1] == 0x15U && result[2] == 0x01U);
+		TEST_CHECK(result[3] == 0x00U && result[4] == 0U);
+		TEST_CHECK(result[5] == 0xc8U && result[6] == 0xfdU);
 		i2c_disconnect(&connection);
 	}
 	athrill_device_destroy(runtime);

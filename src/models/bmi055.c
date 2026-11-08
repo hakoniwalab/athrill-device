@@ -101,8 +101,6 @@ static void raw_sample(const Bmi055 *chip, int16_t *raw)
 	uint32 i;
 	if (chip->source.ops != NULL) {
 		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
-	} else if (chip->target_ops->sensor_sample != NULL) {
-		(void)chip->target_ops->sensor_sample(chip->target, &sample);
 	}
 	to_chip_axes(chip, chip->kind == BMI055_ACCEL ? sample.acceleration :
 		sample.angular_velocity, value);

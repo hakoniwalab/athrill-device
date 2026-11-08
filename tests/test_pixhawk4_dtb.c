@@ -125,13 +125,21 @@ int main(void)
 	expect_dmas(blob, "/soc/sdmmc@40012c00", dma2_phandle, sd_dmas, 4U,
 		sd_names, sizeof(sd_names));
 	(void)sensor_node(blob, "disabled");
-	expect_no_value_source(blob, "/pwm-actuator-map");
+	/* without Hakoniwa the values come from the bench sensor source */
+	{
+		int bench = fdt_path_offset(blob, "/bench-sensor-source");
+		uint32_t bench_phandle;
+		TEST_CHECK(bench >= 0);
+		bench_phandle = fdt_get_phandle(blob, bench);
+		TEST_CHECK(bench_phandle != 0U);
+		expect_value_source(blob, "/pwm-actuator-map", bench_phandle);
+		expect_value_source(blob, "/soc/spi@40013000/imu@0", bench_phandle);
+		expect_value_source(blob, "/soc/i2c@40005c00/magnetometer@e", bench_phandle);
+		expect_value_source(blob, "/soc/spi@40013400/pressure@0", bench_phandle);
+		expect_value_source(blob, "/soc/serial@40011000/gnss", bench_phandle);
+	}
 	expect_boolean(blob, "/pwm-actuator-map",
 		"athrill,tick-before-value-source", 0);
-	expect_no_value_source(blob, "/soc/spi@40013000/imu@0");
-	expect_no_value_source(blob, "/soc/i2c@40005c00/magnetometer@e");
-	expect_no_value_source(blob, "/soc/spi@40013400/pressure@0");
-	expect_no_value_source(blob, "/soc/serial@40011000/gnss");
 	free(blob);
 
 	blob = read_dtb(PIXHAWK4_HAKONIWA_DTB, &size);
