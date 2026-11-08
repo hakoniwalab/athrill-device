@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       16U
+#define ATHRILL_DEVICE_ABI_MINOR       17U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -451,6 +451,14 @@ typedef struct AthrillDeviceResourceOps {
 	sint32 (*gpio_read)(void *context, AthrillDeviceGpioLine line, std_bool *level);
 	sint32 (*gpio_subscribe)(void *context, AthrillDeviceGpioLine line,
 	                         AthrillDeviceGpioEdge callback, void *instance);
+	/* Added in ABI 1.17; the host's console input (Athrill's debugger
+	 * serial): the model that is console channel's receiver gets each
+	 * character athrill_device_console_input hands the runtime; receive
+	 * returns -1 when it cannot take one (its input queue is full). The
+	 * last listener of a channel takes it. */
+	sint32 (*console_listen)(void *context, uint32 channel,
+	                         sint32 (*receive)(void *instance, uint8 data),
+	                         void *instance);
 } AthrillDeviceResourceOps;
 
 typedef struct {
@@ -548,5 +556,9 @@ sint32 athrill_device_gpio_drive(AthrillDeviceRuntime *runtime,
                                  const char *provider_path, uint32 pin, std_bool level);
 sint32 athrill_device_gpio_level(AthrillDeviceRuntime *runtime,
                                  const char *provider_path, uint32 pin, std_bool *level);
+/* Added in ABI 1.17: a character of the host's console input (channel 0
+ * is the console) to its listener; -1 when there is none or it is full. */
+sint32 athrill_device_console_input(AthrillDeviceRuntime *runtime, uint32 channel,
+                                    uint8 data);
 
 #endif /* ATHRILL_DEVICE_IF_H */

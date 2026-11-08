@@ -13,7 +13,6 @@
  * SPDX-License-Identifier: MIT
  */
 #include "models.h"
-#include "athrill_device_stm32_bridge.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,6 +74,8 @@ static sint32 dma_request(void *c, const char *name, std_bool asserted)
 	}
 	return 0;
 }
+
+static sint32 console_listen(void *c, uint32 channel, sint32 (*receive)(void *, uint8), void *instance);
 
 /* ---- the former global UART API on top of the models (one per USART) ---- */
 static const uint32 bases[8] = {
@@ -217,6 +218,7 @@ static void shim_create(uint32 u)
 	resources.get_uart_peripheral = get_uart_peripheral;
 	resources.uart_listen = uart_listen;
 	resources.dma_request = dma_request;
+	resources.console_listen = console_listen;
 	rx_level[u] = FALSE;
 	tx_level[u] = FALSE;
 	node.ops = &node_ops;
@@ -285,9 +287,22 @@ static uint32 stm32_uart_read(uint32 addr)
 	(void)m->mmio->read(uart_at(addr), addr, 4U, &value);
 	return (uint32)value;
 }
+/* the console listener the console UART registered (ABI 1.17) */
+static sint32 (*console_receive)(void *instance, uint8 data);
+static void *console_instance;
+static sint32 console_listen(void *c, uint32 channel, sint32 (*receive)(void *, uint8), void *instance)
+{
+	(void)c;
+	if (channel != 0U) {
+		return -1;
+	}
+	console_receive = receive;
+	console_instance = instance;
+	return 0;
+}
 static std_bool stm32_uart_console_input(uint8 data)
 {
-	return athrill_device_stm32_uart_console_input(data);
+	return (console_receive != NULL && console_receive(console_instance, data) == 0) ? TRUE : FALSE;
 }
 typedef struct {
 	uint64 clock;

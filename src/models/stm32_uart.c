@@ -16,8 +16,9 @@
  * and the USART number and kernel clock divider from the base (H7 instances
  * carry athrill,stm32h7-uart: every USART at D2PCLK = CPU / 4); the console
  * writes through console_write; a register read ends the CPU batch through
- * end_batch (the target's read barrier did it); the debugger console input
- * is reached through athrill_device_stm32_bridge.h.
+ * end_batch (the target's read barrier did it); the console UART takes the
+ * host's console input (Athrill's debugger serial) as its listener
+ * (ABI 1.17 console_listen, channel 0).
  * DMA (step 4-5): the UART raises its "tx" request while CR3 DMAT is set,
  * the transmitter enabled and TDR empty (TXE), and its "rx" request while
  * CR3 DMAR is set and RDR full (RXNE) (RM0410 34.5.15), on its dmas tuples
@@ -30,7 +31,6 @@
  * SPDX-License-Identifier: MIT
  */
 #include "models.h"
-#include "athrill_device_stm32_bridge.h"
 #include "athrill_protocol_uart.h"
 #include "stm32_uart_tcp.h"
 
@@ -139,11 +139,10 @@ static const uint32 uart_bases[8] = {
 static const uint32 f7_dividers[8] = { 2U, 4U, 4U, 4U, 4U, 2U, 4U, 4U };
 static const uint32 h7_dividers[8] = { 4U, 4U, 4U, 4U, 4U, 4U, 4U, 4U };
 
-/* TO BE REMOVED with the target's debugger (athrill_device_stm32_bridge.h). */
-static Uart *console_uart;
 
 static void write_tdr(Uart *u, uint8 data);
 static sint32 push_input(Uart *u, uint8 data);
+static sint32 console_receive(void *instance, uint8 data);
 
 static uint64 host_clock(const Uart *u)
 {
@@ -572,9 +571,10 @@ static sint32 push_input(Uart *u, uint8 data)
 	return 0;
 }
 
-std_bool athrill_device_stm32_uart_console_input(uint8 data)
+/* The host's console input (ABI 1.17), for the console UART. */
+static sint32 console_receive(void *instance, uint8 data)
 {
-	return (console_uart != NULL && push_input(console_uart, data) == 0) ? TRUE : FALSE;
+	return push_input(instance, data);
 }
 
 /* A byte from the chip (the child's uart_send, or the TCP client) onto the line. */
@@ -674,9 +674,6 @@ static void close_files(Uart *u)
 static void uart_destroy(void *instance)
 {
 	Uart *u = instance;
-	if (console_uart == u) {
-		console_uart = NULL;
-	}
 	channel_disconnect(u);
 	close_files(u);
 	free(u);
@@ -738,7 +735,10 @@ static sint32 uart_reset(void *instance)
 	u->console = (u->number == console) ? TRUE : FALSE;
 	u->rx_file_at_end = FALSE;
 	if (u->console) {
-		console_uart = u;
+		/* the console UART takes the host's console input (channel 0) */
+		if (u->resources != NULL && u->resources->console_listen != NULL) {
+			(void)u->resources->console_listen(u->context, 0U, console_receive, u);
+		}
 		u->rx_file_start = (uint64)rx_delay_ms * mhz * 1000U;
 		u->rx_next = u->rx_file_start;
 		rx_path = host_text(u, "DEVICE_CONFIG_STM32_UART_RX_FILE");
