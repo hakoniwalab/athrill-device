@@ -3006,6 +3006,43 @@ sint32 athrill_device_gpio_level(AthrillDeviceRuntime *runtime,
 }
 
 /* ABI 1.17: a character of the host's console input to its listener. */
+sint32 athrill_device_target_node_u32(AthrillDeviceRuntime *runtime,
+                                      const char *compatible, const char *property,
+                                      uint32 index, uint32 *value)
+{
+	uint32 i;
+	if (runtime == NULL || compatible == NULL || property == NULL || value == NULL) {
+		return -1;
+	}
+	for (i = 0U; i < runtime->node_count; i++) {
+		const NodeRecord *node = &runtime->nodes[i];
+		const fdt32_t *cells;
+		const char *list;
+		int length, at;
+		std_bool found = FALSE;
+		if (!node->enabled) {
+			continue;
+		}
+		list = fdt_getprop(runtime->dtb, node->offset, "compatible", &length);
+		if (!string_property_valid(list, length)) {
+			continue;
+		}
+		for (at = 0; at < length && !found; at += (int)strlen(list + at) + 1) {
+			found = (strcmp(list + at, compatible) == 0) ? TRUE : FALSE;
+		}
+		if (!found) {
+			continue;
+		}
+		cells = fdt_getprop(runtime->dtb, node->offset, property, &length);
+		if (cells == NULL || length < 0 || (uint32)length / 4U <= index) {
+			return -1;
+		}
+		*value = fdt32_to_cpu(cells[index]);
+		return 0;
+	}
+	return -1;
+}
+
 sint32 athrill_device_console_input(AthrillDeviceRuntime *runtime, uint32 channel,
 	uint8 data)
 {
