@@ -21,6 +21,14 @@
 #define MAX_MMIO_WINDOWS 8U
 #define ERROR_TEXT_SIZE 256U
 
+/* A dmas tuple as dma_request uses it: its name (in the DTB), its provider
+ * and the request line handed to a provider model. */
+typedef struct {
+	const char *name;
+	uint32 provider;	/* node index + 1 */
+	AthrillDeviceDmaRequestLine line;
+} DmaTuple;
+
 typedef struct NodeRecord NodeRecord;
 typedef struct PluginRecord PluginRecord;
 
@@ -66,6 +74,10 @@ struct NodeRecord {
 	/* ABI 1.14: the DMA provider model of a node with #dma-cells */
 	const AthrillDeviceDmaProviderOps *dma_provider;
 	void *dma_provider_instance;
+	/* ABI 1.14: the node's dmas tuples, decoded once (dma_request) */
+	DmaTuple *dma_tuples;
+	uint32 dma_tuple_count;
+	std_bool dma_tuples_decoded;
 	/* ABI 1.15: the SD card operations a card model offers */
 	const void *sd_card_ops;
 	void *sd_card_instance;
@@ -1537,42 +1549,64 @@ static sint32 resource_dma_provide(void *context,
 
 /* ABI 1.14: a requester's request named name, on every dmas tuple of that
  * name: to the provider model, else to the target. */
+/* The node's dmas tuples, decoded from the DTB at the first request: a
+ * request changes on every frame of a DMA transfer, so it must not read the
+ * DTB each time. */
+static sint32 decode_dma_tuples(NodeRecord *node)
+{
+	AthrillDeviceSpecifier spec;
+	uint32 count, index, i;
+	if (node->dma_tuples_decoded) {
+		return 0;
+	}
+	if (specifier_count(node, "dmas", "#dma-cells", &count) != 0) {
+		return -1;
+	}
+	node->dma_tuples = count != 0U ? calloc(count, sizeof(*node->dma_tuples)) : NULL;
+	if (count != 0U && node->dma_tuples == NULL) {
+		return -1;
+	}
+	for (index = 0U; index < count; index++) {
+		DmaTuple *t = &node->dma_tuples[index];
+		if (decode_dma_specifier(node, index, &spec) != 0 ||
+		    spec.provider == 0U || spec.provider > node->runtime->node_count) {
+			return -1;
+		}
+		t->name = spec.name;
+		t->provider = spec.provider;
+		t->line.requester = node->public_node.id;
+		t->line.index = index;
+		t->line.cell_count = spec.cell_count;
+		for (i = 0U; i < spec.cell_count && i < ATHRILL_DEVICE_MAX_SPEC_CELLS; i++) {
+			t->line.cells[i] = spec.cells[i];
+		}
+	}
+	node->dma_tuple_count = count;
+	node->dma_tuples_decoded = TRUE;
+	return 0;
+}
+
 static sint32 resource_dma_request(void *context, const char *name,
 	std_bool asserted)
 {
 	NodeRecord *node = context;
 	AthrillDeviceRuntime *runtime = node->runtime;
-	AthrillDeviceSpecifier spec;
-	AthrillDeviceDmaRequestLine line;
-	uint32 count, index, matched = 0U, i;
+	uint32 index, matched = 0U;
 	sint32 result = 0;
-	if (name == NULL || name[0] == 0 ||
-	    specifier_count(node, "dmas", "#dma-cells", &count) != 0) {
+	if (name == NULL || name[0] == 0 || decode_dma_tuples(node) != 0) {
 		return -1;
 	}
-	for (index = 0U; index < count; index++) {
+	for (index = 0U; index < node->dma_tuple_count; index++) {
+		const DmaTuple *t = &node->dma_tuples[index];
 		NodeRecord *provider;
-		if (decode_dma_specifier(node, index, &spec) != 0) {
-			return -1;
-		}
-		if (strcmp(spec.name, name) != 0) {
+		if (strcmp(t->name, name) != 0) {
 			continue;
 		}
 		matched++;
-		if (spec.provider == 0U || spec.provider > runtime->node_count) {
-			return -1;
-		}
-		provider = &runtime->nodes[spec.provider - 1U];
+		provider = &runtime->nodes[t->provider - 1U];
 		if (provider->dma_provider != NULL) {
-			memset(&line, 0, sizeof(line));
-			line.requester = node->public_node.id;
-			line.index = index;
-			line.cell_count = spec.cell_count;
-			for (i = 0U; i < spec.cell_count && i < ATHRILL_DEVICE_MAX_SPEC_CELLS; i++) {
-				line.cells[i] = spec.cells[i];
-			}
 			if (provider->dma_provider->request(provider->dma_provider_instance,
-			    &line, asserted) != 0) {
+			    &t->line, asserted) != 0) {
 				result = -1;
 			}
 		} else if (runtime->target_ops->dma_request != NULL &&
@@ -2909,6 +2943,7 @@ void athrill_device_destroy(AthrillDeviceRuntime *runtime)
 	if (runtime->nodes != NULL)
 		for (i = 0U; i < runtime->node_count; i++) {
 			free(runtime->nodes[i].dma_channels);
+			free(runtime->nodes[i].dma_tuples);
 			free(runtime->nodes[i].dependencies);
 			free(runtime->nodes[i].path);
 		}
