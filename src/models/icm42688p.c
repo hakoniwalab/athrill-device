@@ -50,6 +50,9 @@
 typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
 	void *target;
+	/* the data-ready line (ABI 1.16: GPIO lines in the runtime) */
+	const AthrillDeviceResourceOps *gpio_resources;
+	void *gpio_context;
 	const AthrillDeviceNode *node;
 	AthrillDeviceValueSource source;
 	uint8 regs[5][128];
@@ -397,7 +400,7 @@ static sint32 reset(void *instance)
 	reset_registers(chip);
 	fifo_restart(chip);
 	if (chip->data_ready_resolved) {
-		(void)chip->target_ops->gpio_drive(chip->target,
+		(void)chip->gpio_resources->gpio_drive(chip->gpio_context,
 			chip->data_ready, TRUE);
 	}
 	return 0;
@@ -436,8 +439,10 @@ static sint32 connect_model(void *instance,
 		&chip->data_ready) != 0) {
 		return -1;
 	}
+	chip->gpio_resources = args->resources;
+	chip->gpio_context = args->context;
 	chip->data_ready_resolved = TRUE;
-	(void)chip->target_ops->gpio_drive(chip->target, chip->data_ready, TRUE);
+	(void)chip->gpio_resources->gpio_drive(chip->gpio_context, chip->data_ready, TRUE);
 	return 0;
 }
 
@@ -453,7 +458,7 @@ static sint32 tick(void *instance, uint64 now,
 
 	result->next_event_interval = ATHRILL_DEVICE_NO_EVENT;
 	result->can_skip = TRUE;
-	(void)chip->target_ops->gpio_drive(chip->target,
+	(void)chip->gpio_resources->gpio_drive(chip->gpio_context,
 		chip->data_ready, active_low);
 	if (!fifo_on(chip) || ((chip->regs[0][REG_INT_SOURCE0] & FIFO_THS_INT1_EN) == 0U)) {
 		return 0;
@@ -467,9 +472,9 @@ static sint32 tick(void *instance, uint64 now,
 		chip->next_data_ready = (now / period + 1U) * period;
 	}
 	if (now >= chip->next_data_ready) {
-		(void)chip->target_ops->gpio_drive(chip->target,
+		(void)chip->gpio_resources->gpio_drive(chip->gpio_context,
 			chip->data_ready, !active_low);
-		(void)chip->target_ops->gpio_drive(chip->target,
+		(void)chip->gpio_resources->gpio_drive(chip->gpio_context,
 			chip->data_ready, active_low);
 		chip->next_data_ready += period *
 			(1U + (now - chip->next_data_ready) / period);

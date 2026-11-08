@@ -41,6 +41,9 @@ typedef enum {
 typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
 	void *target;
+	/* the data-ready line (ABI 1.16: GPIO lines in the runtime) */
+	const AthrillDeviceResourceOps *gpio_resources;
+	void *gpio_context;
 	const AthrillDeviceNode *node;
 	AthrillDeviceValueSource source;
 	uint8 registers[64];
@@ -325,7 +328,7 @@ static sint32 reset(void *instance)
 	chip->address = 0U;
 	fifo_restart(chip);
 	if (chip->data_ready_resolved) {
-		(void)chip->target_ops->gpio_drive(chip->target, chip->data_ready, TRUE);
+		(void)chip->gpio_resources->gpio_drive(chip->gpio_context, chip->data_ready, TRUE);
 	}
 	return 0;
 }
@@ -365,8 +368,10 @@ static sint32 connect_model(void *instance,
 		&chip->data_ready) != 0) {
 		return -1;
 	}
+	chip->gpio_resources = args->resources;
+	chip->gpio_context = args->context;
 	chip->data_ready_resolved = TRUE;
-	(void)chip->target_ops->gpio_drive(chip->target, chip->data_ready, TRUE);
+	(void)chip->gpio_resources->gpio_drive(chip->gpio_context, chip->data_ready, TRUE);
 	return 0;
 }
 
@@ -380,7 +385,7 @@ static sint32 tick(void *instance, uint64 now,
 	uint64 period;
 	result->next_event_interval = ATHRILL_DEVICE_NO_EVENT;
 	result->can_skip = TRUE;
-	(void)chip->target_ops->gpio_drive(chip->target, chip->data_ready, TRUE);
+	(void)chip->gpio_resources->gpio_drive(chip->gpio_context, chip->data_ready, TRUE);
 	if (!fifo_on(chip) || !interrupt_enabled(chip)) {
 		return 0;
 	}
@@ -392,8 +397,8 @@ static sint32 tick(void *instance, uint64 now,
 		chip->next_data_ready = (now / period + 1U) * period;
 	}
 	if (now >= chip->next_data_ready) {
-		(void)chip->target_ops->gpio_drive(chip->target, chip->data_ready, FALSE);
-		(void)chip->target_ops->gpio_drive(chip->target, chip->data_ready, TRUE);
+		(void)chip->gpio_resources->gpio_drive(chip->gpio_context, chip->data_ready, FALSE);
+		(void)chip->gpio_resources->gpio_drive(chip->gpio_context, chip->data_ready, TRUE);
 		chip->next_data_ready += period *
 			(1U + (now - chip->next_data_ready) / period);
 	}

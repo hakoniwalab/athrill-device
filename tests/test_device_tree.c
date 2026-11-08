@@ -635,53 +635,50 @@ int main(int argc, char **argv)
 	athrill_device_destroy(runtime);
 	runtime = NULL;
 
+	/* ABI 1.16: the GPIO lines live in the runtime; a level from outside
+	 * goes through athrill_device_gpio_drive, a line's level is read back
+	 * with athrill_device_gpio_level */
 	path(dtb, sizeof(dtb), "gpio.dtb");
-	target.gpio_resolved = 0U;
-	target.gpio_driven = 0U;
-	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
 	TEST_CHECK(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
 	TEST_CHECK(target.registered == 1U && target.addresses[0] == 0x40020000U &&
-		target.sizes[0] == 0x400U && target.gpio_resolved == 16U);
+		target.sizes[0] == 0x400U);
+	/* PA4 an output (MODER), driven high (ODR): its line reads high */
 	TEST_CHECK(target.ops->write(target.instance, 0x40020000U, 4U, 1U << 8) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40020014U, 4U, 1U << 4) == 0);
-	TEST_CHECK(target.gpio_driven == 1U && target.gpio_levels[4]);
 	{
-		AthrillDeviceGpioLine line = {3U};
-		TEST_CHECK(gpio_drive(&target, line, TRUE) == 0);
-		TEST_CHECK(target.ops->read(target.instance, 0x40020010U, 4U,
-			&value) == 0 && (value & (1U << 2)) != 0U);
+		std_bool level = FALSE;
+		TEST_CHECK(athrill_device_gpio_level(runtime, "/gpio@40020000", 4U, &level) == 0 && level);
 	}
+	/* PA2 driven high from outside: IDR shows it */
+	TEST_CHECK(athrill_device_gpio_drive(runtime, "/gpio@40020000", 2U, TRUE) == 0);
+	TEST_CHECK(target.ops->read(target.instance, 0x40020010U, 4U,
+		&value) == 0 && (value & (1U << 2)) != 0U);
+	/* a pin of no controller */
+	TEST_CHECK(athrill_device_gpio_drive(runtime, "/gpio@40020400", 2U, TRUE) != 0);
 	athrill_device_destroy(runtime);
 	runtime = NULL;
-	target.gpio_resolved = 0U;
-	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
 
 	path(dtb, sizeof(dtb), "exti.dtb");
-	target.gpio_resolved = 0U;
 	target.irq_resolved = 0U;
 	target.irq_set_count = 0U;
-	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
 	TEST_CHECK(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
 	/* [ADV-DT-003.T1] EXTI owns only the window declared by its reg. */
 	TEST_CHECK(target.registered == 1U &&
 		target.addresses[0] == 0x40013c00U &&
-		target.sizes[0] == 0x400U && target.irq_resolved == 7U &&
-		target.gpio_resolved == 176U);
+		target.sizes[0] == 0x400U && target.irq_resolved == 7U);
 	/* The reset-default route for line 4 is GPIOA; enable and drive PA4 high. */
 	TEST_CHECK(target.ops->write(target.instance, 0x40013c00U, 4U, 1U << 4) == 0);
 	TEST_CHECK(target.ops->write(target.instance, 0x40013c08U, 4U, 1U << 4) == 0);
-	{
-		AthrillDeviceGpioLine line = {4U + 1U};
-		TEST_CHECK(gpio_drive(&target, line, TRUE) == 0);
-	}
+	TEST_CHECK(athrill_device_gpio_drive(runtime, "/gpio@40020000", 4U, TRUE) == 0);
 	TEST_CHECK(target.irq_set_count == 1U && target.last_irq == 10U);
 	TEST_CHECK(target.ops->read(target.instance, 0x40013c14U, 4U,
 		&value) == 0 && (value & (1U << 4)) != 0U);
+	/* the same level again: no edge */
+	TEST_CHECK(athrill_device_gpio_drive(runtime, "/gpio@40020000", 4U, TRUE) == 0);
+	TEST_CHECK(target.irq_set_count == 1U);
 	athrill_device_destroy(runtime);
 	runtime = NULL;
-	target.gpio_resolved = 0U;
 	target.irq_resolved = 0U;
-	memset(target.gpio_edges, 0, sizeof(target.gpio_edges));
 
 	path(dtb, sizeof(dtb), "timer-pwm.dtb");
 	/* [ADV-PWM-002.T1] F765 TIM4: 108 MHz timer, PSC=107, ARR=19999. */
@@ -778,7 +775,8 @@ int main(int argc, char **argv)
 
 	path(dtb, sizeof(dtb), "resources.dtb");
 	TEST_CHECK(build(dtb, NULL, 0U, &target_ops, &target, &runtime) == 0);
-	TEST_CHECK(target.irq_resolved == 1U && target.gpio_resolved == 1U &&
+	/* the GPIO tuple resolves in the runtime (ABI 1.16), not the target */
+	TEST_CHECK(target.irq_resolved == 1U && target.gpio_resolved == 0U &&
 		target.dma_resolved == 1U);
 	athrill_device_destroy(runtime);
 	runtime = NULL;

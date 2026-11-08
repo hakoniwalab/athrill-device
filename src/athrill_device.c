@@ -85,6 +85,17 @@ typedef struct {
 	std_bool level;	/* last published level; FALSE until the first change */
 } GpioWatch;
 
+typedef struct {
+	uint64 handle;
+	std_bool level;
+} RuntimeGpioLine;
+
+typedef struct {
+	uint64 handle;
+	AthrillDeviceGpioEdge callback;
+	void *instance;
+} RuntimeGpioSubscriber;
+
 struct AthrillDeviceRuntime {
 	uint8 *dtb;
 	uint32 dtb_size;
@@ -102,6 +113,11 @@ struct AthrillDeviceRuntime {
 	/* model-to-model GPIO (watch_gpio / publish_gpio_outputs) */
 	GpioWatch *gpio_watches;
 	uint32 gpio_watch_count;
+	/* ABI 1.16: the GPIO lines and their subscribers */
+	RuntimeGpioLine *gpio_lines;
+	uint32 gpio_line_count;
+	RuntimeGpioSubscriber *gpio_subscribers;
+	uint32 gpio_subscriber_count;
 };
 
 static void error_line(const char *code, const char *path,
@@ -1072,6 +1088,140 @@ static sint32 resource_get_interrupt(void *context, const char *name,
 		runtime->target_ops->irq_resolve(runtime->target, &spec, line) : -1;
 }
 
+/* ---- ABI 1.16: GPIO lines (ported from athrill-target-stm32's
+ * device_tree.c line table: the same line identity and order) ---- */
+
+/* The unit address of a node path (".../gpio@40020000"). */
+static sint32 path_unit_address(const char *path, uint32 *address)
+{
+	const char *at;
+	char *end;
+	unsigned long value;
+	if (path == NULL || (at = strrchr(path, '@')) == NULL || at[1] == 0) {
+		return -1;
+	}
+	value = strtoul(at + 1, &end, 16);
+	if (*end != 0 || value > 0xffffffffUL) {
+		return -1;
+	}
+	*address = (uint32)value;
+	return 0;
+}
+
+/* A line is the controller's unit address and the pin (cells[0]); the
+ * flags cell describes the consumer, not the line. */
+static uint64 gpio_handle(const char *provider_path, AthrillDeviceNodeId provider, uint32 pin)
+{
+	uint32 address;
+	uint64 value;
+	if (path_unit_address(provider_path, &address) == 0) {
+		value = ((uint64)address << 16) ^ pin;
+	} else {
+		value = ((uint64)provider << 32) ^ pin;
+	}
+	return value != 0U ? value : 1U;
+}
+
+static RuntimeGpioLine *gpio_line_of(AthrillDeviceRuntime *runtime, uint64 handle,
+	std_bool create)
+{
+	RuntimeGpioLine *grown;
+	uint32 i;
+	for (i = 0U; i < runtime->gpio_line_count; i++) {
+		if (runtime->gpio_lines[i].handle == handle) {
+			return &runtime->gpio_lines[i];
+		}
+	}
+	if (!create) {
+		return NULL;
+	}
+	grown = realloc(runtime->gpio_lines, (runtime->gpio_line_count + 1U) * sizeof(*grown));
+	if (grown == NULL) {
+		return NULL;
+	}
+	runtime->gpio_lines = grown;
+	grown[runtime->gpio_line_count].handle = handle;
+	grown[runtime->gpio_line_count].level = FALSE;
+	return &grown[runtime->gpio_line_count++];
+}
+
+static sint32 runtime_gpio_resolve(AthrillDeviceRuntime *runtime,
+	const AthrillDeviceSpecifier *spec, AthrillDeviceGpioLine *line)
+{
+	if (spec == NULL || line == NULL || spec->cell_count == 0U) {
+		return -1;
+	}
+	line->value = gpio_handle(spec->provider_path, spec->provider, spec->cells[0]);
+	return gpio_line_of(runtime, line->value, TRUE) != NULL ? 0 : -1;
+}
+
+static sint32 runtime_gpio_drive(AthrillDeviceRuntime *runtime,
+	AthrillDeviceGpioLine line, std_bool level)
+{
+	RuntimeGpioLine *g = gpio_line_of(runtime, line.value, FALSE);
+	uint32 i;
+	if (g == NULL) {
+		return -1;
+	}
+	if (g->level == level) {
+		return 0;
+	}
+	g->level = level;
+	for (i = 0U; i < runtime->gpio_subscriber_count; i++) {
+		if (runtime->gpio_subscribers[i].handle == line.value) {
+			runtime->gpio_subscribers[i].callback(runtime->gpio_subscribers[i].instance,
+				level);
+		}
+	}
+	return 0;
+}
+
+static sint32 resource_gpio_resolve(void *context, const AthrillDeviceSpecifier *spec,
+	AthrillDeviceGpioLine *line)
+{
+	NodeRecord *node = context;
+	return runtime_gpio_resolve(node->runtime, spec, line);
+}
+
+static sint32 resource_gpio_drive(void *context, AthrillDeviceGpioLine line, std_bool level)
+{
+	NodeRecord *node = context;
+	return runtime_gpio_drive(node->runtime, line, level);
+}
+
+static sint32 resource_gpio_read(void *context, AthrillDeviceGpioLine line, std_bool *level)
+{
+	NodeRecord *node = context;
+	RuntimeGpioLine *g = gpio_line_of(node->runtime, line.value, FALSE);
+	if (g == NULL || level == NULL) {
+		return -1;
+	}
+	*level = g->level;
+	return 0;
+}
+
+static sint32 resource_gpio_subscribe(void *context, AthrillDeviceGpioLine line,
+	AthrillDeviceGpioEdge callback, void *instance)
+{
+	NodeRecord *node = context;
+	AthrillDeviceRuntime *runtime = node->runtime;
+	RuntimeGpioSubscriber *grown;
+	if (callback == NULL || gpio_line_of(runtime, line.value, FALSE) == NULL) {
+		return -1;
+	}
+	grown = realloc(runtime->gpio_subscribers,
+		(runtime->gpio_subscriber_count + 1U) * sizeof(*grown));
+	if (grown == NULL) {
+		return -1;
+	}
+	runtime->gpio_subscribers = grown;
+	grown[runtime->gpio_subscriber_count].handle = line.value;
+	grown[runtime->gpio_subscriber_count].callback = callback;
+	grown[runtime->gpio_subscriber_count].instance = instance;
+	runtime->gpio_subscriber_count++;
+	return 0;
+}
+
 /* [ADV-GPIO-002] resolve the indexed GPIO tuple used for SPI chip select */
 static sint32 resource_get_gpio(void *context, const char *property,
 	uint32 index, AthrillDeviceGpioLine *line)
@@ -1079,12 +1229,10 @@ static sint32 resource_get_gpio(void *context, const char *property,
 	NodeRecord *node = context;
 	AthrillDeviceSpecifier spec;
 	if (property == NULL || line == NULL ||
-	    decode_specifier(node, property, "#gpio-cells", index, &spec) != 0 ||
-	    node->runtime->target_ops->gpio_resolve == NULL) {
+	    decode_specifier(node, property, "#gpio-cells", index, &spec) != 0) {
 		return -1;
 	}
-	return node->runtime->target_ops->gpio_resolve(node->runtime->target,
-		&spec, line);
+	return runtime_gpio_resolve(node->runtime, &spec, line);
 }
 
 /* [ADV-SPI-006] decode a named DMA tuple through the public target resolver */
@@ -1288,6 +1436,12 @@ static sint32 resource_publish_gpio_outputs(void *context,
 	}
 	for (i = 0U; i < count; i++) {
 		std_bool level = ((levels >> i) & 1U) != 0U;
+		RuntimeGpioLine *g = gpio_line_of(runtime, lines[i].value, FALSE);
+		/* an output's level, as the target's line table kept it (its
+		 * subscribers are told only of driven inputs) */
+		if (g != NULL) {
+			g->level = level;
+		}
 		for (w = 0U; w < runtime->gpio_watch_count; w++) {
 			GpioWatch *watch = &runtime->gpio_watches[w];
 			if (watch->line.value == lines[i].value && watch->level != level) {
@@ -1296,8 +1450,7 @@ static sint32 resource_publish_gpio_outputs(void *context,
 			}
 		}
 	}
-	return runtime->target_ops->gpio_outputs != NULL ?
-		runtime->target_ops->gpio_outputs(runtime->target, lines, count, levels) : 0;
+	return 0;
 }
 
 /* The index-th child of a native UART controller, for the controller. */
@@ -1528,7 +1681,8 @@ static const AthrillDeviceResourceOps resource_ops = {
 	resource_publish_gpio_outputs, resource_get_uart_peripheral,
 	resource_uart_listen, resource_uart_send, resource_dma_provide,
 	resource_dma_request, resource_get_dma_master, resource_sd_card_provide,
-	resource_get_sd_card
+	resource_get_sd_card, resource_gpio_resolve, resource_gpio_drive,
+	resource_gpio_read, resource_gpio_subscribe
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
@@ -2750,9 +2904,38 @@ void athrill_device_destroy(AthrillDeviceRuntime *runtime)
 		}
 	free(runtime->plugins);
 	free(runtime->gpio_watches);
+	free(runtime->gpio_lines);
+	free(runtime->gpio_subscribers);
 	free(runtime->order);
 	free(runtime->tick_order);
 	free(runtime->nodes);
 	free(runtime->dtb);
 	free(runtime);
+}
+
+/* ABI 1.16: a level driven onto a GPIO line from outside the models. */
+sint32 athrill_device_gpio_drive(AthrillDeviceRuntime *runtime,
+	const char *provider_path, uint32 pin, std_bool level)
+{
+	AthrillDeviceGpioLine line;
+	if (runtime == NULL || provider_path == NULL) {
+		return -1;
+	}
+	line.value = gpio_handle(provider_path, 0U, pin);
+	return runtime_gpio_drive(runtime, line, level);
+}
+
+sint32 athrill_device_gpio_level(AthrillDeviceRuntime *runtime,
+	const char *provider_path, uint32 pin, std_bool *level)
+{
+	RuntimeGpioLine *g;
+	if (runtime == NULL || provider_path == NULL || level == NULL) {
+		return -1;
+	}
+	g = gpio_line_of(runtime, gpio_handle(provider_path, 0U, pin), FALSE);
+	if (g == NULL) {
+		return -1;
+	}
+	*level = g->level;
+	return 0;
 }

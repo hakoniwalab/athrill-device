@@ -1149,16 +1149,11 @@ static int mmio_read32(uint64 address, uint32 *value)
 	return -1;
 }
 
+/* A level driven onto a line from outside the models (ABI 1.16: the
+ * runtime holds the GPIO lines). */
 static sint32 drive_named_gpio(const char *provider_path, uint32 pin, std_bool level)
 {
-	const char *provider = strrchr(provider_path, '/');
-	uint32 index;
-	provider = provider != NULL ? provider + 1 : provider_path;
-	for (index = 0U; index < target.gpio_line_count; index++)
-		if (target.gpio_lines[index].pin == pin &&
-		    strcmp(target.gpio_lines[index].provider, provider) == 0)
-			return gpio_drive(&target, target.gpio_lines[index].line, level);
-	return -1;
+	return athrill_device_gpio_drive(runtime, provider_path, pin, level);
 }
 
 static void clear_irq_assertions(void)

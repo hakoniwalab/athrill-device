@@ -48,7 +48,7 @@ static std_bool irq_is_active(void *t, AthrillDeviceIrqLine line) { (void)t; (vo
 static void end_batch(void *t) { (void)t; }
 static sint32 gpio_drive(void *t, AthrillDeviceGpioLine line, std_bool level)
 {
-	(void)t;
+	(void)t;	/* resources (ABI 1.16) */
 	if (level) {
 		gpio_high = (uint32)line.value + 1U;
 	}
@@ -561,7 +561,6 @@ int main(void)
 	target_ops.end_batch = end_batch;
 	target_ops.memory_read = memory_read;
 	target_ops.memory_write = memory_write;
-	target_ops.gpio_drive = gpio_drive;
 	target_ops.host_value = host_value;
 	memset(&resources, 0, sizeof(resources));
 	resources.get_interrupt = get_interrupt;
@@ -570,6 +569,7 @@ int main(void)
 	resources.get_sd_card = get_sd_card;
 	resources.dma_provide = dma_provide;
 	resources.dma_request = dma_request;
+	resources.gpio_drive = gpio_drive;
 
 	test_identify();
 	test_scr_fifo();

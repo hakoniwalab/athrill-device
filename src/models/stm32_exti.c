@@ -279,9 +279,7 @@ static sint32 exti_connect(void *instance,
 	};
 	Stm32Exti *exti = instance;
 	uint32 port, pin;
-	if (exti->target_ops->irq_set == NULL ||
-	    exti->target_ops->gpio_resolve == NULL ||
-	    exti->target_ops->gpio_subscribe == NULL) {
+	if (exti->target_ops->irq_set == NULL) {
 		return -1;
 	}
 	for (pin = 0U; pin < EXTI_IRQS; pin++) {
@@ -302,8 +300,8 @@ static sint32 exti_connect(void *instance,
 			spec.provider_compatible = "st,stm32-gpio";
 			spec.cell_count = 2U;
 			spec.cells[0] = pin;
-			if (exti->target_ops->gpio_resolve(exti->target, &spec, &line) != 0 ||
-			    exti->target_ops->gpio_subscribe(exti->target, line, gpio_edge,
+			if (args->resources->gpio_resolve(args->context, &spec, &line) != 0 ||
+			    args->resources->gpio_subscribe(args->context, line, gpio_edge,
 				&exti->inputs[port][pin]) != 0) {
 				return -1;
 			}
