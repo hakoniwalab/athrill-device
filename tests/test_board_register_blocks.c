@@ -260,6 +260,11 @@ static void test_f7(void)
 		TEST_CHECK(m->mmio->read(dev, 0x1FF0F442U, 2U, &v) == 0 && v == 0x0800U);
 	}
 	close_node();
+	/* IWDG (ArduPilot sets it up) keeps what is written */
+	open_node("/soc/watchdog@40003000");
+	write32(0x40003000U, 0xCCCCU);
+	TEST_CHECK(read32(0x40003000U) == 0xCCCCU);
+	close_node();
 	/* CAN1 and the backup SRAM keep what is written */
 	open_node("/soc/can@40006400");
 	write32(0x40006400U, 0x1U);

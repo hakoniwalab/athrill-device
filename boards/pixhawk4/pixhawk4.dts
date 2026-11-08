@@ -246,6 +246,8 @@
 &usbotg_fs { status = "okay"; };
 &can1 { status = "okay"; };
 &backup_sram { status = "okay"; };
+/* The independent watchdog ArduPilot sets up (PX4 leaves it). */
+&iwdg { status = "okay"; };
 
 &dma1 {
 	status = "okay";
