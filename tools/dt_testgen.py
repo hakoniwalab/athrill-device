@@ -176,6 +176,8 @@ MMIO_MODEL_COMPATIBLES = {
     "athrill,register-block", "st,stm32f4-rcc", "st,stm32h7-rcc", "st,stm32h7-pwr",
     "st,stm32-flash-controller", "st,stm32f7-flash-controller",
     "st,stm32h7-flash-controller", "zephyr,flash-controller",
+    "st,stm32-rtc", "st,stm32-adc", "st,stm32f4-adc", "st,stm32-rng",
+    "zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog",
 }
 # I2C controllers that are athrill-device models: their children are bound to
 # the controller, not to the target, so the harness finds them by driving the

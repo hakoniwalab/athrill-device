@@ -238,6 +238,12 @@
 	};
 };
 
+/* Start-up peripherals PX4 v1.17.0 touches on FMUv5 (RTC, the ADC block,
+ * USB OTG FS): register blocks with the SoC layer's read rules. */
+&rtc { status = "okay"; };
+&adc123_common { status = "okay"; };
+&usbotg_fs { status = "okay"; };
+
 &dma1 {
 	status = "okay";
 };

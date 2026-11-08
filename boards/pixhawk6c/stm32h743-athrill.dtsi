@@ -97,3 +97,37 @@
 &flash {
 	athrill,read-clear = <0x10 0xffff0000>, <0x90 0xffff0000>;
 };
+
+/* RTC: RSF set; INITF follows INIT (ICSR). */
+&rtc {
+	athrill,read-set = <0x0c 0x00000020>;
+	athrill,read-follow = <0x0c 0x0c 0x00000080 (-1)>;
+};
+
+/* ADC1/2 and ADC3 (the rules on the first ADC of each block): ADRDY
+ * follows ADEN; EOC and EOS follow ADSTART; ADCAL and ADDIS read done;
+ * DR reads 0 (a low board-ID voltage: the baseline board revision). */
+&adc12_common {
+	athrill,read-follow = <0x00 0x08 0x00000001 0>,
+			      <0x00 0x08 0x00000004 0>,
+			      <0x00 0x08 0x00000004 1>;
+	athrill,read-clear = <0x08 0x80000002>, <0x40 0xffffffff>;
+};
+&adc3_common {
+	athrill,read-follow = <0x00 0x08 0x00000001 0>,
+			      <0x00 0x08 0x00000004 0>,
+			      <0x00 0x08 0x00000004 1>;
+	athrill,read-clear = <0x08 0x80000002>, <0x40 0xffffffff>;
+};
+
+/* RNG: DRDY set; DR a fixed sequence of numbers. */
+&rng {
+	athrill,read-set = <0x04 0x00000001>;
+	athrill,read-random = <0x08>;
+};
+
+/* USB OTG FS: GRSTCTL core and FIFO resets complete, AHB idle. */
+&usbotg_fs {
+	athrill,read-clear = <0x10 0x00000031>;
+	athrill,read-set = <0x10 0x80000000>;
+};

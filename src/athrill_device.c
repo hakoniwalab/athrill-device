@@ -353,10 +353,6 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 	}
 
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
-NAMED_ADAPTER(stm32f7_rtc_model, "stm32f7-rtc-adapter", "stm32f7-rtc");
-NAMED_ADAPTER(stm32f7_adc_model, "stm32f7-adc-adapter", "stm32f7-adc");
-NAMED_ADAPTER(stm32f7_rng_model, "stm32f7-rng-adapter", "stm32f7-rng");
-NAMED_ADAPTER(stm32f7_otgfs_model, "stm32f7-otgfs-adapter", "stm32f7-otgfs");
 NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter", "stm32f7-crc");
 NAMED_ADAPTER(stm32f7_backup_sram_model, "stm32f7-backup-sram-adapter", "stm32f7-backup-sram");
 NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-source");
@@ -388,17 +384,16 @@ static const char *const stm32f7_timer_compatibles[] = { "st,stm32-timers" };
 static const char *const stm32f7_pwm_compatibles[] = { "st,stm32-pwm" };
 static const char *const stm32f7_uart_compatibles[] = { "st,stm32-usart", "st,stm32-uart" };
 static const char *const stm32_sdmmc_compatibles[] = { "st,stm32-sdmmc" };
-/* Register blocks (src/models/register_block.c): the clock, power and flash
- * controllers' start-up registers, their read rules in the Devicetree. */
+/* Register blocks (src/models/register_block.c): start-up registers (clock,
+ * power, flash, RTC, ADC, RNG, USB OTG, watchdog), their read rules in the
+ * Devicetree. */
 static const char *const register_block_compatibles[] = {
 	"athrill,register-block", "st,stm32f4-rcc", "st,stm32h7-rcc",
 	"st,stm32h7-pwr", "st,stm32-flash-controller", "st,stm32f7-flash-controller",
-	"st,stm32h7-flash-controller", "zephyr,flash-controller"
+	"st,stm32h7-flash-controller", "zephyr,flash-controller",
+	"st,stm32-rtc", "st,stm32-adc", "st,stm32f4-adc", "st,stm32-rng",
+	"zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog"
 };
-static const char *const stm32f7_rtc_compatibles[] = { "st,stm32-rtc" };
-static const char *const stm32f7_adc_compatibles[] = { "st,stm32-adc" };
-static const char *const stm32f7_rng_compatibles[] = { "st,stm32-rng", "zephyr,entropy" };
-static const char *const stm32f7_otgfs_compatibles[] = { "st,stm32-otgfs" };
 static const char *const stm32f7_crc_compatibles[] = { "zephyr,crc" };
 static const char *const stm32f7_backup_sram_compatibles[] = { "st,stm32-backup-sram" };
 static const char *const icm20689_compatibles[] = { "invensense,icm20689" };
@@ -413,7 +408,7 @@ static const char *const stm32h7_soc_compatibles[] = { "st,stm32h743", "st,stm32
 static const char *const stm32h7_spi_compatibles[] = { "st,stm32h7-spi" };
 static const char *const stm32h7_dmamux_compatibles[] = { "st,stm32-dmamux" };
 static const char *const stm32h7_boot_register_compatibles[] = {
-	"st,stm32-bdma", "st,stm32-watchdog",
+	"st,stm32-bdma",
 	"st,stm32h7-axi-target", "st,stm32h7-dbgmcu",
 	"st,stm32h7-system-memory", "st,stm32h7-fdcan"
 };
@@ -444,10 +439,6 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_uart_compatibles, 2U, &athrill_device_stm32_uart_model },
 	{ stm32_sdmmc_compatibles, 1U, &athrill_device_stm32_sdmmc_model },
 	{ register_block_compatibles, sizeof(register_block_compatibles) / sizeof(register_block_compatibles[0]), &athrill_device_register_block_model },
-	{ stm32f7_rtc_compatibles, 1U, &stm32f7_rtc_model },
-	{ stm32f7_adc_compatibles, 1U, &stm32f7_adc_model },
-	{ stm32f7_rng_compatibles, 2U, &stm32f7_rng_model },
-	{ stm32f7_otgfs_compatibles, 1U, &stm32f7_otgfs_model },
 	{ stm32f7_crc_compatibles, 1U, &stm32f7_crc_model },
 	{ stm32f7_backup_sram_compatibles, 1U, &stm32f7_backup_sram_model },
 	{ icm20689_compatibles, 1U, &athrill_device_icm20689_model },
@@ -461,7 +452,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32h7_soc_compatibles, 2U, &stm32h7_soc_model },
 	{ stm32h7_spi_compatibles, 1U, &athrill_device_stm32h7_spi_model },
 	{ stm32h7_dmamux_compatibles, 1U, &athrill_device_stm32_dmamux_model },
-	{ stm32h7_boot_register_compatibles, 6U, &stm32h7_boot_register_model },
+	{ stm32h7_boot_register_compatibles, 5U, &stm32h7_boot_register_model },
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
 	{ bmi055_gyro_compatibles, 1U, &athrill_device_bmi055_model },
 	{ icm42688p_compatibles, 2U, &athrill_device_icm42688p_model },

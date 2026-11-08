@@ -137,6 +137,40 @@ static void test_h7(void)
 	write32(0x52002090U, 0xFFFFFFFFU);
 	TEST_CHECK(read32(0x52002090U) == 0x0000FFFFU);
 	close_node();
+	/* RTC: RSF, INITF follows INIT */
+	open_node("/soc/rtc@58004000");
+	write32(0x5800400CU, 1U << 7);
+	TEST_CHECK((read32(0x5800400CU) & ((1U << 5) | (1U << 6))) == ((1U << 5) | (1U << 6)));
+	close_node();
+	/* ADC3: ADCAL done, ADRDY after ADEN, DR 0; EOC/EOS after ADSTART */
+	open_node("/soc/adc@58026000");
+	write32(0x58026008U, (1U << 31) | 1U);
+	TEST_CHECK((read32(0x58026008U) & (1U << 31)) == 0U);
+	TEST_CHECK((read32(0x58026000U) & 1U) != 0U);
+	TEST_CHECK(read32(0x58026040U) == 0U);
+	write32(0x58026008U, 1U << 2);
+	TEST_CHECK((read32(0x58026000U) & 0xCU) == 0xCU);
+	close_node();
+	/* ADC1/2: the same rules on the first ADC */
+	open_node("/soc/adc@40022000");
+	write32(0x40022008U, 1U | (1U << 1));
+	TEST_CHECK((read32(0x40022008U) & 2U) == 0U && (read32(0x40022000U) & 1U) != 0U);
+	close_node();
+	/* USB OTG FS: resets complete, AHB idle */
+	open_node("/soc/usb@40080000");
+	write32(0x40080010U, 1U << 0);
+	TEST_CHECK((read32(0x40080010U) & (1U << 31)) != 0U && (read32(0x40080010U) & 0x31U) == 0U);
+	close_node();
+	/* IWDG keeps what is written */
+	open_node("/soc/watchdog@58004800");
+	write32(0x58004800U, 0xAAAAU);
+	TEST_CHECK(read32(0x58004800U) == 0xAAAAU);
+	close_node();
+	/* RNG: DRDY; DR the target's sequence from 0x7436c001 */
+	open_node("/soc/rng@48021800");
+	TEST_CHECK((read32(0x48021804U) & 1U) != 0U);
+	TEST_CHECK(read32(0x48021808U) == (uint32)(0x7436C001ULL * 1664525U + 1013904223U));
+	close_node();
 	free((void *)blob);
 }
 
@@ -166,6 +200,22 @@ static void test_f7(void)
 	open_node("/soc/flash-controller@40023c00");
 	write32(0x40023C0CU, 0xFFFFFFFFU);
 	TEST_CHECK(read32(0x40023C0CU) == 0xFFFEFFFFU);
+	close_node();
+	/* RTC: RSF; INITF follows INIT */
+	open_node("/soc/rtc@40002800");
+	write32(0x4000280CU, 1U << 7);
+	TEST_CHECK(read32(0x4000280CU) == ((1U << 7) | (1U << 6) | (1U << 5)));
+	close_node();
+	/* ADC: SR EOC always; the common registers (0x300) in the block */
+	open_node("/soc/adc@40012000");
+	TEST_CHECK(read32(0x40012000U) == 2U);
+	write32(0x40012304U, 0x30000U);
+	TEST_CHECK(read32(0x40012304U) == 0x30000U);
+	close_node();
+	/* USB OTG FS: GRSTCTL resets complete, AHB idle */
+	open_node("/soc/usb@50000000");
+	write32(0x50000010U, 0x31U);
+	TEST_CHECK(read32(0x50000010U) == 0x80000000U);
 	close_node();
 	free((void *)blob);
 }
