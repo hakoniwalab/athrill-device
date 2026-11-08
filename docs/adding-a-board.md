@@ -6,10 +6,23 @@ the C models selected by each node's `compatible` property contain behaviour.
 The graph is validated and built once at startup, so Devicetree is not parsed
 in the instruction loop.
 
-This guide uses Pixhawk 6C as the running example. The merged Devicetree path
-currently builds Pixhawk 4. Pixhawk 6C authoring can follow the same process,
-but the H7-specific models and its new sensor models listed under
-[Coming next](#coming-next) must be merged before its DTB will run.
+Every board is built only from its DTB; no target builds a board in C code.
+The STM32 target runs Pixhawk 4 (`boards/pixhawk4/`), Pixhawk 6C
+(`boards/pixhawk6c/`), NUCLEO-F767ZI (`boards/nucleo-f767zi/`) and
+NUCLEO-H743ZI (`boards/nucleo-h743zi/`), and the RISC-V target runs Erbium
+(`boards/erbium/`). Every peripheral of those boards is an athrill-device
+model; the targets keep only the CPU's architectural devices (section 4).
+
+The STM32 boards share Athrill's per-family facts (start-up read rules of the
+register blocks, the NVIC line count) in `boards/stm32-athrill/stm32f7-athrill.dtsi`
+and `stm32h7-athrill.dtsi`. The NUCLEO boards include Zephyr's own board DTS
+unchanged, so a Zephyr application built for that board runs on the board
+Athrill builds from the same description; peripherals without a model are
+switched off in the Athrill layer (see each board README).
+
+This guide uses Pixhawk 6C as the running example. Its files in
+`boards/pixhawk6c/` are the result of the steps below and can be compared
+with a new board at each step.
 
 ## 1. Choose and record the SoC source
 
@@ -94,13 +107,18 @@ comment. Never use that property to hide a functional device whose model is
 missing: every enabled functional node must resolve to a built-in model, an
 explicit plugin, or a target-owned architectural device.
 
-The merged sensor chips still obtain physical samples through the target
-interface. The planned graph form places one node with compatible
-`hakoniwa,sensor-device` at board scope and gives every sensor chip an explicit
-value-source phandle to it; the ordered PWM output model returns actuator
-values to the same source. The binding and property name for that edge have
-not merged, so do not invent them in a board DTS yet. Keep the link, channel,
-and trace settings in `device_config.txt` when this model is added.
+Sensor chips and the ordered PWM output read and write physical values
+through an explicit `value-source` phandle; nothing reaches them through the
+target. The base board declares two sources at board scope: an
+`athrill,bench-sensor-source` node, which the sensor chips and the
+`athrill,pwm-actuator-map` node point at, and a `hakoniwa,sensor-device` node
+with `status = "disabled"`. A second DTS (`<board>-hakoniwa.dts`) includes
+the base, enables the Hakoniwa node, and points the same consumers at it. Each
+of those consumers also carries the boolean `athrill,tick-before-value-source`
+property, so it ticks before the source and reads the previously latched
+value. The base board then runs without the Hakoniwa plugin (SIH and bench
+runs), and the Hakoniwa board needs it (section 4). Link, channel, and trace
+settings stay in `device_config.txt`.
 
 ## 3. Compile and identify the DTB
 
@@ -123,7 +141,8 @@ git -C "$ZEPHYR" checkout --detach FETCH_HEAD
 test "$(git -C "$ZEPHYR" rev-parse HEAD)" = "$ZEPHYR_REV"
 ```
 
-Preprocess the DTS and compile the exact result that will be committed:
+Preprocess the DTS and compile the exact result that will be committed. For a
+RISC-V board, replace the `dts/arm` include with `dts/riscv`:
 
 ```bash
 set -eu
@@ -156,18 +175,31 @@ changed.
 ## 4. Resolve every `compatible`
 
 The loader chooses the first exact registered string in a node's ordered
-`compatible` list. It never guesses from the node name. The merged production
+`compatible` list. It never guesses from the node name. The production
 registry accepts the following strings; test-only `athrill,test-*` entries are
 not board interfaces.
 
 | Kind | Registered compatible strings |
 | --- | --- |
-| Native models | `st,stm32-gpio`; `st,stm32-exti`; `st,stm32-timers`; `invensense,icm20689`; `infineon,fm25xxx`; `ramtron,fm25v02a`; `isentek,ist8310`; `meas,ms5611`; `u-blox,m8`; `athrill,pwm-actuator-map` |
-| Transitional target adapters | `holybro,pixhawk4`; `st,stm32f765`; `st,stm32f7`; `st,stm32-dma-v1`; `st,stm32-spi-fifo`; `st,stm32-spi`; `st,stm32-i2c-v2`; `st,stm32-usart`; `st,stm32-uart`; `st,stm32-sdmmc`; `st,stm32-flash-controller`; `st,stm32f7-flash-controller`; `zephyr,flash-controller`; `st,stm32-rtc`; `st,stm32-adc`; `st,stm32-rng`; `zephyr,entropy`; `st,stm32-otgfs`; `zephyr,crc`; `st,stm32-backup-sram`; `zephyr,sdmmc-disk`; `athrill,bench-sensor-source` |
-| Structural models | `simple-bus`; `simple-mfd`; `syscon`; `fixed-clock`; `zephyr,memory-region`; `zephyr,memory-attr`; `mmio-sram`; `st,stm32f7-pinctrl`; `st,stm32-pinctrl`; `st,stm32-reset`; `st,stm32-rcc`; `st,stm32f4-rcc`; `st,stm32-rcc-rctl`; `st,stm32-nv-flash`; `soc-nv-flash`; `st,stm32-nvm-otp`; `fixed-layout`; `usb-nop-xceiv`; `st,stm32-smbus`; `st,stm32-pwm` |
+| Board and SoC roots (structural) | `holybro,pixhawk4`; `holybro,pixhawk6c`; `st,stm32f767zi-nucleo`; `st,stm32h743zi-nucleo`; `openhwgroup,erbium`; `st,stm32f765`; `st,stm32f767`; `st,stm32f7`; `st,stm32h743`; `st,stm32h7` |
+| Structural nodes | `simple-bus`; `simple-mfd`; `syscon`; `fixed-clock`; `zephyr,memory-region`; `zephyr,memory-attr`; `mmio-sram`; `st,stm32f7-pinctrl`; `st,stm32-pinctrl`; `st,stm32-reset`; `st,stm32-rcc`; `st,stm32-rcc-rctl`; `st,stm32-nv-flash`; `soc-nv-flash`; `st,stm32-nvm-otp`; `fixed-layout`; `usb-nop-xceiv`; `st,stm32-smbus`; `st,stm32-pwm`; Zephyr's description-only nodes `zephyr,mapped-partition`; `fixed-partitions`; `gpio-leds`; `pwm-leds`; `gpio-keys`; `arduino-header-r3`; `st,stm32-hse-clock`; `st,stm32fx-pll-clock`; `st,stm32h7-pll-clock`; `st,stm32-vref`; `st,stm32-vbat`; `st,stm32-temp-cal` |
+| STM32 on-chip models | `st,stm32-gpio`; `st,stm32-exti`; `st,stm32f7-syscfg`; `st,stm32h7-syscfg`; `st,stm32-dma-v1`; `st,stm32-dmamux`; `st,stm32-spi-fifo`; `st,stm32-spi`; `st,stm32h7-spi`; `st,stm32-i2c-v2`; `st,stm32-timers`; `st,stm32-usart`; `st,stm32-uart`; `st,stm32-sdmmc` |
+| Register blocks (start-up registers whose read rules are in the DTS) | `athrill,register-block`; `st,stm32f4-rcc`; `st,stm32h7-rcc`; `st,stm32h7-pwr`; `st,stm32-flash-controller`; `st,stm32f7-flash-controller`; `st,stm32h7-flash-controller`; `zephyr,flash-controller`; `st,stm32-rtc`; `st,stm32-adc`; `st,stm32f4-adc`; `st,stm32-rng`; `zephyr,entropy`; `st,stm32-otgfs`; `st,stm32-watchdog`; `zephyr,crc`; `openhwgroup,erbium-mram-controller` |
+| RISC-V (Erbium) on-chip models | `riscv,machine-timer`; `openhwgroup,shakti-uart-v1` |
+| Off-chip chip models | `invensense,icm20689`; `invensense,icm42688`; `invensense,icm4268x`; `bosch,bma280` (BMI055 accelerometer); `bosch,bmg160` (BMI055 gyroscope); `infineon,fm25xxx`; `ramtron,fm25v02a`; `isentek,ist8310`; `meas,ms5611`; `u-blox,m8`; `zephyr,sdmmc-disk` |
+| Value sources and sinks | `athrill,bench-sensor-source`; `athrill,pwm-actuator-map` |
+| Plugin (not built in) | `hakoniwa,sensor-device` (STM32 boards) and `hakoniwa,sensor-registers` (Erbium), from the `board/common/` library (`libhako_sensor_device`) |
 | STM32 target-owned architectural nodes | `arm,cortex-m7`; `arm,v7m-nvic`; `arm,armv7m-systick`; `arm,armv7m-mpu`; `arm,armv7m-dwt`; `arm,dtcm` |
-| RISC-V (Erbium) models | `openhwgroup,shakti-uart-v1`; `riscv,machine-timer`; `openhwgroup,erbium-mram-controller` (register block); `openhwgroup,erbium` (structural) |
 | RISC-V target-owned architectural nodes | `riscv`; `riscv,cpu-intc`; `sifive,plic-1.0.0` |
+
+An enabled node whose own compatible has no model can still be kept in two
+ways, both visible in the DTS. Put `athrill,register-block` first in its
+`compatible` list and give its start-up read rules, as the Athrill layers do
+for `st,stm32-lpuart`, `st,stm32-bxcan`, `st,stm32h7-fdcan` and `st,stm32-bdma`;
+or, for a node without registers of its own, add the empty property
+`athrill,structural`. Otherwise switch it off with `status = "disabled"`; an
+enabled node that matches nothing stops the start-up with
+`DEVICE_TREE_ERROR code=unmodelled`.
 
 ### Add a missing built-in chip model
 
@@ -205,45 +237,70 @@ one library with a contiguous, zero-based
 stops at the first missing index.
 
 The configured value has the form
-`compatible=library-path`. The loader checks the plugin magic, ABI, structure
+`compatible=library-path`. Write the compatible's comma as `%2C`, because the
+Athrill configuration tokenizer treats a literal comma as a field separator.
+The loader checks the plugin magic, ABI, structure
 sizes, names, versions, callbacks, and exported compatible. A plugin cannot
 replace a built-in compatible, and two plugins cannot claim the same
 compatible. Keep the library loaded for the lifetime of every model instance.
 
-The Hakoniwa sensor library exports both this model-plugin ABI and the legacy
-EXDEV ABI during the migration window. New DT boards use the explicit plugin
-mapping; existing C boards may retain their `DEV` line until the EXDEV
-deprecation gate.
+The Hakoniwa sensor library still also exports the legacy EXDEV ABI. A board
+built from its DTB does not use it: map `hakoniwa,sensor-device` with a plugin
+entry and add no `DEV` line.
 
-## 5. Run the merged Devicetree path
+## 5. Run the board
 
-The STM32 target reads `DEVICE_CONFIG_DEVICE_TREE` from `device_config.txt`.
-The path and all host-resource paths are resolved from Athrill's working
-directory. If the key is absent, the target uses the legacy C-built board.
-Do not set `DEVICE_CONFIG_STM32_BOARD` for the Devicetree-built path.
+`DEVICE_CONFIG_DEVICE_TREE` in `device_config.txt` names the DTB. The path and
+all host-resource paths are resolved from Athrill's working directory. Without
+the key no board devices are built: the STM32 target stops with an error if
+`DEVICE_CONFIG_STM32_BOARD` is set, and the RISC-V target runs only the hart,
+its local interrupts, and the PLIC.
 
-The following is a complete board-selection portion for the currently merged
-Pixhawk 4 DTB when Athrill starts in the athrill-device repository root:
+Host-only values such as file paths, TCP ports, and Hakoniwa asset and channel
+names remain outside the DTB. Each target reads its own keys from
+`device_config.txt` and hands them to the models; the keys are listed in the
+target's configuration reference (athrill-target-stm32 and
+athrill-target-riscv `docs/configuration.md`).
+
+The following is a complete board-selection portion for the Pixhawk 4 base
+DTB (PX4 SIH and bench runs) when Athrill starts in the athrill-device
+repository root:
 
 ```text
 DEVICE_CPU_FREQ 216
 DEVICE_CONFIG_STM32_BOOT_ADDR 0x08008000
+DEVICE_CONFIG_STM32_BOARD fmu-v5
 DEVICE_CONFIG_DEVICE_TREE boards/pixhawk4/pixhawk4.dtb
 DEVICE_CONFIG_STM32_FRAM_FILE fram.bin
 DEVICE_CONFIG_STM32_SDCARD_IMAGE sd.img
 DEVICE_CONFIG_STM32_ACTUATOR_FILE actuators.txt
 ```
 
-F-RAM, SD image, UART files, actuator trace, sensor bench selection, sensor
-device placement, and UART TCP port are host-only values. They remain outside
-the DTB and are logged with its hash. Add a plugin line only for a library that
-implements the plugin ABI and a compatible not already built in.
+On STM32, `DEVICE_CONFIG_STM32_BOARD` selects only the SoC profile: `fmu-v5`
+for STM32F7 and `fmu-v6c` for STM32H7. The devices and wiring come from the
+DTB. Pixhawk 6C uses `fmu-v6c` with `boards/pixhawk6c/pixhawk6c.dtb`.
+The NUCLEO boards run Zephyr applications without this key; their complete
+`device_config.txt` and memory map are written by athrill-target-stm32
+`examples/zephyr/run.sh`.
 
-On successful startup, the checked-in Pixhawk 4 blob produces this graph line:
+A Hakoniwa run uses the `-hakoniwa` DTB, the plugin mapping from section 4,
+and the `HAKO_SENSOR_DEVICE_*` keys described in this repository's
+`docs/configuration.md`. Erbium uses `boards/erbium/erbium.dtb`; its UART
+input file and TCP port are the RISC-V target's `DEVICE_CONFIG_ERBIUM_*` keys.
 
-```text
-DEVICE_TREE sha256=fa07dfd4a9925553235e158b92ae21e2bdbd32458767424254e24270fd340e67 size=23896
-```
+On successful startup, Athrill prints one graph line with the DTB's SHA-256
+and size. The checked-in blobs produce:
+
+| DTB | Startup line |
+| --- | --- |
+| `boards/pixhawk4/pixhawk4.dtb` | `DEVICE_TREE sha256=234cbb779e476eb3f614f365df8e2262dd33af91118fa812d49efab9918d6089 size=26092` |
+| `boards/pixhawk4/pixhawk4-hakoniwa.dtb` | `DEVICE_TREE sha256=7627a4f12a4a2b84f937811736d2d2ec9abc4ac4c032ab9191eeed4506cb84c2 size=26181` |
+| `boards/pixhawk6c/pixhawk6c.dtb` | `DEVICE_TREE sha256=6dbeeac9caf225be3f87ac340430124831d63557d7783bea390f5147e5079b2d size=31279` |
+| `boards/pixhawk6c/pixhawk6c-hakoniwa.dtb` | `DEVICE_TREE sha256=bb8dd3a9ed85c731434949eddebadec51a972c28693ad89be61bd31ea8837dfa size=31392` |
+| `boards/nucleo-f767zi/nucleo-f767zi.dtb` | `DEVICE_TREE sha256=6a72e8dccf8e54f2c65f53beaa706622d7834a437920e77f0e8fa962ef6474e3 size=29491` |
+| `boards/nucleo-h743zi/nucleo-h743zi.dtb` | `DEVICE_TREE sha256=f14668b555edd421fe21b99294b854a47c676fd7d19c1f7730de2102b6f10c0f size=34742` |
+| `boards/erbium/erbium.dtb` | `DEVICE_TREE sha256=74d0308a9d6ded43a601f10e6b6be893b77acb5bee4a89259b111a15ee1afda8 size=1969` |
+| `boards/erbium/erbium-hakoniwa.dtb` | `DEVICE_TREE sha256=1f27925e82d2a2441860445af2747aff41544a94dd7376e30305f16dcbd8176f size=2097` |
 
 Each present host-only value is then logged as
 `DEVICE_TREE_HOST sha256=... key=... value=...`, followed by one stable
@@ -278,9 +335,10 @@ flight:
    encoded into the datasheet register format. For Pixhawk 6C, cover the
    ICM-42688-P and both BMI055 dies as well as H7-only SPI, DMAMUX/BDMA, and
    SDMMC v2 front ends.
-4. If a C-built version of the board exists, run the same firmware with the
-   same host configuration, initial F-RAM, SD image, and sensor input on both
-   paths. Compare instruction counts, console output, trace records, F-RAM,
+4. If the board replaces an existing implementation (the Pixhawk boards
+   replaced C-built boards, and Erbium replaced the RISC-V target's C
+   devices), run the same firmware with the same host configuration, initial
+   F-RAM, SD image, and sensor input on both. Compare instruction counts, console output, trace records, F-RAM,
    the complete SD image, and flight logs. For Pixhawk 6C, require the
    60-virtual-second in-process PIL trace to be identical for PX4 and
    ArduCopter and report the first differing record if it is not.
@@ -296,12 +354,3 @@ test, equivalence, boot, and flight results. Include the firmware revisions,
 DTB hash, model versions, host inputs, instruction counts, and artifact hashes
 needed to reproduce the comparison. Do not rely on private paths, unpublished
 sources, or tracking references.
-
-## Coming next
-
-Before Pixhawk 6C can run from its DTB, the registry needs H7 SoC/front-end
-models, DMAMUX/BDMA and SDMMC v2 support, and models for ICM-42688-P and the two
-BMI055 dies. The `hakoniwa,sensor-device` model/plugin and its explicit
-value-source and actuator edges must also be defined and merged. Until then,
-keep the existing C-built Pixhawk 6C as the execution and equivalence
-reference; do not mark missing functional nodes as structural.
