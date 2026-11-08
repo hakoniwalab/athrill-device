@@ -26,8 +26,19 @@ ctest --test-dir build --output-on-failure
 
 `libfdt` is the read-only subset pinned to dtc v1.7.2 and used under its
 BSD-2-Clause option; its retained notice is in
-`LICENSES/BSD-2-Clause-libfdt.txt`.  The checked-in Pixhawk 4 board source and
-blob are documented in [`boards/pixhawk4/`](boards/pixhawk4/README.md). To add
+`LICENSES/BSD-2-Clause-libfdt.txt`.
+
+The checked-in boards, each with its source and blob documented:
+
+| Board | SoC | Firmware checked |
+| --- | --- | --- |
+| [`pixhawk4`](boards/pixhawk4/README.md) | STM32F765 | PX4, ArduPilot |
+| [`pixhawk6c`](boards/pixhawk6c/README.md) | STM32H743 | PX4 |
+| [`nucleo-f767zi`](boards/nucleo-f767zi/README.md) | STM32F767 | Zephyr samples, built for Zephyr's `nucleo_f767zi` |
+| [`nucleo-h743zi`](boards/nucleo-h743zi/README.md) | STM32H743 | Zephyr samples, built for Zephyr's `nucleo_h743zi` |
+| [`erbium`](boards/erbium/README.md) | Erbium (RV64) | PX4, and Zephyr samples built for Zephyr's `erbium` |
+
+The nucleo boards include Zephyr's own board files unchanged. To add
 another board, follow [Adding a board from a Devicetree](docs/adding-a-board.md).
 
 ```

@@ -9,6 +9,10 @@ and adds what that DTSI does not describe: the system registers at
 `0x02000000` (a register block with the platform identifier and revision)
 and the machine timer's `clock-frequency` (the 2 MHz timebase).
 
+Zephyr has the same board upstream (`boards/openhwgroup/erbium`). Zephyr's
+hello_world, synchronization and philosophers samples, built for `erbium` at
+the pinned revision, run on `erbium.dtb` unchanged.
+
 | Node | Model |
 | --- | --- |
 | `serial@2004000` (`openhwgroup,shakti-uart-v1`) | `shakti-uart` |

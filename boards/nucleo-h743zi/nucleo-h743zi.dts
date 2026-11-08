@@ -1,0 +1,40 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * ST NUCLEO-H743ZI for Athrill: Zephyr's own board description
+ * boards/st/nucleo_h743zi/nucleo_h743zi.dts (Apache-2.0, included unchanged, not
+ * copied), so a Zephyr application built for nucleo_h743zi runs as it is.
+ * This layer adds Athrill's SoC facts and switches off the peripherals that
+ * Athrill does not model.
+ */
+
+#include <st/nucleo_h743zi/nucleo_h743zi.dts>
+#include "../stm32-athrill/stm32h7-athrill.dtsi"
+
+/* Not modelled on Athrill: an application that uses them does not run. */
+&dac1 { status = "disabled"; };
+&mac { status = "disabled"; };
+
+/*
+ * LPUART1: Zephyr's serial driver starts it, so it cannot be switched off.
+ * A register block that answers its start-up (ISR: TEACK and REACK follow
+ * CR1 TE and RE; TXE and TC always set): what is written goes nowhere and
+ * nothing is received. The console is USART3.
+ */
+&lpuart1 {
+	compatible = "athrill,register-block", "st,stm32-lpuart", "st,stm32-uart";
+	athrill,read-follow = <0x1c 0x00 0x00000008 18>,
+			      <0x1c 0x00 0x00000004 20>;
+	athrill,read-set = <0x1c 0x000000c0>;
+};
+
+/ {
+	soc {
+		/* SYSCFG (the upstream H7 DTSI has no node for it): Zephyr's
+		 * start-up sets PWRCR, as on Pixhawk 6C. */
+		syscfg: system-config@58000400 {
+			compatible = "st,stm32h7-syscfg";
+			reg = <0x58000400 0x400>;
+		};
+	};
+};

@@ -1,0 +1,16 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * ST NUCLEO-F767ZI for Athrill: Zephyr's own board description
+ * boards/st/nucleo_f767zi/nucleo_f767zi.dts (Apache-2.0, included unchanged, not
+ * copied), so a Zephyr application built for nucleo_f767zi runs as it is.
+ * This layer adds Athrill's SoC facts and switches off the peripherals that
+ * Athrill does not model.
+ */
+
+#include <st/nucleo_f767zi/nucleo_f767zi.dts>
+#include "../stm32-athrill/stm32f7-athrill.dtsi"
+
+/* Not modelled on Athrill: an application that uses them does not run. */
+&dac1 { status = "disabled"; };
+&mac { status = "disabled"; };

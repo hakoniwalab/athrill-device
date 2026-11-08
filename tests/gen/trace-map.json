@@ -41,6 +41,46 @@
       "uart_controllers_with_dmas": 0
     },
     {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "chip_compatibles": {},
+      "chip_nodes": 0,
+      "dma_controllers": 0,
+      "dma_references": 0,
+      "dt_boards": 1,
+      "dt_irq_nodes": 11,
+      "dt_mmio_nodes": 28,
+      "dt_negative_nodes": 1,
+      "dt_nodes": 54,
+      "gpio_chip_selects": 0,
+      "gpio_interrupt_consumers": 0,
+      "pwm_entries": 0,
+      "pwm_maps": 0,
+      "sd_cards": 0,
+      "uart_children": 0,
+      "uart_controllers": 2,
+      "uart_controllers_with_dmas": 0
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "chip_compatibles": {},
+      "chip_nodes": 0,
+      "dma_controllers": 0,
+      "dma_references": 0,
+      "dt_boards": 1,
+      "dt_irq_nodes": 11,
+      "dt_mmio_nodes": 31,
+      "dt_negative_nodes": 1,
+      "dt_nodes": 65,
+      "gpio_chip_selects": 0,
+      "gpio_interrupt_consumers": 0,
+      "pwm_entries": 0,
+      "pwm_maps": 0,
+      "sd_cards": 0,
+      "uart_children": 0,
+      "uart_controllers": 2,
+      "uart_controllers_with_dmas": 0
+    },
+    {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "chip_compatibles": {
         "invensense,icm20689": 1,
@@ -511,6 +551,2015 @@
       "name": "erbium__erbium__root__ADV-DT-005.T1",
       "node_path": "/",
       "source_file": "tests/gen/test_gen_erbium__erbium.c",
+      "test_spec_id": "ADV-DT-005.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "reg": []
+      },
+      "item_id": "ADV-SPI-002",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__spi@40013000__ADV-SPI-002.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-SPI-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "reg": []
+      },
+      "item_id": "ADV-I2C-002",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__i2c@40005400__ADV-I2C-002.T1",
+      "node_path": "/soc/i2c@40005400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-I2C-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "children": []
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__serial@40004800__ADV-UART-002.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "children": []
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__serial@40011400__ADV-UART-002.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "mutated_property": "compatible",
+        "negative_dtb": "${ATHRILL_TRACE_BUILD_DIR}/nucleo_f767zi__nucleo_f767zi__unknown-compatible.dtb"
+      },
+      "item_id": "ADV-DT-001",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__ADV-DT-001.T1",
+      "node_path": "/soc",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "enabled_compatible_nodes": [
+          "/",
+          "/soc",
+          "/soc/rtc@40002800",
+          "/soc/watchdog@40003000",
+          "/soc/serial@40004800",
+          "/soc/i2c@40005400",
+          "/soc/can@40006400",
+          "/soc/timers@40010000",
+          "/soc/timers@40010000/pwm",
+          "/soc/serial@40011400",
+          "/soc/adc@40012000",
+          "/soc/spi@40013000",
+          "/soc/interrupt-controller@40013c00",
+          "/soc/pin-controller@40020000",
+          "/soc/pin-controller@40020000/gpio@40020000",
+          "/soc/pin-controller@40020000/gpio@40020400",
+          "/soc/pin-controller@40020000/gpio@40020800",
+          "/soc/pin-controller@40020000/gpio@40020c00",
+          "/soc/pin-controller@40020000/gpio@40021000",
+          "/soc/pin-controller@40020000/gpio@40021400",
+          "/soc/pin-controller@40020000/gpio@40021800",
+          "/soc/pin-controller@40020000/gpio@40021c00",
+          "/soc/pin-controller@40020000/gpio@40022000",
+          "/soc/pin-controller@40020000/gpio@40022400",
+          "/soc/pin-controller@40020000/gpio@40022800",
+          "/soc/rcc@40023800",
+          "/soc/rcc@40023800/reset-controller",
+          "/soc/flash-controller@40023c00",
+          "/soc/flash-controller@40023c00/flash@8000000",
+          "/soc/flash-controller@40023c00/flash@8000000/partitions/partition@0",
+          "/soc/flash-controller@40023c00/flash@8000000/partitions/partition@10000",
+          "/soc/flash-controller@40023c00/flash@8000000/partitions/partition@40000",
+          "/soc/flash-controller@40023c00/flash@8000000/partitions/partition@100000",
+          "/soc/flash-controller@40023c00/flash@8000000/partitions/partition@1c0000",
+          "/soc/flash-controller@40023c00/flash@1ff0f400",
+          "/soc/flash-controller@40023c00/flash@1ff0f400/nvmem-layout",
+          "/soc/usb@50000000",
+          "/soc/rng@50060800",
+          "/soc/debug@e0042000",
+          "/soc/system-memory@1ff0f400",
+          "/soc/power@40007000",
+          "/clocks/clk-hse",
+          "/clocks/clk-lsi",
+          "/clocks/pll",
+          "/vref",
+          "/vbat",
+          "/otghs_fs_phy",
+          "/otgfs_phy",
+          "/memory-placeholder@90000000",
+          "/memory@20000000",
+          "/memory@20020000",
+          "/connector",
+          "/leds",
+          "/gpio_keys"
+        ]
+      },
+      "item_id": "ADV-DT-002",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__root__ADV-DT-002.T1",
+      "node_path": "/",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073752064,
+            "size": 768
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__rtc@40002800__ADV-DT-003.T1",
+      "node_path": "/soc/rtc@40002800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073754112,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__watchdog@40003000__ADV-DT-003.T1",
+      "node_path": "/soc/watchdog@40003000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073760256,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__serial@40004800__ADV-DT-003.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073763328,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__i2c@40005400__ADV-DT-003.T1",
+      "node_path": "/soc/i2c@40005400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073767424,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__can@40006400__ADV-DT-003.T1",
+      "node_path": "/soc/can@40006400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073807360,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__timers@40010000__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40010000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073812480,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__serial@40011400__ADV-DT-003.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073815552,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__adc@40012000__ADV-DT-003.T1",
+      "node_path": "/soc/adc@40012000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073819648,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__spi@40013000__ADV-DT-003.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073822720,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__interrupt-controller@40013c00__ADV-DT-003.T1",
+      "node_path": "/soc/interrupt-controller@40013c00",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073872896,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40020000__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40020000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073873920,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40020400__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40020400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073874944,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40020800__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40020800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073875968,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40020c00__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40020c00",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073876992,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40021000__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40021000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073878016,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40021400__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40021400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073879040,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40021800__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40021800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073880064,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40021c00__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40021c00",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073881088,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40022000__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40022000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073882112,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40022400__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40022400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073883136,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__pin-controller@40020000__gpio@40022800__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@40020000/gpio@40022800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073887232,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__rcc@40023800__ADV-DT-003.T1",
+      "node_path": "/soc/rcc@40023800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073888256,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__flash-controller@40023c00__ADV-DT-003.T1",
+      "node_path": "/soc/flash-controller@40023c00",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1342177280,
+            "size": 262144
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__usb@50000000__ADV-DT-003.T1",
+      "node_path": "/soc/usb@50000000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1342572544,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__rng@50060800__ADV-DT-003.T1",
+      "node_path": "/soc/rng@50060800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 3758366720,
+            "size": 4096
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__debug@e0042000__ADV-DT-003.T1",
+      "node_path": "/soc/debug@e0042000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 535884800,
+            "size": 256
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__system-memory@1ff0f400__ADV-DT-003.T1",
+      "node_path": "/soc/system-memory@1ff0f400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073770496,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__power@40007000__ADV-DT-003.T1",
+      "node_path": "/soc/power@40007000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              41,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__rtc@40002800__ADV-DT-004.T1",
+      "node_path": "/soc/rtc@40002800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              39,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__serial@40004800__ADV-DT-004.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              31,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              32,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__i2c@40005400__ADV-DT-004.T1",
+      "node_path": "/soc/i2c@40005400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              19,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              20,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              21,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              22,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__can@40006400__ADV-DT-004.T1",
+      "node_path": "/soc/can@40006400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              24,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              25,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              26,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              27,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__timers@40010000__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40010000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              71,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__serial@40011400__ADV-DT-004.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              35,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__spi@40013000__ADV-DT-004.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              6,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              7,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              8,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              9,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              10,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              23,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              40,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__interrupt-controller@40013c00__ADV-DT-004.T1",
+      "node_path": "/soc/interrupt-controller@40013c00",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              4,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__flash-controller@40023c00__ADV-DT-004.T1",
+      "node_path": "/soc/flash-controller@40023c00",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              67,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__usb@50000000__ADV-DT-004.T1",
+      "node_path": "/soc/usb@50000000",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              80,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__soc__rng@50060800__ADV-DT-004.T1",
+      "node_path": "/soc/rng@50060800",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-f767zi/nucleo-f767zi.dtb",
+      "derived_properties": {
+        "dtb_size": 29491
+      },
+      "item_id": "ADV-DT-005",
+      "known_defect": null,
+      "name": "nucleo-f767zi__nucleo-f767zi__root__ADV-DT-005.T1",
+      "node_path": "/",
+      "source_file": "tests/gen/test_gen_nucleo_f767zi__nucleo_f767zi.c",
+      "test_spec_id": "ADV-DT-005.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "reg": []
+      },
+      "item_id": "ADV-SPI-002",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__spi@40013000__ADV-SPI-002.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-SPI-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "reg": []
+      },
+      "item_id": "ADV-I2C-002",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__i2c@40005400__ADV-I2C-002.T1",
+      "node_path": "/soc/i2c@40005400",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-I2C-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "children": []
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__serial@40004800__ADV-UART-002.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "children": []
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__serial@58000c00__ADV-UART-002.T1",
+      "node_path": "/soc/serial@58000c00",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "mutated_property": "compatible",
+        "negative_dtb": "${ATHRILL_TRACE_BUILD_DIR}/nucleo_h743zi__nucleo_h743zi__unknown-compatible.dtb"
+      },
+      "item_id": "ADV-DT-001",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__ADV-DT-001.T1",
+      "node_path": "/soc",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "enabled_compatible_nodes": [
+          "/",
+          "/soc",
+          "/soc/memory@38800000",
+          "/soc/timers@40001800",
+          "/soc/timers@40001800/pwm",
+          "/soc/serial@40004800",
+          "/soc/i2c@40005400",
+          "/soc/can@4000a000",
+          "/soc/spi@40013000",
+          "/soc/adc@40022000",
+          "/soc/rng@48021800",
+          "/soc/flash-controller@52002000",
+          "/soc/flash-controller@52002000/flash@1ff1e000",
+          "/soc/flash-controller@52002000/flash@1ff1e000/nvmem-layout",
+          "/soc/flash-controller@52002000/flash@8000000",
+          "/soc/flash-controller@52002000/flash@8000000/partitions/partition@0",
+          "/soc/flash-controller@52002000/flash@8000000/partitions/partition@40000",
+          "/soc/flash-controller@52002000/flash@8000000/partitions/partition@80000",
+          "/soc/flash-controller@52002000/flash@8000000/partitions/partition@c0000",
+          "/soc/interrupt-controller@58000000",
+          "/soc/serial@58000c00",
+          "/soc/rtc@58004000",
+          "/soc/watchdog@58004800",
+          "/soc/pin-controller@58020000",
+          "/soc/pin-controller@58020000/gpio@58020000",
+          "/soc/pin-controller@58020000/gpio@58020400",
+          "/soc/pin-controller@58020000/gpio@58020800",
+          "/soc/pin-controller@58020000/gpio@58020c00",
+          "/soc/pin-controller@58020000/gpio@58021000",
+          "/soc/pin-controller@58020000/gpio@58021400",
+          "/soc/pin-controller@58020000/gpio@58021800",
+          "/soc/pin-controller@58020000/gpio@58021c00",
+          "/soc/pin-controller@58020000/gpio@58022000",
+          "/soc/pin-controller@58020000/gpio@58022400",
+          "/soc/pin-controller@58020000/gpio@58022800",
+          "/soc/rcc@58024400",
+          "/soc/rcc@58024400/reset-controller",
+          "/soc/power@58024800",
+          "/soc/adc@58026000",
+          "/soc/usb@40080000",
+          "/soc/axi-target@51008000",
+          "/soc/debug@5c001000",
+          "/soc/system-memory@1ff1e800",
+          "/soc/system-config@58000400",
+          "/memory@0",
+          "/clocks/clk-hse",
+          "/clocks/clk-hsi48",
+          "/clocks/clk-lsi",
+          "/clocks/pll@0",
+          "/clocks/pll@1",
+          "/dietemp",
+          "/vbat",
+          "/vref",
+          "/memory@20000000",
+          "/memory@90000000",
+          "/otghs_fs_phy",
+          "/memory@24000000",
+          "/memory@30000000",
+          "/memory@30020000",
+          "/memory@38000000",
+          "/memory@30040000",
+          "/connector",
+          "/leds",
+          "/pwmleds",
+          "/gpio_keys"
+        ]
+      },
+      "item_id": "ADV-DT-002",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__root__ADV-DT-002.T1",
+      "node_path": "/",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073747968,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__timers@40001800__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40001800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073760256,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__serial@40004800__ADV-DT-003.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073763328,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__i2c@40005400__ADV-DT-003.T1",
+      "node_path": "/soc/i2c@40005400",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073782784,
+            "size": 1024
+          },
+          {
+            "address": 1073785856,
+            "size": 848
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__can@4000a000__ADV-DT-003.T1",
+      "node_path": "/soc/can@4000a000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073819648,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__spi@40013000__ADV-DT-003.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073881088,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__adc@40022000__ADV-DT-003.T1",
+      "node_path": "/soc/adc@40022000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1208096768,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__rng@48021800__ADV-DT-003.T1",
+      "node_path": "/soc/rng@48021800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1375739904,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__flash-controller@52002000__ADV-DT-003.T1",
+      "node_path": "/soc/flash-controller@52002000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476395008,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__interrupt-controller@58000000__ADV-DT-003.T1",
+      "node_path": "/soc/interrupt-controller@58000000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476398080,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__serial@58000c00__ADV-DT-003.T1",
+      "node_path": "/soc/serial@58000c00",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476411392,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__rtc@58004000__ADV-DT-003.T1",
+      "node_path": "/soc/rtc@58004000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476413440,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__watchdog@58004800__ADV-DT-003.T1",
+      "node_path": "/soc/watchdog@58004800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476526080,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58020000__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58020000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476527104,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58020400__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58020400",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476528128,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58020800__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58020800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476529152,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58020c00__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58020c00",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476530176,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58021000__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58021000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476531200,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58021400__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58021400",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476532224,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58021800__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58021800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476533248,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58021c00__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58021c00",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476534272,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58022000__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58022000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476535296,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58022400__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58022400",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476536320,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__pin-controller@58020000__gpio@58022800__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58022800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476543488,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__rcc@58024400__ADV-DT-003.T1",
+      "node_path": "/soc/rcc@58024400",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476544512,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__power@58024800__ADV-DT-003.T1",
+      "node_path": "/soc/power@58024800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476550656,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__adc@58026000__ADV-DT-003.T1",
+      "node_path": "/soc/adc@58026000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1074266112,
+            "size": 262144
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__usb@40080000__ADV-DT-003.T1",
+      "node_path": "/soc/usb@40080000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1358987264,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__axi-target@51008000__ADV-DT-003.T1",
+      "node_path": "/soc/axi-target@51008000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1543507968,
+            "size": 4096
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__debug@5c001000__ADV-DT-003.T1",
+      "node_path": "/soc/debug@5c001000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 535947264,
+            "size": 256
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__system-memory@1ff1e800__ADV-DT-003.T1",
+      "node_path": "/soc/system-memory@1ff1e800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476396032,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__system-config@58000400__ADV-DT-003.T1",
+      "node_path": "/soc/system-config@58000400",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              43,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__timers@40001800__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40001800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              39,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__serial@40004800__ADV-DT-004.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              31,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              32,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__i2c@40005400__ADV-DT-004.T1",
+      "node_path": "/soc/i2c@40005400",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              19,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              21,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              63,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__can@4000a000__ADV-DT-004.T1",
+      "node_path": "/soc/can@4000a000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              35,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__spi@40013000__ADV-DT-004.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              80,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__rng@48021800__ADV-DT-004.T1",
+      "node_path": "/soc/rng@48021800",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              4,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__flash-controller@52002000__ADV-DT-004.T1",
+      "node_path": "/soc/flash-controller@52002000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              6,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              7,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              8,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              9,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              10,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              23,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              40,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__interrupt-controller@58000000__ADV-DT-004.T1",
+      "node_path": "/soc/interrupt-controller@58000000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              142,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__serial@58000c00__ADV-DT-004.T1",
+      "node_path": "/soc/serial@58000c00",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              41,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__rtc@58004000__ADV-DT-004.T1",
+      "node_path": "/soc/rtc@58004000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              101,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              98,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              99,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__soc__usb@40080000__ADV-DT-004.T1",
+      "node_path": "/soc/usb@40080000",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "nucleo-h743zi/nucleo-h743zi.dtb",
+      "derived_properties": {
+        "dtb_size": 34742
+      },
+      "item_id": "ADV-DT-005",
+      "known_defect": null,
+      "name": "nucleo-h743zi__nucleo-h743zi__root__ADV-DT-005.T1",
+      "node_path": "/",
+      "source_file": "tests/gen/test_gen_nucleo_h743zi__nucleo_h743zi.c",
       "test_spec_id": "ADV-DT-005.T1",
       "will_fail": false
     },

@@ -394,8 +394,17 @@ static const char *const structural_compatibles[] = {
 	"st,stm32-rcc", "st,stm32-rcc-rctl",
 	"st,stm32-nv-flash", "soc-nv-flash", "st,stm32-nvm-otp",
 	"fixed-layout", "usb-nop-xceiv", "st,stm32-smbus",
+	/* Zephyr board descriptions without registers of their own: flash
+	 * partitions, LEDs and buttons on GPIOs or PWM, the Arduino header, the
+	 * clock sources and PLLs (RCC registers), the ADC's internal channels */
+	"zephyr,mapped-partition", "fixed-partitions", "gpio-leds", "pwm-leds",
+	"gpio-keys", "arduino-header-r3", "st,stm32-hse-clock",
+	"st,stm32fx-pll-clock", "st,stm32h7-pll-clock", "st,stm32-vref",
+	"st,stm32-vbat", "st,stm32-temp-cal",
+	/* the nucleo boards (Zephyr's board files) */
+	"st,stm32f767zi-nucleo", "st,stm32h743zi-nucleo",
 	/* the SoC nodes: their blocks are their children's models */
-	"st,stm32f765", "st,stm32f7", "st,stm32h743", "st,stm32h7"
+	"st,stm32f765", "st,stm32f767", "st,stm32f7", "st,stm32h743", "st,stm32h7"
 };
 
 /* FMUv5 registrations are deliberately per model; there is no catch-all. */
