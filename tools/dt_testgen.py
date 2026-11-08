@@ -179,7 +179,7 @@ MMIO_MODEL_COMPATIBLES = {
     "st,stm32-rtc", "st,stm32-adc", "st,stm32f4-adc", "st,stm32-rng",
     "zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog", "zephyr,crc",
     "openhwgroup,erbium-mram-controller", "riscv,machine-timer",
-    "openhwgroup,shakti-uart-v1",
+    "openhwgroup,shakti-uart-v1", "hakoniwa,sensor-registers",
 }
 # I2C controllers that are athrill-device models: their children are bound to
 # the controller, not to the target, so the harness finds them by driving the
@@ -190,6 +190,8 @@ NATIVE_I2C_COMPATIBLES = {"st,stm32-i2c-v2"}
 # cs-gpios line through the GPIO model's registers and exchanges bytes
 # through the controller's registers (kind 0: F7 DR, 1: H7 TXDR/RXDR).
 NATIVE_SPI_COMPATIBLES = {"st,stm32-spi-fifo": 0, "st,stm32-spi": 0, "st,stm32h7-spi": 1}
+# Compatibles of the Hakoniwa sensor plugin (board/common).
+HAKONIWA_PLUGIN_COMPATIBLES = {"hakoniwa,sensor-device", "hakoniwa,sensor-registers"}
 TARGET_ARCHITECTURAL_COMPATIBLES = {
     "arm,armv7m-systick", "arm,v7m-nvic", "arm,cortex-m7", "arm,armv7m-mpu",
     # RISC-V (Erbium): the hart, its local interrupt controller and the PLIC
@@ -1369,13 +1371,24 @@ def render_source(dtb: Path, fdt: Fdt, cases: list[dict[str, object]],
         f"\tif (strcmp(argv[1], {c_string(str(case['name']))}) == 0) return case_{c_identifier(str(case['name']))}();"
         for case in cases
     )
-    plugin_code = """
-\tAthrillDevicePluginPath plugin = {"hakoniwa,sensor-device", plugin_path};
-\tif (plugin_path != NULL) {
-\t\toptions.plugins = &plugin;
-\t\toptions.plugin_count = 1U;
-\t}
-""" if use_plugin else "\t(void)plugin_path;\n"
+    # The board's Hakoniwa nodes are models of the sensor plugin (one library
+    # registers both compatibles): map each one the board uses to it.
+    plugin_compatibles = sorted({item for node in fdt.nodes if enabled(node)
+                                 for item in compatible(node) if item in HAKONIWA_PLUGIN_COMPATIBLES})
+    plugin_entries = "\n".join(f"\t\t{{{c_string(item)}, NULL}}," for item in plugin_compatibles)
+    plugin_code = f"""
+\tAthrillDevicePluginPath plugins[] = {{
+{plugin_entries}
+\t}};
+\tif (plugin_path != NULL) {{
+\t\tuint32 plugin_index;
+\t\tfor (plugin_index = 0U; plugin_index < sizeof(plugins) / sizeof(plugins[0]); plugin_index++) {{
+\t\t\tplugins[plugin_index].library_path = plugin_path;
+\t\t}}
+\t\toptions.plugins = plugins;
+\t\toptions.plugin_count = sizeof(plugins) / sizeof(plugins[0]);
+\t}}
+""" if use_plugin and plugin_compatibles else "\t(void)plugin_path;\n"
     native_i2c = [(node.path, cells(node.properties["reg"])[0]) for node in fdt.nodes
                   if enabled(node) and NATIVE_I2C_COMPATIBLES.intersection(compatible(node))]
     native_i2c_lines = "\n".join(

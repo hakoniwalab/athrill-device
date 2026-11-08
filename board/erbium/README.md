@@ -26,3 +26,29 @@ The device is mapped at `0x20000000` and raises PLIC source 5:
 - [config/device_config-hakoniwa.txt](config/device_config-hakoniwa.txt): the device configuration lines.
 
 Build the device for this board with `-DATHRILL_ADDRESS_WIDTH=64` (see the top README).
+
+## Devicetree (athrill-target-riscv after v0.1.0)
+
+From athrill-target-riscv's Devicetree-built Erbium on, the device is a Devicetree node instead of a memory.txt `DEV`
+line: [boards/erbium/erbium-hakoniwa.dtb](../../boards/erbium/erbium-hakoniwa.dts) places
+`hakoniwa,sensor-registers` at `0x20000000` with PLIC source 5, and the same library is its model plugin. The
+memory definition is RAM only; the device configuration names the Devicetree and the plugin, then the same
+`HAKO_SENSOR_DEVICE_*` lines as above:
+
+```text
+DEVICE_CONFIG_DEVICE_TREE athrill-device/boards/erbium/erbium-hakoniwa.dtb
+DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa%2Csensor-registers=athrill-device/build-erbium/libhako_sensor_device.dylib
+```
+
+With the in-process build (`-DHAKO_SENSOR_DEVICE_BUILD_INPROC=ON`, `libhako_sensor_device_inproc`) the Hakoniwa
+Drone aircraft runs inside Athrill: no aircraft service and no `hako-cmd`. Name its airframe instead of the
+Hakoniwa asset and channels:
+
+```text
+DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa%2Csensor-registers=athrill-device/build-erbium/libhako_sensor_device_inproc.dylib
+HAKO_AIRCRAFT_CONFIG_PATH hakoniwa-drone-core/config/drone/x500-athrill-px4
+```
+
+A memory.txt `DEV` line together with `DEVICE_CONFIG_DEVICE_TREE` stops Athrill with an error: the core keeps a
+pointer into the region table that the Devicetree models grow.
+

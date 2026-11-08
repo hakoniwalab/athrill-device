@@ -1,6 +1,26 @@
 {
   "board_coverage": [
     {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "chip_compatibles": {},
+      "chip_nodes": 0,
+      "dma_controllers": 0,
+      "dma_references": 0,
+      "dt_boards": 1,
+      "dt_irq_nodes": 3,
+      "dt_mmio_nodes": 5,
+      "dt_negative_nodes": 1,
+      "dt_nodes": 8,
+      "gpio_chip_selects": 0,
+      "gpio_interrupt_consumers": 0,
+      "pwm_entries": 0,
+      "pwm_maps": 0,
+      "sd_cards": 0,
+      "uart_children": 0,
+      "uart_controllers": 0,
+      "uart_controllers_with_dmas": 0
+    },
+    {
       "board": "erbium/erbium.dtb",
       "chip_compatibles": {},
       "chip_nodes": 0,
@@ -122,6 +142,212 @@
     }
   ],
   "generated_tests": [
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "mutated_property": "compatible",
+        "negative_dtb": "${ATHRILL_TRACE_BUILD_DIR}/erbium__erbium_hakoniwa__unknown-compatible.dtb"
+      },
+      "item_id": "ADV-DT-001",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__cpus__cpu@0__ADV-DT-001.T1",
+      "node_path": "/cpus/cpu@0",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "enabled_compatible_nodes": [
+          "/",
+          "/soc",
+          "/soc/memory-controller@2001000",
+          "/soc/memory-controller@2001000/memory@40000200",
+          "/soc/serial@2004000",
+          "/soc/timer@80f40200",
+          "/soc/syscon@2000000",
+          "/soc/sensor@20000000"
+        ]
+      },
+      "item_id": "ADV-DT-002",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__root__ADV-DT-002.T1",
+      "node_path": "/",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 33558528,
+            "size": 4096
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__soc__memory-controller@2001000__ADV-DT-003.T1",
+      "node_path": "/soc/memory-controller@2001000",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 33570816,
+            "size": 4096
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__soc__serial@2004000__ADV-DT-003.T1",
+      "node_path": "/soc/serial@2004000",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 2163474944,
+            "size": 8
+          },
+          {
+            "address": 2163474952,
+            "size": 8
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__soc__timer@80f40200__ADV-DT-003.T1",
+      "node_path": "/soc/timer@80f40200",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 33554432,
+            "size": 4096
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__soc__syscon@2000000__ADV-DT-003.T1",
+      "node_path": "/soc/syscon@2000000",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 536870912,
+            "size": 4096
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__soc__sensor@20000000__ADV-DT-003.T1",
+      "node_path": "/soc/sensor@20000000",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              1,
+              1
+            ],
+            "provider_path": "/soc/interrupt-controller@a0000000"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__soc__memory-controller@2001000__ADV-DT-004.T1",
+      "node_path": "/soc/memory-controller@2001000",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              3,
+              1
+            ],
+            "provider_path": "/soc/interrupt-controller@a0000000"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__soc__serial@2004000__ADV-DT-004.T1",
+      "node_path": "/soc/serial@2004000",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              5,
+              1
+            ],
+            "provider_path": "/soc/interrupt-controller@a0000000"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__soc__sensor@20000000__ADV-DT-004.T1",
+      "node_path": "/soc/sensor@20000000",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "erbium/erbium-hakoniwa.dtb",
+      "derived_properties": {
+        "dtb_size": 2097
+      },
+      "item_id": "ADV-DT-005",
+      "known_defect": null,
+      "name": "erbium__erbium-hakoniwa__root__ADV-DT-005.T1",
+      "node_path": "/",
+      "source_file": "tests/gen/test_gen_erbium__erbium_hakoniwa.c",
+      "test_spec_id": "ADV-DT-005.T1",
+      "will_fail": false
+    },
     {
       "board": "erbium/erbium.dtb",
       "derived_properties": {
