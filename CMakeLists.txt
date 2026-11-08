@@ -32,6 +32,7 @@ add_library(athrill_device STATIC
   src/models/stm32h7_sdmmc.c
   src/models/sdcard.c
   src/models/sdcard_card.c
+  src/models/register_block.c
   src/models/stm32_i2c.c
   src/models/stm32_spi.c
   src/models/stm32_spi_bindings.c
@@ -174,6 +175,18 @@ if(BUILD_TESTING)
   target_include_directories(test_stm32_sdmmc PRIVATE src/models)
   target_link_libraries(test_stm32_sdmmc PRIVATE athrill_device)
   add_test(NAME stm32-sdmmc COMMAND test_stm32_sdmmc)
+  add_executable(test_register_block tests/test_register_block.c)
+  target_compile_definitions(test_register_block PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_register_block PRIVATE src/models)
+  target_link_libraries(test_register_block PRIVATE athrill_device)
+  add_test(NAME register-block COMMAND test_register_block)
+  add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
+  target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
+    PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
+    PIXHAWK6C_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6c/pixhawk6c.dtb")
+  target_include_directories(test_board_register_blocks PRIVATE src/models third_party/libfdt)
+  target_link_libraries(test_board_register_blocks PRIVATE athrill_device)
+  add_test(NAME board-register-blocks COMMAND test_board_register_blocks)
   add_executable(test_stm32_dma_spec tests/test_stm32_dma_spec.c)
   target_compile_definitions(test_stm32_dma_spec PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_stm32_dma_spec PRIVATE src/models)

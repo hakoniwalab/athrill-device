@@ -353,7 +353,6 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 	}
 
 NAMED_ADAPTER(stm32f7_soc_model, "stm32f7-soc-adapter", "stm32f7-soc");
-NAMED_ADAPTER(stm32f7_flash_model, "stm32f7-flash-adapter", "stm32f7-flash");
 NAMED_ADAPTER(stm32f7_rtc_model, "stm32f7-rtc-adapter", "stm32f7-rtc");
 NAMED_ADAPTER(stm32f7_adc_model, "stm32f7-adc-adapter", "stm32f7-adc");
 NAMED_ADAPTER(stm32f7_rng_model, "stm32f7-rng-adapter", "stm32f7-rng");
@@ -362,8 +361,6 @@ NAMED_ADAPTER(stm32f7_crc_model, "stm32f7-crc-adapter", "stm32f7-crc");
 NAMED_ADAPTER(stm32f7_backup_sram_model, "stm32f7-backup-sram-adapter", "stm32f7-backup-sram");
 NAMED_ADAPTER(bench_sensor_model, "bench-sensor-source-adapter", "bench-sensor-source");
 NAMED_ADAPTER(stm32h7_soc_model, "stm32h7-soc-adapter", "stm32h7-soc");
-NAMED_ADAPTER(stm32h7_rcc_model, "stm32h7-rcc-adapter", "stm32h7-rcc");
-NAMED_ADAPTER(stm32h7_pwr_model, "stm32h7-pwr-adapter", "stm32h7-pwr");
 NAMED_ADAPTER(stm32h7_boot_register_model, "stm32h7-boot-register-adapter",
 	"stm32h7-boot-register");
 
@@ -372,7 +369,7 @@ static const char *const structural_compatibles[] = {
 	"simple-bus", "simple-mfd", "syscon", "fixed-clock",
 	"zephyr,memory-region", "zephyr,memory-attr", "mmio-sram",
 	"st,stm32f7-pinctrl", "st,stm32-pinctrl", "st,stm32-reset",
-	"st,stm32-rcc", "st,stm32f4-rcc", "st,stm32-rcc-rctl",
+	"st,stm32-rcc", "st,stm32-rcc-rctl",
 	"st,stm32-nv-flash", "soc-nv-flash", "st,stm32-nvm-otp",
 	"fixed-layout", "usb-nop-xceiv", "st,stm32-smbus"
 };
@@ -391,9 +388,12 @@ static const char *const stm32f7_timer_compatibles[] = { "st,stm32-timers" };
 static const char *const stm32f7_pwm_compatibles[] = { "st,stm32-pwm" };
 static const char *const stm32f7_uart_compatibles[] = { "st,stm32-usart", "st,stm32-uart" };
 static const char *const stm32_sdmmc_compatibles[] = { "st,stm32-sdmmc" };
-static const char *const stm32f7_flash_compatibles[] = {
-	"st,stm32-flash-controller", "st,stm32f7-flash-controller",
-	"zephyr,flash-controller"
+/* Register blocks (src/models/register_block.c): the clock, power and flash
+ * controllers' start-up registers, their read rules in the Devicetree. */
+static const char *const register_block_compatibles[] = {
+	"athrill,register-block", "st,stm32f4-rcc", "st,stm32h7-rcc",
+	"st,stm32h7-pwr", "st,stm32-flash-controller", "st,stm32f7-flash-controller",
+	"st,stm32h7-flash-controller", "zephyr,flash-controller"
 };
 static const char *const stm32f7_rtc_compatibles[] = { "st,stm32-rtc" };
 static const char *const stm32f7_adc_compatibles[] = { "st,stm32-adc" };
@@ -410,8 +410,6 @@ static const char *const sdcard_compatibles[] = { "zephyr,sdmmc-disk" };
 static const char *const pwm_actuator_compatibles[] = { "athrill,pwm-actuator-map" };
 static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-source" };
 static const char *const stm32h7_soc_compatibles[] = { "st,stm32h743", "st,stm32h7" };
-static const char *const stm32h7_rcc_compatibles[] = { "st,stm32h7-rcc" };
-static const char *const stm32h7_pwr_compatibles[] = { "st,stm32h7-pwr" };
 static const char *const stm32h7_spi_compatibles[] = { "st,stm32h7-spi" };
 static const char *const stm32h7_dmamux_compatibles[] = { "st,stm32-dmamux" };
 static const char *const stm32h7_boot_register_compatibles[] = {
@@ -445,7 +443,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ stm32f7_pwm_compatibles, 1U, &structural_model },
 	{ stm32f7_uart_compatibles, 2U, &athrill_device_stm32_uart_model },
 	{ stm32_sdmmc_compatibles, 1U, &athrill_device_stm32_sdmmc_model },
-	{ stm32f7_flash_compatibles, 3U, &stm32f7_flash_model },
+	{ register_block_compatibles, sizeof(register_block_compatibles) / sizeof(register_block_compatibles[0]), &athrill_device_register_block_model },
 	{ stm32f7_rtc_compatibles, 1U, &stm32f7_rtc_model },
 	{ stm32f7_adc_compatibles, 1U, &stm32f7_adc_model },
 	{ stm32f7_rng_compatibles, 2U, &stm32f7_rng_model },
@@ -461,8 +459,6 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
 	{ bench_sensor_compatibles, 1U, &bench_sensor_model },
 	{ stm32h7_soc_compatibles, 2U, &stm32h7_soc_model },
-	{ stm32h7_rcc_compatibles, 1U, &stm32h7_rcc_model },
-	{ stm32h7_pwr_compatibles, 1U, &stm32h7_pwr_model },
 	{ stm32h7_spi_compatibles, 1U, &athrill_device_stm32h7_spi_model },
 	{ stm32h7_dmamux_compatibles, 1U, &athrill_device_stm32_dmamux_model },
 	{ stm32h7_boot_register_compatibles, 6U, &stm32h7_boot_register_model },

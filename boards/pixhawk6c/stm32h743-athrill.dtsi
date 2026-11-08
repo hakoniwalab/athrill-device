@@ -69,3 +69,31 @@
  */
 &sdmmc1 { athrill,stm32h7-sdmmc; };
 &sdmmc2 { athrill,stm32h7-sdmmc; };
+
+/*
+ * Register blocks (athrill-device src/models/register_block.c): what the
+ * start-up code polls (RM0433). Rules read the stored words; offsets from
+ * the block's base.
+ */
+/* RCC: HSI on and ready after reset; HSIRDY follows HSION; CSIRDY,
+ * HSI48RDY, HSERDY and PLL1/2/3RDY follow their ON bits; SWS = SW;
+ * LSERDY = LSEON (BDCR), LSIRDY = LSION (CSR). */
+&rcc {
+	athrill,reset-values = <0x00 0x00000005>;
+	athrill,read-follow = <0x00 0x00 0x00000001 2>,
+			      <0x00 0x00 0x15011080 1>,
+			      <0x70 0x70 0x00000001 1>,
+			      <0x74 0x74 0x00000001 1>;
+	athrill,read-copy = <0x10 0x10 0 3 3>;
+};
+
+/* PWR: ACTVOSRDY (CSR1) and VOSRDY (D3CR) set; USB33RDY follows USB33DEN. */
+&pwr {
+	athrill,read-set = <0x04 0x00002000>, <0x18 0x00002000>;
+	athrill,read-follow = <0x0c 0x0c 0x01000000 2>;
+};
+
+/* FLASH: the bank status registers never busy (SR1, SR2 high half). */
+&flash {
+	athrill,read-clear = <0x10 0xffff0000>, <0x90 0xffff0000>;
+};
