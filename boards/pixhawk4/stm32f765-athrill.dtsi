@@ -45,10 +45,38 @@
 	athrill,read-set = <0x10 0x80000000>;
 };
 
+/* CAN1 (bxCAN): keeps what is written (PX4's UAVCAN probes it). */
+&can1 {
+	compatible = "athrill,register-block", "st,stm32-bxcan";
+};
+
+/* Backup SRAM: a register block (it keeps its bytes) before the memory
+ * region compatibles, which describe no registers. */
+&backup_sram {
+	compatible = "athrill,register-block", "zephyr,memory-region",
+		     "st,stm32-backup-sram";
+};
+
 / {
 	soc {
 		/* PWR (Zephyr has no F7 PWR node): VOSRDY; ODRDY and ODSWRDY
 		 * follow CR1 ODEN and ODSWEN; BRR follows BRE. */
+		/* DBGMCU IDCODE: REV_ID 0x1001 (revision Z), DEV_ID 0x451 (F76x/77x). */
+		dbgmcu: debug@e0042000 {
+			compatible = "athrill,register-block";
+			reg = <0xe0042000 0x1000>;
+			athrill,reset-values = <0x00 0x10016451>;
+		};
+
+		/* System memory: the 96-bit unique ID ("ATHRILL STM7") and the flash
+		 * size (2048 KiB, at 0x1ff0f442). */
+		system_memory: system-memory@1ff0f400 {
+			compatible = "athrill,register-block";
+			reg = <0x1ff0f400 0x100>;
+			athrill,reset-values = <0x20 0x52485441>, <0x24 0x204c4c49>,
+					       <0x28 0x374d5453>, <0x40 0x08000000>;
+		};
+
 		pwr: power@40007000 {
 			compatible = "athrill,register-block";
 			reg = <0x40007000 0x400>;

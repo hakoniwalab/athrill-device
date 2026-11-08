@@ -63,21 +63,6 @@
 			compatible = "st,stm32h7-syscfg";
 			reg = <0x58000400 0x400>;
 		};
-
-		axi_target7: axi-target@51008000 {
-			compatible = "st,stm32h7-axi-target";
-			reg = <0x51008000 0x400>;
-		};
-
-		dbgmcu: debug@5c001000 {
-			compatible = "st,stm32h7-dbgmcu";
-			reg = <0x5c001000 0x1000>;
-		};
-
-		system_memory: system-memory@1ff1e800 {
-			compatible = "st,stm32h7-system-memory";
-			reg = <0x1ff1e800 0x100>;
-		};
 	};
 };
 
