@@ -85,6 +85,8 @@ typedef struct {
 	std_bool level;	/* last published level; FALSE until the first change */
 } GpioWatch;
 
+#define CONSOLE_CHANNELS 4U
+
 typedef struct {
 	uint64 handle;
 	std_bool level;
@@ -118,6 +120,9 @@ struct AthrillDeviceRuntime {
 	uint32 gpio_line_count;
 	RuntimeGpioSubscriber *gpio_subscribers;
 	uint32 gpio_subscriber_count;
+	/* ABI 1.17: the console input's receivers by channel */
+	sint32 (*console_receive[CONSOLE_CHANNELS])(void *instance, uint8 data);
+	void *console_instance[CONSOLE_CHANNELS];
 };
 
 static void error_line(const char *code, const char *path,
@@ -1214,6 +1219,19 @@ static sint32 resource_gpio_subscribe(void *context, AthrillDeviceGpioLine line,
 	return 0;
 }
 
+/* ABI 1.17: a model takes the host's console input of a channel. */
+static sint32 resource_console_listen(void *context, uint32 channel,
+	sint32 (*receive)(void *instance, uint8 data), void *instance)
+{
+	NodeRecord *node = context;
+	if (channel >= CONSOLE_CHANNELS || receive == NULL) {
+		return -1;
+	}
+	node->runtime->console_receive[channel] = receive;
+	node->runtime->console_instance[channel] = instance;
+	return 0;
+}
+
 /* [ADV-GPIO-002] resolve the indexed GPIO tuple used for SPI chip select */
 static sint32 resource_get_gpio(void *context, const char *property,
 	uint32 index, AthrillDeviceGpioLine *line)
@@ -1674,7 +1692,7 @@ static const AthrillDeviceResourceOps resource_ops = {
 	resource_uart_listen, resource_uart_send, resource_dma_provide,
 	resource_dma_request, resource_get_dma_master, resource_sd_card_provide,
 	resource_get_sd_card, resource_gpio_resolve, resource_gpio_drive,
-	resource_gpio_read, resource_gpio_subscribe
+	resource_gpio_read, resource_gpio_subscribe, resource_console_listen
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
@@ -2930,4 +2948,15 @@ sint32 athrill_device_gpio_level(AthrillDeviceRuntime *runtime,
 	}
 	*level = g->level;
 	return 0;
+}
+
+/* ABI 1.17: a character of the host's console input to its listener. */
+sint32 athrill_device_console_input(AthrillDeviceRuntime *runtime, uint32 channel,
+	uint8 data)
+{
+	if (runtime == NULL || channel >= CONSOLE_CHANNELS ||
+	    runtime->console_receive[channel] == NULL) {
+		return -1;
+	}
+	return runtime->console_receive[channel](runtime->console_instance[channel], data);
 }

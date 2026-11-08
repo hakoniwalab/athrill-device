@@ -11,9 +11,8 @@ remains here is `config/` (below); the rest of this note is history.
 
 State of what remains (not yet athrill-device models):
 
-- They reach the host only through `include/athrill_device_host.h` (the
-  required interface); they no longer call the Athrill core's time, IRQ,
-  memory or configuration functions.
+- They reached the host only through `include/athrill_device_host.h` (the
+  required interface; it went in step 4-8 with the last ported model).
 - They are compiled by athrill-target-stm32's CMake (`ATHRILL_DEVICE_DIR`),
   not by the athrill-device library: their tick functions still take the
   core's `DeviceClockType`, the UART console echo and `cpu.h` remain.
