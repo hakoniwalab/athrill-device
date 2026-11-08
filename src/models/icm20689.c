@@ -56,6 +56,9 @@ typedef struct {
 typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
 	void *target;
+	/* the data-ready line (ABI 1.16: GPIO lines in the runtime) */
+	const AthrillDeviceResourceOps *gpio_resources;
+	void *gpio_context;
 	const AthrillDeviceNode *node;
 	AthrillDeviceValueSource source;
 	uint8 registers[128];
@@ -386,6 +389,8 @@ static sint32 connect_model(void *instance,
 		&chip->data_ready) != 0) {
 		return -1;
 	}
+	chip->gpio_resources = args->resources;
+	chip->gpio_context = args->context;
 	chip->data_ready_resolved = TRUE;
 	return 0;
 }
@@ -404,15 +409,15 @@ static sint32 tick(void *instance, uint64 now,
 		return 0;
 	}
 	period = sample_clocks(chip);
-	(void)chip->target_ops->gpio_drive(chip->target, chip->data_ready,
+	(void)chip->gpio_resources->gpio_drive(chip->gpio_context, chip->data_ready,
 		active_low);
 	if (chip->next_sample == 0U) {
 		chip->next_sample = (now / period + 1U) * period;
 	}
 	if (now >= chip->next_sample) {
-		(void)chip->target_ops->gpio_drive(chip->target, chip->data_ready,
+		(void)chip->gpio_resources->gpio_drive(chip->gpio_context, chip->data_ready,
 			!active_low);
-		(void)chip->target_ops->gpio_drive(chip->target, chip->data_ready,
+		(void)chip->gpio_resources->gpio_drive(chip->gpio_context, chip->data_ready,
 			active_low);
 		chip->next_sample += period *
 			(1U + (now - chip->next_sample) / period);

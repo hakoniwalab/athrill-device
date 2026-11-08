@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       15U
+#define ATHRILL_DEVICE_ABI_MINOR       16U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -437,6 +437,20 @@ typedef struct AthrillDeviceResourceOps {
 	 * none. Children connect after their controller: call it from reset. */
 	sint32 (*sd_card_provide)(void *context, const void *ops, void *instance);
 	sint32 (*get_sd_card)(void *context, const void **ops, void **instance);
+	/* Added in ABI 1.16; the GPIO lines live in the runtime (before, in the
+	 * target's line table). A line is a pin of a GPIO controller node:
+	 * gpio_resolve gives the line of a specifier (provider node or path,
+	 * cells[0] the pin; get_gpio resolves a property's tuples the same
+	 * way); gpio_drive sets the level a chip or the board drives onto a
+	 * line and tells its subscribers (changes only), in subscription order;
+	 * gpio_read gives that level; gpio_subscribe registers a callback for
+	 * the changes (the GPIO model's inputs, the EXTI's edges). */
+	sint32 (*gpio_resolve)(void *context, const AthrillDeviceSpecifier *spec,
+	                       AthrillDeviceGpioLine *line);
+	sint32 (*gpio_drive)(void *context, AthrillDeviceGpioLine line, std_bool level);
+	sint32 (*gpio_read)(void *context, AthrillDeviceGpioLine line, std_bool *level);
+	sint32 (*gpio_subscribe)(void *context, AthrillDeviceGpioLine line,
+	                         AthrillDeviceGpioEdge callback, void *instance);
 } AthrillDeviceResourceOps;
 
 typedef struct {
@@ -527,5 +541,12 @@ sint32 athrill_device_reset(AthrillDeviceRuntime *runtime);
 sint32 athrill_device_tick(AthrillDeviceRuntime *runtime, uint64 now,
                            AthrillDeviceTickResult *result);
 void athrill_device_destroy(AthrillDeviceRuntime *runtime);
+/* Added in ABI 1.16: a level driven from outside the models (a host or a
+ * test) onto pin of the GPIO controller node at provider_path, and the
+ * level of such a line; -1 when that controller has no such line. */
+sint32 athrill_device_gpio_drive(AthrillDeviceRuntime *runtime,
+                                 const char *provider_path, uint32 pin, std_bool level);
+sint32 athrill_device_gpio_level(AthrillDeviceRuntime *runtime,
+                                 const char *provider_path, uint32 pin, std_bool *level);
 
 #endif /* ATHRILL_DEVICE_IF_H */

@@ -188,10 +188,7 @@ static sint32 gpio_connect(void *instance,
 	uint32 pin;
 	gpio->resources = args->resources;
 	gpio->resource_context = args->context;
-	if (args->resources->publish_gpio_outputs == NULL ||
-	    gpio->target_ops->gpio_resolve == NULL ||
-	    gpio->target_ops->gpio_subscribe == NULL ||
-	    gpio->target_ops->gpio_outputs == NULL) {
+	if (args->resources->publish_gpio_outputs == NULL) {
 		return -1;
 	}
 	for (pin = 0U; pin < GPIO_PINS; pin++) {
@@ -202,9 +199,9 @@ static sint32 gpio_connect(void *instance,
 		spec.provider_compatible = gpio->node->matched_compatible;
 		spec.cell_count = 2U;
 		spec.cells[0] = pin;
-		if (gpio->target_ops->gpio_resolve(gpio->target, &spec,
+		if (args->resources->gpio_resolve(args->context, &spec,
 			&gpio->lines[pin]) != 0 ||
-		    gpio->target_ops->gpio_subscribe(gpio->target,
+		    args->resources->gpio_subscribe(args->context,
 			gpio->lines[pin], gpio_input, &holder->inputs[pin]) != 0) {
 			return -1;
 		}

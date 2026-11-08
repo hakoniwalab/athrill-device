@@ -526,8 +526,8 @@ static sint32 sdmmc_reset(void *instance)
 		f7_reset(&m->f7, card, card_instance);
 	}
 	/* D0 high: the board's pull-up, the card not busy */
-	if (m->has_d0 && host->target_ops->gpio_drive != NULL) {
-		(void)host->target_ops->gpio_drive(host->target, m->d0, TRUE);
+	if (m->has_d0) {
+		(void)m->f7.resources->gpio_drive(m->f7.context, m->d0, TRUE);
 	}
 	return 0;
 }
