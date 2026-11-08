@@ -33,3 +33,11 @@
  * storage that reads back stands for it, as for other start-up-only blocks.
  * Its MRAM child is the RAM of Athrill's memory map (memory.txt).
  */
+
+/*
+ * The machine timer counts at the timebase (/cpus timebase-frequency, 2 MHz;
+ * NuttX's CONFIG_ERBIUM_MTIMER_FREQ is the same): the model reads it here.
+ */
+&mtimer {
+	clock-frequency = <2000000>;
+};

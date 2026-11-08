@@ -178,7 +178,7 @@ MMIO_MODEL_COMPATIBLES = {
     "st,stm32h7-flash-controller", "zephyr,flash-controller",
     "st,stm32-rtc", "st,stm32-adc", "st,stm32f4-adc", "st,stm32-rng",
     "zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog", "zephyr,crc",
-    "openhwgroup,erbium-mram-controller",
+    "openhwgroup,erbium-mram-controller", "riscv,machine-timer",
 }
 # I2C controllers that are athrill-device models: their children are bound to
 # the controller, not to the target, so the harness finds them by driving the

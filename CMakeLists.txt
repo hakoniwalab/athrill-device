@@ -33,6 +33,7 @@ add_library(athrill_device STATIC
   src/models/sdcard.c
   src/models/sdcard_card.c
   src/models/register_block.c
+  src/models/riscv_mtimer.c
   src/models/bench_sensor.c
   src/models/stm32_i2c.c
   src/models/stm32_spi.c
@@ -181,6 +182,11 @@ if(BUILD_TESTING)
   target_include_directories(test_register_block PRIVATE src/models)
   target_link_libraries(test_register_block PRIVATE athrill_device)
   add_test(NAME register-block COMMAND test_register_block)
+  add_executable(test_riscv_mtimer tests/test_riscv_mtimer.c)
+  target_compile_definitions(test_riscv_mtimer PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_riscv_mtimer PRIVATE src/models)
+  target_link_libraries(test_riscv_mtimer PRIVATE athrill_device)
+  add_test(NAME riscv-mtimer COMMAND test_riscv_mtimer)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
