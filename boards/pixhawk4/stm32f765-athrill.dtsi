@@ -26,6 +26,25 @@
 	athrill,read-clear = <0x0c 0x00010000>;
 };
 
+/* RTC: RSF (registers synchronised) set; INITF follows INIT. */
+&rtc {
+	athrill,read-set = <0x0c 0x00000020>;
+	athrill,read-follow = <0x0c 0x0c 0x00000080 (-1)>;
+};
+
+/* ADC: the whole block (ADC1-3 and the common registers at 0x300; Zephyr's
+ * node covers ADC1 only); ADC1 SR EOC: a conversion is always done. */
+&adc123_common {
+	reg = <0x40012000 0x400>;
+	athrill,read-set = <0x00 0x00000002>;
+};
+
+/* USB OTG FS: GRSTCTL core and FIFO resets complete, AHB idle. */
+&usbotg_fs {
+	athrill,read-clear = <0x10 0x00000031>;
+	athrill,read-set = <0x10 0x80000000>;
+};
+
 / {
 	soc {
 		/* PWR (Zephyr has no F7 PWR node): VOSRDY; ODRDY and ODSWRDY
