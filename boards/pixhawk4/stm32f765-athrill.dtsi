@@ -1,0 +1,41 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Athrill's STM32F765Xi SoC layer: Zephyr's stm32f765Xi.dtsi (Apache-2.0,
+ * included, not copied) and the Athrill facts the board file does not
+ * hold, such as the start-up read rules of the register blocks
+ * (athrill-device src/models/register_block.c).
+ */
+#include <st/f7/stm32f765Xi.dtsi>
+
+/*
+ * Register blocks: what the start-up code polls (RM0410). Rules read the
+ * stored words; offsets from the block's base.
+ */
+/* RCC: HSIRDY, HSERDY, PLLRDY, PLLI2SRDY, PLLSAIRDY follow their ON
+ * bits; SWS = SW; LSERDY = LSEON (BDCR), LSIRDY = LSION (CSR). */
+&rcc {
+	athrill,read-follow = <0x00 0x00 0x15010001 1>,
+			      <0x70 0x70 0x00000001 1>,
+			      <0x74 0x74 0x00000001 1>;
+	athrill,read-copy = <0x08 0x08 0 2 2>;
+};
+
+/* FLASH: never busy (SR BSY). */
+&flash {
+	athrill,read-clear = <0x0c 0x00010000>;
+};
+
+/ {
+	soc {
+		/* PWR (Zephyr has no F7 PWR node): VOSRDY; ODRDY and ODSWRDY
+		 * follow CR1 ODEN and ODSWEN; BRR follows BRE. */
+		pwr: power@40007000 {
+			compatible = "athrill,register-block";
+			reg = <0x40007000 0x400>;
+			athrill,read-set = <0x04 0x00004000>;
+			athrill,read-follow = <0x04 0x00 0x00030000 0>,
+					      <0x04 0x04 0x00000200 (-6)>;
+		};
+	};
+};

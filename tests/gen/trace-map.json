@@ -12,9 +12,9 @@
       "dma_references": 35,
       "dt_boards": 1,
       "dt_irq_nodes": 27,
-      "dt_mmio_nodes": 38,
+      "dt_mmio_nodes": 41,
       "dt_negative_nodes": 1,
-      "dt_nodes": 63,
+      "dt_nodes": 64,
       "gpio_chip_selects": 3,
       "gpio_interrupt_consumers": 1,
       "pwm_entries": 8,
@@ -36,9 +36,9 @@
       "dma_references": 35,
       "dt_boards": 1,
       "dt_irq_nodes": 27,
-      "dt_mmio_nodes": 38,
+      "dt_mmio_nodes": 41,
       "dt_negative_nodes": 1,
-      "dt_nodes": 62,
+      "dt_nodes": 63,
       "gpio_chip_selects": 3,
       "gpio_interrupt_consumers": 1,
       "pwm_entries": 8,
@@ -62,7 +62,7 @@
       "dma_references": 18,
       "dt_boards": 1,
       "dt_irq_nodes": 34,
-      "dt_mmio_nodes": 39,
+      "dt_mmio_nodes": 42,
       "dt_negative_nodes": 1,
       "dt_nodes": 83,
       "gpio_chip_selects": 4,
@@ -88,7 +88,7 @@
       "dma_references": 18,
       "dt_boards": 1,
       "dt_irq_nodes": 34,
-      "dt_mmio_nodes": 39,
+      "dt_mmio_nodes": 42,
       "dt_negative_nodes": 1,
       "dt_nodes": 82,
       "gpio_chip_selects": 4,
@@ -971,6 +971,7 @@
           "/soc/dma@40026000",
           "/soc/dma@40026400",
           "/soc/i2c@40006000",
+          "/soc/power@40007000",
           "/soc/system-config@40013800",
           "/otghs_fs_phy",
           "/otgfs_phy",
@@ -1606,6 +1607,42 @@
       "derived_properties": {
         "reg": [
           {
+            "address": 1073887232,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__rcc@40023800__ADV-DT-003.T1",
+      "node_path": "/soc/rcc@40023800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073888256,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__flash-controller@40023c00__ADV-DT-003.T1",
+      "node_path": "/soc/flash-controller@40023c00",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
             "address": 1073897472,
             "size": 1024
           }
@@ -1651,6 +1688,24 @@
       "known_defect": null,
       "name": "pixhawk4__pixhawk4-hakoniwa__soc__i2c@40006000__ADV-DT-003.T1",
       "node_path": "/soc/i2c@40006000",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073770496,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__power@40007000__ADV-DT-003.T1",
+      "node_path": "/soc/power@40007000",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
       "test_spec_id": "ADV-DT-003.T1",
       "will_fail": false
@@ -2453,7 +2508,7 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 25365
+        "dtb_size": 25695
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -4115,6 +4170,7 @@
           "/soc/dma@40026000",
           "/soc/dma@40026400",
           "/soc/i2c@40006000",
+          "/soc/power@40007000",
           "/soc/system-config@40013800",
           "/otghs_fs_phy",
           "/otgfs_phy",
@@ -4749,6 +4805,42 @@
       "derived_properties": {
         "reg": [
           {
+            "address": 1073887232,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__rcc@40023800__ADV-DT-003.T1",
+      "node_path": "/soc/rcc@40023800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073888256,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__flash-controller@40023c00__ADV-DT-003.T1",
+      "node_path": "/soc/flash-controller@40023c00",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "reg": [
+          {
             "address": 1073897472,
             "size": 1024
           }
@@ -4794,6 +4886,24 @@
       "known_defect": null,
       "name": "pixhawk4__pixhawk4__soc__i2c@40006000__ADV-DT-003.T1",
       "node_path": "/soc/i2c@40006000",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073770496,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__power@40007000__ADV-DT-003.T1",
+      "node_path": "/soc/power@40007000",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
       "test_spec_id": "ADV-DT-003.T1",
       "will_fail": false
@@ -5596,7 +5706,7 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
-        "dtb_size": 25167
+        "dtb_size": 25497
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -7563,6 +7673,24 @@
       "derived_properties": {
         "reg": [
           {
+            "address": 1375739904,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__flash-controller@52002000__ADV-DT-003.T1",
+      "node_path": "/soc/flash-controller@52002000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
             "address": 1476395008,
             "size": 1024
           }
@@ -7788,6 +7916,42 @@
       "known_defect": null,
       "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__pin-controller@58020000__gpio@58022800__ADV-DT-003.T1",
       "node_path": "/soc/pin-controller@58020000/gpio@58022800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476543488,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__rcc@58024400__ADV-DT-003.T1",
+      "node_path": "/soc/rcc@58024400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476544512,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa__soc__power@58024800__ADV-DT-003.T1",
+      "node_path": "/soc/power@58024800",
       "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa.c",
       "test_spec_id": "ADV-DT-003.T1",
       "will_fail": false
@@ -8839,7 +9003,7 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 30536
+        "dtb_size": 30843
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -10682,6 +10846,24 @@
       "derived_properties": {
         "reg": [
           {
+            "address": 1375739904,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__flash-controller@52002000__ADV-DT-003.T1",
+      "node_path": "/soc/flash-controller@52002000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
+        "reg": [
+          {
             "address": 1476395008,
             "size": 1024
           }
@@ -10907,6 +11089,42 @@
       "known_defect": null,
       "name": "pixhawk6c__pixhawk6c__soc__pin-controller@58020000__gpio@58022800__ADV-DT-003.T1",
       "node_path": "/soc/pin-controller@58020000/gpio@58022800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476543488,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__rcc@58024400__ADV-DT-003.T1",
+      "node_path": "/soc/rcc@58024400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476544512,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c__soc__power@58024800__ADV-DT-003.T1",
+      "node_path": "/soc/power@58024800",
       "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c.c",
       "test_spec_id": "ADV-DT-003.T1",
       "will_fail": false
@@ -11958,7 +12176,7 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
-        "dtb_size": 30282
+        "dtb_size": 30589
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
