@@ -1,0 +1,27 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Athrill Erbium board description.
+ *
+ * SoC description: Zephyr openhwgroup/erbium.dtsi, Apache-2.0 (board files
+ * boards/openhwgroup/erbium/erbium.dts: console on UART0 at 115200 baud).
+ */
+
+/dts-v1/;
+
+#include "erbium-athrill.dtsi"
+
+/ {
+	model = "OpenHW Foundation Erbium (Athrill)";
+	compatible = "openhwgroup,erbium";
+
+	chosen {
+		zephyr,console = &uart0;
+	};
+};
+
+/* Not yet an athrill-device model: the RISC-V target still runs the C
+ * machine timer (hakoniwalab/athrill-target-riscv). */
+&mtimer {
+	status = "disabled";
+};

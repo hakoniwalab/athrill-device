@@ -51,7 +51,7 @@ typedef struct {
 } Rule;
 
 typedef struct {
-	uint32 base;
+	uint64 base;
 	uint32 size;
 	uint8 *data;
 } Window;
@@ -246,20 +246,28 @@ static sint32 block_create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	b->target_ops = args->target_ops;
 	b->target = args->target;
-	n = cells_of(node, "reg") / 2U;
-	for (i = 0U; i < n && i < MAX_WINDOWS; i++) {
-		Window *w = &b->windows[b->window_count];
+	/* The windows as the runtime maps them (ABI 1.18 get_reg): reg decoded
+	 * with the parent's cell counts, so 32- and 64-bit buses alike. */
+	n = 0U;
+	if (node->ops->struct_size >= sizeof(AthrillDeviceNodeOps) && node->ops->get_reg != NULL) {
+		uint64 address, size;
+		while (n <= MAX_WINDOWS && node->ops->get_reg(node->context, n, &address, &size) == 0) {
+			if (n < MAX_WINDOWS) {
+				Window *w = &b->windows[b->window_count];
 
-		w->base = cell(node, "reg", 2U * i);
-		w->size = cell(node, "reg", (2U * i) + 1U);
-		w->data = calloc(w->size + 4U, 1U);
-		if (w->size == 0U || (w->size % 4U) != 0U || w->data == NULL) {
-			fprintf(stderr, "register block %s: reg %u must be a non-empty multiple of 4 bytes\n",
-				node->path, i);
-			free(w->data);
-			goto fail;
+				w->base = address;
+				w->size = (uint32)size;
+				w->data = (size <= 0xfffffff0ULL) ? calloc(w->size + 4U, 1U) : NULL;
+				if (w->size == 0U || (w->size % 4U) != 0U || w->data == NULL) {
+					fprintf(stderr, "register block %s: reg %u must be a non-empty multiple of 4 bytes\n",
+						node->path, n);
+					free(w->data);
+					goto fail;
+				}
+				b->window_count++;
+			}
+			n++;
 		}
-		b->window_count++;
 	}
 	if (b->window_count == 0U || n > MAX_WINDOWS ||
 	    !add_rules(b, node, "athrill,read-copy", RULE_COPY, 5U) ||

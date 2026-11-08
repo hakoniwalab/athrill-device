@@ -1,0 +1,35 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Athrill's Erbium SoC layer: Zephyr's openhwgroup/erbium.dtsi (Apache-2.0,
+ * included, not copied) and the Erbium blocks that DTSI does not describe.
+ *
+ * Interrupts: the hart's local interrupt controller (riscv,cpu-intc) and the
+ * PLIC (sifive,plic-1.0.0) are target-owned; the RISC-V target resolves
+ * <&plic source flags> to a PLIC source and <&hlic n> to the mip bit n.
+ */
+#include <openhwgroup/erbium.dtsi>
+
+/ {
+	soc {
+		/*
+		 * The system registers: the platform identifier at 0x00 and the
+		 * platform revision at 0x08, which NuttX's Erbium start-up reads;
+		 * the rest of the 4 KiB is storage that reads back what was
+		 * written.
+		 */
+		sysreg: syscon@2000000 {
+			compatible = "athrill,register-block";
+			reg = <0x0 0x02000000 0x0 0x1000>;
+			athrill,reset-values = <0x00 0xeb680000>,
+					       <0x08 0x00000014>;
+		};
+	};
+};
+
+/*
+ * The MRAM controller (openhwgroup,erbium-mram-controller) is a register
+ * block in athrill-device: no firmware run here uses its registers, so
+ * storage that reads back stands for it, as for other start-up-only blocks.
+ * Its MRAM child is the RAM of Athrill's memory map (memory.txt).
+ */

@@ -387,7 +387,7 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 
 
 static const char *const structural_compatibles[] = {
-	"holybro,pixhawk4", "holybro,pixhawk6c",
+	"holybro,pixhawk4", "holybro,pixhawk6c", "openhwgroup,erbium",
 	"simple-bus", "simple-mfd", "syscon", "fixed-clock",
 	"zephyr,memory-region", "zephyr,memory-attr", "mmio-sram",
 	"st,stm32f7-pinctrl", "st,stm32-pinctrl", "st,stm32-reset",
@@ -419,7 +419,8 @@ static const char *const register_block_compatibles[] = {
 	"st,stm32h7-pwr", "st,stm32-flash-controller", "st,stm32f7-flash-controller",
 	"st,stm32h7-flash-controller", "zephyr,flash-controller",
 	"st,stm32-rtc", "st,stm32-adc", "st,stm32f4-adc", "st,stm32-rng",
-	"zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog", "zephyr,crc"
+	"zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog", "zephyr,crc",
+	"openhwgroup,erbium-mram-controller"
 };
 static const char *const icm20689_compatibles[] = { "invensense,icm20689" };
 static const char *const fm25v02_compatibles[] = { "infineon,fm25xxx", "ramtron,fm25v02a" };
@@ -619,10 +620,24 @@ static sint32 node_get_string(void *context, const char *name, uint32 index,
 	return -1;
 }
 
+/* ABI 1.18: the decoded register windows (validate_and_create fills them
+ * before any model is created). */
+static sint32 node_get_reg(void *context, uint32 index, uint64 *address,
+                           uint64 *size)
+{
+	NodeRecord *node = context;
+	if (index >= node->window_count || address == NULL || size == NULL) {
+		return -1;
+	}
+	*address = node->windows[index].address;
+	*size = node->windows[index].size;
+	return 0;
+}
+
 static const AthrillDeviceNodeOps node_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceNodeOps), node_get_property, node_get_u32,
-	node_get_u64, node_get_string
+	node_get_u64, node_get_string, node_get_reg
 };
 
 static int target_owns(const AthrillDeviceBuildOptions *options,
