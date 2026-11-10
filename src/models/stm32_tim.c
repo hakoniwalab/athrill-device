@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
 #define TIM_CR1		0x00U
 #define TIM_CR2		0x04U
@@ -93,6 +94,9 @@ typedef struct {
 	AthrillDeviceIrqLine irq_cc_line;
 	AthrillDeviceIrqLine irq_trg_com_line;
 	AthrillDeviceIrqLine irq_brk_line;
+	/* ABI 1.19: asking for a tick after a register write (request_tick) */
+	const AthrillDeviceResourceOps *resources;
+	void *resource_context;
 } TimType;
 
 /*
@@ -734,6 +738,10 @@ static sint32 timer_connect(void *instance,
 	const AthrillDeviceConnectArgs *args)
 {
 	TimType *timer = instance;
+	if (args->resources->struct_size >= offsetof(AthrillDeviceResourceOps, request_tick) + sizeof(void *)) {
+		timer->resources = args->resources;
+		timer->resource_context = args->context;
+	}
 	if (timer->target_ops->time_now == NULL ||
 	    timer->target_ops->irq_set == NULL ||
 	    timer->target_ops->irq_is_active == NULL) {
@@ -806,6 +814,10 @@ static sint32 timer_write(void *instance, uint64 address, uint32 size,
 		((1U << (8U * size)) - 1U)) << shift;
 	advance_to(timer, timer->target_ops->time_now(timer->target));
 	write_register(timer, offset, (uint32)input << shift, mask);
+	/* any write may change the next event or the interrupt levels */
+	if (timer->resources != NULL) {
+		timer->resources->request_tick(timer->resource_context);
+	}
 	return 0;
 }
 
@@ -824,6 +836,8 @@ static sint32 timer_tick(void *instance, uint64 now,
 	if (!counting(timer) && timer->asserted == 0U &&
 	    (reg(timer, TIM_SR) & reg(timer, TIM_DIER)) == 0U) {
 		timer->last_clock = now;
+		/* ABI 1.19: nothing to do until a register write (which asks for a tick) */
+		result->contract = ATHRILL_DEVICE_TICK_DEADLINE;
 		return 0;
 	}
 	advance_to(timer, now);
@@ -831,6 +845,20 @@ static sint32 timer_tick(void *instance, uint64 now,
 	until = clocks_to_event(timer);
 	if (until != 0U) {
 		result->next_event_interval = until;
+	}
+	/*
+	 * ABI 1.19: with no interrupt line high, a tick before the next event
+	 * does nothing observable (the counter is computed from the clock on
+	 * every access; an enabled flag is set only at the event; a register
+	 * write asks for a tick). A line that is high must be ticked every
+	 * time: raise_interrupts() pends it again once its handler is no
+	 * longer active, which the CPU decides, not the timer. In one-pulse
+	 * mode the counter stops by itself at an update, which a PWM reader
+	 * sees (and which is an event only with its interrupt enabled), so
+	 * that mode is ticked every time too.
+	 */
+	if ((timer->asserted == 0U) && ((reg(timer, TIM_CR1) & CR1_OPM) == 0U)) {
+		result->contract = ATHRILL_DEVICE_TICK_DEADLINE;
 	}
 	return 0;
 }

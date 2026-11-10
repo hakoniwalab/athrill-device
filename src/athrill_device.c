@@ -31,6 +31,9 @@ typedef struct {
 
 typedef struct NodeRecord NodeRecord;
 typedef struct PluginRecord PluginRecord;
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+static void add_tick_dependent(NodeRecord *provider, const NodeRecord *consumer);
+#endif
 
 typedef struct {
 	uint64 address;
@@ -41,6 +44,18 @@ typedef struct {
 
 struct NodeRecord {
 	struct AthrillDeviceRuntime *runtime;
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	/* the contract its last tick reported (ABI 1.19); NONE: not ticked again */
+	uint32 tick_contract;
+	/* DEADLINE: the time of the event it reported (UINT64 max: none), and
+	 * whether it asked for a tick since (request_tick) */
+	uint64 tick_due;
+	std_bool tick_requested;
+	/* the models that read this one (a PWM consumer of this timer): asked
+	 * for a tick whenever this one is ticked or asks for a tick */
+	uint32 *tick_dependents;
+	uint32 tick_dependent_count;
+#endif
 	int offset;
 	int parent_index;
 	uint32 preorder;
@@ -135,6 +150,10 @@ struct AthrillDeviceRuntime {
 	/* ABI 1.17: the console input's receivers by channel */
 	sint32 (*console_receive[CONSOLE_CHANNELS])(void *instance, uint8 data);
 	void *console_instance[CONSOLE_CHANNELS];
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	/* the host value ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE was 1: the contracts are used */
+	std_bool tick_skip;
+#endif
 };
 
 static void error_line(const char *code, const char *path,
@@ -1331,6 +1350,9 @@ static sint32 resource_get_pwm(void *context, const char *property,
 	channel->ops = timer->model->pwm;
 	channel->instance = timer->instance;
 	channel->channel = spec.cells[0];
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	add_tick_dependent(timer, node);	/* node samples the timer's PWM */
+#endif
 	return 0;
 }
 
@@ -1744,6 +1766,51 @@ static sint32 resource_get_uart_child(void *context, uint32 index,
 	return -1;
 }
 
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+/* node's dependents are ticked at the next tick (or later in this one) */
+static void request_dependents(NodeRecord *node)
+{
+	uint32 i;
+
+	for (i = 0U; i < node->tick_dependent_count; i++) {
+		node->runtime->nodes[node->tick_dependents[i]].tick_requested = TRUE;
+	}
+}
+
+/* consumer reads provider's state (resource_get_pwm): a dependent of provider */
+static void add_tick_dependent(NodeRecord *provider, const NodeRecord *consumer)
+{
+	uint32 index = (uint32)(consumer - provider->runtime->nodes);
+	uint32 *grown;
+	uint32 i;
+
+	for (i = 0U; i < provider->tick_dependent_count; i++) {
+		if (provider->tick_dependents[i] == index) {
+			return;
+		}
+	}
+	grown = realloc(provider->tick_dependents, (provider->tick_dependent_count + 1U) * sizeof(uint32));
+	if (grown == NULL) {
+		return;
+	}
+	provider->tick_dependents = grown;
+	provider->tick_dependents[provider->tick_dependent_count++] = index;
+}
+#endif
+
+/* ABI 1.19: the model asks for a tick at the next athrill_device_tick. */
+static void resource_request_tick(void *context)
+{
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	NodeRecord *node = context;
+
+	node->tick_requested = TRUE;
+	request_dependents(node);
+#else
+	(void)context;
+#endif
+}
+
 static const AthrillDeviceResourceOps resource_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceResourceOps), resource_get_interrupt,
@@ -1755,7 +1822,8 @@ static const AthrillDeviceResourceOps resource_ops = {
 	resource_uart_listen, resource_uart_send, resource_dma_provide,
 	resource_dma_request, resource_get_dma_master, resource_sd_card_provide,
 	resource_get_sd_card, resource_gpio_resolve, resource_gpio_drive,
-	resource_gpio_read, resource_gpio_subscribe, resource_console_listen
+	resource_gpio_read, resource_gpio_subscribe, resource_console_listen,
+	resource_request_tick
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
@@ -2783,6 +2851,23 @@ static int register_and_connect(AthrillDeviceRuntime *runtime)
 	return athrill_device_reset(runtime);
 }
 
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+/* Tick skipping on: the host value ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE is "1". */
+static std_bool tick_skip_requested(const AthrillDeviceBuildOptions *options)
+{
+	uint32 i;
+
+	for (i = 0U; i < options->host_value_count; i++) {
+		if ((options->host_values[i].key != NULL) && (options->host_values[i].value != NULL)
+		    && (strcmp(options->host_values[i].key, ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE) == 0)
+		    && (strcmp(options->host_values[i].value, "1") == 0)) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+#endif
+
 static void log_runtime(AthrillDeviceRuntime *runtime,
                         const AthrillDeviceBuildOptions *options)
 {
@@ -2878,6 +2963,12 @@ sint32 athrill_device_build(const AthrillDeviceBuildOptions *options,
 		goto fail;
 	}
 	log_runtime(runtime, options);
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	runtime->tick_skip = tick_skip_requested(options);
+	if (runtime->tick_skip) {
+		fprintf(stderr, "INFO: device tick skipping on (models that report a tick contract)\n");
+	}
+#endif
 	*result = runtime;
 	return 0;
 fail:
@@ -2900,6 +2991,10 @@ sint32 athrill_device_reset(AthrillDeviceRuntime *runtime)
 			error_line("reset", node->path, "-", node->model->model_name);
 			return -1;
 		}
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+		node->tick_contract = ATHRILL_DEVICE_TICK_EVERY;	/* reported again by its next tick */
+		node->tick_requested = FALSE;
+#endif
 	}
 	return 0;
 }
@@ -2912,11 +3007,49 @@ static sint32 tick_one(NodeRecord *node, uint64 now,
 	if (!node->created || node->model->tick == NULL) {
 		return 0;
 	}
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	if (node->runtime->tick_skip) {
+		if (node->tick_contract == ATHRILL_DEVICE_TICK_NONE) {
+			return 0;	/* its tick does nothing: as if ticked */
+		}
+		if ((node->tick_contract == ATHRILL_DEVICE_TICK_DEADLINE) && !node->tick_requested
+		    && (now < node->tick_due)) {
+			/* as if ticked: nothing happens, its event is still that far away */
+			if ((node->tick_due != ATHRILL_DEVICE_NO_EVENT)
+			    && ((node->tick_due - now) < result->next_event_interval)) {
+				result->next_event_interval = node->tick_due - now;
+			}
+			return 0;
+		}
+		node->tick_requested = FALSE;	/* a request made during this tick counts for the next */
+	}
+#endif
 	one.next_event_interval = ATHRILL_DEVICE_NO_EVENT;
 	one.can_skip = TRUE;
+	one.contract = ATHRILL_DEVICE_TICK_EVERY;
 	if (node->model->tick(node->instance, now, &one) != 0) {
 		return -1;
 	}
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	if (node->runtime->tick_skip) {
+		request_dependents(node);	/* its state may have moved: its readers look again */
+	}
+	/* NONE also needs no event; NONE and DEADLINE need nothing busy; else EVERY */
+	if ((one.contract == ATHRILL_DEVICE_TICK_NONE) && one.can_skip
+	    && (one.next_event_interval == ATHRILL_DEVICE_NO_EVENT)) {
+		node->tick_contract = ATHRILL_DEVICE_TICK_NONE;
+	} else if ((one.contract == ATHRILL_DEVICE_TICK_DEADLINE) && one.can_skip) {
+		node->tick_contract = ATHRILL_DEVICE_TICK_DEADLINE;
+		if ((one.next_event_interval == ATHRILL_DEVICE_NO_EVENT)
+		    || (one.next_event_interval > (ATHRILL_DEVICE_NO_EVENT - now))) {
+			node->tick_due = ATHRILL_DEVICE_NO_EVENT;
+		} else {
+			node->tick_due = now + one.next_event_interval;
+		}
+	} else {
+		node->tick_contract = ATHRILL_DEVICE_TICK_EVERY;
+	}
+#endif
 	if (one.next_event_interval < result->next_event_interval) {
 		result->next_event_interval = one.next_event_interval;
 	}
@@ -2971,6 +3104,9 @@ void athrill_device_destroy(AthrillDeviceRuntime *runtime)
 			}
 	if (runtime->nodes != NULL)
 		for (i = 0U; i < runtime->node_count; i++) {
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+			free(runtime->nodes[i].tick_dependents);
+#endif
 			free(runtime->nodes[i].dma_channels);
 			free(runtime->nodes[i].dma_tuples);
 			free(runtime->nodes[i].dependencies);

@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       18U
+#define ATHRILL_DEVICE_ABI_MINOR       19U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -465,6 +465,11 @@ typedef struct AthrillDeviceResourceOps {
 	sint32 (*console_listen)(void *context, uint32 channel,
 	                         sint32 (*receive)(void *instance, uint8 data),
 	                         void *instance);
+	/* Added in ABI 1.19: a model that reported ATHRILL_DEVICE_TICK_DEADLINE
+	 * asks to be ticked at the next athrill_device_tick (something changed
+	 * when its next event is or what its tick would do). Does nothing in a
+	 * runtime without tick skipping. Check struct_size before calling. */
+	void (*request_tick)(void *context);
 } AthrillDeviceResourceOps;
 
 typedef struct {
@@ -478,9 +483,26 @@ typedef struct {
 	void *context;
 } AthrillDeviceConnectArgs;
 
+/*
+ * Added in ABI 1.19: how a model's tick behaves, which it reports in each
+ * tick's result (the runtime presets EVERY, so a model that does not know
+ * the field keeps today's behaviour). A runtime built with tick skipping
+ * (ATHRILL_DEVICE_TICK_SKIP) and asked for it at run time
+ * (ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE) uses it; any other runtime ticks
+ * every model every time. docs/design/tick-skip.md.
+ */
+#define ATHRILL_DEVICE_TICK_EVERY      0U	/* a tick may do something at any time */
+#define ATHRILL_DEVICE_TICK_NONE       1U	/* a tick never does anything, never reports an event */
+/* before the time of the event it reported, a tick does nothing observable
+ * unless the model asked for one since (request_tick) */
+#define ATHRILL_DEVICE_TICK_DEADLINE   2U
+#define ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE "DEVICE_CONFIG_DEVICE_TICK_SKIP"
+
 typedef struct {
 	uint64 next_event_interval;
 	std_bool can_skip;
+	/* ABI 1.19: ATHRILL_DEVICE_TICK_EVERY (preset), _NONE or _DEADLINE */
+	uint32 contract;
 } AthrillDeviceTickResult;
 
 typedef struct AthrillDeviceModelOps {

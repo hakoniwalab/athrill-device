@@ -37,6 +37,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stddef.h>
 
 #define USART_CR1	0x00U
 #define USART_CR2	0x04U
@@ -142,6 +143,7 @@ static const uint32 h7_dividers[8] = { 4U, 4U, 4U, 4U, 4U, 4U, 4U, 4U };
 
 static void write_tdr(Uart *u, uint8 data);
 static sint32 push_input(Uart *u, uint8 data);
+static void request_tick(const Uart *u);
 static sint32 console_receive(void *instance, uint8 data);
 
 static uint64 host_clock(const Uart *u)
@@ -533,6 +535,7 @@ static sint32 uart_read(void *instance, uint64 address, uint32 size, uint64 *res
 	}
 	*result = read_register(u, offset) >> (8U * (((uint32)address - u->base) & 3U));
 	update_requests(u);
+	request_tick(u);	/* RDR, for one, frees the receiver */
 	return 0;
 }
 
@@ -552,6 +555,7 @@ static sint32 uart_write(void *instance, uint64 address, uint32 size, uint64 val
 	}
 	write_register(u, offset, (uint32)value << shift, mask);
 	update_requests(u);
+	request_tick(u);
 	return 0;
 }
 
@@ -559,6 +563,16 @@ static const AthrillDeviceMmioOps uart_mmio = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceMmioOps), uart_read, uart_write
 };
+
+/* ABI 1.19: ask for a tick (something changed the UART outside its tick). */
+static void request_tick(const Uart *u)
+{
+	if ((u->resources != NULL)
+	    && (u->resources->struct_size >= offsetof(AthrillDeviceResourceOps, request_tick) + sizeof(void *))
+	    && (u->resources->request_tick != NULL)) {
+		u->resources->request_tick(u->context);
+	}
+}
 
 /* A character waiting to arrive at u; -1 when its queue is full. */
 static sint32 push_input(Uart *u, uint8 data)
@@ -568,6 +582,7 @@ static sint32 push_input(Uart *u, uint8 data)
 	}
 	u->input[(u->input_head + u->input_count) % INPUT_QUEUE_SIZE] = data;
 	u->input_count++;
+	request_tick(u);
 	return 0;
 }
 
@@ -769,6 +784,23 @@ static void report_interval(AthrillDeviceTickResult *result, const Uart *u, uint
 	}
 }
 
+/*
+ * ABI 1.19: a tick before the next reported event does nothing observable
+ * when the UART is not linked over TCP (polled every tick), no interrupt
+ * line is high (a high line is pended again once its handler is no longer
+ * active, which the CPU decides) and nothing is being sent (the end of a
+ * frame writes the console or file and moves the DMA requests at a time
+ * that is reported only with its interrupt enabled). Reception's next
+ * character is a reported event; register accesses and input ask for a
+ * tick (request_tick).
+ */
+static void uart_tick_contract(const Uart *u, AthrillDeviceTickResult *result)
+{
+	if ((u->tcp == NULL) && (u->asserted == 0U) && !u->tdr_full && !u->sending) {
+		result->contract = ATHRILL_DEVICE_TICK_DEADLINE;
+	}
+}
+
 static sint32 uart_tick(void *instance, uint64 now, AthrillDeviceTickResult *result)
 {
 	Uart *u = instance;
@@ -782,6 +814,7 @@ static sint32 uart_tick(void *instance, uint64 now, AthrillDeviceTickResult *res
 	cr1 = reg(u, USART_CR1);
 	advance_to(u, now);
 	if ((cr1 & CR1_UE) == 0U) {
+		uart_tick_contract(u, result);
 		return 0;
 	}
 	raise_interrupt(u);
@@ -801,6 +834,7 @@ static sint32 uart_tick(void *instance, uint64 now, AthrillDeviceTickResult *res
 	else if (u->console && u->rx_file_at_end && listening(u)) {
 		report_interval(result, u, u->rx_next);
 	}
+	uart_tick_contract(u, result);
 	return 0;
 }
 
