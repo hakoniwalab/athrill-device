@@ -44,6 +44,10 @@ struct NodeRecord {
 #ifdef ATHRILL_DEVICE_TICK_SKIP
 	/* the contract its last tick reported (ABI 1.19); NONE: not ticked again */
 	uint32 tick_contract;
+	/* DEADLINE: the time of the event it reported (UINT64 max: none), and
+	 * whether it asked for a tick since (request_tick) */
+	uint64 tick_due;
+	std_bool tick_requested;
 #endif
 	int offset;
 	int parent_index;
@@ -1752,6 +1756,18 @@ static sint32 resource_get_uart_child(void *context, uint32 index,
 	return -1;
 }
 
+/* ABI 1.19: the model asks for a tick at the next athrill_device_tick. */
+static void resource_request_tick(void *context)
+{
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	NodeRecord *node = context;
+
+	node->tick_requested = TRUE;
+#else
+	(void)context;
+#endif
+}
+
 static const AthrillDeviceResourceOps resource_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceResourceOps), resource_get_interrupt,
@@ -1763,7 +1779,8 @@ static const AthrillDeviceResourceOps resource_ops = {
 	resource_uart_listen, resource_uart_send, resource_dma_provide,
 	resource_dma_request, resource_get_dma_master, resource_sd_card_provide,
 	resource_get_sd_card, resource_gpio_resolve, resource_gpio_drive,
-	resource_gpio_read, resource_gpio_subscribe, resource_console_listen
+	resource_gpio_read, resource_gpio_subscribe, resource_console_listen,
+	resource_request_tick
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
@@ -2933,6 +2950,7 @@ sint32 athrill_device_reset(AthrillDeviceRuntime *runtime)
 		}
 #ifdef ATHRILL_DEVICE_TICK_SKIP
 		node->tick_contract = ATHRILL_DEVICE_TICK_EVERY;	/* reported again by its next tick */
+		node->tick_requested = FALSE;
 #endif
 	}
 	return 0;
@@ -2947,8 +2965,20 @@ static sint32 tick_one(NodeRecord *node, uint64 now,
 		return 0;
 	}
 #ifdef ATHRILL_DEVICE_TICK_SKIP
-	if (node->runtime->tick_skip && (node->tick_contract == ATHRILL_DEVICE_TICK_NONE)) {
-		return 0;	/* its tick does nothing: as if ticked */
+	if (node->runtime->tick_skip) {
+		if (node->tick_contract == ATHRILL_DEVICE_TICK_NONE) {
+			return 0;	/* its tick does nothing: as if ticked */
+		}
+		if ((node->tick_contract == ATHRILL_DEVICE_TICK_DEADLINE) && !node->tick_requested
+		    && (now < node->tick_due)) {
+			/* as if ticked: nothing happens, its event is still that far away */
+			if ((node->tick_due != ATHRILL_DEVICE_NO_EVENT)
+			    && ((node->tick_due - now) < result->next_event_interval)) {
+				result->next_event_interval = node->tick_due - now;
+			}
+			return 0;
+		}
+		node->tick_requested = FALSE;	/* a request made during this tick counts for the next */
 	}
 #endif
 	one.next_event_interval = ATHRILL_DEVICE_NO_EVENT;
@@ -2958,10 +2988,21 @@ static sint32 tick_one(NodeRecord *node, uint64 now,
 		return -1;
 	}
 #ifdef ATHRILL_DEVICE_TICK_SKIP
-	/* NONE also needs no event and nothing busy, else the model is ticked as EVERY */
-	node->tick_contract = ((one.contract == ATHRILL_DEVICE_TICK_NONE) && one.can_skip
-		&& (one.next_event_interval == ATHRILL_DEVICE_NO_EVENT)) ? ATHRILL_DEVICE_TICK_NONE
-		: ATHRILL_DEVICE_TICK_EVERY;
+	/* NONE also needs no event; NONE and DEADLINE need nothing busy; else EVERY */
+	if ((one.contract == ATHRILL_DEVICE_TICK_NONE) && one.can_skip
+	    && (one.next_event_interval == ATHRILL_DEVICE_NO_EVENT)) {
+		node->tick_contract = ATHRILL_DEVICE_TICK_NONE;
+	} else if ((one.contract == ATHRILL_DEVICE_TICK_DEADLINE) && one.can_skip) {
+		node->tick_contract = ATHRILL_DEVICE_TICK_DEADLINE;
+		if ((one.next_event_interval == ATHRILL_DEVICE_NO_EVENT)
+		    || (one.next_event_interval > (ATHRILL_DEVICE_NO_EVENT - now))) {
+			node->tick_due = ATHRILL_DEVICE_NO_EVENT;
+		} else {
+			node->tick_due = now + one.next_event_interval;
+		}
+	} else {
+		node->tick_contract = ATHRILL_DEVICE_TICK_EVERY;
+	}
 #endif
 	if (one.next_event_interval < result->next_event_interval) {
 		result->next_event_interval = one.next_event_interval;

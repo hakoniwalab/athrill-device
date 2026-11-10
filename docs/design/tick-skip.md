@@ -43,7 +43,7 @@ It is reported in every tick's result, not in `AthrillDeviceModelOps`. The reaso
 |---|---|---|
 | `ATHRILL_DEVICE_TICK_EVERY` (0) | As today: the tick may do something at any time. | Ticks it every time, as today. |
 | `ATHRILL_DEVICE_TICK_NONE` | The tick never does anything. The model also reports no event and is never busy. | Does not tick it again until a reset. |
-| `ATHRILL_DEVICE_TICK_DEADLINE` (step 2) | Before the time of the event it last reported, a tick does nothing observable, unless the model asked for a tick since (see 2). | Ticks it when that time has come or after it asked; otherwise skips it, and still reports the remaining interval to the target. |
+| `ATHRILL_DEVICE_TICK_DEADLINE` | Before the time of the event it last reported, a tick does nothing observable, unless the model asked for a tick since (see 2). | Ticks it when that time has come or after it asked; otherwise skips it, and still reports the remaining interval to the target. |
 
 Rules:
 
@@ -109,3 +109,29 @@ Athrill STM32 with its JIT, the same binary, the option off and on.
 |---|---|---|---|
 | PX4 fmu-v5 bench, 12e9 clocks | 19.90–20.13 s | 19.56–19.71 s | console and final state identical |
 | ArduCopter run-full, 80 virtual s | 41.12 s | 40.57 s | MAVLink bytes, steps, final PC identical |
+
+### Steps 2 and 3 (STM32 timers and UARTs `DEADLINE`)
+
+Each model reports `DEADLINE` only when skipping its tick provably changes nothing.
+
+**STM32 timer**
+- Reports `DEADLINE` when no interrupt line is high.
+- A high line must be ticked: it is pended again once its handler is no longer active, which the CPU decides.
+- Asks for a tick on every register write.
+
+**STM32 UART**
+- Reports `DEADLINE` when:
+  - it is not linked over TCP (that link is polled every tick);
+  - no interrupt line is high;
+  - nothing is being sent: the end of a frame writes the console or file and moves the DMA requests at a time that is reported as an event only when its interrupt is enabled.
+- Asks for a tick on every register access, and on input from its chip or from the console.
+
+Athrill STM32 with its JIT, the same binary, the option off and on:
+
+| Workload | Off | On | Output |
+|---|---|---|---|
+| PX4 fmu-v5 bench, 12e9 clocks | 20.38 s | 18.55–18.62 s | console and final state identical |
+| ArduCopter run-full, spin-halt, 20 / 80 virtual s | 9.74 / 41.27 s (RTF 1.90) | 8.76 / 37.18 s (RTF 2.11) | MAVLink bytes, steps, final PC identical |
+| ArduCopter run-full, idle loop executed, 40 virtual s | 22.40 s | 19.52 s | MAVLink bytes, steps, final PC identical |
+
+athrill-device ctest: 661/661 with the build option ON and OFF.
