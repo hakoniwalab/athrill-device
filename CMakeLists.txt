@@ -160,6 +160,8 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/exti.dtb"
       "${TEST_DTB_DIR}/timer-pwm.dtb"
       "${TEST_DTB_DIR}/timer-h7-pwm.dtb"
+      "${TEST_DTB_DIR}/tick-skip-runtime.dtb"
+      "${TEST_DTB_DIR}/tick-skip-contract.dtb"
       "${TEST_DTB_DIR}/dma-request.dtb"
       "${TEST_DTB_DIR}/disabled-provider.dtb"
       "${TEST_DTB_DIR}/duplicate-phandle.dtb"
@@ -259,6 +261,24 @@ if(BUILD_TESTING)
   add_test(NAME stm32-uart COMMAND test_stm32_uart)
   add_test(NAME stm32-uart-spec-gaps COMMAND test_stm32_uart spec-gaps)
   set_tests_properties(stm32-uart-spec-gaps PROPERTIES WILL_FAIL TRUE)
+
+  add_library(test_tick_skip_plugin MODULE tests/test_tick_skip_plugin.c)
+  target_compile_definitions(test_tick_skip_plugin PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_tick_skip_plugin PRIVATE include)
+  set_target_properties(test_tick_skip_plugin PROPERTIES PREFIX "")
+  add_executable(test_tick_skip tests/test_tick_skip.c)
+  target_compile_definitions(test_tick_skip PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES TEST_DTB_DIR="${TEST_DTB_DIR}")
+  if(ATHRILL_DEVICE_ENABLE_TICK_SKIP)
+    target_compile_definitions(test_tick_skip PRIVATE TEST_TICK_SKIP_COMPILED)
+  endif()
+  target_include_directories(test_tick_skip PRIVATE tests)
+  target_link_libraries(test_tick_skip PRIVATE athrill_device)
+  add_dependencies(test_tick_skip generate-test-dtbs)
+  add_test(NAME tick-skip-directed COMMAND test_tick_skip directed)
+  add_test(NAME tick-skip-random COMMAND test_tick_skip random)
+  add_test(NAME tick-skip-contract
+    COMMAND test_tick_skip contract $<TARGET_FILE:test_tick_skip_plugin>)
 
   add_executable(test_channel tests/test_channel.c)
   target_compile_definitions(test_channel PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

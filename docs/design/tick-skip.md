@@ -135,3 +135,28 @@ Athrill STM32 with its JIT, the same binary, the option off and on:
 | ArduCopter run-full, idle loop executed, 40 virtual s | 22.40 s | 19.52 s | MAVLink bytes, steps, final PC identical |
 
 athrill-device ctest: 661/661 with the build option ON and OFF.
+
+### Further verification
+
+Option off vs on, Athrill STM32 + JIT.
+
+**PX4 SIH scenario** (take-off, hover, land; 16e9 clocks)
+- The console, the steps (2,904,097,144), the F-RAM and the SD card image with its ULog are identical.
+- They are also identical to the run without the JIT and to the published reference: F-RAM `86dab857...`, SD `84cbe953...`.
+
+**Zephyr on NUCLEO-F767ZI and NUCLEO-H743ZI**
+- hello_world, synchronization, philosophers: console, steps and final PC identical.
+- philosophers ran 56.5 → 48.5 s on the F767ZI and 135.2 → 123.2 s on the H743ZI.
+
+**Tests** (`tests/test_tick_skip.c`, written by Codex)
+- **`tick-skip-directed`:** a runtime with an STM32 TIM2, USART1 and GPIOA, driven with and without skipping. After every step it compares MMIO reads, the IRQ log with times, every tick's interval and `can_skip`, the console and file bytes, and the DMA requests.
+- **`tick-skip-random`:** 1,024 scripts, seed `0x91f3d4c2a7865b0d`.
+- **`tick-skip-contract`:** a test model checks the runtime's rules.
+- These six mutations each make a test fail:
+  - the timer reports `DEADLINE` with a line high;
+  - the timer does not ask for a tick on a write;
+  - the UART reports `DEADLINE` while sending;
+  - the UART does not ask for a tick on an RDR read;
+  - the runtime does not report a skipped model's remaining interval;
+  - the runtime clears the request after the tick instead of before.
+- ctest passes 664/664 with the build option ON and OFF.

@@ -233,6 +233,35 @@ def main() -> None:
             ("pwm-names", strings("FMU_CH1")),
         ], []),
     ])
+    tick_skip_runtime = board([
+        provider("intc", 2, "#interrupt-cells", 1),
+        provider("dma", 4, "#dma-cells", 1),
+        node("timer@40000000", [
+            ("compatible", strings("st,stm32-timers")),
+            ("reg", be32(0x40000000, 0x400)),
+            ("interrupt-parent", be32(2)),
+            ("interrupts", be32(28)),
+            ("interrupt-names", strings("global")),
+        ], []),
+        node("serial@40011000", [
+            ("compatible", strings("st,stm32-uart")),
+            ("reg", be32(0x40011000, 0x400)),
+            ("interrupt-parent", be32(2)),
+            ("interrupts", be32(37)),
+            ("dmas", be32(4, 7, 4, 8)),
+            ("dma-names", strings("tx", "rx")),
+        ], []),
+        node("gpio@40020000", [
+            ("compatible", strings("st,stm32-gpio")),
+            ("reg", be32(0x40020000, 0x400)),
+            ("#gpio-cells", be32(2)),
+            ("phandle", be32(3)),
+        ], []),
+    ])
+    tick_skip_contract = board([
+        device("tick-contract@6000", 0x6000, 0x100,
+               compatible="athrill,test-tick-contract"),
+    ])
     overflow_reg = node("", [
         ("compatible", strings("athrill,test-board")),
         ("#address-cells", be32(2)), ("#size-cells", be32(2)),
@@ -272,6 +301,8 @@ def main() -> None:
         "exti.dtb": exti,
         "timer-pwm.dtb": timer_pwm,
         "timer-h7-pwm.dtb": timer_h7_pwm,
+        "tick-skip-runtime.dtb": tick_skip_runtime,
+        "tick-skip-contract.dtb": tick_skip_contract,
         "overlap.dtb": board([clock("clock", 1),
                               device("device@1000", 0x1000, 0x100, 1),
                               device("device@1080", 0x1080, 0x100, 1)]),
