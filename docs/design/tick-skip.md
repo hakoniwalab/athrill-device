@@ -65,6 +65,12 @@ Rules:
 | Build | `ATHRILL_DEVICE_TICK_SKIP` (CMake option `ATHRILL_DEVICE_ENABLE_TICK_SKIP`, OFF) | The runtime code is today's code. The contract field and `request_tick` exist, but the runtime never reads them; `request_tick` does nothing. |
 | Run | the host value `DEVICE_CONFIG_DEVICE_TICK_SKIP` = `1` (`ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE`), which the target passes in `AthrillDeviceBuildOptions.host_values` from its configuration | Every model is ticked, as today. |
 
+### 4. A model that reads another model's state is ticked with it
+
+A model that reads a timer's PWM output through `resource_get_pwm()` becomes that timer's dependent. Whenever the timer is really ticked, or asks for a tick, the runtime asks for a tick of its dependents too. A dependent later in the tick order is then ticked in the same `athrill_device_tick()`; one earlier, at the next one.
+
+An STM32 timer in one-pulse mode (`CR1_OPM`) stays `EVERY`: its counter stops by itself at an update, which a PWM reader sees, but which is an event only with its interrupt enabled.
+
 The tick order and the `DEVICE_TICK` start-up lines do not change. Skipping a model does not change the order in which the others are ticked.
 
 ## Order of adoption
@@ -74,6 +80,7 @@ The tick order and the `DEVICE_TICK` start-up lines do not change. Skipping a mo
 | 1 | GPIO ports, other models whose tick is empty | `NONE` | Nothing to review: the tick has no body. |
 | 2 | STM32 timers | `DEADLINE` | 8 nodes. Counter state is already computed from the clock on read. |
 | 3 | STM32 UARTs without a TCP link | `DEADLINE` | 7 nodes. A UART linked over TCP polls the host on every tick, so it stays `EVERY`. |
+| 4 | PWM actuator map | `DEADLINE`, no event of its own | It only samples its timers' PWM outputs. The runtime ticks it whenever one of those timers was ticked or asked for a tick (see 4). |
 
 Each step is a separate commit, measured and verified on its own.
 
@@ -160,3 +167,19 @@ Option off vs on, Athrill STM32 + JIT.
   - the runtime does not report a skipped model's remaining interval;
   - the runtime clears the request after the tick instead of before.
 - ctest passes 664/664 with the build option ON and OFF.
+
+### Step 4 (PWM actuator map) and the whole result
+
+Athrill STM32 on one Mac, nothing else running, 2 runs each (the spread was at most 2.3%). The same binary in three configurations: (1) no JIT, no tick skip; (2) JIT; (3) JIT and tick skip. Real-time factor (virtual time / host time):
+
+| Workload | Virtual time | (1) | (2) | (3) | Output in all three |
+|---|---|---|---|---|---|
+| PX4 fmu-v5 bench | 55.6 s | 1.80 | 2.87 | 3.19 | console and final state identical |
+| PX4 SIH scenario | 74.1 s | 1.96 | 3.32 | 3.52 | F-RAM, SD image and steps identical (the published reference) |
+| ArduCopter run-full, spin-halt | 80 s | 1.28 | 1.95 | 2.30 | MAVLink bytes and steps identical |
+| ArduCopter run-full, idle loop executed | 80 s | 1.19 | 1.75 | 2.15 | MAVLink bytes and steps identical |
+| Zephyr philosophers, NUCLEO-F767ZI | 30 s | 0.51 | 0.52 | 0.63 | console and steps identical |
+
+Tick skip alone, (2) to (3), is 11% for the PX4 bench and 18 to 23% for ArduCopter. With step 4, ArduCopter spin-halt gains 15% from tick skip, against 10% after step 3.
+
+athrill-device ctest: 664/664 with the build option ON and OFF.

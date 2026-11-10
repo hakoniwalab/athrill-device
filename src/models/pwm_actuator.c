@@ -109,6 +109,12 @@ static sint32 actuator_tick(void *instance, uint64 now,
 	(void)now;
 	result->next_event_interval = ATHRILL_DEVICE_NO_EVENT;
 	result->can_skip = TRUE;
+	/*
+	 * ABI 1.19: the PWM samples change only with the timers' state, and the
+	 * runtime ticks this model whenever one of its timers was ticked or
+	 * asked for a tick (it is their PWM dependent): no event of its own.
+	 */
+	result->contract = ATHRILL_DEVICE_TICK_DEADLINE;
 	for (index = 0U; index < actuator->output_count; index++) {
 		AthrillDevicePwmSample sample;
 		uint64 pulse = 0U;

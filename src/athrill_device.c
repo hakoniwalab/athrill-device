@@ -31,6 +31,9 @@ typedef struct {
 
 typedef struct NodeRecord NodeRecord;
 typedef struct PluginRecord PluginRecord;
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+static void add_tick_dependent(NodeRecord *provider, const NodeRecord *consumer);
+#endif
 
 typedef struct {
 	uint64 address;
@@ -48,6 +51,10 @@ struct NodeRecord {
 	 * whether it asked for a tick since (request_tick) */
 	uint64 tick_due;
 	std_bool tick_requested;
+	/* the models that read this one (a PWM consumer of this timer): asked
+	 * for a tick whenever this one is ticked or asks for a tick */
+	uint32 *tick_dependents;
+	uint32 tick_dependent_count;
 #endif
 	int offset;
 	int parent_index;
@@ -1343,6 +1350,9 @@ static sint32 resource_get_pwm(void *context, const char *property,
 	channel->ops = timer->model->pwm;
 	channel->instance = timer->instance;
 	channel->channel = spec.cells[0];
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	add_tick_dependent(timer, node);	/* node samples the timer's PWM */
+#endif
 	return 0;
 }
 
@@ -1756,6 +1766,38 @@ static sint32 resource_get_uart_child(void *context, uint32 index,
 	return -1;
 }
 
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+/* node's dependents are ticked at the next tick (or later in this one) */
+static void request_dependents(NodeRecord *node)
+{
+	uint32 i;
+
+	for (i = 0U; i < node->tick_dependent_count; i++) {
+		node->runtime->nodes[node->tick_dependents[i]].tick_requested = TRUE;
+	}
+}
+
+/* consumer reads provider's state (resource_get_pwm): a dependent of provider */
+static void add_tick_dependent(NodeRecord *provider, const NodeRecord *consumer)
+{
+	uint32 index = (uint32)(consumer - provider->runtime->nodes);
+	uint32 *grown;
+	uint32 i;
+
+	for (i = 0U; i < provider->tick_dependent_count; i++) {
+		if (provider->tick_dependents[i] == index) {
+			return;
+		}
+	}
+	grown = realloc(provider->tick_dependents, (provider->tick_dependent_count + 1U) * sizeof(uint32));
+	if (grown == NULL) {
+		return;
+	}
+	provider->tick_dependents = grown;
+	provider->tick_dependents[provider->tick_dependent_count++] = index;
+}
+#endif
+
 /* ABI 1.19: the model asks for a tick at the next athrill_device_tick. */
 static void resource_request_tick(void *context)
 {
@@ -1763,6 +1805,7 @@ static void resource_request_tick(void *context)
 	NodeRecord *node = context;
 
 	node->tick_requested = TRUE;
+	request_dependents(node);
 #else
 	(void)context;
 #endif
@@ -2988,6 +3031,9 @@ static sint32 tick_one(NodeRecord *node, uint64 now,
 		return -1;
 	}
 #ifdef ATHRILL_DEVICE_TICK_SKIP
+	if (node->runtime->tick_skip) {
+		request_dependents(node);	/* its state may have moved: its readers look again */
+	}
 	/* NONE also needs no event; NONE and DEADLINE need nothing busy; else EVERY */
 	if ((one.contract == ATHRILL_DEVICE_TICK_NONE) && one.can_skip
 	    && (one.next_event_interval == ATHRILL_DEVICE_NO_EVENT)) {
@@ -3058,6 +3104,9 @@ void athrill_device_destroy(AthrillDeviceRuntime *runtime)
 			}
 	if (runtime->nodes != NULL)
 		for (i = 0U; i < runtime->node_count; i++) {
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+			free(runtime->nodes[i].tick_dependents);
+#endif
 			free(runtime->nodes[i].dma_channels);
 			free(runtime->nodes[i].dma_tuples);
 			free(runtime->nodes[i].dependencies);

@@ -852,9 +852,12 @@ static sint32 timer_tick(void *instance, uint64 now,
 	 * every access; an enabled flag is set only at the event; a register
 	 * write asks for a tick). A line that is high must be ticked every
 	 * time: raise_interrupts() pends it again once its handler is no
-	 * longer active, which the CPU decides, not the timer.
+	 * longer active, which the CPU decides, not the timer. In one-pulse
+	 * mode the counter stops by itself at an update, which a PWM reader
+	 * sees (and which is an event only with its interrupt enabled), so
+	 * that mode is ticked every time too.
 	 */
-	if (timer->asserted == 0U) {
+	if ((timer->asserted == 0U) && ((reg(timer, TIM_CR1) & CR1_OPM) == 0U)) {
 		result->contract = ATHRILL_DEVICE_TICK_DEADLINE;
 	}
 	return 0;
