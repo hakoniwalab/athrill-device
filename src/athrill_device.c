@@ -41,6 +41,10 @@ typedef struct {
 
 struct NodeRecord {
 	struct AthrillDeviceRuntime *runtime;
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	/* the contract its last tick reported (ABI 1.19); NONE: not ticked again */
+	uint32 tick_contract;
+#endif
 	int offset;
 	int parent_index;
 	uint32 preorder;
@@ -135,6 +139,10 @@ struct AthrillDeviceRuntime {
 	/* ABI 1.17: the console input's receivers by channel */
 	sint32 (*console_receive[CONSOLE_CHANNELS])(void *instance, uint8 data);
 	void *console_instance[CONSOLE_CHANNELS];
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	/* the host value ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE was 1: the contracts are used */
+	std_bool tick_skip;
+#endif
 };
 
 static void error_line(const char *code, const char *path,
@@ -2783,6 +2791,23 @@ static int register_and_connect(AthrillDeviceRuntime *runtime)
 	return athrill_device_reset(runtime);
 }
 
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+/* Tick skipping on: the host value ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE is "1". */
+static std_bool tick_skip_requested(const AthrillDeviceBuildOptions *options)
+{
+	uint32 i;
+
+	for (i = 0U; i < options->host_value_count; i++) {
+		if ((options->host_values[i].key != NULL) && (options->host_values[i].value != NULL)
+		    && (strcmp(options->host_values[i].key, ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE) == 0)
+		    && (strcmp(options->host_values[i].value, "1") == 0)) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+#endif
+
 static void log_runtime(AthrillDeviceRuntime *runtime,
                         const AthrillDeviceBuildOptions *options)
 {
@@ -2878,6 +2903,12 @@ sint32 athrill_device_build(const AthrillDeviceBuildOptions *options,
 		goto fail;
 	}
 	log_runtime(runtime, options);
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	runtime->tick_skip = tick_skip_requested(options);
+	if (runtime->tick_skip) {
+		fprintf(stderr, "INFO: device tick skipping on (models that report a tick contract)\n");
+	}
+#endif
 	*result = runtime;
 	return 0;
 fail:
@@ -2900,6 +2931,9 @@ sint32 athrill_device_reset(AthrillDeviceRuntime *runtime)
 			error_line("reset", node->path, "-", node->model->model_name);
 			return -1;
 		}
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+		node->tick_contract = ATHRILL_DEVICE_TICK_EVERY;	/* reported again by its next tick */
+#endif
 	}
 	return 0;
 }
@@ -2912,11 +2946,23 @@ static sint32 tick_one(NodeRecord *node, uint64 now,
 	if (!node->created || node->model->tick == NULL) {
 		return 0;
 	}
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	if (node->runtime->tick_skip && (node->tick_contract == ATHRILL_DEVICE_TICK_NONE)) {
+		return 0;	/* its tick does nothing: as if ticked */
+	}
+#endif
 	one.next_event_interval = ATHRILL_DEVICE_NO_EVENT;
 	one.can_skip = TRUE;
+	one.contract = ATHRILL_DEVICE_TICK_EVERY;
 	if (node->model->tick(node->instance, now, &one) != 0) {
 		return -1;
 	}
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	/* NONE also needs no event and nothing busy, else the model is ticked as EVERY */
+	node->tick_contract = ((one.contract == ATHRILL_DEVICE_TICK_NONE) && one.can_skip
+		&& (one.next_event_interval == ATHRILL_DEVICE_NO_EVENT)) ? ATHRILL_DEVICE_TICK_NONE
+		: ATHRILL_DEVICE_TICK_EVERY;
+#endif
 	if (one.next_event_interval < result->next_event_interval) {
 		result->next_event_interval = one.next_event_interval;
 	}

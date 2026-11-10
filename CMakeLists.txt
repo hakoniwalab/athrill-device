@@ -49,6 +49,13 @@ add_library(athrill_device STATIC
   src/sha256.c
   third_party/libfdt/libfdt.c)
 add_library(athrill-device::athrill-device ALIAS athrill_device)
+# Experiment, off by default: the runtime skips the ticks of models that
+# report a tick contract (docs/design/tick-skip.md), when the target also
+# passes the host value DEVICE_CONFIG_DEVICE_TICK_SKIP 1.
+option(ATHRILL_DEVICE_ENABLE_TICK_SKIP "Skip the ticks of models that report a tick contract (experiment)" OFF)
+if(ATHRILL_DEVICE_ENABLE_TICK_SKIP)
+  target_compile_definitions(athrill_device PRIVATE ATHRILL_DEVICE_TICK_SKIP)
+endif()
 target_include_directories(athrill_device
   PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

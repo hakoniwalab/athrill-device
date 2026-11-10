@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       18U
+#define ATHRILL_DEVICE_ABI_MINOR       19U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -478,9 +478,23 @@ typedef struct {
 	void *context;
 } AthrillDeviceConnectArgs;
 
+/*
+ * Added in ABI 1.19: how a model's tick behaves, which it reports in each
+ * tick's result (the runtime presets EVERY, so a model that does not know
+ * the field keeps today's behaviour). A runtime built with tick skipping
+ * (ATHRILL_DEVICE_TICK_SKIP) and asked for it at run time
+ * (ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE) uses it; any other runtime ticks
+ * every model every time. docs/design/tick-skip.md.
+ */
+#define ATHRILL_DEVICE_TICK_EVERY      0U	/* a tick may do something at any time */
+#define ATHRILL_DEVICE_TICK_NONE       1U	/* a tick never does anything, never reports an event */
+#define ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE "DEVICE_CONFIG_DEVICE_TICK_SKIP"
+
 typedef struct {
 	uint64 next_event_interval;
 	std_bool can_skip;
+	/* ABI 1.19: ATHRILL_DEVICE_TICK_EVERY (preset) or _NONE */
+	uint32 contract;
 } AthrillDeviceTickResult;
 
 typedef struct AthrillDeviceModelOps {
