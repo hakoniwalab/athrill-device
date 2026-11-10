@@ -12,6 +12,9 @@
  * console and DEVICE_CONFIG_STM32_UART_TX_FILE, its input from the debugger
  * and DEVICE_CONFIG_STM32_UART_RX_FILE after DEVICE_CONFIG_STM32_UART_RX_DELAY_MS),
  * the interrupt as a level made pending again by the tick.
+ * DEVICE_CONFIG_STM32_UART_TX_INSTANT (nonzero, console UART only): a character
+ * leaves the shift register at once (TXE and TC without the frame time), so a
+ * firmware that polls its console does not wait; reception keeps its timing.
  * What changed with the move: the base, interrupt and chip come from the node
  * and the USART number and kernel clock divider from the base (H7 instances
  * carry athrill,stm32h7-uart: every USART at D2PCLK = CPU / 4); the console
@@ -96,6 +99,7 @@ struct Uart {
 	std_bool tdr_full;
 	uint8 tdr;
 	uint64 shift_end;	/* the clock the frame in the shift register is sent */
+	std_bool tx_instant;	/* DEVICE_CONFIG_STM32_UART_TX_INSTANT on the console UART */
 	std_bool sending;	/* a frame was sent since TC was last set */
 	std_bool tc;
 	/* receiver */
@@ -191,6 +195,12 @@ static uint64 frame_clocks(const Uart *u)
 	return (half_bits * bit2 * u->divider) / 4U;
 }
 
+/* CPU clocks a transmitted frame takes: none with DEVICE_CONFIG_STM32_UART_TX_INSTANT. */
+static uint64 tx_frame_clocks(const Uart *u)
+{
+	return u->tx_instant ? 0U : frame_clocks(u);
+}
+
 static sint32 channel_child_receive(void *context, uint8 data,
 	uint64 completion_time)
 {
@@ -274,7 +284,7 @@ static std_bool channel_connect(Uart *u)
 static void shift_out(Uart *u, uint8 data, uint64 start)
 {
 	uint64 completion;
-	u->shift_end = start + frame_clocks(u);
+	u->shift_end = start + tx_frame_clocks(u);
 	u->sending = TRUE;
 	if (u->console) {
 		(void)u->target_ops->console_write(u->target, 0U, data);
@@ -748,6 +758,8 @@ static sint32 uart_reset(void *instance)
 	u->rx_request = FALSE;
 	u->advancing = FALSE;
 	u->console = (u->number == console) ? TRUE : FALSE;
+	u->tx_instant = u->console &&
+		(host_number(u, "DEVICE_CONFIG_STM32_UART_TX_INSTANT", 0U) != 0U);
 	u->rx_file_at_end = FALSE;
 	if (u->console) {
 		/* the console UART takes the host's console input (channel 0) */
@@ -823,7 +835,7 @@ static sint32 uart_tick(void *instance, uint64 now, AthrillDeviceTickResult *res
 		report_interval(result, u, u->shift_end);
 	}
 	if (((cr1 & CR1_TCIE) != 0U) && (u->tdr_full || u->sending)) {
-		report_interval(result, u, u->tdr_full ? (u->shift_end + frame_clocks(u)) : u->shift_end);
+		report_interval(result, u, u->tdr_full ? (u->shift_end + tx_frame_clocks(u)) : u->shift_end);
 	}
 	if (u->tx_dma_enabled && ((reg(u, USART_CR3) & CR3_DMAT) != 0U) && (u->tdr_full || u->sending)) {
 		report_interval(result, u, u->shift_end);
