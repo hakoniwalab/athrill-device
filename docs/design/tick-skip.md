@@ -71,6 +71,10 @@ A model that reads a timer's PWM output through `resource_get_pwm()` becomes tha
 
 An STM32 timer in one-pulse mode (`CR1_OPM`) stays `EVERY`: its counter stops by itself at an update, which a PWM reader sees, but which is an event only with its interrupt enabled.
 
+The update of a timer changes its PWM in a second way: a preloaded register (`CCRx` with `OCxPE`, `ARR` with `ARPE`, `PSC`) reaches its shadow there, without an interrupt. While a preload register waits for its update, the timer reports that update as its next event. The runtime then ticks the timer at the update, and its PWM dependents with it.
+
+This was found after step 4 was merged. PX4 on the Pixhawk 6C, flying the in-process Hakoniwa aircraft, writes its motor duties to preloaded `CCRx`. With tick skip, the actuator map kept the old duty until the next register write. The first actuator sample after arming then differed from the reference, at 50.012 virtual s. The earlier verification did not see it, because no output it compared depends on the PWM.
+
 The tick order and the `DEVICE_TICK` start-up lines do not change. Skipping a model does not change the order in which the others are ticked.
 
 ## Order of adoption
@@ -159,6 +163,7 @@ Option off vs on, Athrill STM32 + JIT.
 - **`tick-skip-directed`:** a runtime with an STM32 TIM2, USART1 and GPIOA, driven with and without skipping. After every step it compares MMIO reads, the IRQ log with times, every tick's interval and `can_skip`, the console and file bytes, and the DMA requests.
 - **`tick-skip-random`:** 1,024 scripts, seed `0x91f3d4c2a7865b0d`.
 - **`tick-skip-contract`:** a test model checks the runtime's rules.
+- **`tick-skip-pwm`:** a timer with a preloaded PWM channel and its actuator map, on a board of their own. New duties are written between updates, and the actuator trace is compared after every tick. It fails when the timer does not report the update of a pending preload.
 - These six mutations each make a test fail:
   - the timer reports `DEADLINE` with a line high;
   - the timer does not ask for a tick on a write;

@@ -21,10 +21,17 @@
 # the armed run with these seeds gave the same values with five builds,
 # each "armed and took off". The verification now makes the seeds anew
 # every time and checks them first (seed_sha256).
+# Instructions re-recorded 2026-11-11: a timer now reports the update that
+# loads a pending preload register (CCRx, ARR, PSC) as an event, so that tick
+# skip ticks its PWM readers there. The extra batch boundaries change the
+# printed count (it adds the clocks of a branch to itself on a path that
+# depends on the batch), 5248904847 -> 5248909950; the console, the PWM trace
+# and the time-stamped sensor-device trace are unchanged, with the interpreter,
+# with tick skip and with the JIT and tick skip.
 seed_sha256 fram.bin b2325cf2b36ad1118b5076ae07efaff67098b23454693beaff985ca9c2cf277f
 seed_sha256 sd.img 1006b9fa1ed50fa2729932b482753fc64003b141600853da8d96ed7d46bb017e
 firmware_sha256 8719b2ea764d3185bbf4fbda7d7031763b03eac700d2fe355967eea57c4ffe78
-instructions 5248904847
+instructions 5248909950
 sha256 console.raw abe45c05b078454a3885d725a99d21e7af4741872b78c924777d7f71b687d70b
 sha256 pwm.trace 72244d73872b67884721bdb2a98a6a17e3a0535bef9436005938515e2e5be8c1
 sha256 sensor-device.trace 6a928ca49166fec8c07e0c39ccbddf4b23ed8e71b336519bf8351393e1e362f7

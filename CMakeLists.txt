@@ -162,6 +162,7 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/timer-h7-pwm.dtb"
       "${TEST_DTB_DIR}/tick-skip-runtime.dtb"
       "${TEST_DTB_DIR}/tick-skip-contract.dtb"
+      "${TEST_DTB_DIR}/tick-skip-pwm.dtb"
       "${TEST_DTB_DIR}/dma-request.dtb"
       "${TEST_DTB_DIR}/disabled-provider.dtb"
       "${TEST_DTB_DIR}/duplicate-phandle.dtb"
@@ -277,6 +278,7 @@ if(BUILD_TESTING)
   add_dependencies(test_tick_skip generate-test-dtbs)
   add_test(NAME tick-skip-directed COMMAND test_tick_skip directed)
   add_test(NAME tick-skip-random COMMAND test_tick_skip random)
+  add_test(NAME tick-skip-pwm COMMAND test_tick_skip pwm)
   add_test(NAME tick-skip-contract
     COMMAND test_tick_skip contract $<TARGET_FILE:test_tick_skip_plugin>)
 

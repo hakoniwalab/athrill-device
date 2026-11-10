@@ -25,6 +25,8 @@
 #define TIM_CNT  0x24U
 #define TIM_PSC  0x28U
 #define TIM_ARR  0x2cU
+#define TIM_CCMR1 0x18U
+#define TIM_CCER 0x20U
 #define TIM_CCR1 0x34U
 
 #define UART_CR1 0x00U
@@ -74,6 +76,7 @@ typedef struct {
 	uint32 output_count;
 	uint32 end_batches;
 	char tx_path[256];
+	char pwm_path[256];
 } Target;
 
 typedef struct {
@@ -176,6 +179,9 @@ static sint32 host_value(void *context, const char *key, const char **value)
 	} else if (strcmp(key, "DEVICE_CONFIG_STM32_UART_TX_FILE") == 0 &&
 		target->tx_path[0] != '\0') {
 		*value = target->tx_path;
+	} else if (strcmp(key, "DEVICE_CONFIG_STM32_ACTUATOR_FILE") == 0 &&
+		target->pwm_path[0] != '\0') {
+		*value = target->pwm_path;
 	} else {
 		return -1;
 	}
@@ -368,7 +374,8 @@ static void pair_reset(Pair *pair)
 	compare_targets(pair);
 }
 
-static void build_pair(Pair *pair, const char *case_name)
+static void build_pair_dtb(Pair *pair, const char *case_name,
+	const char *dtb_name, uint32 windows, std_bool pwm)
 {
 	char dtb[1024];
 	AthrillDeviceBuildOptions options;
@@ -382,7 +389,15 @@ static void build_pair(Pair *pair, const char *case_name)
 	(void)snprintf(pair->skipping_target.tx_path,
 		sizeof(pair->skipping_target.tx_path), "/tmp/athrill-tick-skip-%ld-%s-skipping.bin",
 		(long)getpid(), case_name);
-	(void)snprintf(dtb, sizeof(dtb), "%s/tick-skip-runtime.dtb", TEST_DTB_DIR);
+	if (pwm) {
+		(void)snprintf(pair->reference_target.pwm_path,
+			sizeof(pair->reference_target.pwm_path), "/tmp/athrill-tick-skip-%ld-%s-reference.pwm",
+			(long)getpid(), case_name);
+		(void)snprintf(pair->skipping_target.pwm_path,
+			sizeof(pair->skipping_target.pwm_path), "/tmp/athrill-tick-skip-%ld-%s-skipping.pwm",
+			(long)getpid(), case_name);
+	}
+	(void)snprintf(dtb, sizeof(dtb), "%s/%s", TEST_DTB_DIR, dtb_name);
 	memset(&options, 0, sizeof(options));
 	options.dtb_path = dtb;
 	options.maximum_dtb_size = 1024U * 1024U;
@@ -396,10 +411,15 @@ static void build_pair(Pair *pair, const char *case_name)
 		&pair->skipping) != 0) {
 		fail_mismatch("building skipping runtime");
 	}
-	if (pair->reference_target.window_count != 3U ||
-		pair->skipping_target.window_count != 3U) {
+	if (pair->reference_target.window_count != windows ||
+		pair->skipping_target.window_count != windows) {
 		fail_mismatch("test DTB MMIO windows");
 	}
+}
+
+static void build_pair(Pair *pair, const char *case_name)
+{
+	build_pair_dtb(pair, case_name, "tick-skip-runtime.dtb", 3U, FALSE);
 }
 
 static void compare_files(const char *a_path, const char *b_path)
@@ -590,6 +610,53 @@ static void directed(void)
 	puts("tick-skip-directed: ok");
 }
 
+/*
+ * A PWM duty written to a preloaded CCR1 (OC1PE) reaches the output at the
+ * next update, without an interrupt. Its reader, the pwm-actuator-map, must
+ * see it then with skipping as without: the actuator trace is compared after
+ * every tick.
+ */
+static void compare_pwm_traces(const Pair *pair)
+{
+	compare_files(pair->reference_target.pwm_path, pair->skipping_target.pwm_path);
+}
+
+static void pwm_preload(void)
+{
+	Pair pair;
+	uint64 t;
+	build_pair_dtb(&pair, "pwm", "tick-skip-pwm.dtb", 1U, TRUE);
+	pair_reset(&pair);
+	pair_tick(&pair, 1U);
+	pair_write(&pair, TIM_BASE + TIM_PSC, 0U);
+	pair_write(&pair, TIM_BASE + TIM_ARR, 999U);
+	/* CH1: PWM mode 1 (OC1M = 110), preload (OC1PE), output enabled */
+	pair_write(&pair, TIM_BASE + TIM_CCMR1, (6U << 4) | (1U << 3));
+	pair_write(&pair, TIM_BASE + TIM_CCER, 1U);
+	pair_write(&pair, TIM_BASE + TIM_CCR1, 100U);
+	pair_write(&pair, TIM_BASE + TIM_EGR, 1U);
+	pair_write(&pair, TIM_BASE + TIM_CR1, 1U);
+	pair_tick(&pair, 10U);
+	compare_pwm_traces(&pair);
+	/* new duties, each taking effect at the next update; ticks in between and after */
+	for (t = 1U; t <= 5U; t++) {
+		pair.reference_target.now = (t * 1000U) + 20U;
+		pair.skipping_target.now = (t * 1000U) + 20U;
+		pair_write(&pair, TIM_BASE + TIM_CCR1, 100U * (t + 1U));
+		pair_tick(&pair, (t * 1000U) + 500U);
+		compare_pwm_traces(&pair);
+		pair_tick(&pair, (t * 1000U) + 1500U);
+		compare_pwm_traces(&pair);
+	}
+	/* no UART on this board: destroy without the UART file comparison */
+	athrill_device_destroy(pair.reference);
+	athrill_device_destroy(pair.skipping);
+	compare_pwm_traces(&pair);
+	(void)unlink(pair.reference_target.pwm_path);
+	(void)unlink(pair.skipping_target.pwm_path);
+	printf("tick-skip-pwm: preloaded PWM duties reach the actuator map at the same ticks\n");
+}
+
 static uint64 random_state;
 static uint32 random_u32(void)
 {
@@ -742,13 +809,15 @@ static void contract_tests(const char *plugin_path)
 int main(int argc, char **argv)
 {
 	if (argc < 2) {
-		fprintf(stderr, "usage: %s directed|random|contract [plugin]\n", argv[0]);
+		fprintf(stderr, "usage: %s directed|random|pwm|contract [plugin]\n", argv[0]);
 		return EXIT_FAILURE;
 	}
 	if (strcmp(argv[1], "directed") == 0) {
 		directed();
 	} else if (strcmp(argv[1], "random") == 0) {
 		random_tests();
+	} else if (strcmp(argv[1], "pwm") == 0) {
+		pwm_preload();
 	} else if (strcmp(argv[1], "contract") == 0 && argc == 3) {
 		contract_tests(argv[2]);
 	} else {

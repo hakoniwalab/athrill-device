@@ -258,6 +258,27 @@ def main() -> None:
             ("phandle", be32(3)),
         ], []),
     ])
+    # tests/test_tick_skip.c "pwm": a timer with a PWM output read by a
+    # pwm-actuator-map, its PWM dependent under tick skip.
+    tick_skip_pwm = board([
+        provider("intc", 2, "#interrupt-cells", 1),
+        node("timers@40000000", [
+            ("compatible", strings("st,stm32-timers")),
+            ("reg", be32(0x40000000, 0x400)),
+            ("interrupt-parent", be32(2)),
+            ("interrupts", be32(28)),
+            ("interrupt-names", strings("global")),
+        ], [node("pwm", [
+            ("compatible", strings("st,stm32-pwm")),
+            ("#pwm-cells", be32(3)),
+            ("phandle", be32(5)),
+        ], [])]),
+        node("pwm-actuator-map", [
+            ("compatible", strings("athrill,pwm-actuator-map")),
+            ("pwms", be32(5, 1, 20_000_000, 0)),
+            ("pwm-names", strings("FMU_CH1")),
+        ], []),
+    ])
     tick_skip_contract = board([
         device("tick-contract@6000", 0x6000, 0x100,
                compatible="athrill,test-tick-contract"),
@@ -303,6 +324,7 @@ def main() -> None:
         "timer-h7-pwm.dtb": timer_h7_pwm,
         "tick-skip-runtime.dtb": tick_skip_runtime,
         "tick-skip-contract.dtb": tick_skip_contract,
+        "tick-skip-pwm.dtb": tick_skip_pwm,
         "overlap.dtb": board([clock("clock", 1),
                               device("device@1000", 0x1000, 0x100, 1),
                               device("device@1080", 0x1080, 0x100, 1)]),

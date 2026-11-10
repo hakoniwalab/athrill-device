@@ -468,6 +468,41 @@ static uint64 clocks_to_event(const TimType *t)
 	return (counts * period_of(t)) - t->remainder;
 }
 
+/* A preload register (ARR, PSC or CCRx) waits for the next update to reach its shadow. */
+static std_bool shadows_pending(const TimType *t)
+{
+	uint32 k;
+
+	if ((t->arr != (reg(t, TIM_ARR) & counter_mask(t))) || (t->psc != (reg(t, TIM_PSC) & 0xFFFFU))) {
+		return TRUE;
+	}
+	for (k = 0U; k < t->channels; k++) {
+		if (t->ccr[k] != (reg(t, TIM_CCR1 + (4U * k)) & counter_mask(t))) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/*
+ * The clocks to the next counter boundary while a preload is pending; 0 if
+ * none. The update there loads the shadows, which changes the PWM a reader
+ * samples, without an interrupt: with tick skip it must be ticked there.
+ */
+static uint64 clocks_to_shadow_load(const TimType *t)
+{
+	uint64 counts;
+
+	if (!counting(t) || ((reg(t, TIM_CR1) & CR1_UDIS) != 0U) || !shadows_pending(t)) {
+		return 0U;
+	}
+	counts = counts_to_boundary(t);
+	if (counts == 0U) {
+		return 0U;
+	}
+	return (counts * period_of(t)) - t->remainder;
+}
+
 /*
  * The interrupt lines are levels (a flag and its enable): an interrupt is
  * made pending when its line rises, and again while it stays high once the
@@ -843,6 +878,13 @@ static sint32 timer_tick(void *instance, uint64 now,
 	advance_to(timer, now);
 	raise_interrupts(timer);
 	until = clocks_to_event(timer);
+	{
+		uint64 load = clocks_to_shadow_load(timer);
+
+		if ((load != 0U) && ((until == 0U) || (load < until))) {
+			until = load;
+		}
+	}
 	if (until != 0U) {
 		result->next_event_interval = until;
 	}
@@ -855,7 +897,10 @@ static sint32 timer_tick(void *instance, uint64 now,
 	 * longer active, which the CPU decides, not the timer. In one-pulse
 	 * mode the counter stops by itself at an update, which a PWM reader
 	 * sees (and which is an event only with its interrupt enabled), so
-	 * that mode is ticked every time too.
+	 * that mode is ticked every time too. While a preload register waits
+	 * for the next update, that update is reported as an event: it changes
+	 * the PWM without an interrupt, and the PWM readers are ticked with
+	 * the timer (its PWM dependents).
 	 */
 	if ((timer->asserted == 0U) && ((reg(timer, TIM_CR1) & CR1_OPM) == 0U)) {
 		result->contract = ATHRILL_DEVICE_TICK_DEADLINE;
