@@ -120,6 +120,11 @@ cmake --build build-stm32-inproc -j
 This produces `libhako_sensor_device_inproc.dylib` beside the default library and copies its two runtime release
 dependencies beside it.
 
+> **Known issue: the in-process build does not compile with the public Hakoniwa Drone v5.0.0.** Its interface
+> header `include/aircraft/iaircraft.hpp` includes `aircraft/impl/fault_injection/fault_rotor.hpp`. That header is
+> not in the public release or in its source repository, so the compiler stops there. This will be fixed in the
+> next release of Hakoniwa Drone; please wait for it. The default library (the Hakoniwa link) is not affected.
+
 ## Use it
 
 **Hakoniwa Drone (v5.0.0 or later):**
