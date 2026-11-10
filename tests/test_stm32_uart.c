@@ -87,6 +87,7 @@ static void *uarts[8];
 static const AthrillDeviceModelOps *m = &athrill_device_stm32_uart_model;
 static std_bool shim_h7;
 static std_bool shim_tx_dma;
+static std_bool shim_tx_instant;
 static uint64 shim_rx_start;
 static uint32 shim_console;
 static const char *shim_rx_file;
@@ -125,6 +126,8 @@ static sint32 host_value(void *t, const char *key, const char **value)
 		(void)snprintf(text, 64, "%u", shim_console);
 	} else if (strcmp(key, "DEVICE_CONFIG_STM32_UART_TX_DMA") == 0) {
 		(void)snprintf(text, 64, "%u", shim_tx_dma ? 1U : 0U);
+	} else if (strcmp(key, "DEVICE_CONFIG_STM32_UART_TX_INSTANT") == 0) {
+		(void)snprintf(text, 64, "%u", shim_tx_instant ? 1U : 0U);
 	} else if (strcmp(key, "DEVICE_CONFIG_STM32_UART_RX_DELAY_MS") == 0) {
 		(void)snprintf(text, 64, "%u", (unsigned)(shim_rx_start / 1000U));
 	} else if (strcmp(key, "DEVICE_CPU_FREQ") == 0) {
@@ -527,6 +530,40 @@ static void test_transmit(void)
 	now = 2U * FRAME_115200;
 	CHECK_EQ("USART2: TC", rd(USART2, ISR) & TC, TC);
 	CHECK_STR("USART2 is not the console", console_out, "");
+}
+
+/* DEVICE_CONFIG_STM32_UART_TX_INSTANT: the console UART sends at once; another UART keeps the frame time. */
+static void test_transmit_instant(void)
+{
+	shim_tx_instant = TRUE;
+	setup(NULL);
+	wr(USART3, BRR, 469U);
+	wr(USART3, CR1, UE | TE);
+	wr(USART3, TDR, 'A');
+	CHECK_EQ("instant: TXE and TC at once", rd(USART3, ISR) & (TXE | TC), TXE | TC);
+	wr(USART3, TDR, 'B');
+	wr(USART3, TDR, 'C');
+	CHECK_STR("instant: nothing waits in TDR", console_out, "ABC");
+	CHECK_EQ("instant: TXE and TC, no time passed", rd(USART3, ISR) & (TXE | TC), TXE | TC);
+	CHECK_EQ("instant: the clock did not move", (uint32)now, 0U);
+
+	setup(NULL);
+	wr(USART3, BRR, 469U);
+	wr(USART3, CR1, UE | TE);
+	dma_tx_data = "XY";
+	wr(USART3, CR3, 1U << 7);
+	(void)tick();
+	CHECK_STR("instant: UART DMA sends every byte at once", console_out, "XY");
+
+	setup(NULL);
+	wr(USART2, BRR, 469U);
+	wr(USART2, CR1, UE | TE);
+	wr(USART2, TDR, 'Z');
+	wr(USART2, TDR, 'Y');
+	CHECK_EQ("instant: USART2, not the console, keeps the frame time", rd(USART2, ISR) & TXE, 0U);
+	now = 2U * FRAME_115200;
+	CHECK_EQ("instant: USART2 TC after two frames", rd(USART2, ISR) & TC, TC);
+	shim_tx_instant = FALSE;
 }
 
 static uint64 frame_of(uint32 base, uint32 cr1, uint32 cr2, uint32 brr)
@@ -961,6 +998,7 @@ int main(int argc, char **argv)
 		return (failures == 0) ? 0 : 1;
 	}
 	test_transmit();
+	test_transmit_instant();
 	test_frame_formats();
 	test_transmit_interrupts();
 	test_receive();
