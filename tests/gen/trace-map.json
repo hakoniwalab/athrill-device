@@ -89,7 +89,7 @@
       },
       "chip_nodes": 3,
       "dma_controllers": 2,
-      "dma_references": 35,
+      "dma_references": 36,
       "dt_boards": 1,
       "dt_irq_nodes": 30,
       "dt_mmio_nodes": 49,
@@ -113,7 +113,7 @@
       },
       "chip_nodes": 3,
       "dma_controllers": 2,
-      "dma_references": 35,
+      "dma_references": 36,
       "dt_boards": 1,
       "dt_irq_nodes": 30,
       "dt_mmio_nodes": 49,
@@ -5206,7 +5206,7 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 26181
+        "dtb_size": 26229
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -5459,6 +5459,21 @@
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
         "references": [
+          {
+            "consumer_path": "/soc/timers@40010000",
+            "index": 0,
+            "name": "up",
+            "provider": {
+              "cells": [
+                5,
+                6,
+                152640,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
           {
             "consumer_path": "/soc/serial@40011000",
             "index": 0,
@@ -8641,7 +8656,7 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
-        "dtb_size": 26092
+        "dtb_size": 26140
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -8894,6 +8909,21 @@
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
         "references": [
+          {
+            "consumer_path": "/soc/timers@40010000",
+            "index": 0,
+            "name": "up",
+            "provider": {
+              "cells": [
+                5,
+                6,
+                152640,
+                3
+              ],
+              "provider_compatible": "st,stm32-dma-v1",
+              "provider_path": "/soc/dma@40026400"
+            }
+          },
           {
             "consumer_path": "/soc/serial@40011000",
             "index": 0,

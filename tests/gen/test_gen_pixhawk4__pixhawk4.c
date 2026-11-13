@@ -2645,7 +2645,10 @@ static int case_pixhawk4__pixhawk4__soc__dma_40026400__ADV_DMA_005_T1(void)
 	uint32 index;
 	CHECK(build_board() == 0);
 	CHECK(count_model_path(captured_stderr, "/soc/dma@40026400") == 1U);
-	CHECK(count_dma_provider("/soc/dma@40026400") == 20U);
+	CHECK(count_dma_provider("/soc/dma@40026400") == 21U);
+	{ static const uint32 wanted[] = {5U, 6U, 152640U, 3U};
+	  CHECK(find_dma("/soc/dma@40026400", wanted, 4U,
+	                 0U, "up")); }
 	{ static const uint32 wanted[] = {7U, 4U, 1088U, 3U};
 	  CHECK(find_dma("/soc/dma@40026400", wanted, 4U,
 	                 0U, "tx")); }
