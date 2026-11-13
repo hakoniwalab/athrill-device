@@ -94,7 +94,7 @@
       "dt_irq_nodes": 30,
       "dt_mmio_nodes": 49,
       "dt_negative_nodes": 1,
-      "dt_nodes": 73,
+      "dt_nodes": 74,
       "gpio_chip_selects": 3,
       "gpio_interrupt_consumers": 1,
       "pwm_entries": 0,
@@ -3488,7 +3488,8 @@
           "/memory@20000000",
           "/memory@20020000",
           "/bench-sensor-source",
-          "/sensor-device"
+          "/sensor-device",
+          "/esc-fault"
         ]
       },
       "item_id": "ADV-DT-002",
@@ -5245,7 +5246,7 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
       "derived_properties": {
-        "dtb_size": 26453
+        "dtb_size": 26557
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,

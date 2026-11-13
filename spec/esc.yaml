@@ -88,3 +88,21 @@
   - id: ADV-ESC-005.T3
     stimulus: The telemetry hook dropping, then replacing (current 0, eRPM 0); a dropped command; the ESC not on a UART.
     expect: No bytes; the rewritten values; no bytes; no bytes while the motors are still driven.
+- id: ADV-ESC-006
+  statement: The schedule fault model stops each listed motor from its time on, replacing every frame for it with value 0
+    (no thrust) and keeping its telemetry-request bit, so the ESC answers that motor's telemetry with no current and no
+    eRPM; the stops come from athrill,motor-stop pairs (motor index, time in ms of the target clock), or from the host value
+    DEVICE_CONFIG_ESC_MOTOR_STOP ("motor@time-ms[+...]") in their place; a malformed host value is refused.
+  source:
+    devicetree: athrill,esc-fault-schedule (athrill,motor-stop); the ESC's fault-model
+    manual: none (fault injection)
+  scope: A motor fails at a chosen time while the ESC still answers, as a stalled or disconnected motor does.
+  verification: unit
+  applies_to: esc
+  tests:
+  - id: ADV-ESC-006.T1
+    stimulus: athrill,motor-stop = <2 20>; frames and telemetry requests before and after 20 ms.
+    expect: Motor 2 runs, then has no thrust and answers 0 A and 0 eRPM; motors 0, 1 and 3 run on and answer as before.
+  - id: ADV-ESC-006.T2
+    stimulus: DEVICE_CONFIG_ESC_MOTOR_STOP "1@5+3@5" over a property stopping motor 0 at 1 ms; then "1:5".
+    expect: Motors 1 and 3 stop at 5 ms, motor 0 runs; "1:5" is refused.

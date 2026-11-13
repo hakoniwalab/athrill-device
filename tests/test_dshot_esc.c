@@ -71,6 +71,14 @@ static uint32 timeout_us;		/* 0: the default */
 
 /* the telemetry line (the ESC as a UART child): the bytes it sent */
 static std_bool on_uart = TRUE;
+
+/* the schedule fault model (athrill,esc-fault-schedule), when used */
+static std_bool use_schedule;
+static void *schedule;
+static const AthrillDeviceEscFaultOps *schedule_ops;
+static uint32 schedule_stops[4];	/* athrill,motor-stop cells */
+static uint32 schedule_cells;
+static const char *motor_stop_host;	/* DEVICE_CONFIG_ESC_MOTOR_STOP */
 static uint8 line[256];
 static uint32 line_len;
 static AthrillDeviceEscFaultAction telemetry_action;
@@ -126,6 +134,13 @@ static std_bool irq_is_active(void *t, AthrillDeviceIrqLine l)
 /* ---- nodes ---- */
 static sint32 get_u32(void *c, const char *name, uint32 index, uint32 *value)
 {
+	if (c == &schedule) {
+		if (strcmp(name, "athrill,motor-stop") != 0 || index >= schedule_cells) {
+			return -1;
+		}
+		*value = schedule_stops[index];
+		return 0;
+	}
 	if (c == &esc) {
 		if (strcmp(name, "athrill,signal-timeout-us") == 0 && timeout_us != 0U) {
 			*value = timeout_us;
@@ -257,10 +272,31 @@ static const AthrillDeviceEscFaultOps fault_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceEscFaultOps), fault_command, fault_telemetry
 };
+static sint32 esc_fault_provide(void *c, const AthrillDeviceEscFaultOps *ops, void *instance)
+{
+	(void)c;
+	(void)instance;
+	schedule_ops = ops;
+	return 0;
+}
+static sint32 host_value(void *t, const char *key, const char **value)
+{
+	(void)t;
+	if (strcmp(key, "DEVICE_CONFIG_ESC_MOTOR_STOP") == 0 && motor_stop_host != NULL) {
+		*value = motor_stop_host;
+		return 0;
+	}
+	return -1;
+}
 static sint32 get_esc_fault(void *c, const char *property, const AthrillDeviceEscFaultOps **ops,
 	void **instance)
 {
 	(void)c;
+	if (use_schedule && strcmp(property, "fault-model") == 0) {
+		*ops = schedule_ops;
+		*instance = schedule;
+		return 0;
+	}
 	if (!use_fault || strcmp(property, "fault-model") != 0) {
 		return -1;
 	}
@@ -271,8 +307,8 @@ static sint32 get_esc_fault(void *c, const char *property, const AthrillDeviceEs
 
 static AthrillDeviceTargetOps target_ops;
 static AthrillDeviceNodeOps node_ops;
-static AthrillDeviceResourceOps tim_resources, dma_resources, esc_resources;
-static AthrillDeviceNode tim_node, dma_node, esc_node;
+static AthrillDeviceResourceOps tim_resources, dma_resources, esc_resources, schedule_resources;
+static AthrillDeviceNode tim_node, dma_node, esc_node, schedule_node;
 
 static void *create(const AthrillDeviceModelOps *m, AthrillDeviceNode *node,
 	AthrillDeviceResourceOps *resources, void *context)
@@ -300,6 +336,10 @@ static void setup(void)
 		tim->destroy(timer);
 		dma->destroy(dmac);
 	}
+	if (schedule != NULL) {
+		athrill_device_esc_fault_schedule_model.destroy(schedule);
+		schedule = NULL;
+	}
 	memset(&target_ops, 0, sizeof(target_ops));
 	target_ops.abi_major = ATHRILL_DEVICE_ABI_MAJOR;
 	target_ops.struct_size = sizeof(target_ops);
@@ -309,6 +349,7 @@ static void setup(void)
 	target_ops.irq_is_active = irq_is_active;
 	target_ops.memory_read = memory_read;
 	target_ops.memory_write = memory_write;
+	target_ops.host_value = host_value;
 	memset(&node_ops, 0, sizeof(node_ops));
 	node_ops.get_u32 = get_u32;
 	node_ops.get_property = get_property;
@@ -345,6 +386,16 @@ static void setup(void)
 	memset(ram, 0, sizeof(ram));
 	dmac = create(dma, &dma_node, &dma_resources, &dmac);
 	timer = create(tim, &tim_node, &tim_resources, &timer);
+	if (use_schedule) {
+		memset(&schedule_resources, 0, sizeof(schedule_resources));
+		schedule_resources.struct_size = sizeof(schedule_resources);
+		schedule_resources.esc_fault_provide = esc_fault_provide;
+		schedule_node.ops = &node_ops;
+		schedule_node.path = "/esc-fault";
+		schedule_node.context = &schedule;
+		schedule = create(&athrill_device_esc_fault_schedule_model, &schedule_node,
+			&schedule_resources, &schedule);
+	}
 	esc = create(esc_model, &esc_node, &esc_resources, &esc);
 }
 
@@ -788,6 +839,80 @@ static void test_telemetry_fault_and_line(void)
 	request_mask = 0U;
 }
 
+/* the last telemetry answer of a motor at its present state */
+static Kiss telemetry_of(uint32 motor, const uint16 v[4])
+{
+	uint32 at;
+	request_mask = 1U << motor;
+	(void)tick_at(now + 5000U);
+	at = line_len;
+	(void)frame(v, FALSE);
+	request_mask = 0U;
+	TEST_CHECK(line_len == at + 10U);
+	return kiss_at(at);
+}
+
+/* [ADV-ESC-006.T1] athrill,motor-stop = <2 20>: motor 2 runs until 20 ms,
+ * then gets no thrust while the others run on; its telemetry then answers
+ * no current and no eRPM, the others' as before. */
+static void test_schedule_stop(void)
+{
+	static const uint16 v[4] = { 1200U, 1200U, 1200U, 1200U };
+	Kiss k;
+	use_schedule = TRUE;
+	schedule_stops[0] = 2U;
+	schedule_stops[1] = 20U;
+	schedule_cells = 2U;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	expect_last(v);
+	k = telemetry_of(2U, v);
+	TEST_CHECK(k.current != 0U && k.erpm != 0U);
+	(void)tick_at(20U * 216000U);		/* 20 ms */
+	(void)frame(v, FALSE);
+	TEST_CHECK(sink_values[sink_calls - 1U][2] == 0.0F);
+	TEST_CHECK(sink_values[sink_calls - 1U][0] == throttle(1200U));
+	TEST_CHECK(sink_values[sink_calls - 1U][3] == throttle(1200U));
+	k = telemetry_of(2U, v);
+	TEST_CHECK(k.current == 0U && k.erpm == 0U && k.voltage == 1600U);
+	k = telemetry_of(0U, v);
+	TEST_CHECK(k.current != 0U && k.erpm != 0U);
+	use_schedule = FALSE;
+	schedule_cells = 0U;
+}
+
+/* [ADV-ESC-006.T2] DEVICE_CONFIG_ESC_MOTOR_STOP "1@5+3@5" replaces the
+ * property: motors 1 and 3 stop at 5 ms; a malformed value is refused. */
+static void test_schedule_host_value(void)
+{
+	static const uint16 v[4] = { 900U, 900U, 900U, 900U };
+	AthrillDeviceCreateArgs args;
+	void *instance = NULL;
+	use_schedule = TRUE;
+	schedule_stops[0] = 0U;
+	schedule_stops[1] = 1U;
+	schedule_cells = 2U;			/* motor 0 at 1 ms, replaced below */
+	motor_stop_host = "1@5+3@5";
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(5U * 216000U);
+	(void)frame(v, FALSE);
+	TEST_CHECK(sink_values[sink_calls - 1U][0] == throttle(900U));
+	TEST_CHECK(sink_values[sink_calls - 1U][1] == 0.0F);
+	TEST_CHECK(sink_values[sink_calls - 1U][2] == throttle(900U));
+	TEST_CHECK(sink_values[sink_calls - 1U][3] == 0.0F);
+	motor_stop_host = "1:5";
+	memset(&args, 0, sizeof(args));
+	args.target_ops = &target_ops;
+	args.node = &schedule_node;
+	TEST_CHECK(athrill_device_esc_fault_schedule_model.create(&args, &instance) != 0);
+	motor_stop_host = NULL;
+	use_schedule = FALSE;
+	schedule_cells = 0U;
+}
+
 int main(void)
 {
 	test_frame_values();
@@ -801,6 +926,8 @@ int main(void)
 	test_telemetry_frame();
 	test_telemetry_consumption();
 	test_telemetry_fault_and_line();
+	test_schedule_stop();
+	test_schedule_host_value();
 	printf("dshot esc: all checks passed\n");
 	return 0;
 }

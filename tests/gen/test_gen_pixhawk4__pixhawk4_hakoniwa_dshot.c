@@ -433,6 +433,7 @@ static const char *const target_compatibles[] = {
 	"arm,v7m-nvic",
 	"athrill,bench-sensor-source",
 	"athrill,dshot-esc",
+	"athrill,esc-fault-schedule",
 	"athrill,register-block",
 	"fixed-layout",
 	"hakoniwa,sensor-device",
@@ -1611,7 +1612,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot__root__ADV_DT_002_T1(void)
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 73U);
+	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 74U);
 	CHECK(count_model_path(captured_stderr, "/") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000000") == 1U);
@@ -1685,6 +1686,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/memory@20020000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/bench-sensor-source") == 1U);
 	CHECK(count_model_path(captured_stderr, "/sensor-device") == 1U);
+	CHECK(count_model_path(captured_stderr, "/esc-fault") == 1U);
 	destroy_board();
 	return 0;
 }
