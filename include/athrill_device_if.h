@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       19U
+#define ATHRILL_DEVICE_ABI_MINOR       20U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -230,6 +230,52 @@ typedef struct {
 	const AthrillDeviceValueProviderOps *ops;
 	void *instance;
 } AthrillDeviceValueSource;
+
+/*
+ * Added in ABI 1.20: the fault-injection entry point of an ESC model.
+ * An ESC names a fault model with a phandle property (its binding says
+ * which, e.g. "fault-model"); with none it behaves as the bypass: every
+ * command and every telemetry answer passes unchanged.
+ *
+ * command: called for every frame the ESC received, valid or not, before
+ * its value reaches the motor. telemetry: called before the ESC sends a
+ * telemetry answer. The fault model sets *action; on REPLACE it has
+ * rewritten the struct, which the ESC then uses as if it had been
+ * received (command) or measured (telemetry). time is the target's clock
+ * (time_now). motor is the ESC's own channel index (its binding).
+ */
+typedef enum {
+	ATHRILL_DEVICE_ESC_FAULT_PASS = 0,	/* unchanged */
+	ATHRILL_DEVICE_ESC_FAULT_DROP = 1,	/* as if never received / never sent */
+	ATHRILL_DEVICE_ESC_FAULT_REPLACE = 2	/* the struct as rewritten */
+} AthrillDeviceEscFaultAction;
+
+typedef struct {
+	uint16 frame;			/* the 16 bits as received, first bit in bit 15 */
+	std_bool valid;			/* bit period, pulse widths and CRC all correct */
+	uint16 value;			/* 11 bits: 0 stop, 1..47 command, 48..2047 throttle */
+	std_bool telemetry_request;
+} AthrillDeviceEscCommand;
+
+typedef struct {
+	float32 temperature_c;
+	float32 voltage_v;
+	float32 current_a;
+	float32 consumption_mah;
+	float32 erpm;			/* electrical revolutions per minute */
+} AthrillDeviceEscTelemetry;
+
+typedef struct AthrillDeviceEscFaultOps {
+	uint32 abi_major;
+	uint32 abi_minor;
+	uint32 struct_size;
+	sint32 (*command)(void *instance, uint32 motor, uint64 time,
+	                  AthrillDeviceEscCommand *command,
+	                  AthrillDeviceEscFaultAction *action);
+	sint32 (*telemetry)(void *instance, uint32 motor, uint64 time,
+	                    AthrillDeviceEscTelemetry *telemetry,
+	                    AthrillDeviceEscFaultAction *action);
+} AthrillDeviceEscFaultOps;
 
 /*
  * Required interface: what athrill-device needs from the host. The target
@@ -470,6 +516,18 @@ typedef struct AthrillDeviceResourceOps {
 	 * when its next event is or what its tick would do). Does nothing in a
 	 * runtime without tick skipping. Check struct_size before calling. */
 	void (*request_tick)(void *context);
+	/* Added in ABI 1.20; ESC fault models (AthrillDeviceEscFaultOps).
+	 * esc_fault_provide: a fault model offers its operations; called from
+	 * connect. get_esc_fault: for an ESC, the fault model its phandle
+	 * property names (connected before it); -1 when the property is absent
+	 * or names no fault model, and the ESC then bypasses.
+	 * Check struct_size before calling. */
+	sint32 (*esc_fault_provide)(void *context,
+	                            const AthrillDeviceEscFaultOps *ops,
+	                            void *instance);
+	sint32 (*get_esc_fault)(void *context, const char *property,
+	                        const AthrillDeviceEscFaultOps **ops,
+	                        void **instance);
 } AthrillDeviceResourceOps;
 
 typedef struct {
