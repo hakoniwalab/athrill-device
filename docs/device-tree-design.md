@@ -667,7 +667,7 @@ same pass-through as a node, and it is also the template of a fault model.
 `athrill,esc-fault-schedule` stops motors at given times: from each
 `athrill,motor-stop` pair (motor index, time in ms) on, that motor's frames
 are replaced by value 0 and its telemetry answers 0 A. The host value
-`DEVICE_CONFIG_ESC_MOTOR_STOP` (`motor:time-ms[,...]`) replaces the pairs.
+`DEVICE_CONFIG_ESC_MOTOR_STOP` (`motor@time-ms[+...]`) replaces the pairs.
 An edge that names a missing node is an error. An edge that names a node
 that offers no fault operations gives none.
 

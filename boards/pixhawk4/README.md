@@ -15,13 +15,16 @@ Hakoniwa node, and adds the `value-source` edges used by Hakoniwa and PIL.
 the PWM actuator map. PX4 v1.17.0 drives them with DShot600 when
 `PWM_AUX_TIM0` is -3. The ESC sits on UART4 (TELEM4) and answers telemetry
 requests with KISS frames, which PX4 reads with `DSHOT_TEL_CFG` 104.
+Its fault-model is `athrill,esc-fault-schedule` with no stop: nothing changes
+until a run sets the host value `DEVICE_CONFIG_ESC_MOTOR_STOP`, e.g. `2@40000`
+to stop PX4's motor 3 at 40 s.
 
 The checked-in blobs have SHA-256:
 
 ```text
 cd3a21918920144f266486817916342f5f841f551bbfde0e9576f5a95f28b412  pixhawk4.dtb
 60c9e2dd35d89b919c39a1bb169ce1ab15929c6e52b1be439f959a653ea28fe0  pixhawk4-hakoniwa.dtb
-8bd0c9ce0f2efb77910f21dc5f677e69e6e41d8530815fa43573f66017bfd41d  pixhawk4-hakoniwa-dshot.dtb
+338872bd171ac2cc4c037d5174c5d9422ddc93d4c73cc6be91971e70a369fef3  pixhawk4-hakoniwa-dshot.dtb
 ```
 
 It was made with GNU cpp and dtc 1.7.x from a Linux container (Ubuntu

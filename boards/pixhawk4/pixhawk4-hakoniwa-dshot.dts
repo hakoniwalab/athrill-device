@@ -17,6 +17,18 @@
 };
 
 /*
+ * The ESC's fault-injection point: a schedule fault model with no stop, so
+ * nothing changes until a run names one with the host value
+ * DEVICE_CONFIG_ESC_MOTOR_STOP ("motor@time-ms", e.g. "2@40000" stops PX4's
+ * motor 3 at 40 s).
+ */
+/ {
+	esc_fault: esc-fault {
+		compatible = "athrill,esc-fault-schedule";
+	};
+};
+
+/*
  * The ESC sits on UART4 (PX4 TELEM4, /dev/ttyS3): its KISS telemetry line.
  * PX4 reads it with DSHOT_TEL_CFG = 104 (TELEM 4).
  */
@@ -31,5 +43,6 @@
 		pwm-names = "FMU_CH1", "FMU_CH2", "FMU_CH3", "FMU_CH4";
 		value-source = <&hakoniwa_sensor>;
 		athrill,tick-before-value-source;
+		fault-model = <&esc_fault>;
 	};
 };

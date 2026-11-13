@@ -11,7 +11,8 @@
  * The stops: athrill,motor-stop = <motor time-ms>, ... pairs; motor is the
  * ESC's motor index (its pwms order, 0 = the first: PX4 motor 1), time-ms
  * the target clock in milliseconds. The host value
- * DEVICE_CONFIG_ESC_MOTOR_STOP ("motor:time-ms[,motor:time-ms...]")
+ * DEVICE_CONFIG_ESC_MOTOR_STOP ("motor@time-ms[+motor@time-ms...]";
+ * Athrill's configuration splits values at "," and ":")
  * replaces them, so a run can choose its fault without a new DTB. The
  * ESC's trace (DEVICE_CONFIG_DSHOT_ESC_FILE) shows the replaced frames
  * (action=2 value=0).
@@ -93,7 +94,7 @@ static void add_stop(EscFaultSchedule *f, uint32 motor, uint64 time_ms, uint64 f
 	}
 }
 
-/* "motor:time-ms[,motor:time-ms...]"; -1 when malformed */
+/* "motor@time-ms[+motor@time-ms...]"; -1 when malformed */
 static sint32 parse_host(EscFaultSchedule *f, const char *text, uint64 frequency)
 {
 	const char *p = text;
@@ -103,7 +104,7 @@ static sint32 parse_host(EscFaultSchedule *f, const char *text, uint64 frequency
 		unsigned long motor = strtoul(p, &end, 10);
 		unsigned long long time_ms;
 
-		if ((end == p) || (*end != ':')) {
+		if ((end == p) || (*end != '@')) {
 			return -1;
 		}
 		p = end + 1;
@@ -113,7 +114,7 @@ static sint32 parse_host(EscFaultSchedule *f, const char *text, uint64 frequency
 		}
 		add_stop(f, (uint32)motor, (uint64)time_ms, frequency);
 		p = end;
-		if (*p == ',') {
+		if (*p == '+') {
 			p++;
 		} else if (*p != '\0') {
 			return -1;

@@ -883,7 +883,7 @@ static void test_schedule_stop(void)
 	schedule_cells = 0U;
 }
 
-/* [ADV-ESC-006.T2] DEVICE_CONFIG_ESC_MOTOR_STOP "1:5,3:5" replaces the
+/* [ADV-ESC-006.T2] DEVICE_CONFIG_ESC_MOTOR_STOP "1@5+3@5" replaces the
  * property: motors 1 and 3 stop at 5 ms; a malformed value is refused. */
 static void test_schedule_host_value(void)
 {
@@ -894,7 +894,7 @@ static void test_schedule_host_value(void)
 	schedule_stops[0] = 0U;
 	schedule_stops[1] = 1U;
 	schedule_cells = 2U;			/* motor 0 at 1 ms, replaced below */
-	motor_stop_host = "1:5,3:5";
+	motor_stop_host = "1@5+3@5";
 	setup();
 	timer_dshot_mode();
 	(void)tick_at(5U * 216000U);
@@ -903,7 +903,7 @@ static void test_schedule_host_value(void)
 	TEST_CHECK(sink_values[sink_calls - 1U][1] == 0.0F);
 	TEST_CHECK(sink_values[sink_calls - 1U][2] == throttle(900U));
 	TEST_CHECK(sink_values[sink_calls - 1U][3] == 0.0F);
-	motor_stop_host = "1-5";
+	motor_stop_host = "1:5";
 	memset(&args, 0, sizeof(args));
 	args.target_ops = &target_ops;
 	args.node = &schedule_node;

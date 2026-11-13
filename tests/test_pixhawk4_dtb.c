@@ -194,7 +194,16 @@ int main(void)
 			esc_length == (int)(4U * 4U * sizeof(fdt32_t)) &&
 			map_length >= esc_length &&
 			memcmp(esc_pwms, map_pwms, (size_t)esc_length) == 0);
-		TEST_CHECK(fdt_getprop(blob, esc, "fault-model", NULL) == NULL);
+		{
+			/* the fault-injection point: a schedule with no stop */
+			const fdt32_t *fault = fdt_getprop(blob, esc, "fault-model", &length);
+			int node = fdt_path_offset(blob, "/esc-fault");
+			TEST_CHECK(fault != NULL && length == 4 && node >= 0 &&
+				fdt32_to_cpu(*fault) == fdt_get_phandle(blob, node));
+			status = fdt_getprop(blob, node, "compatible", &length);
+			TEST_CHECK(status != NULL && strcmp(status, "athrill,esc-fault-schedule") == 0);
+			TEST_CHECK(fdt_getprop(blob, node, "athrill,motor-stop", NULL) == NULL);
+		}
 	}
 	expect_value_source(blob, "/soc/serial@40004c00/dshot-esc", sensor_phandle);
 	dma2_phandle = fdt_get_phandle(blob, fdt_path_offset(blob, "/soc/dma@40026400"));
