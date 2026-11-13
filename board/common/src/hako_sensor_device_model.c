@@ -5,9 +5,13 @@
 
 #ifndef ATHRILL_HAKONIWA_PASSIVE
 #include "hako_sensor_device_link.h"
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+#include "hako_sensor_device_publish.h"
+#endif
 #endif
 
 #include <inttypes.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +26,8 @@
 #define BENCH_ACC_NOISE 0.02F
 #define BENCH_GYRO_NOISE 0.003F
 #define BENCH_MAG_NOISE 0.003F
+
+#define HAKO_MOTOR_STATUS_MAX 16U
 
 typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
@@ -43,6 +49,23 @@ typedef struct {
 	HakoGpsSample pending_gps;
 	uint64 last_time_usec;
 	uint64 time_offset_usec;
+	/* ABI 1.21: the motors with the pending sample, and with the latched one */
+	HakoMotorStatusSample pending_motors[HAKO_MOTOR_STATUS_MAX];
+	uint32 pending_motor_count;
+	HakoMotorStatusSample motors[HAKO_MOTOR_STATUS_MAX];
+	uint32 motor_count;
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+	/* the visual state output when Athrill is the Hakoniwa asset */
+	HakoVehiclePoseSample pending_pose;
+	std_bool pending_has_pose;
+	HakoVisualStateOutput visual;
+	std_bool publish;
+	uint32 sequence;
+	/* rotor faults from outside (a Disturbance PDU), for the ESC fault hook */
+	HakoVisualStateOutput fault_input;
+	float fault_scale[HAKO_MOTOR_STATUS_MAX];
+	uint32 fault_count;
+#endif
 #endif
 } HakoSensorModel;
 
@@ -190,6 +213,16 @@ static void wait_for_sample(HakoSensorModel *model)
 		if (hako_sensor_link_read(model->last_time_usec,
 			&model->pending_sensor, &model->pending_gps,
 			&model->pending_has_gps)) {
+			uint32 i;
+			for (i = 0U; i < HAKO_MOTOR_STATUS_MAX; i++) {
+				if (!hako_sensor_link_read_motor_status(i, &model->pending_motors[i])) {
+					break;
+				}
+			}
+			model->pending_motor_count = i;
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+			model->pending_has_pose = hako_sensor_link_read_pose(&model->pending_pose) ? TRUE : FALSE;
+#endif
 			model->has_pending = TRUE;
 		} else {
 			(void)usleep(20);
@@ -201,6 +234,8 @@ static void latch_sample(HakoSensorModel *model)
 {
 	const HakoSensorSample *source = &model->pending_sensor;
 	uint32 i;
+	memcpy(model->motors, model->pending_motors, sizeof(model->motors));
+	model->motor_count = model->pending_motor_count;
 	for (i = 0U; i < 3U; i++) {
 		model->sample.acceleration[i] = source->acc[i];
 		model->sample.angular_velocity[i] = source->gyro[i];
@@ -262,6 +297,24 @@ static sint32 linked_tick(HakoSensorModel *model, uint64 now,
 				model->pending_gps.time_usec - model->time_offset_usec);
 		}
 		model->last_time_usec = model->pending_sensor.time_usec;
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+		/* the vehicle as it is with this sample, the duty as the motors run */
+		if (model->publish && model->pending_has_pose) {
+			uint32 count = (model->motor_count != 0U) ? model->motor_count : 4U;
+			if (count > HAKO_ACTUATOR_CHANNELS) {
+				count = HAKO_ACTUATOR_CHANNELS;
+			}
+			(void)hako_sensor_publish_visual_state(&model->visual, &model->pending_pose,
+				model->actuator.controls, count, model->sequence++);
+		}
+		if (model->publish) {
+			uint32 faults = 0U;
+			if (hako_sensor_read_rotor_fault(&model->fault_input, model->fault_scale,
+				HAKO_MOTOR_STATUS_MAX, &faults)) {
+				model->fault_count = faults;
+			}
+		}
+#endif
 		model->has_pending = FALSE;
 		model->actuator.time_usec = model->last_time_usec;
 		trace_actuator(model, model->last_time_usec - model->time_offset_usec);
@@ -335,6 +388,24 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 			}
 		}
 #endif
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+		/* athrill3 --hakoniwa <asset>: write the visual state to its PDU channel */
+		model->visual.asset_name = host_value(model, "HAKO_SENSOR_DEVICE_PUBLISH_ASSET");
+		model->visual.robot_name = host_value(model, "HAKO_SENSOR_DEVICE_VISUAL_ROBOT");
+		if (model->visual.robot_name == NULL) {
+			model->visual.robot_name = "DroneVisualStatePublisher";
+		}
+		model->visual.channel_id = host_u32(model, "HAKO_SENSOR_DEVICE_VISUAL_CHANNEL", 0U);
+		model->visual.pdu_size = host_u32(model, "HAKO_SENSOR_DEVICE_VISUAL_PDU_SIZE", 32768U);
+		model->publish = (model->visual.asset_name != NULL) ? TRUE : FALSE;
+		model->fault_input.asset_name = model->visual.asset_name;
+		model->fault_input.robot_name = host_value(model, "HAKO_SENSOR_DEVICE_FAULT_ROBOT");
+		if (model->fault_input.robot_name == NULL) {
+			model->fault_input.robot_name = "Drone";
+		}
+		model->fault_input.channel_id = host_u32(model, "HAKO_SENSOR_DEVICE_FAULT_CHANNEL", 3U);
+		model->fault_input.pdu_size = host_u32(model, "HAKO_SENSOR_DEVICE_FAULT_PDU_SIZE", 256U);
+#endif
 		if (path != NULL && !model->linked) {
 			if (model->trace != NULL) fclose(model->trace);
 			free(model);
@@ -374,6 +445,8 @@ static sint32 reset(void *instance)
 	model->has_time_offset = FALSE;
 	model->last_time_usec = 0U;
 	model->time_offset_usec = 0U;
+	model->pending_motor_count = 0U;
+	model->motor_count = 0U;
 #endif
 	return 0;
 }
@@ -457,10 +530,94 @@ static const AthrillDeviceValueProviderOps value_ops = {
 	actuator_output
 };
 
+#if defined(HAKO_SENSOR_DEVICE_MOTOR_STATUS) && !defined(ATHRILL_HAKONIWA_PASSIVE)
+/* ABI 1.21: the aircraft's motors with the latched sample, for an ESC */
+static sint32 motor_status(void *instance, uint32 motor, AthrillDeviceMotorStatus *status)
+{
+	HakoSensorModel *model = instance;
+	const HakoMotorStatusSample *m;
+	if (status == NULL || motor >= model->motor_count) {
+		return -1;
+	}
+	m = &model->motors[motor];
+	status->rpm = m->rpm;
+	status->current_a = m->current_a;
+	status->voltage_v = m->voltage_v;
+	status->duty = m->duty;
+	status->has_current = m->has_current ? TRUE : FALSE;
+	return 0;
+}
+
+static const AthrillDeviceMotorStatusOps motor_status_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceMotorStatusOps), motor_status
+};
+
+/*
+ * ABI 1.20: the rotor faults from outside as an ESC fault model (the ESC's
+ * fault-model names this node): scale 0 stops the motor (value 0, its
+ * telemetry request kept), a scale between 0 and 1 scales its throttle.
+ */
+static sint32 fault_command(void *instance, uint32 motor, uint64 time,
+	AthrillDeviceEscCommand *command, AthrillDeviceEscFaultAction *action)
+{
+	HakoSensorModel *model = instance;
+	float scale;
+	(void)time;
+	if (command == NULL || action == NULL) {
+		return -1;
+	}
+	*action = ATHRILL_DEVICE_ESC_FAULT_PASS;
+	if (!command->valid || motor >= model->fault_count) {
+		return 0;
+	}
+	scale = model->fault_scale[motor];
+	if (!(scale < 1.0F) || command->value < 48U) {
+		return 0;
+	}
+	command->value = (scale <= 0.0F) ? 0U :
+		(uint16)(48U + (uint32)((float)(command->value - 48U) * scale));
+	*action = ATHRILL_DEVICE_ESC_FAULT_REPLACE;
+	return 0;
+}
+
+static sint32 fault_telemetry(void *instance, uint32 motor, uint64 time,
+	AthrillDeviceEscTelemetry *telemetry, AthrillDeviceEscFaultAction *action)
+{
+	(void)instance;
+	(void)motor;
+	(void)time;
+	(void)telemetry;
+	*action = ATHRILL_DEVICE_ESC_FAULT_PASS;	/* the physics reports the motor */
+	return 0;
+}
+
+static const AthrillDeviceEscFaultOps esc_fault_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceEscFaultOps), fault_command, fault_telemetry
+};
+
+static sint32 connect_model(void *instance, const AthrillDeviceConnectArgs *args)
+{
+	const AthrillDeviceResourceOps *r = args->resources;
+	if (r == NULL || r->struct_size < offsetof(AthrillDeviceResourceOps, motor_status_provide) +
+	    sizeof(r->motor_status_provide) || r->motor_status_provide == NULL) {
+		return 0;	/* an older runtime: no motor state, no fault hook offered */
+	}
+	if (r->esc_fault_provide(args->context, &esc_fault_ops, instance) != 0) {
+		return -1;
+	}
+	return r->motor_status_provide(args->context, &motor_status_ops, instance);
+}
+#define HAKO_SENSOR_CONNECT connect_model
+#else
+#define HAKO_SENSOR_CONNECT NULL
+#endif
+
 static const AthrillDeviceModelOps model_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceModelOps), "hakoniwa-sensor-device", "2", NULL,
-	create, destroy, NULL, NULL, NULL, NULL, NULL, reset, tick, NULL,
+	create, destroy, NULL, NULL, NULL, NULL, HAKO_SENSOR_CONNECT, reset, tick, NULL,
 	&value_ops
 };
 

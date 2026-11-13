@@ -32,6 +32,13 @@
  * athrill,telemetry-temperature-c (30), consumption the integral of the
  * current. Not a UART child: no answer.
  *
+ * [ADV-ESC-007] When the value-source offers its motors' state (ABI 1.21
+ * motor_status, e.g. an aircraft in process), the answer takes that
+ * motor's speed, current and voltage from it instead: eRPM = rpm x
+ * athrill,motor-poles / 2 (default 14, PX4's MOT_POLE_COUNT default), the
+ * current only when the physics has a current model; the motor model fills
+ * what the source does not give.
+ *
  * Trace: host value DEVICE_CONFIG_DSHOT_ESC_FILE, one line per frame.
  *
  * SPDX-License-Identifier: MIT
@@ -93,6 +100,10 @@ typedef struct DshotEsc {
 	float32 full_current_a;
 	float32 voltage_v;
 	float32 temperature_c;
+	/* the value-source's motor state, when it offers one (ABI 1.21) */
+	const AthrillDeviceMotorStatusOps *motor_state;
+	void *motor_state_instance;
+	float32 pole_pairs;
 } DshotEsc;
 
 /* [ADV-ESC-002] DShot150/300/600/1200: bit times 20/3, 10/3, 5/3, 5/6 us */
@@ -164,14 +175,37 @@ static void set_command(DshotEsc *esc, Motor *m, float32 command)
 	}
 }
 
+/* [ADV-ESC-005][ADV-ESC-007] the motor now: the source's state over the motor model */
+static void motor_now(const DshotEsc *esc, const Motor *m, AthrillDeviceEscTelemetry *tel)
+{
+	AthrillDeviceMotorStatus st;
+
+	tel->temperature_c = esc->temperature_c;
+	tel->voltage_v = esc->voltage_v;
+	tel->current_a = esc->full_current_a * m->command * m->command;
+	tel->consumption_mah = m->consumption_mah;
+	tel->erpm = esc->full_erpm * m->command;
+	if ((esc->motor_state != NULL) &&
+	    (esc->motor_state->motor_status(esc->motor_state_instance, m->index, &st) == 0)) {
+		tel->erpm = st.rpm * esc->pole_pairs;
+		if (st.voltage_v > 0.0F) {
+			tel->voltage_v = st.voltage_v;
+		}
+		if (st.has_current) {
+			tel->current_a = (st.current_a > 0.0F) ? st.current_a : 0.0F;
+		}
+	}
+}
+
 /* [ADV-ESC-005] the consumption up to time, at the motor's present current */
 static void integrate(DshotEsc *esc, Motor *m, uint64 time)
 {
 	if (time > m->consumption_time) {
+		AthrillDeviceEscTelemetry now;
 		float32 seconds = (float32)(time - m->consumption_time) / (float32)esc->frequency;
-		float32 amps = esc->full_current_a * m->command * m->command;
 
-		m->consumption_mah += amps * seconds / 3.6F;
+		motor_now(esc, m, &now);
+		m->consumption_mah += now.current_a * seconds / 3.6F;
 	}
 	m->consumption_time = time;
 }
@@ -232,11 +266,7 @@ static void telemetry(DshotEsc *esc, Motor *m, uint64 time)
 		return;
 	}
 	integrate(esc, m, time);
-	tel.temperature_c = esc->temperature_c;
-	tel.voltage_v = esc->voltage_v;
-	tel.current_a = esc->full_current_a * m->command * m->command;
-	tel.consumption_mah = m->consumption_mah;
-	tel.erpm = esc->full_erpm * m->command;
+	motor_now(esc, m, &tel);
 	if ((esc->fault != NULL) &&
 	    (esc->fault->telemetry(esc->fault_instance, m->index, time, &tel, &action) != 0)) {
 		action = ATHRILL_DEVICE_ESC_FAULT_DROP;
@@ -386,6 +416,12 @@ static sint32 esc_create(const AthrillDeviceCreateArgs *args, void **instance)
 		esc->voltage_v = (float32)voltage_mv / 1000.0F;
 		esc->temperature_c = (float32)temperature;
 	}
+	{
+		uint32 poles = 14U;
+
+		(void)args->node->ops->get_u32(args->node->context, "athrill,motor-poles", 0U, &poles);
+		esc->pole_pairs = (float32)poles / 2.0F;
+	}
 	esc->timeout_clocks = (uint64)timeout_us * (esc->frequency / 1000000U);
 	if (args->target_ops->host_value != NULL &&
 	    args->target_ops->host_value(args->target, "DEVICE_CONFIG_DSHOT_ESC_FILE",
@@ -438,6 +474,12 @@ static sint32 esc_connect(void *instance, const AthrillDeviceConnectArgs *args)
 	esc->resource_context = args->context;
 	if (r->get_esc_fault(args->context, "fault-model", &esc->fault, &esc->fault_instance) != 0) {
 		esc->fault = NULL;	/* none: bypass */
+	}
+	if ((r->struct_size < offsetof(AthrillDeviceResourceOps, get_motor_status) + sizeof(r->get_motor_status)) ||
+	    (r->get_motor_status == NULL) ||
+	    (r->get_motor_status(args->context, "value-source", &esc->motor_state,
+		&esc->motor_state_instance) != 0)) {
+		esc->motor_state = NULL;	/* the motor model alone */
 	}
 	return (index != 0U) ? athrill_device_connect_value_source(esc->node, args, &esc->sink) : -1;
 }

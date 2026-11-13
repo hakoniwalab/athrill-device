@@ -136,3 +136,18 @@ void hako_sensor_link_cleanup(void)
 {
 	(void)hakoniwa_asset_unregister(link.asset_name);
 }
+
+/* The Hakoniwa link carries no motor state. */
+bool hako_sensor_link_read_motor_status(uint32_t index, HakoMotorStatusSample *status)
+{
+	(void)index;
+	(void)status;
+	return false;
+}
+
+/* Nor a pose: the aircraft service publishes it itself. */
+bool hako_sensor_link_read_pose(HakoVehiclePoseSample *pose)
+{
+	(void)pose;
+	return false;
+}

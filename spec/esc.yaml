@@ -106,3 +106,18 @@
   - id: ADV-ESC-006.T2
     stimulus: DEVICE_CONFIG_ESC_MOTOR_STOP "1@5+3@5" over a property stopping motor 0 at 1 ms; then "1:5".
     expect: Motors 1 and 3 stop at 5 ms, motor 0 runs; "1:5" is refused.
+- id: ADV-ESC-007
+  statement: When its value-source offers the motors' state (ABI 1.21 motor_status), the ESC's telemetry answer takes
+    that motor's speed (eRPM = rpm x athrill,motor-poles / 2, default 14), its current when the source has a current
+    model, and its voltage; the ESC's motor model gives the rest, and everything when the source has no state for the
+    motor.
+  source:
+    devicetree: athrill,dshot-esc value-source, athrill,motor-poles
+    manual: PX4 v1.17.0 DShot (esc_rpm = eRPM x 100 / (MOT_POLE_COUNT / 2))
+  scope: PX4 reads the physics' rotor speed and current, e.g. a stopped rotor spinning down.
+  verification: unit
+  applies_to: esc
+  tests:
+  - id: ADV-ESC-007.T1
+    stimulus: A source giving 5000 rpm, 4.2 A, 15.1 V; then without a current model; then no state for the motor.
+    expect: eRPM/100 350, 4.20 A, 15.10 V; then the model's current with the source's speed and voltage; then the model's.

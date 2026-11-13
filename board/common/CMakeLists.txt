@@ -11,6 +11,9 @@ set(CMAKE_C_EXTENSIONS ON)
 
 option(HAKO_SENSOR_DEVICE_BUILD_INPROC
   "Build the sensor device with a Hakoniwa Drone aircraft in process" OFF)
+option(HAKO_SENSOR_DEVICE_BUILD_INPROC_MOTOR
+  "Also build libhako_sensor_device_inproc_motor: the in-process link that gives the aircraft's motor state (rotor rpm, current, voltage) to the ESC; needs a Drone tree with IAirCraft::get_rotor_status"
+  OFF)
 
 # Keep the legacy EXDEV entry point until the EXDEV deprecation gate.  The
 # same shared library also exports the Devicetree model-plugin entry point.
@@ -133,6 +136,30 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
   configure_hako_dual_abi_target(hako_sensor_device_inproc)
   set_target_properties(hako_sensor_device_inproc PROPERTIES
     C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
+
+  if(HAKO_SENSOR_DEVICE_BUILD_INPROC_MOTOR)
+    # The same in-process link, also offering the aircraft's motor state
+    # (ABI 1.21 motor_status) to an ESC: a separate binary, so the existing
+    # in-process plugin stays as it is.
+    add_library(hako_sensor_device_inproc_motor SHARED
+      src/hako_sensor_device_model.c
+      src/hako_sensor_registers_model.c
+      src/hako_sensor_device_exdev.c
+      src/hako_sensor_device_link_inproc.cpp
+      src/hako_sensor_device_link_mavlink.c
+      src/hako_sensor_device_publish.cpp)
+    # writes Hakoniwa PDUs through Athrill's asset (athrill3 --hakoniwa)
+    target_link_libraries(hako_sensor_device_inproc_motor PRIVATE hakoniwa-core::shakoc)
+    target_include_directories(hako_sensor_device_inproc_motor PRIVATE
+      "${CMAKE_CURRENT_LIST_DIR}/../../include"
+      "${CMAKE_CURRENT_LIST_DIR}/include")
+    configure_hako_inproc_target(hako_sensor_device_inproc_motor)
+    target_compile_definitions(hako_sensor_device_inproc_motor PRIVATE
+      HAKO_SENSOR_DEVICE_INPROC HAKO_SENSOR_DEVICE_MOTOR_STATUS ATHRILL_DEVICE_STANDALONE_TYPES)
+    configure_hako_dual_abi_target(hako_sensor_device_inproc_motor)
+    set_target_properties(hako_sensor_device_inproc_motor PROPERTIES
+      C_VISIBILITY_PRESET hidden CXX_VISIBILITY_PRESET hidden)
+  endif()
 
   add_executable(hako_sensor_inproc_test
     test/hako_sensor_inproc_test.cpp

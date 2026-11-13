@@ -21,6 +21,23 @@ typedef struct {
 	bool aircraft_worker;
 } HakoSensorLinkConfig;
 
+/* One motor's state at the last sample read (hako_sensor_link_read_motor_status). */
+typedef struct {
+	float rpm;		/* mechanical rev/min */
+	float current_a;	/* 0 with has_current false: no current model */
+	float voltage_v;	/* the supply the motor ran with */
+	float duty;		/* the command it ran with, 0..1 */
+	bool has_current;
+} HakoMotorStatusSample;
+
+/* The vehicle's pose at the last sample read, in Hakoniwa's world frame
+ * (ROS: x north, y west, z up; roll, pitch, yaw in rad), as the aircraft
+ * service writes its pos PDU. */
+typedef struct {
+	double x, y, z;
+	double roll, pitch, yaw;
+} HakoVehiclePoseSample;
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -43,6 +60,14 @@ bool hako_sensor_link_write_actuator(const HakoActuatorSample *actuator);
 uint64_t hako_sensor_link_async_sample_period_usec(void);
 
 void hako_sensor_link_notify_time(uint64_t time_usec);
+/*
+ * The state of motor index (the actuator channel) as the aircraft left it
+ * at the last sample hako_sensor_link_read returned; false when this link
+ * has no motor state (only the in-process link with motor status has).
+ */
+bool hako_sensor_link_read_motor_status(uint32_t index, HakoMotorStatusSample *status);
+/* The vehicle's pose with the last sample read; false when this link has none. */
+bool hako_sensor_link_read_pose(HakoVehiclePoseSample *pose);
 
 void hako_sensor_link_cleanup(void);
 

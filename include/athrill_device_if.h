@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       20U
+#define ATHRILL_DEVICE_ABI_MINOR       21U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -296,6 +296,32 @@ typedef struct AthrillDeviceEscFaultOps {
 } AthrillDeviceEscFaultOps;
 
 /*
+ * Added in ABI 1.21: the state of the motors a value source drives (its
+ * actuator outputs), as its physics last left them, for an ESC's
+ * telemetry. motor is the actuator output index (the order of the values
+ * actuator_output takes). -1 when the source has no state for that motor
+ * now (no physics, or not that many motors): the ESC then uses its own
+ * model. rpm: mechanical revolutions per minute; current_a: 0 with
+ * has_current FALSE when the physics has no current model; voltage_v: the
+ * supply the motor is driven with; duty: the command the motor ran with.
+ */
+typedef struct {
+	float32 rpm;
+	float32 current_a;
+	float32 voltage_v;
+	float32 duty;
+	std_bool has_current;
+} AthrillDeviceMotorStatus;
+
+typedef struct AthrillDeviceMotorStatusOps {
+	uint32 abi_major;
+	uint32 abi_minor;
+	uint32 struct_size;
+	sint32 (*motor_status)(void *instance, uint32 motor,
+	                       AthrillDeviceMotorStatus *status);
+} AthrillDeviceMotorStatusOps;
+
+/*
  * Required interface: what athrill-device needs from the host. The target
  * implements it and the models call it; models never call the target or
  * the Athrill core directly.
@@ -546,6 +572,17 @@ typedef struct AthrillDeviceResourceOps {
 	sint32 (*get_esc_fault)(void *context, const char *property,
 	                        const AthrillDeviceEscFaultOps **ops,
 	                        void **instance);
+	/* Added in ABI 1.21; motor state (AthrillDeviceMotorStatusOps).
+	 * motor_status_provide: a value source offers its motors' state; called
+	 * from connect. get_motor_status: for a consumer, the motor state of
+	 * the node its phandle property names (e.g. its value-source);
+	 * -1 when that node offers none. Check struct_size before calling. */
+	sint32 (*motor_status_provide)(void *context,
+	                               const AthrillDeviceMotorStatusOps *ops,
+	                               void *instance);
+	sint32 (*get_motor_status)(void *context, const char *property,
+	                           const AthrillDeviceMotorStatusOps **ops,
+	                           void **instance);
 } AthrillDeviceResourceOps;
 
 typedef struct {

@@ -296,6 +296,7 @@ and size. The checked-in blobs produce:
 | `boards/pixhawk4/pixhawk4.dtb` | `DEVICE_TREE sha256=cd3a21918920144f266486817916342f5f841f551bbfde0e9576f5a95f28b412 size=26140` |
 | `boards/pixhawk4/pixhawk4-hakoniwa.dtb` | `DEVICE_TREE sha256=60c9e2dd35d89b919c39a1bb169ce1ab15929c6e52b1be439f959a653ea28fe0 size=26229` |
 | `boards/pixhawk4/pixhawk4-hakoniwa-dshot.dtb` | `DEVICE_TREE sha256=338872bd171ac2cc4c037d5174c5d9422ddc93d4c73cc6be91971e70a369fef3 size=26557` |
+| `boards/pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb` | `DEVICE_TREE sha256=a908983bd499399b7c82035c71adb259a0121cf6fbebcff0072070332ddcc8cc size=26541` |
 | `boards/pixhawk6c/pixhawk6c.dtb` | `DEVICE_TREE sha256=6dbeeac9caf225be3f87ac340430124831d63557d7783bea390f5147e5079b2d size=31279` |
 | `boards/pixhawk6c/pixhawk6c-hakoniwa.dtb` | `DEVICE_TREE sha256=bb8dd3a9ed85c731434949eddebadec51a972c28693ad89be61bd31ea8837dfa size=31392` |
 | `boards/nucleo-f767zi/nucleo-f767zi.dtb` | `DEVICE_TREE sha256=6a72e8dccf8e54f2c65f53beaa706622d7834a437920e77f0e8fa962ef6474e3 size=29491` |

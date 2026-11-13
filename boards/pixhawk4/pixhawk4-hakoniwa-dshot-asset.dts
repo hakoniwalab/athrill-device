@@ -1,0 +1,16 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Pixhawk 4 on DShot with Athrill as the Hakoniwa asset (athrill3
+ * --hakoniwa <asset>) and the aircraft in process: the ESC's fault-model is
+ * the Hakoniwa sensor device, which takes rotor faults from outside (a
+ * hako_msgs/Disturbance PDU, e.g. hakoniwa-threejs-drone's Rotor Fault
+ * Injection) with the in-process motor plugin. With another plugin the
+ * sensor device offers no fault hook and the ESC bypasses.
+ */
+
+#include "pixhawk4-hakoniwa-dshot.dts"
+
+&dshot_esc {
+	fault-model = <&hakoniwa_sensor>;
+};

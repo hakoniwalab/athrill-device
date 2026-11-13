@@ -18,6 +18,10 @@ requests with KISS frames, which PX4 reads with `DSHOT_TEL_CFG` 104.
 Its fault-model is `athrill,esc-fault-schedule` with no stop: nothing changes
 until a run sets the host value `DEVICE_CONFIG_ESC_MOTOR_STOP`, e.g. `2@40000`
 to stop PX4's motor 3 at 40 s.
+`pixhawk4-hakoniwa-dshot-asset.dts` makes the Hakoniwa sensor device the ESC's
+fault-model, for Athrill as the Hakoniwa asset with the aircraft in process
+(the in-process motor plugin): rotor faults then come from a
+`hako_msgs/Disturbance` PDU, e.g. hakoniwa-threejs-drone's Rotor Fault Injection.
 
 The checked-in blobs have SHA-256:
 
@@ -25,6 +29,7 @@ The checked-in blobs have SHA-256:
 cd3a21918920144f266486817916342f5f841f551bbfde0e9576f5a95f28b412  pixhawk4.dtb
 60c9e2dd35d89b919c39a1bb169ce1ab15929c6e52b1be439f959a653ea28fe0  pixhawk4-hakoniwa.dtb
 338872bd171ac2cc4c037d5174c5d9422ddc93d4c73cc6be91971e70a369fef3  pixhawk4-hakoniwa-dshot.dtb
+a908983bd499399b7c82035c71adb259a0121cf6fbebcff0072070332ddcc8cc  pixhawk4-hakoniwa-dshot-asset.dtb
 ```
 
 It was made with GNU cpp and dtc 1.7.x from a Linux container (Ubuntu
@@ -60,6 +65,14 @@ cpp -nostdinc -undef -x assembler-with-cpp \
   "$ROOT/build/pixhawk4-hakoniwa-dshot.pre.dts"
 dtc -I dts -O dtb -o "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa-dshot.dtb" \
   "$ROOT/build/pixhawk4-hakoniwa-dshot.pre.dts"
+cpp -nostdinc -undef -x assembler-with-cpp \
+  -I "$ZEPHYR/dts" -I "$ZEPHYR/dts/arm" -I "$ZEPHYR/dts/common" \
+  -I "$ZEPHYR/include" \
+  -I "$ROOT/boards/pixhawk4" \
+  "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa-dshot-asset.dts" \
+  "$ROOT/build/pixhawk4-hakoniwa-dshot-asset.pre.dts"
+dtc -I dts -O dtb -o "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb" \
+  "$ROOT/build/pixhawk4-hakoniwa-dshot-asset.pre.dts"
 ```
 
 The Zephyr include remains an external build input; it is not copied into
