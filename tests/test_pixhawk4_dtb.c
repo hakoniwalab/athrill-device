@@ -103,6 +103,9 @@ int main(void)
 		0U, 6U, 4U, 0x5480U, 3U, 0U, 6U, 4U, 0x5440U, 3U,
 		0U, 3U, 4U, 0x5480U, 3U, 0U, 3U, 4U, 0x5440U, 3U
 	};
+	/* TIM1_UP: DMA2 stream 5 channel 6, PX4's DShot stream (32-bit M2P, high priority) */
+	static const uint32_t tim1_dmas[] = { 0U, 5U, 6U, 0x25440U, 3U };
+	static const char tim1_names[] = "up";
 	static const char spi_names[] = "tx\0rx\0tx\0rx";
 	static const char sd_names[] = "rx\0tx\0rx\0tx";
 	size_t size;
@@ -124,6 +127,8 @@ int main(void)
 		spi_names, sizeof(spi_names));
 	expect_dmas(blob, "/soc/sdmmc@40012c00", dma2_phandle, sd_dmas, 4U,
 		sd_names, sizeof(sd_names));
+	expect_dmas(blob, "/soc/timers@40010000", dma2_phandle, tim1_dmas, 1U,
+		tim1_names, sizeof(tim1_names));
 	(void)sensor_node(blob, "disabled");
 	/* without Hakoniwa the values come from the bench sensor source */
 	{

@@ -163,6 +163,7 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/tick-skip-runtime.dtb"
       "${TEST_DTB_DIR}/tick-skip-contract.dtb"
       "${TEST_DTB_DIR}/tick-skip-pwm.dtb"
+      "${TEST_DTB_DIR}/tick-skip-dshot.dtb"
       "${TEST_DTB_DIR}/dma-request.dtb"
       "${TEST_DTB_DIR}/disabled-provider.dtb"
       "${TEST_DTB_DIR}/duplicate-phandle.dtb"
@@ -255,6 +256,17 @@ if(BUILD_TESTING)
   add_test(NAME stm32h7-spi-spec-gaps COMMAND test_stm32_spi spec-gaps)
   set_tests_properties(stm32h7-spi-spec-gaps PROPERTIES WILL_FAIL TRUE)
 
+  add_executable(test_stm32_tim_dma tests/test_stm32_tim_dma.c)
+  target_compile_definitions(test_stm32_tim_dma PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_stm32_tim_dma PRIVATE src/models tests)
+  target_link_libraries(test_stm32_tim_dma PRIVATE athrill_device)
+  add_test(NAME stm32-tim-dma COMMAND test_stm32_tim_dma)
+  add_executable(test_stm32_tim_dma_burst tests/test_stm32_tim_dma_burst.c)
+  target_compile_definitions(test_stm32_tim_dma_burst PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_stm32_tim_dma_burst PRIVATE src/models tests)
+  target_link_libraries(test_stm32_tim_dma_burst PRIVATE athrill_device)
+  add_test(NAME stm32-tim-dma-burst COMMAND test_stm32_tim_dma_burst)
+
   add_executable(test_stm32_uart tests/test_stm32_uart.c)
   target_compile_definitions(test_stm32_uart PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_stm32_uart PRIVATE src/models)
@@ -279,6 +291,7 @@ if(BUILD_TESTING)
   add_test(NAME tick-skip-directed COMMAND test_tick_skip directed)
   add_test(NAME tick-skip-random COMMAND test_tick_skip random)
   add_test(NAME tick-skip-pwm COMMAND test_tick_skip pwm)
+  add_test(NAME tick-skip-dshot COMMAND test_tick_skip dshot)
   add_test(NAME tick-skip-contract
     COMMAND test_tick_skip contract $<TARGET_FILE:test_tick_skip_plugin>)
 

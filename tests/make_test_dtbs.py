@@ -279,6 +279,29 @@ def main() -> None:
             ("pwm-names", strings("FMU_CH1")),
         ], []),
     ])
+    # tests/test_tick_skip.c "dshot": PX4's DShot on TIM1 of a Pixhawk 4,
+    # the timer's update DMA request served by the DMA2 model (stream 5,
+    # channel 6), as in the board's devicetree.
+    tick_skip_dshot = board([
+        provider("intc", 2, "#interrupt-cells", 1),
+        node("dma-controller@40026400", [
+            ("compatible", strings("st,stm32-dma-v1")),
+            ("reg", be32(0x40026400, 0x400)),
+            ("interrupt-parent", be32(2)),
+            ("interrupts", be32(56, 57, 58, 59, 60, 68, 69, 70)),
+            ("#dma-cells", be32(4)),
+            ("phandle", be32(9)),
+        ], []),
+        node("timers@40010000", [
+            ("compatible", strings("st,stm32-timers")),
+            ("reg", be32(0x40010000, 0x400)),
+            ("interrupt-parent", be32(2)),
+            ("interrupts", be32(25, 27, 26, 24)),
+            ("interrupt-names", strings("up", "cc", "trgcom", "brk")),
+            ("dmas", be32(9, 5, 6, 0, 0)),
+            ("dma-names", strings("up")),
+        ], []),
+    ])
     tick_skip_contract = board([
         device("tick-contract@6000", 0x6000, 0x100,
                compatible="athrill,test-tick-contract"),
@@ -325,6 +348,7 @@ def main() -> None:
         "tick-skip-runtime.dtb": tick_skip_runtime,
         "tick-skip-contract.dtb": tick_skip_contract,
         "tick-skip-pwm.dtb": tick_skip_pwm,
+        "tick-skip-dshot.dtb": tick_skip_dshot,
         "overlap.dtb": board([clock("clock", 1),
                               device("device@1000", 0x1000, 0x100, 1),
                               device("device@1080", 0x1080, 0x100, 1)]),

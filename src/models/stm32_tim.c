@@ -50,6 +50,8 @@
 #define SR_TIF		(1U << 6)
 #define SR_BIF		(1U << 7)
 
+#define DIER_UDE	(1U << 8)
+
 #define EGR_UG		(1U << 0)
 #define EGR_CC1G	(1U << 1)
 #define EGR_COMG	(1U << 5)
@@ -90,6 +92,10 @@ typedef struct {
 	uint64 last_clock;
 	uint64 remainder;	/* CPU clocks towards the next count */
 	uint32 asserted;	/* SR & DIER as last seen: a newly set flag pends the interrupt */
+	uint32 dma_index;	/* the DMA burst index: the next DMAR access goes to DBA + dma_index */
+	uint32 burst_left;	/* DMAR transfers left in the update DMA burst (0: none asked) */
+	std_bool up_raise;	/* an update asked for a burst: raise "up" once the counter is consistent */
+	std_bool up_level;	/* the "up" DMA request as last driven */
 	AthrillDeviceIrqLine irq_update_line;
 	AthrillDeviceIrqLine irq_cc_line;
 	AthrillDeviceIrqLine irq_trg_com_line;
@@ -253,6 +259,74 @@ static void load_shadows(TimType *t)
 	t->rep = (t->kind == TIM_ADVANCED) ? (reg(t, TIM_RCR) & 0xFFFFU) : 0U;
 }
 
+/*
+ * [RM0410 25.3.27, 25.4.1, 25.4.4] The update DMA request: with UDE set, an
+ * update event (a counter overflow/underflow; UG too when URS = 0) asks
+ * for a burst of DBL + 1 transfers through DMAR. The request is a level:
+ * raised for the burst, lowered after its last transfer. A burst not served
+ * yet is not asked again by later updates (the request stays raised).
+ */
+static std_bool update_dma_armed(const TimType *t)
+{
+	return ((reg(t, TIM_DIER) & DIER_UDE) != 0U) && (t->burst_left == 0U) &&
+		((reg(t, TIM_CR1) & CR1_UDIS) == 0U);
+}
+
+static void update_dma(TimType *t, std_bool overflow)
+{
+	if (!update_dma_armed(t) || (!overflow && ((reg(t, TIM_CR1) & CR1_URS) != 0U))) {
+		return;
+	}
+	t->burst_left = ((reg(t, TIM_DCR) >> 8) & 0x1FU) + 1U;
+	t->up_raise = TRUE;
+}
+
+static void drive_up(TimType *t, std_bool level)
+{
+	t->up_level = level;
+	if ((t->resources != NULL) && (t->resources->dma_request != NULL)) {
+		(void)t->resources->dma_request(t->resource_context, "up", level);
+	}
+}
+
+/*
+ * Raises a burst asked for: the DMA may serve it at once, writing DMAR,
+ * which comes back here through timer_write (advance_to is then already at
+ * this clock, so the transfers land at this point of the counter).
+ */
+static void flush_dma(TimType *t)
+{
+	if (!t->up_raise) {
+		return;
+	}
+	t->up_raise = FALSE;
+	if (!t->up_level) {
+		drive_up(t, TRUE);
+	}
+}
+
+/* One DMAR transfer done: the burst's last lowers the request. */
+static void burst_transfer(TimType *t)
+{
+	if (t->burst_left == 0U) {
+		return;
+	}
+	t->burst_left--;
+	if ((t->burst_left == 0U) && t->up_level) {
+		drive_up(t, FALSE);
+	}
+}
+
+/* UDE cleared: no burst, the request lowered. */
+static void cancel_update_dma(TimType *t)
+{
+	t->burst_left = 0U;
+	t->up_raise = FALSE;
+	if (t->up_level) {
+		drive_up(t, FALSE);
+	}
+}
+
 /* An overflow or underflow of the counter: an update event unless UDIS, or the repetition counter, holds it. */
 static void counter_boundary(TimType *t)
 {
@@ -265,6 +339,7 @@ static void counter_boundary(TimType *t)
 	}
 	load_shadows(t);
 	t->regs[TIM_SR / 4U] |= SR_UIF;
+	update_dma(t, TRUE);
 	if ((reg(t, TIM_CR1) & CR1_OPM) != 0U) {
 		t->regs[TIM_CR1 / 4U] &= ~CR1_CEN;
 	}
@@ -371,6 +446,10 @@ static std_bool steady(const TimType *t)
 	if ((reg(t, TIM_CR1) & CR1_OPM) != 0U) {
 		return FALSE;
 	}
+	/* every update that asks for a burst is taken one at a time */
+	if (update_dma_armed(t)) {
+		return FALSE;
+	}
 	if ((t->arr != (reg(t, TIM_ARR) & counter_mask(t))) || (t->psc != (reg(t, TIM_PSC) & 0xFFFFU))) {
 		return FALSE;
 	}
@@ -434,6 +513,7 @@ static void advance_to(TimType *t, uint64 clock)
 			taken = segment(t, n);
 		}
 		elapsed -= taken * period;
+		flush_dma(t);
 	}
 	t->remainder = counting(t) ? elapsed : 0U;
 }
@@ -445,6 +525,9 @@ static uint64 clocks_to_event(const TimType *t)
 	uint64 counts;
 	uint32 k;
 
+	if (update_dma_armed(t)) {
+		enabled |= SR_UIF;	/* the next update asks for a DMA burst */
+	}
 	if (!counting(t) || (enabled == 0U)) {
 		return 0U;
 	}
@@ -572,7 +655,7 @@ static uint32 writable(const TimType *t, uint32 offset)
 	case TIM_DCR:
 		return basic ? 0U : 0x1F1FU;
 	case TIM_DMAR:
-		return basic ? 0U : 0xFFFFFFFFU;
+		return 0U;	/* redirected (burst_offset), never stored */
 	case TIM_OR:
 		return ((t->number == 2U) || (t->number == 5U) || (t->number == 11U)) ? 0xFFFFFFFFU : 0U;
 	case TIM_CCMR3:
@@ -584,6 +667,28 @@ static uint32 writable(const TimType *t, uint32 offset)
 	default:
 		return 0U;
 	}
+}
+
+/*
+ * [RM0410 25.3.27, 25.4.21, 25.4.22] DMA burst: an access to DMAR goes to
+ * the register at CR1 + (DBA + index) x 4, the index running 0..DBL. Every
+ * DMAR access, by the CPU or by a DMA stream, is one transfer and moves the
+ * index; a DCR write and a reset start it again at 0. The offset returned is
+ * TIM_REGS_SIZE (nothing there) when the index leaves the register block or
+ * comes back onto DMAR itself, and always for a basic timer (no DCR/DMAR).
+ */
+static uint32 burst_offset(TimType *t)
+{
+	uint32 dcr = reg(t, TIM_DCR);
+	uint32 dba = dcr & 0x1FU;
+	uint32 dbl = (dcr >> 8) & 0x1FU;
+	uint32 offset = 4U * (dba + t->dma_index);
+
+	t->dma_index = (t->dma_index >= dbl) ? 0U : (t->dma_index + 1U);
+	if ((t->kind == TIM_BASIC) || (offset == TIM_DMAR) || (offset >= TIM_REGS_SIZE)) {
+		return TIM_REGS_SIZE;
+	}
+	return offset;
 }
 
 static uint32 read_register(TimType *t, uint32 offset)
@@ -598,6 +703,14 @@ static uint32 read_register(TimType *t, uint32 offset)
 		return t->cnt;
 	case TIM_EGR:
 		return 0U;
+	case TIM_DMAR: {
+		uint32 value;
+
+		offset = burst_offset(t);
+		value = (offset < TIM_REGS_SIZE) ? read_register(t, offset) : 0U;
+		burst_transfer(t);
+		return value;
+	}
 	default:
 		return (offset < TIM_REGS_SIZE) ? reg(t, offset) : 0U;
 	}
@@ -615,6 +728,7 @@ static void generate(TimType *t, uint32 value)
 		if ((reg(t, TIM_CR1) & CR1_URS) == 0U) {
 			t->regs[TIM_SR / 4U] |= SR_UIF;
 		}
+		update_dma(t, FALSE);
 	}
 	for (k = 0U; k < t->channels; k++) {
 		if ((value & (EGR_CC1G << k)) != 0U) {
@@ -649,6 +763,16 @@ static void write_register(TimType *t, uint32 offset, uint32 value, uint32 mask)
 	case TIM_CNT:
 		t->cnt = ((t->cnt & ~mask) | (value & mask)) & counter_mask(t);
 		return;
+	case TIM_DMAR:	/* redirected, never stored */
+		offset = burst_offset(t);
+		if (offset < TIM_REGS_SIZE) {
+			write_register(t, offset, value, mask);
+		}
+		burst_transfer(t);
+		return;
+	case TIM_DCR:
+		t->dma_index = 0U;
+		break;
 	case TIM_CR1:
 		/* DIR is read-only in center-aligned mode */
 		if (((mask & CR1_DIR) != 0U) && (((value >> CR1_CMS_SHIFT) & 3U) == 0U)) {
@@ -663,6 +787,9 @@ static void write_register(TimType *t, uint32 offset, uint32 value, uint32 mask)
 	}
 	mask &= writable(t, offset);
 	t->regs[offset / 4U] = (t->regs[offset / 4U] & ~mask) | (value & mask);
+	if ((offset == TIM_DIER) && ((reg(t, TIM_DIER) & DIER_UDE) == 0U)) {
+		cancel_update_dma(t);
+	}
 	/* unbuffered registers act at once */
 	if ((offset == TIM_ARR) && ((reg(t, TIM_CR1) & CR1_ARPE) == 0U)) {
 		t->arr = reg(t, TIM_ARR) & counter_mask(t);
@@ -813,6 +940,10 @@ static sint32 timer_reset(void *instance)
 	timer->last_clock = 0U;
 	timer->remainder = 0U;
 	timer->asserted = 0U;
+	timer->dma_index = 0U;
+	timer->burst_left = 0U;
+	timer->up_raise = FALSE;
+	timer->up_level = FALSE;
 	return 0;
 }
 
@@ -849,6 +980,7 @@ static sint32 timer_write(void *instance, uint64 address, uint32 size,
 		((1U << (8U * size)) - 1U)) << shift;
 	advance_to(timer, timer->target_ops->time_now(timer->target));
 	write_register(timer, offset, (uint32)input << shift, mask);
+	flush_dma(timer);	/* UG may have asked for a burst */
 	/* any write may change the next event or the interrupt levels */
 	if (timer->resources != NULL) {
 		timer->resources->request_tick(timer->resource_context);
