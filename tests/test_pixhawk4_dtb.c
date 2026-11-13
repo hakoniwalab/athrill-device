@@ -178,7 +178,7 @@ int main(void)
 	sensor = sensor_node(blob, "okay");
 	sensor_phandle = fdt_get_phandle(blob, sensor);
 	{
-		int esc = fdt_path_offset(blob, "/dshot-esc");
+		int esc = fdt_path_offset(blob, "/soc/serial@40004c00/dshot-esc");
 		int map = fdt_path_offset(blob, "/pwm-actuator-map");
 		const fdt32_t *esc_pwms;
 		const fdt32_t *map_pwms;
@@ -196,7 +196,7 @@ int main(void)
 			memcmp(esc_pwms, map_pwms, (size_t)esc_length) == 0);
 		TEST_CHECK(fdt_getprop(blob, esc, "fault-model", NULL) == NULL);
 	}
-	expect_value_source(blob, "/dshot-esc", sensor_phandle);
+	expect_value_source(blob, "/soc/serial@40004c00/dshot-esc", sensor_phandle);
 	dma2_phandle = fdt_get_phandle(blob, fdt_path_offset(blob, "/soc/dma@40026400"));
 	expect_dmas(blob, "/soc/timers@40010000", dma2_phandle, tim1_dmas, 1U,
 		tim1_names, sizeof(tim1_names));

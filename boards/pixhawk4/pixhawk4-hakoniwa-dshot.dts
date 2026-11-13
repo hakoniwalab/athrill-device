@@ -6,7 +6,8 @@
  * PX4 v1.17.0 drives FMU outputs 1-4 (TIM1 CH4..CH1) with DShot when
  * PWM_AUX_TIM0 is -5/-4/-3 (DShot150/300/600). The ESC decodes each motor's
  * frame and gives its throttle to the Hakoniwa sink, in place of the PWM
- * actuator map (both would set every actuator channel of the sink).
+ * actuator map (both would set every actuator channel of the sink), and
+ * answers telemetry requests with KISS frames on UART4.
  */
 
 #include "pixhawk4-hakoniwa.dts"
@@ -15,7 +16,11 @@
 	status = "disabled";
 };
 
-/ {
+/*
+ * The ESC sits on UART4 (PX4 TELEM4, /dev/ttyS3): its KISS telemetry line.
+ * PX4 reads it with DSHOT_TEL_CFG = 104 (TELEM 4).
+ */
+&uart4 {
 	dshot_esc: dshot-esc {
 		compatible = "athrill,dshot-esc";
 		/* FMU_CH1..FMU_CH4, the motor order of PWM_AUX_FUNC1..4 */

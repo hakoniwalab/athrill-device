@@ -69,6 +69,12 @@ static uint32 fault_motor[64];
 
 static uint32 timeout_us;		/* 0: the default */
 
+/* the telemetry line (the ESC as a UART child): the bytes it sent */
+static std_bool on_uart = TRUE;
+static uint8 line[256];
+static uint32 line_len;
+static AthrillDeviceEscFaultAction telemetry_action;
+
 static uint32 tim_base = TIM1_BASE;
 static uint32 dma_base = DMA2_BASE;
 
@@ -229,8 +235,22 @@ static sint32 fault_command(void *i, uint32 motor, uint64 time, AthrillDeviceEsc
 static sint32 fault_telemetry(void *i, uint32 motor, uint64 time, AthrillDeviceEscTelemetry *t,
 	AthrillDeviceEscFaultAction *action)
 {
-	(void)i; (void)motor; (void)time; (void)t;
-	*action = ATHRILL_DEVICE_ESC_FAULT_PASS;
+	(void)i; (void)motor; (void)time;
+	*action = telemetry_action;
+	if (telemetry_action == ATHRILL_DEVICE_ESC_FAULT_REPLACE) {
+		t->current_a = 0.0F;	/* the motor stop of the stage 4 goal */
+		t->erpm = 0.0F;
+	}
+	return 0;
+}
+static sint32 uart_send(void *c, uint8 data)
+{
+	(void)c;
+	if (!on_uart) {
+		return -1;		/* not a UART child */
+	}
+	TEST_CHECK(line_len < sizeof(line));
+	line[line_len++] = data;
 	return 0;
 }
 static const AthrillDeviceEscFaultOps fault_ops = {
@@ -306,6 +326,7 @@ static void setup(void)
 	esc_resources.get_value_source = get_value_source;
 	esc_resources.get_esc_fault = get_esc_fault;
 	esc_resources.request_tick = request_tick;
+	esc_resources.uart_send = uart_send;
 	dma_node.ops = &node_ops;
 	dma_node.path = "/soc/dma@40026400";
 	dma_node.context = &dma_base;
@@ -319,6 +340,8 @@ static void setup(void)
 	sink_calls = 0U;
 	fault_calls = 0U;
 	fault_action = ATHRILL_DEVICE_ESC_FAULT_PASS;
+	telemetry_action = ATHRILL_DEVICE_ESC_FAULT_PASS;
+	line_len = 0U;
 	memset(ram, 0, sizeof(ram));
 	dmac = create(dma, &dma_node, &dma_resources, &dmac);
 	timer = create(tim, &tim_node, &tim_resources, &timer);
@@ -393,11 +416,12 @@ static uint16 packet(uint16 value, std_bool telemetry)
 	uint16 crc = (uint16)((data ^ (data >> 4) ^ (data >> 8)) & 0xFU);
 	return (uint16)((data << 4) | crc);
 }
+static uint32 request_mask;	/* motors whose frame asks for telemetry */
 static void fill(const uint16 values[4], std_bool telemetry)
 {
 	uint32 m, b;
 	for (m = 0U; m < 4U; m++) {
-		uint16 p = packet(values[m], telemetry);
+		uint16 p = packet(values[m], telemetry || (((request_mask >> m) & 1U) != 0U));
 		for (b = 0U; b < 16U; b++) {
 			ram[4U * b + m] = ((p >> (15U - b)) & 1U) ? 14U : 7U;
 		}
@@ -639,6 +663,131 @@ static void test_signal_loss(void)
 	timeout_us = 0U;
 }
 
+/* PX4 v1.17.0 DShotTelemetry::crc8, as written there */
+static uint8 px4_crc8(const uint8 *buf, uint8 len)
+{
+	uint8 crc = 0U;
+	uint8 i, k;
+	for (i = 0U; i < len; i++) {
+		uint8 crc_u = (uint8)(buf[i] ^ crc);
+		for (k = 0U; k < 8U; k++) {
+			crc_u = (uint8)((crc_u & 0x80U) ? (0x7U ^ (uint8)(crc_u << 1)) : (uint8)(crc_u << 1));
+		}
+		crc = crc_u;
+	}
+	return crc;
+}
+
+typedef struct {
+	uint32 temperature, voltage, current, consumption, erpm;
+} Kiss;
+
+/* one KISS frame from the line at offset, decoded as PX4 does; its CRC checked */
+static Kiss kiss_at(uint32 offset)
+{
+	Kiss k;
+	const uint8 *f = &line[offset];
+	TEST_CHECK(offset + 10U <= line_len);
+	TEST_CHECK(px4_crc8(f, 9U) == f[9]);
+	k.temperature = f[0];
+	k.voltage = ((uint32)f[1] << 8) | f[2];
+	k.current = ((uint32)f[3] << 8) | f[4];
+	k.consumption = ((uint32)f[5] << 8) | f[6];
+	k.erpm = ((uint32)f[7] << 8) | f[8];
+	return k;
+}
+
+static uint32 round_u(float32 x) { return (uint32)(x + 0.5F); }
+
+/* [ADV-ESC-005.T1] a request on one motor: one 10-byte KISS frame for it,
+ * PX4's CRC-8, the model's values (30 C, 16.00 V, 30 A x t^2, 70000 eRPM x
+ * t); requests in turn: one frame each, in order. */
+static void test_telemetry_frame(void)
+{
+	static const uint16 v[4] = { 1048U, 548U, 2047U, 1048U };
+	uint32 m;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);			/* the motors at their throttles */
+	TEST_CHECK(line_len == 0U);		/* no request, no answer */
+	for (m = 0U; m < 4U; m++) {
+		float32 t = throttle(v[m]);
+		Kiss k;
+		request_mask = 1U << m;
+		(void)tick_at(now + 5000U);
+		(void)frame(v, FALSE);
+		TEST_CHECK(line_len == 10U * (m + 1U));
+		k = kiss_at(10U * m);
+		TEST_CHECK(k.temperature == 30U && k.voltage == 1600U);
+		TEST_CHECK(k.current == round_u(30.0F * t * t * 100.0F));
+		TEST_CHECK(k.erpm == round_u(70000.0F * t / 100.0F));
+	}
+	request_mask = 0U;
+}
+
+/* [ADV-ESC-005.T2] consumption: the integral of the current, in mAh
+ * (a 1 s signal timeout, so the motors keep running over the 0.36 s gap). */
+static void test_telemetry_consumption(void)
+{
+	static const uint16 v[4] = { 2047U, 2047U, 2047U, 2047U };
+	Kiss k;
+	timeout_us = 1000000U;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);			/* 30 A from here */
+	(void)tick_at(now + 360U * 216000U);	/* 0.36 s: 3 mAh */
+	request_mask = 1U;
+	(void)frame(v, FALSE);
+	request_mask = 0U;
+	k = kiss_at(0U);
+	TEST_CHECK(k.consumption == 3U);
+	timeout_us = 0U;
+}
+
+/* [ADV-ESC-005.T3] the telemetry hook: drop sends nothing (PX4 times out),
+ * replace sends the rewritten values; a dropped command is not answered;
+ * not on a UART, no answer, the motors still driven. */
+static void test_telemetry_fault_and_line(void)
+{
+	static const uint16 v[4] = { 1500U, 1500U, 1500U, 1500U };
+	Kiss k;
+	setup();
+	use_fault = TRUE;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	request_mask = 1U << 2;
+	telemetry_action = ATHRILL_DEVICE_ESC_FAULT_DROP;
+	(void)tick_at(now + 5000U);
+	(void)frame(v, FALSE);
+	TEST_CHECK(line_len == 0U);
+	telemetry_action = ATHRILL_DEVICE_ESC_FAULT_REPLACE;
+	(void)tick_at(now + 5000U);
+	(void)frame(v, FALSE);
+	k = kiss_at(0U);
+	TEST_CHECK(k.current == 0U && k.erpm == 0U && k.voltage == 1600U);
+	telemetry_action = ATHRILL_DEVICE_ESC_FAULT_PASS;
+	fault_action = ATHRILL_DEVICE_ESC_FAULT_DROP;
+	line_len = 0U;
+	(void)tick_at(now + 5000U);
+	(void)frame(v, FALSE);
+	TEST_CHECK(line_len == 0U);
+	fault_action = ATHRILL_DEVICE_ESC_FAULT_PASS;
+	use_fault = FALSE;
+	on_uart = FALSE;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	TEST_CHECK(line_len == 0U);
+	expect_last(v);
+	on_uart = TRUE;
+	request_mask = 0U;
+}
+
 int main(void)
 {
 	test_frame_values();
@@ -649,6 +798,9 @@ int main(void)
 	test_no_gap();
 	test_fault_hook();
 	test_signal_loss();
+	test_telemetry_frame();
+	test_telemetry_consumption();
+	test_telemetry_fault_and_line();
 	printf("dshot esc: all checks passed\n");
 	return 0;
 }

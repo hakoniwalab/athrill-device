@@ -66,3 +66,25 @@
   - id: ADV-ESC-004.T1
     stimulus: 1 ms timeout, one frame, then no frame; then a frame every 0.5 ms for 5 ms.
     expect: The motors run until 1 ms after the frame and stop then; the next event is that moment; frames keep them running.
+- id: ADV-ESC-005
+  statement: As a UART child, the ESC answers a valid frame whose telemetry-request bit is set with one 10-byte KISS frame
+    for that motor (temperature C, voltage 0.01 V, current 0.01 A, consumption mAh, eRPM/100, big-endian, CRC-8 polynomial
+    0x07 over 9 bytes), after the fault-model telemetry hook; its values come from the ESC's motor model (eRPM proportional
+    to the throttle, current to its square, consumption the integral of the current). A dropped command, a dropped answer
+    or a node that is not a UART child gives no answer.
+  source:
+    devicetree: athrill,dshot-esc under a UART; athrill,telemetry-* properties
+    manual: KISS ESC telemetry frame as PX4 v1.17.0 DShotTelemetry reads it (CRC-8, field order and units)
+  scope: PX4 receives ESC telemetry (esc_status) from the emulated ESCs.
+  verification: unit
+  applies_to: esc
+  tests:
+  - id: ADV-ESC-005.T1
+    stimulus: No request, then a request on each motor in turn at throttles 1048, 548, 2047, 1048.
+    expect: No bytes, then one frame per request in order; PX4's CRC-8 holds; 30 C, 16.00 V, 30 A x t^2, 70000 eRPM x t.
+  - id: ADV-ESC-005.T2
+    stimulus: Full throttle for 0.36 s, then a request.
+    expect: Consumption 3 mAh.
+  - id: ADV-ESC-005.T3
+    stimulus: The telemetry hook dropping, then replacing (current 0, eRPM 0); a dropped command; the ESC not on a UART.
+    expect: No bytes; the rewritten values; no bytes; no bytes while the motors are still driven.

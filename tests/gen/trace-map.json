@@ -100,7 +100,7 @@
       "pwm_entries": 0,
       "pwm_maps": 0,
       "sd_cards": 1,
-      "uart_children": 1,
+      "uart_children": 2,
       "uart_controllers": 7,
       "uart_controllers_with_dmas": 7
     },
@@ -3078,8 +3078,10 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
       "derived_properties": {
-        "child_count": 0,
-        "children": []
+        "child_count": 1,
+        "children": [
+          "/soc/serial@40004c00/dshot-esc"
+        ]
       },
       "item_id": "ADV-UART-002",
       "known_defect": null,
@@ -3087,6 +3089,19 @@
       "node_path": "/soc/serial@40004c00",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
       "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "controller": "/soc/serial@40004c00"
+      },
+      "item_id": "ADV-UART-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__serial@40004c00__dshot-esc__ADV-UART-001.T1",
+      "node_path": "/soc/serial@40004c00/dshot-esc",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-001.T1",
       "will_fail": false
     },
     {
@@ -3417,6 +3432,7 @@
           "/soc/serial@40004400",
           "/soc/serial@40004800",
           "/soc/serial@40004c00",
+          "/soc/serial@40004c00/dshot-esc",
           "/soc/i2c@40005400",
           "/soc/i2c@40005800",
           "/soc/i2c@40005c00",
@@ -3472,8 +3488,7 @@
           "/memory@20000000",
           "/memory@20020000",
           "/bench-sensor-source",
-          "/sensor-device",
-          "/dshot-esc"
+          "/sensor-device"
         ]
       },
       "item_id": "ADV-DT-002",

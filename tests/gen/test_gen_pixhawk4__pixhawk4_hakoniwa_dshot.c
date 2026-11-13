@@ -1446,8 +1446,20 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot__soc__serial_40004c00__ADV_UAR
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	CHECK(count_uart_bindings("/soc/serial@40004c00") == 0U);
-	CHECK(0U <= 1U);
+	CHECK(count_uart_bindings("/soc/serial@40004c00") == 1U);
+	CHECK(1U <= 1U);
+	CHECK(find_uart_binding("/soc/serial@40004c00", "/soc/serial@40004c00/dshot-esc") < target.uart_binding_count);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa_dshot__soc__serial_40004c00__dshot_esc__ADV_UART_001_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	index = find_uart_binding("/soc/serial@40004c00", "/soc/serial@40004c00/dshot-esc");
+	CHECK(index < target.uart_binding_count);
+	CHECK(count_uart_peripheral("/soc/serial@40004c00/dshot-esc") == 1U);
 	destroy_board();
 	return 0;
 }
@@ -1616,6 +1628,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/soc/serial@40004400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/serial@40004800") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/serial@40004c00") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/serial@40004c00/dshot-esc") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005800") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/i2c@40005c00") == 1U);
@@ -1672,7 +1685,6 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot__root__ADV_DT_002_T1(void)
 	CHECK(count_model_path(captured_stderr, "/memory@20020000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/bench-sensor-source") == 1U);
 	CHECK(count_model_path(captured_stderr, "/sensor-device") == 1U);
-	CHECK(count_model_path(captured_stderr, "/dshot-esc") == 1U);
 	destroy_board();
 	return 0;
 }
@@ -2879,6 +2891,7 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot__soc__serial@40004800__ADV-UART-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot__soc__serial_40004800__ADV_UART_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot__soc__serial@40004800__ADV-UART-006.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot__soc__serial_40004800__ADV_UART_006_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot__soc__serial@40004c00__ADV-UART-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot__soc__serial_40004c00__ADV_UART_002_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot__soc__serial@40004c00__dshot-esc__ADV-UART-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot__soc__serial_40004c00__dshot_esc__ADV_UART_001_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot__soc__serial@40004c00__ADV-UART-006.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot__soc__serial_40004c00__ADV_UART_006_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot__soc__serial@40007800__ADV-UART-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot__soc__serial_40007800__ADV_UART_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot__soc__serial@40007800__ADV-UART-006.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot__soc__serial_40007800__ADV_UART_006_T1();
