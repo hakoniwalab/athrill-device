@@ -18,6 +18,14 @@ typedef struct {
 #ifdef __cplusplus
 extern "C" {
 #endif
+/*
+ * Reads the rotor fault scales of a hako_msgs/Disturbance PDU (d_user_custom
+ * slot 1, one scale per rotor, as hakoniwa-threejs-drone's Rotor Fault
+ * Injection writes them). *count is 0 when the PDU holds none. false when
+ * the channel can not be read.
+ */
+bool hako_sensor_read_rotor_fault(const HakoVisualStateOutput *input,
+	float *scale, uint32_t max, uint32_t *count);
 /* Writes one vehicle's pose and per-rotor duty as a DroneVisualStateArray. */
 bool hako_sensor_publish_visual_state(const HakoVisualStateOutput *output,
 	const HakoVehiclePoseSample *pose, const float *duty, uint32_t duty_count, uint32_t sequence);

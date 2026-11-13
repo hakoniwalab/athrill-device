@@ -61,6 +61,10 @@ typedef struct {
 	HakoVisualStateOutput visual;
 	std_bool publish;
 	uint32 sequence;
+	/* rotor faults from outside (a Disturbance PDU), for the ESC fault hook */
+	HakoVisualStateOutput fault_input;
+	float fault_scale[HAKO_MOTOR_STATUS_MAX];
+	uint32 fault_count;
 #endif
 #endif
 } HakoSensorModel;
@@ -303,6 +307,13 @@ static sint32 linked_tick(HakoSensorModel *model, uint64 now,
 			(void)hako_sensor_publish_visual_state(&model->visual, &model->pending_pose,
 				model->actuator.controls, count, model->sequence++);
 		}
+		if (model->publish) {
+			uint32 faults = 0U;
+			if (hako_sensor_read_rotor_fault(&model->fault_input, model->fault_scale,
+				HAKO_MOTOR_STATUS_MAX, &faults)) {
+				model->fault_count = faults;
+			}
+		}
 #endif
 		model->has_pending = FALSE;
 		model->actuator.time_usec = model->last_time_usec;
@@ -387,6 +398,13 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 		model->visual.channel_id = host_u32(model, "HAKO_SENSOR_DEVICE_VISUAL_CHANNEL", 0U);
 		model->visual.pdu_size = host_u32(model, "HAKO_SENSOR_DEVICE_VISUAL_PDU_SIZE", 32768U);
 		model->publish = (model->visual.asset_name != NULL) ? TRUE : FALSE;
+		model->fault_input.asset_name = model->visual.asset_name;
+		model->fault_input.robot_name = host_value(model, "HAKO_SENSOR_DEVICE_FAULT_ROBOT");
+		if (model->fault_input.robot_name == NULL) {
+			model->fault_input.robot_name = "Drone";
+		}
+		model->fault_input.channel_id = host_u32(model, "HAKO_SENSOR_DEVICE_FAULT_CHANNEL", 3U);
+		model->fault_input.pdu_size = host_u32(model, "HAKO_SENSOR_DEVICE_FAULT_PDU_SIZE", 256U);
 #endif
 		if (path != NULL && !model->linked) {
 			if (model->trace != NULL) fclose(model->trace);
@@ -535,12 +553,59 @@ static const AthrillDeviceMotorStatusOps motor_status_ops = {
 	sizeof(AthrillDeviceMotorStatusOps), motor_status
 };
 
+/*
+ * ABI 1.20: the rotor faults from outside as an ESC fault model (the ESC's
+ * fault-model names this node): scale 0 stops the motor (value 0, its
+ * telemetry request kept), a scale between 0 and 1 scales its throttle.
+ */
+static sint32 fault_command(void *instance, uint32 motor, uint64 time,
+	AthrillDeviceEscCommand *command, AthrillDeviceEscFaultAction *action)
+{
+	HakoSensorModel *model = instance;
+	float scale;
+	(void)time;
+	if (command == NULL || action == NULL) {
+		return -1;
+	}
+	*action = ATHRILL_DEVICE_ESC_FAULT_PASS;
+	if (!command->valid || motor >= model->fault_count) {
+		return 0;
+	}
+	scale = model->fault_scale[motor];
+	if (!(scale < 1.0F) || command->value < 48U) {
+		return 0;
+	}
+	command->value = (scale <= 0.0F) ? 0U :
+		(uint16)(48U + (uint32)((float)(command->value - 48U) * scale));
+	*action = ATHRILL_DEVICE_ESC_FAULT_REPLACE;
+	return 0;
+}
+
+static sint32 fault_telemetry(void *instance, uint32 motor, uint64 time,
+	AthrillDeviceEscTelemetry *telemetry, AthrillDeviceEscFaultAction *action)
+{
+	(void)instance;
+	(void)motor;
+	(void)time;
+	(void)telemetry;
+	*action = ATHRILL_DEVICE_ESC_FAULT_PASS;	/* the physics reports the motor */
+	return 0;
+}
+
+static const AthrillDeviceEscFaultOps esc_fault_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceEscFaultOps), fault_command, fault_telemetry
+};
+
 static sint32 connect_model(void *instance, const AthrillDeviceConnectArgs *args)
 {
 	const AthrillDeviceResourceOps *r = args->resources;
 	if (r == NULL || r->struct_size < offsetof(AthrillDeviceResourceOps, motor_status_provide) +
 	    sizeof(r->motor_status_provide) || r->motor_status_provide == NULL) {
-		return 0;	/* an older runtime: no motor state offered */
+		return 0;	/* an older runtime: no motor state, no fault hook offered */
+	}
+	if (r->esc_fault_provide(args->context, &esc_fault_ops, instance) != 0) {
+		return -1;
 	}
 	return r->motor_status_provide(args->context, &motor_status_ops, instance);
 }

@@ -13,6 +13,8 @@
 #include "hako_msgs/pdu_cpptype_DroneVisualState.hpp"
 #include "hako_msgs/pdu_cpptype_DroneVisualStateArray.hpp"
 #include "hako_msgs/pdu_cpptype_conv_DroneVisualStateArray.hpp"
+#include "hako_msgs/pdu_cpptype_Disturbance.hpp"
+#include "hako_msgs/pdu_cpptype_conv_Disturbance.hpp"
 
 #include <vector>
 
@@ -49,4 +51,40 @@ extern "C" bool hako_sensor_publish_visual_state(const HakoVisualStateOutput *ou
 	}
 	return hakoniwa_asset_write_pdu(output->asset_name, output->robot_name, output->channel_id,
 		buffer.data(), static_cast<size_t>(written)) == 0;
+}
+
+/* the user-custom slot of hako_msgs/Disturbance holding the rotor fault scales
+ * (Hakoniwa Drone: MI_DRONE_DISTURBANCE_USER_CUSTOM_SLOT_ROTOR_FAULT) */
+#define HAKO_DISTURBANCE_SLOT_ROTOR_FAULT 1U
+
+extern "C" bool hako_sensor_read_rotor_fault(const HakoVisualStateOutput *input,
+	float *scale, uint32_t max, uint32_t *count)
+{
+	if (input == nullptr || input->asset_name == nullptr || input->robot_name == nullptr ||
+	    scale == nullptr || count == nullptr) {
+		return false;
+	}
+	*count = 0U;
+	std::vector<char> buffer(input->pdu_size, 0);
+	if (hakoniwa_asset_read_pdu(input->asset_name, input->robot_name, input->channel_id,
+		buffer.data(), buffer.size()) != 0) {
+		return false;
+	}
+	if (hako_get_base_ptr_pdu(buffer.data()) == nullptr) {
+		return true;	/* nothing written yet (no PDU header): no fault */
+	}
+	HakoCpp_Disturbance disturbance{};
+	hako::pdu::msgs::hako_msgs::Disturbance convertor;
+	if (!convertor.pdu2cpp(buffer.data(), disturbance)) {
+		return true;
+	}
+	if (disturbance.d_user_custom.size() <= HAKO_DISTURBANCE_SLOT_ROTOR_FAULT) {
+		return true;
+	}
+	const auto& data = disturbance.d_user_custom[HAKO_DISTURBANCE_SLOT_ROTOR_FAULT].data;
+	for (std::size_t i = 0U; i < data.size() && i < max; i++) {
+		scale[i] = static_cast<float>(data[i]);
+		(*count)++;
+	}
+	return true;
 }
