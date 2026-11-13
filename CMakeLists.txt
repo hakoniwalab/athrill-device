@@ -255,6 +255,12 @@ if(BUILD_TESTING)
   add_test(NAME stm32h7-spi-spec-gaps COMMAND test_stm32_spi spec-gaps)
   set_tests_properties(stm32h7-spi-spec-gaps PROPERTIES WILL_FAIL TRUE)
 
+  add_executable(test_stm32_tim_dma tests/test_stm32_tim_dma.c)
+  target_compile_definitions(test_stm32_tim_dma PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_stm32_tim_dma PRIVATE src/models tests)
+  target_link_libraries(test_stm32_tim_dma PRIVATE athrill_device)
+  add_test(NAME stm32-tim-dma COMMAND test_stm32_tim_dma)
+
   add_executable(test_stm32_uart tests/test_stm32_uart.c)
   target_compile_definitions(test_stm32_uart PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_stm32_uart PRIVATE src/models)

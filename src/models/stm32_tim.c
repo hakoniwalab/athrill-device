@@ -90,6 +90,7 @@ typedef struct {
 	uint64 last_clock;
 	uint64 remainder;	/* CPU clocks towards the next count */
 	uint32 asserted;	/* SR & DIER as last seen: a newly set flag pends the interrupt */
+	uint32 dma_index;	/* the DMA burst index: the next DMAR access goes to DBA + dma_index */
 	AthrillDeviceIrqLine irq_update_line;
 	AthrillDeviceIrqLine irq_cc_line;
 	AthrillDeviceIrqLine irq_trg_com_line;
@@ -572,7 +573,7 @@ static uint32 writable(const TimType *t, uint32 offset)
 	case TIM_DCR:
 		return basic ? 0U : 0x1F1FU;
 	case TIM_DMAR:
-		return basic ? 0U : 0xFFFFFFFFU;
+		return 0U;	/* redirected (burst_offset), never stored */
 	case TIM_OR:
 		return ((t->number == 2U) || (t->number == 5U) || (t->number == 11U)) ? 0xFFFFFFFFU : 0U;
 	case TIM_CCMR3:
@@ -584,6 +585,28 @@ static uint32 writable(const TimType *t, uint32 offset)
 	default:
 		return 0U;
 	}
+}
+
+/*
+ * [RM0410 25.3.27, 25.4.21, 25.4.22] DMA burst: an access to DMAR goes to
+ * the register at CR1 + (DBA + index) x 4, the index running 0..DBL. Every
+ * DMAR access, by the CPU or by a DMA stream, is one transfer and moves the
+ * index; a DCR write and a reset start it again at 0. The offset returned is
+ * TIM_REGS_SIZE (nothing there) when the index leaves the register block or
+ * comes back onto DMAR itself, and always for a basic timer (no DCR/DMAR).
+ */
+static uint32 burst_offset(TimType *t)
+{
+	uint32 dcr = reg(t, TIM_DCR);
+	uint32 dba = dcr & 0x1FU;
+	uint32 dbl = (dcr >> 8) & 0x1FU;
+	uint32 offset = 4U * (dba + t->dma_index);
+
+	t->dma_index = (t->dma_index >= dbl) ? 0U : (t->dma_index + 1U);
+	if ((t->kind == TIM_BASIC) || (offset == TIM_DMAR) || (offset >= TIM_REGS_SIZE)) {
+		return TIM_REGS_SIZE;
+	}
+	return offset;
 }
 
 static uint32 read_register(TimType *t, uint32 offset)
@@ -598,6 +621,9 @@ static uint32 read_register(TimType *t, uint32 offset)
 		return t->cnt;
 	case TIM_EGR:
 		return 0U;
+	case TIM_DMAR:
+		offset = burst_offset(t);
+		return (offset < TIM_REGS_SIZE) ? read_register(t, offset) : 0U;
 	default:
 		return (offset < TIM_REGS_SIZE) ? reg(t, offset) : 0U;
 	}
@@ -649,6 +675,15 @@ static void write_register(TimType *t, uint32 offset, uint32 value, uint32 mask)
 	case TIM_CNT:
 		t->cnt = ((t->cnt & ~mask) | (value & mask)) & counter_mask(t);
 		return;
+	case TIM_DMAR:	/* redirected, never stored */
+		offset = burst_offset(t);
+		if (offset < TIM_REGS_SIZE) {
+			write_register(t, offset, value, mask);
+		}
+		return;
+	case TIM_DCR:
+		t->dma_index = 0U;
+		break;
 	case TIM_CR1:
 		/* DIR is read-only in center-aligned mode */
 		if (((mask & CR1_DIR) != 0U) && (((value >> CR1_CMS_SHIFT) & 3U) == 0U)) {
@@ -813,6 +848,7 @@ static sint32 timer_reset(void *instance)
 	timer->last_clock = 0U;
 	timer->remainder = 0U;
 	timer->asserted = 0U;
+	timer->dma_index = 0U;
 	return 0;
 }
 
