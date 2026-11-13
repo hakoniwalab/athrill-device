@@ -14,23 +14,28 @@ Hakoniwa node, and adds the `value-source` edges used by Hakoniwa and PIL.
 The checked-in blobs have SHA-256:
 
 ```text
-234cbb779e476eb3f614f365df8e2262dd33af91118fa812d49efab9918d6089  pixhawk4.dtb
-7627a4f12a4a2b84f937811736d2d2ec9abc4ac4c032ab9191eeed4506cb84c2  pixhawk4-hakoniwa.dtb
+cd3a21918920144f266486817916342f5f841f551bbfde0e9576f5a95f28b412  pixhawk4.dtb
+60c9e2dd35d89b919c39a1bb169ce1ab15929c6e52b1be439f959a653ea28fe0  pixhawk4-hakoniwa.dtb
 ```
 
-It was made with GNU cpp and dtc 1.7.x from a Linux container, from the
-repository containing the pinned Zephyr sparse checkout:
+It was made with GNU cpp and dtc 1.7.x from a Linux container (Ubuntu
+24.04, packages `cpp` and `device-tree-compiler`), from the repository
+containing the pinned Zephyr sparse checkout (`dts`,
+`include/zephyr/dt-bindings` and the `include/zephyr/sys/util_*.h` headers
+they include):
 
 ```bash
 ROOT=$PWD
 ZEPHYR=$ROOT/zephyr/zephyr
 mkdir -p "$ROOT/build"
 cpp -nostdinc -undef -x assembler-with-cpp \
-  -I "$ZEPHYR/dts" -I "$ZEPHYR/include" \
+  -I "$ZEPHYR/dts" -I "$ZEPHYR/dts/arm" -I "$ZEPHYR/dts/common" \
+  -I "$ZEPHYR/include" \
   -I "$ROOT/boards/pixhawk4" \
   "$ROOT/boards/pixhawk4/pixhawk4.dts" "$ROOT/build/pixhawk4.pre.dts"
 cpp -nostdinc -undef -x assembler-with-cpp \
-  -I "$ZEPHYR/dts" -I "$ZEPHYR/include" \
+  -I "$ZEPHYR/dts" -I "$ZEPHYR/dts/arm" -I "$ZEPHYR/dts/common" \
+  -I "$ZEPHYR/include" \
   -I "$ROOT/boards/pixhawk4" \
   "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa.dts" \
   "$ROOT/build/pixhawk4-hakoniwa.pre.dts"
