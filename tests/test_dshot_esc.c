@@ -79,6 +79,11 @@ static const AthrillDeviceEscFaultOps *schedule_ops;
 static uint32 schedule_stops[4];	/* athrill,motor-stop cells */
 static uint32 schedule_cells;
 static const char *motor_stop_host;	/* DEVICE_CONFIG_ESC_MOTOR_STOP */
+
+/* the value-source's motor state (ABI 1.21), when offered */
+static std_bool use_motor_state;
+static sint32 motor_state_result;
+static AthrillDeviceMotorStatus motor_state;
 static uint8 line[256];
 static uint32 line_len;
 static AthrillDeviceEscFaultAction telemetry_action;
@@ -272,6 +277,31 @@ static const AthrillDeviceEscFaultOps fault_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceEscFaultOps), fault_command, fault_telemetry
 };
+static sint32 motor_status(void *i, uint32 motor, AthrillDeviceMotorStatus *status)
+{
+	(void)i;
+	TEST_CHECK(motor < 4U);
+	if (motor_state_result != 0) {
+		return motor_state_result;
+	}
+	*status = motor_state;
+	return 0;
+}
+static const AthrillDeviceMotorStatusOps motor_status_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceMotorStatusOps), motor_status
+};
+static sint32 get_motor_status(void *c, const char *property, const AthrillDeviceMotorStatusOps **ops,
+	void **instance)
+{
+	(void)c;
+	if (!use_motor_state || strcmp(property, "value-source") != 0) {
+		return -1;
+	}
+	*ops = &motor_status_ops;
+	*instance = NULL;
+	return 0;
+}
 static sint32 esc_fault_provide(void *c, const AthrillDeviceEscFaultOps *ops, void *instance)
 {
 	(void)c;
@@ -368,6 +398,7 @@ static void setup(void)
 	esc_resources.get_esc_fault = get_esc_fault;
 	esc_resources.request_tick = request_tick;
 	esc_resources.uart_send = uart_send;
+	esc_resources.get_motor_status = get_motor_status;
 	dma_node.ops = &node_ops;
 	dma_node.path = "/soc/dma@40026400";
 	dma_node.context = &dma_base;
@@ -913,6 +944,40 @@ static void test_schedule_host_value(void)
 	schedule_cells = 0U;
 }
 
+/* [ADV-ESC-007.T1] the value-source's motor state: the answer carries its
+ * speed (eRPM = rpm x 14 / 2), current and voltage; with no current model
+ * the current is the ESC's own; with no state for the motor, all its own. */
+static void test_telemetry_motor_state(void)
+{
+	static const uint16 v[4] = { 1048U, 1048U, 1048U, 1048U };
+	const float32 t = throttle(1048U);
+	Kiss k;
+	use_motor_state = TRUE;
+	motor_state_result = 0;
+	motor_state.rpm = 5000.0F;
+	motor_state.current_a = 4.2F;
+	motor_state.voltage_v = 15.1F;
+	motor_state.duty = 0.5F;
+	motor_state.has_current = TRUE;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	k = telemetry_of(1U, v);
+	TEST_CHECK(k.erpm == 350U);		/* 5000 rpm x 7 / 100 */
+	TEST_CHECK(k.current == 420U && k.voltage == 1510U && k.temperature == 30U);
+	motor_state.has_current = FALSE;
+	k = telemetry_of(1U, v);
+	TEST_CHECK(k.erpm == 350U && k.voltage == 1510U);
+	TEST_CHECK(k.current == round_u(30.0F * t * t * 100.0F));
+	motor_state_result = -1;
+	k = telemetry_of(1U, v);
+	TEST_CHECK(k.erpm == round_u(70000.0F * t / 100.0F) && k.voltage == 1600U);
+	TEST_CHECK(k.current == round_u(30.0F * t * t * 100.0F));
+	use_motor_state = FALSE;
+	motor_state_result = 0;
+}
+
 int main(void)
 {
 	test_frame_values();
@@ -928,6 +993,7 @@ int main(void)
 	test_telemetry_fault_and_line();
 	test_schedule_stop();
 	test_schedule_host_value();
+	test_telemetry_motor_state();
 	printf("dshot esc: all checks passed\n");
 	return 0;
 }

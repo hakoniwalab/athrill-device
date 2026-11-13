@@ -99,6 +99,9 @@ struct NodeRecord {
 	/* ABI 1.20: the ESC fault operations a fault model offers */
 	const AthrillDeviceEscFaultOps *esc_fault_ops;
 	void *esc_fault_instance;
+	/* ABI 1.21: the motor state a value source offers */
+	const AthrillDeviceMotorStatusOps *motor_status_ops;
+	void *motor_status_instance;
 	std_bool uart_bound;
 };
 
@@ -1799,6 +1802,50 @@ static sint32 resource_get_esc_fault(void *context, const char *property,
 	return 0;
 }
 
+/* ABI 1.21: a value source offers its motors' state (once, from connect). */
+static sint32 resource_motor_status_provide(void *context,
+	const AthrillDeviceMotorStatusOps *ops, void *instance)
+{
+	NodeRecord *node = context;
+	if (ops == NULL || node->motor_status_ops != NULL ||
+	    !abi_header_ok(ops->abi_major, ops->abi_minor, ops->struct_size,
+	                   sizeof(AthrillDeviceMotorStatusOps)) ||
+	    ops->motor_status == NULL) {
+		return -1;
+	}
+	node->motor_status_ops = ops;
+	node->motor_status_instance = instance;
+	fprintf(stderr, "DEVICE_MOTOR_STATUS provider=%s\n", node->path);
+	return 0;
+}
+
+/* ABI 1.21: for a consumer, the motor state of the node its property names. */
+static sint32 resource_get_motor_status(void *context, const char *property,
+	const AthrillDeviceMotorStatusOps **ops, void **instance)
+{
+	NodeRecord *node = context;
+	const fdt32_t *cell;
+	NodeRecord *provider;
+	int length;
+	int provider_index;
+	if (property == NULL || ops == NULL || instance == NULL) {
+		return -1;
+	}
+	cell = fdt_getprop(node->runtime->dtb, node->offset, property, &length);
+	if (cell == NULL || length != 4 ||
+	    (provider_index = node_index_by_phandle(node->runtime,
+		fdt32_to_cpu(*cell))) < 0) {
+		return -1;
+	}
+	provider = &node->runtime->nodes[provider_index];
+	if (!provider->enabled || provider->motor_status_ops == NULL) {
+		return -1;
+	}
+	*ops = provider->motor_status_ops;
+	*instance = provider->motor_status_instance;
+	return 0;
+}
+
 /* [ADV-UART-002] expose only enabled children bound to this controller */
 static sint32 resource_get_uart_child(void *context, uint32 index,
 	AthrillDeviceUartEndpoint *endpoint)
@@ -1876,7 +1923,8 @@ static const AthrillDeviceResourceOps resource_ops = {
 	resource_dma_request, resource_get_dma_master, resource_sd_card_provide,
 	resource_get_sd_card, resource_gpio_resolve, resource_gpio_drive,
 	resource_gpio_read, resource_gpio_subscribe, resource_console_listen,
-	resource_request_tick, resource_esc_fault_provide, resource_get_esc_fault
+	resource_request_tick, resource_esc_fault_provide, resource_get_esc_fault,
+	resource_motor_status_provide, resource_get_motor_status
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,

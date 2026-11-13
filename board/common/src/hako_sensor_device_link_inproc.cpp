@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <vector>
 
 namespace {
 
@@ -168,6 +169,10 @@ struct InProcessLink {
 	bool worker_sample_ready{false};
 	bool worker_stop{false};
 	bool worker_failed{false};
+	/* the rotors as the aircraft left them with the sample being prepared,
+	 * and with the sample the device read last (hako_sensor_link_read) */
+	std::vector<HakoMotorStatusSample> worker_motors;
+	std::vector<HakoMotorStatusSample> read_motors;
 };
 
 std::unique_ptr<InProcessLink> link;
@@ -243,6 +248,34 @@ bool stepUntilSensor(InProcessLink& state, uint64_t last_time_usec)
 		&& sensor.time_usec > last_time_usec;
 }
 
+/* The aircraft's rotors now, in the thread that steps it. */
+std::vector<HakoMotorStatusSample> captureMotors(InProcessLink& state)
+{
+	std::vector<HakoMotorStatusSample> motors;
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+	auto aircraft = state.aircraft_container->getAirCraft(0U);
+	if (aircraft == nullptr) {
+		return motors;
+	}
+	for (std::size_t i = 0U; i < aircraft->get_rotor_count(); ++i) {
+		hako::aircraft::RotorStatusType rotor{};
+		HakoMotorStatusSample motor{};
+		if (!aircraft->get_rotor_status(i, rotor)) {
+			break;
+		}
+		motor.rpm = static_cast<float>(rotor.rpm);
+		motor.current_a = static_cast<float>(rotor.current);
+		motor.voltage_v = static_cast<float>(rotor.voltage);
+		motor.duty = static_cast<float>(rotor.duty);
+		motor.has_current = rotor.has_current;
+		motors.push_back(motor);
+	}
+#else
+	(void)state;
+#endif
+	return motors;
+}
+
 void runAircraftWorker(InProcessLink *state)
 {
 	std::unique_lock<std::mutex> lock(state->worker_mutex);
@@ -257,7 +290,9 @@ void runAircraftWorker(InProcessLink *state)
 		const uint64_t last_time_usec = state->worker_after_usec;
 		lock.unlock();
 		const bool success = stepUntilSensor(*state, last_time_usec);
+		std::vector<HakoMotorStatusSample> motors = captureMotors(*state);
 		lock.lock();
+		state->worker_motors = std::move(motors);
 
 		state->worker_pending = false;
 		state->worker_sample_ready = success;
@@ -291,6 +326,7 @@ bool readWorkerSample(
 		state.gps_time_usec = source_gps.time_usec;
 		hako_sensor_link_decode_gps(&source_gps, gps);
 	}
+	state.read_motors = state.worker_motors;	/* with this sample */
 	state.worker_sample_ready = false;
 	return true;
 }
@@ -384,6 +420,7 @@ extern "C" bool hako_sensor_link_read(
 	if (!stepUntilSensor(*link, last_time_usec)) {
 		return false;
 	}
+	link->read_motors = captureMotors(*link);
 	Hako_HakoHilSensor source_sensor{};
 	Hako_HakoHilGps source_gps{};
 	bool source_has_gps = false;
@@ -430,6 +467,15 @@ extern "C" uint64_t hako_sensor_link_async_sample_period_usec(void)
 
 extern "C" void hako_sensor_link_notify_time(uint64_t)
 {
+}
+
+extern "C" bool hako_sensor_link_read_motor_status(uint32_t index, HakoMotorStatusSample *status)
+{
+	if (!link || status == nullptr || index >= link->read_motors.size()) {
+		return false;
+	}
+	*status = link->read_motors[index];	/* read in the device's thread */
+	return true;
 }
 
 extern "C" void hako_sensor_link_cleanup(void)
