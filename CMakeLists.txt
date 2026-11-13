@@ -39,6 +39,7 @@ add_library(athrill_device STATIC
   src/models/bench_sensor.c
   src/models/esc_fault_bypass.c
   src/models/dshot_esc.c
+  src/models/esc_fault_schedule.c
   src/models/stm32_i2c.c
   src/models/stm32_spi.c
   src/models/stm32_spi_bindings.c
