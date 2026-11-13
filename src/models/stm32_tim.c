@@ -96,6 +96,11 @@ typedef struct {
 	uint32 burst_left;	/* DMAR transfers left in the update DMA burst (0: none asked) */
 	std_bool up_raise;	/* an update asked for a burst: raise "up" once the counter is consistent */
 	std_bool up_level;	/* the "up" DMA request as last driven */
+	/* ABI 1.20: the PWM period listeners (one per channel) */
+	AthrillDevicePwmPeriodCallback watch_callback[4];
+	void *watch_listener[4];
+	std_bool watched;
+	uint32 updates;		/* update events so far (counter_boundary) */
 	AthrillDeviceIrqLine irq_update_line;
 	AthrillDeviceIrqLine irq_cc_line;
 	AthrillDeviceIrqLine irq_trg_com_line;
@@ -339,6 +344,7 @@ static void counter_boundary(TimType *t)
 	}
 	load_shadows(t);
 	t->regs[TIM_SR / 4U] |= SR_UIF;
+	t->updates++;
 	update_dma(t, TRUE);
 	if ((reg(t, TIM_CR1) & CR1_OPM) != 0U) {
 		t->regs[TIM_CR1 / 4U] &= ~CR1_CEN;
@@ -450,6 +456,12 @@ static std_bool steady(const TimType *t)
 	if (update_dma_armed(t)) {
 		return FALSE;
 	}
+	/* a watched timer skips only periods it can report as a run: edge
+	 * aligned, one update per period */
+	if (t->watched && ((cms(t) != 0U) || (t->rep != 0U) ||
+	    ((t->kind == TIM_ADVANCED) && ((reg(t, TIM_RCR) & 0xFFFFU) != 0U)))) {
+		return FALSE;
+	}
 	if ((t->arr != (reg(t, TIM_ARR) & counter_mask(t))) || (t->psc != (reg(t, TIM_PSC) & 0xFFFFU))) {
 		return FALSE;
 	}
@@ -491,6 +503,25 @@ static uint64 skip_periods(TimType *t, uint64 n)
 	return periods * length;
 }
 
+static sint32 timer_pwm_sample(void *instance, uint32 channel,
+	AthrillDevicePwmSample *pwm);
+
+/* [ADV-PWM-003] ABI 1.20: tell the listeners that periods identical periods started at time */
+static void notify_periods(TimType *t, uint64 time, uint64 periods)
+{
+	uint32 k;
+
+	for (k = 0U; k < t->channels; k++) {
+		AthrillDevicePwmSample sample;
+
+		if (t->watch_callback[k] == NULL ||
+		    timer_pwm_sample(t, k + 1U, &sample) != 0) {
+			continue;
+		}
+		t->watch_callback[k](t->watch_listener[k], k + 1U, time, periods, &sample);
+	}
+}
+
 static void advance_to(TimType *t, uint64 clock)
 {
 	uint64 elapsed;
@@ -508,11 +539,28 @@ static void advance_to(TimType *t, uint64 clock)
 		if (n == 0U) {
 			break;
 		}
+		uint64 start = clock - elapsed;	/* the clock of the last count */
+		uint64 first = counts_to_boundary(t);
+		uint32 updates = t->updates;
+		uint64 skipped;
+
 		taken = steady(t) ? skip_periods(t, n) : 0U;
+		skipped = taken;
 		if (taken == 0U) {
 			taken = segment(t, n);
 		}
 		elapsed -= taken * period;
+		if (t->watched) {
+			if (skipped != 0U) {
+				/* edge aligned, RCR 0 (steady): one update per period, unless UDIS */
+				if ((reg(t, TIM_CR1) & CR1_UDIS) == 0U) {
+					notify_periods(t, start + (first * period),
+						skipped / ((uint64)t->arr + 1U));
+				}
+			} else if (t->updates != updates) {
+				notify_periods(t, start + (first * period), 1U);
+			}
+		}
 		flush_dma(t);
 	}
 	t->remainder = counting(t) ? elapsed : 0U;
@@ -729,6 +777,9 @@ static void generate(TimType *t, uint32 value)
 			t->regs[TIM_SR / 4U] |= SR_UIF;
 		}
 		update_dma(t, FALSE);
+		if (t->watched && ((reg(t, TIM_CR1) & CR1_UDIS) == 0U)) {
+			notify_periods(t, t->last_clock, 1U);	/* UG starts a period now */
+		}
 	}
 	for (k = 0U; k < t->channels; k++) {
 		if ((value & (EGR_CC1G << k)) != 0U) {
@@ -844,9 +895,30 @@ static sint32 timer_pwm_sample(void *instance, uint32 channel,
 	return 0;
 }
 
+/* [ADV-PWM-003] ABI 1.20: one period listener per channel */
+static sint32 timer_pwm_watch(void *instance, uint32 channel,
+	AthrillDevicePwmPeriodCallback callback, void *listener)
+{
+	TimType *t = instance;
+	uint32 k;
+
+	if (channel == 0U || channel > t->channels) {
+		return -1;
+	}
+	t->watch_callback[channel - 1U] = callback;
+	t->watch_listener[channel - 1U] = listener;
+	t->watched = FALSE;
+	for (k = 0U; k < t->channels; k++) {
+		if (t->watch_callback[k] != NULL) {
+			t->watched = TRUE;
+		}
+	}
+	return 0;
+}
+
 static const AthrillDevicePwmProviderOps timer_pwm_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
-	sizeof(AthrillDevicePwmProviderOps), timer_pwm_sample
+	sizeof(AthrillDevicePwmProviderOps), timer_pwm_sample, timer_pwm_watch
 };
 
 static sint32 timer_validate(const AthrillDeviceNode *node, char *error,

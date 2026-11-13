@@ -64,12 +64,30 @@ typedef struct {
 	uint64 high_clocks;
 } AthrillDevicePwmSample;
 
+/*
+ * Added in ABI 1.20: a PWM period callback. The provider calls it at the
+ * start of every period of the watched channel (the update event, when the
+ * period's shadow values are loaded), in period order, with the period's
+ * sample and the target clock at which it started. periods > 1 reports
+ * that many consecutive identical periods, the first at time, each
+ * sample->period_clocks after the previous. The call may come late (when
+ * the provider catches up); time is still exact. It is made while the
+ * provider is advancing: the listener must not access the provider.
+ */
+typedef void (*AthrillDevicePwmPeriodCallback)(void *listener, uint32 channel,
+	uint64 time, uint64 periods, const AthrillDevicePwmSample *sample);
+
 typedef struct AthrillDevicePwmProviderOps {
 	uint32 abi_major;
 	uint32 abi_minor;
 	uint32 struct_size;
 	sint32 (*sample)(void *instance, uint32 channel,
 	                 AthrillDevicePwmSample *sample);
+	/* Added in ABI 1.20: call callback(listener, ...) at every period of
+	 * channel (one listener per channel; NULL callback stops). -1 for a
+	 * channel the provider does not have. Check struct_size first. */
+	sint32 (*watch)(void *instance, uint32 channel,
+	                AthrillDevicePwmPeriodCallback callback, void *listener);
 } AthrillDevicePwmProviderOps;
 
 typedef struct {
