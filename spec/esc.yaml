@@ -1,0 +1,68 @@
+- id: ADV-ESC-001
+  statement: A DShot ESC decodes each motor's 16-bit frame (11-bit value, telemetry-request bit, 4-bit CRC, first bit
+    first) from its PWM channel and gives the motor value 0..47 as no thrust and 48..2047 as throttle 0..1, all motors
+    to its value-source sink when one changes.
+  source:
+    devicetree: athrill,dshot-esc (pwms in motor order, value-source)
+    manual: DShot protocol (frame, CRC, command range) as PX4 v1.17.0 dshot.c sends it
+  scope: The motor thrust follows the firmware's DShot commands.
+  verification: unit
+  applies_to: esc
+  tests:
+  - id: ADV-ESC-001.T1
+    stimulus: PX4's 68-word buffer for values 1000, 48, 2047, 0, then 1500, 1500, 5, 2047, through TIM1 and DMA2, ticked
+      at every update and once late.
+    expect: The sink's last values are the throttles of the frame; the same both ways.
+  - id: ADV-ESC-001.T2
+    stimulus: The same frame twice.
+    expect: No sink call for the second.
+- id: ADV-ESC-002
+  statement: A frame is valid only when every bit period is within 15 % of a DShot150/300/600/1200 bit and within 2 % of
+    the frame's first, every high time is 20-45 % (0) or 55-90 % (1) of its period, 16 bits come before idle, and the CRC
+    holds; an invalid frame changes nothing.
+  source:
+    devicetree: none
+    manual: DShot protocol (bit rates, 0/1 duty), as a receiving ESC checks it
+  scope: A misconfigured or corrupted output does not drive the motors.
+  verification: unit
+  applies_to: esc
+  tests:
+  - id: ADV-ESC-002.T1
+    stimulus: One motor's last CRC bit inverted.
+    expect: That motor keeps its value, the others take theirs; the fault hook sees it invalid.
+  - id: ADV-ESC-002.T2
+    stimulus: DShot300 (3.5 us bits); 2.53 us bits; one 0 bit of motor 0 sent 10/21 high.
+    expect: DShot300 taken; 2.53 us not; motor 0 unchanged while motors 1-3 take theirs.
+  - id: ADV-ESC-002.T3
+    stimulus: A frame cut after 10 bits (the end word after them, NDTR 44).
+    expect: No sink call; the fault hook sees an invalid frame per motor.
+  - id: ADV-ESC-002.T4
+    stimulus: Two frames back to back with no end word between them (values 500, then 1500).
+    expect: The first is taken; the second is invalid.
+- id: ADV-ESC-003
+  statement: Every received frame, valid or not, goes through the fault-model hook before it reaches the motor; drop
+    leaves the motor as it was and replace uses the rewritten command; with no fault-model it passes.
+  source:
+    devicetree: athrill,dshot-esc fault-model (ABI 1.20 AthrillDeviceEscFaultOps)
+    manual: none
+  scope: Fault injection at the ESC boundary.
+  verification: unit
+  applies_to: esc
+  tests:
+  - id: ADV-ESC-003.T1
+    stimulus: A test fault model passing, then dropping, then replacing with value 48.
+    expect: Pass takes the frame, drop keeps the previous values, replace gives no thrust; the hook sees each motor's
+      value and index.
+- id: ADV-ESC-004
+  statement: A running motor stops when no valid frame came for athrill,signal-timeout-us (default 100 ms); the ESC
+    reports that moment as its next event.
+  source:
+    devicetree: athrill,dshot-esc athrill,signal-timeout-us
+    manual: none (an ESC's signal-loss behaviour; the time depends on its firmware)
+  scope: A firmware that stops sending does not leave the motors running.
+  verification: unit
+  applies_to: esc
+  tests:
+  - id: ADV-ESC-004.T1
+    stimulus: 1 ms timeout, one frame, then no frame; then a frame every 0.5 ms for 5 ms.
+    expect: The motors run until 1 ms after the frame and stop then; the next event is that moment; frames keep them running.

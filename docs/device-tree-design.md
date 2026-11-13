@@ -646,6 +646,15 @@ uses `memory_read` and `memory_write` for guest RAM and named bus endpoints
 for peripheral transfers. It never dereferences guest memory or calls the
 Athrill bus directly.
 
+`athrill,dshot-esc` is a DShot ESC for the motors on its `pwms` channels,
+in `pwms` order. It watches every PWM period of each channel (ABI 1.20
+`watch`), decodes each motor's 16-bit frame, and checks it as a receiving
+ESC does: the bit rate, the 0/1 high times, 16 bits before idle, and the
+CRC. It gives each motor's throttle (0..47 none, 48..2047 as 0..1) to its
+`value-source` sink. With no valid frame for `athrill,signal-timeout-us`
+(default 100000), a running motor stops. The host value
+`DEVICE_CONFIG_DSHOT_ESC_FILE` traces every frame.
+
 An ESC model takes its fault-injection entry point from a `fault-model`
 phandle (ABI 1.20, `AthrillDeviceEscFaultOps`). The loader orders the named
 node before the ESC. That node offers its operations from `connect`

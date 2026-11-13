@@ -38,6 +38,7 @@ add_library(athrill_device STATIC
   src/models/shakti_uart_tcp.c
   src/models/bench_sensor.c
   src/models/esc_fault_bypass.c
+  src/models/dshot_esc.c
   src/models/stm32_i2c.c
   src/models/stm32_spi.c
   src/models/stm32_spi_bindings.c
@@ -267,6 +268,11 @@ if(BUILD_TESTING)
   target_include_directories(test_stm32_tim_dma PRIVATE src/models tests)
   target_link_libraries(test_stm32_tim_dma PRIVATE athrill_device)
   add_test(NAME stm32-tim-dma COMMAND test_stm32_tim_dma)
+  add_executable(test_dshot_esc tests/test_dshot_esc.c)
+  target_compile_definitions(test_dshot_esc PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_dshot_esc PRIVATE src/models tests)
+  target_link_libraries(test_dshot_esc PRIVATE athrill_device)
+  add_test(NAME dshot-esc COMMAND test_dshot_esc)
   add_executable(test_stm32_tim_dma_burst tests/test_stm32_tim_dma_burst.c)
   target_compile_definitions(test_stm32_tim_dma_burst PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_stm32_tim_dma_burst PRIVATE src/models tests)

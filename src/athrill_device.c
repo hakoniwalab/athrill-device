@@ -465,6 +465,7 @@ static const char *const sdcard_compatibles[] = { "zephyr,sdmmc-disk" };
 static const char *const pwm_actuator_compatibles[] = { "athrill,pwm-actuator-map" };
 static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-source" };
 static const char *const esc_fault_bypass_compatibles[] = { "athrill,esc-fault-bypass" };
+static const char *const dshot_esc_compatibles[] = { "athrill,dshot-esc" };
 static const char *const stm32h7_spi_compatibles[] = { "st,stm32h7-spi" };
 static const char *const stm32h7_dmamux_compatibles[] = { "st,stm32-dmamux" };
 static const char *const bmi055_accel_compatibles[] = { "bosch,bma280" };
@@ -504,6 +505,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
 	{ bench_sensor_compatibles, 1U, &athrill_device_bench_sensor_model },
 	{ esc_fault_bypass_compatibles, 1U, &athrill_device_esc_fault_bypass_model },
+	{ dshot_esc_compatibles, 1U, &athrill_device_dshot_esc_model },
 	{ stm32h7_spi_compatibles, 1U, &athrill_device_stm32h7_spi_model },
 	{ stm32h7_dmamux_compatibles, 1U, &athrill_device_stm32_dmamux_model },
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },

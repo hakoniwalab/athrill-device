@@ -8,6 +8,7 @@
 - [chips](items-chips.md)
 - [dma](items-dma.md)
 - [dt](items-dt.md)
+- [esc](items-esc.md)
 - [gpio](items-gpio.md)
 - [i2c](items-i2c.md)
 - [pwm](items-pwm.md)
