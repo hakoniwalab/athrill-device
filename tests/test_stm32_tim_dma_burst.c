@@ -22,6 +22,11 @@
  *  - 8.3.14 (DMA): the stream disables itself at NDTR = 0; 8.5.3 HISR:
  *    stream 5 flags at bit 6, TCIF +5.
  *
+ * The PWM period callback (ABI 1.20, ADV-PWM-003) is checked on the same
+ * setup: a listener on each channel gets every period in order, at its
+ * exact start, also when the timer catches up late, and runs of identical
+ * periods as one call.
+ *
  * The model's choices, which the manual leaves open, are checked too: a
  * burst not served yet is not queued again by later updates (the request
  * just stays raised); clearing UDE lowers it.
@@ -31,6 +36,7 @@
 #include "models.h"
 #include "test_check.h"
 
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
@@ -512,6 +518,167 @@ static void test_update_is_event(void)
 	TEST_CHECK(next_event() == ATHRILL_DEVICE_NO_EVENT);
 }
 
+/* ---- the PWM period callback ---- */
+typedef struct {
+	uint32 channel;
+	uint64 time;
+	uint64 periods;
+	std_bool enabled;
+	uint64 high;
+	uint64 period;
+} PeriodCall;
+
+static PeriodCall calls[4096];
+static uint32 call_count;
+
+static void on_period(void *listener, uint32 channel, uint64 time, uint64 periods,
+	const AthrillDevicePwmSample *sample)
+{
+	TEST_CHECK(listener == &calls);
+	TEST_CHECK(call_count < 4096U);
+	calls[call_count].channel = channel;
+	calls[call_count].time = time;
+	calls[call_count].periods = periods;
+	calls[call_count].enabled = sample->enabled;
+	calls[call_count].high = sample->high_clocks;
+	calls[call_count].period = sample->period_clocks;
+	call_count++;
+}
+
+static void watch_all(AthrillDevicePwmPeriodCallback cb)
+{
+	uint32 k;
+	TEST_CHECK(tim->pwm->struct_size >= offsetof(AthrillDevicePwmProviderOps, watch) +
+		sizeof(tim->pwm->watch));
+	for (k = 1U; k <= 4U; k++) {
+		TEST_CHECK(tim->pwm->watch(timer, k, cb, &calls) == 0);
+	}
+}
+
+/* the calls of one channel, runs expanded: per period high clocks and start times */
+static uint32 expand(uint32 channel, uint64 *high, uint64 *time, uint32 max)
+{
+	uint32 i, n = 0U;
+	uint64 p;
+	for (i = 0U; i < call_count; i++) {
+		if (calls[i].channel != channel) {
+			continue;
+		}
+		for (p = 0U; p < calls[i].periods && n < max; p++) {
+			high[n] = calls[i].high;
+			time[n] = calls[i].time + p * calls[i].period;
+			n++;
+		}
+	}
+	return n;
+}
+
+/* one DShot frame from its first update, ticked at every update (fine)
+ * or once at the end (late): returns the frame's first update */
+static uint64 frame_with_watch(std_bool late)
+{
+	uint64 start;
+	reset_all();
+	call_count = 0U;
+	timer_dshot_mode();
+	fill(0U);
+	tick_at(1000U);
+	watch_all(on_period);
+	call_count = 0U;
+	start_burst(WORDS);
+	start = now + next_event();
+	if (late) {
+		tick_at(start + 30U * CLOCKS_PER_UPDATE);
+	} else {
+		uint32 u;
+		for (u = 0U; u <= 30U; u++) {
+			tick_at(start + (uint64)u * CLOCKS_PER_UPDATE);
+		}
+	}
+	return start;
+}
+
+/* [ADV-PWM-003.T1] every period of each channel, in order, at its start:
+ * idle, the 16 bits of the frame (7 or 14 counts high, 21 per period, 18
+ * CPU clocks a count), the end word, idle; the same late as fine. */
+static void test_watch_frame(void)
+{
+	static uint64 high_fine[64], time_fine[64], high_late[64], time_late[64];
+	uint64 start;
+	uint32 k, u, n_fine, n_late;
+	for (k = 1U; k <= 4U; k++) {
+		start = frame_with_watch(FALSE);
+		n_fine = expand(k, high_fine, time_fine, 64U);
+		TEST_CHECK(n_fine == 31U);
+		for (u = 0U; u < 31U; u++) {
+			uint64 want = 0U;
+			TEST_CHECK(time_fine[u] == start + (uint64)u * CLOCKS_PER_UPDATE);
+			if (u >= 1U && u <= 16U) {
+				want = (uint64)ram[4U * (u - 1U) + (k - 1U)] * 18U;
+			}
+			TEST_CHECK(high_fine[u] == want);
+		}
+		start = frame_with_watch(TRUE);
+		n_late = expand(k, high_late, time_late, 64U);
+		TEST_CHECK(n_late == n_fine);
+		TEST_CHECK(memcmp(high_late, high_fine, sizeof(uint64) * n_fine) == 0);
+		TEST_CHECK(memcmp(time_late, time_fine, sizeof(uint64) * n_fine) == 0);
+	}
+	for (u = 0U; u < call_count; u++) {
+		TEST_CHECK(calls[u].enabled && calls[u].period == CLOCKS_PER_UPDATE);
+	}
+}
+
+/* [ADV-PWM-003.T2] a steady output (no DMA): a long gap comes as a few runs
+ * whose periods add up to the updates in it, starting where they should. */
+static void test_watch_steady(void)
+{
+	static uint64 high[2048], time[2048];
+	uint64 first;
+	uint32 n, i, runs = 0U;
+	reset_all();
+	timer_dshot_mode();			/* counting from clock 0: updates at k x 378 */
+	twr(TIM_CCR1, 9U);
+	tick_at(1000U);				/* CCR1 loaded at 378 */
+	watch_all(on_period);
+	call_count = 0U;
+	first = ((1000U / CLOCKS_PER_UPDATE) + 1U) * CLOCKS_PER_UPDATE;
+	tick_at(1000U + 1000U * CLOCKS_PER_UPDATE);
+	n = expand(1U, high, time, 2048U);
+	TEST_CHECK(n == 1000U);
+	for (i = 0U; i < n; i++) {
+		TEST_CHECK(high[i] == 9U * 18U);
+		TEST_CHECK(time[i] == first + (uint64)i * CLOCKS_PER_UPDATE);
+	}
+	for (i = 0U; i < call_count; i++) {
+		runs += (calls[i].channel == 1U) ? 1U : 0U;
+	}
+	TEST_CHECK(runs <= 3U);
+}
+
+/* [ADV-PWM-003.T3] UG starts a period now (not under UDIS); no listener, no
+ * call; a channel the timer does not have is refused. */
+static void test_watch_ug_and_stop(void)
+{
+	reset_all();
+	timer_dshot_mode();
+	tick_at(5000U);
+	watch_all(on_period);
+	call_count = 0U;
+	twr(TIM_CR1, CR1_ARPE);			/* stopped */
+	twr(TIM_EGR, EGR_UG);
+	TEST_CHECK(call_count == 4U && calls[0].time == 5000U && calls[0].periods == 1U);
+	twr(TIM_CR1, CR1_ARPE | CR1_UDIS);
+	twr(TIM_EGR, EGR_UG);
+	TEST_CHECK(call_count == 4U);
+	watch_all(NULL);
+	twr(TIM_CR1, CR1_ARPE | CR1_CEN);
+	tick_at(5000U + 100U * CLOCKS_PER_UPDATE);
+	TEST_CHECK(call_count == 4U);
+	TEST_CHECK(tim->pwm->watch(timer, 0U, on_period, &calls) != 0);
+	TEST_CHECK(tim->pwm->watch(timer, 5U, on_period, &calls) != 0);
+}
+
 int main(void)
 {
 	setup();
@@ -521,6 +688,9 @@ int main(void)
 	test_ude_off();
 	test_ug_urs_udis();
 	test_update_is_event();
+	test_watch_frame();
+	test_watch_steady();
+	test_watch_ug_and_stop();
 	printf("stm32 timer update DMA burst: all checks passed\n");
 	return 0;
 }

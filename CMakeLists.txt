@@ -37,6 +37,8 @@ add_library(athrill_device STATIC
   src/models/shakti_uart.c
   src/models/shakti_uart_tcp.c
   src/models/bench_sensor.c
+  src/models/esc_fault_bypass.c
+  src/models/dshot_esc.c
   src/models/stm32_i2c.c
   src/models/stm32_spi.c
   src/models/stm32_spi_bindings.c
@@ -164,6 +166,11 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/tick-skip-contract.dtb"
       "${TEST_DTB_DIR}/tick-skip-pwm.dtb"
       "${TEST_DTB_DIR}/tick-skip-dshot.dtb"
+      "${TEST_DTB_DIR}/esc-fault-bypass.dtb"
+      "${TEST_DTB_DIR}/esc-fault-none.dtb"
+      "${TEST_DTB_DIR}/esc-fault-plugin.dtb"
+      "${TEST_DTB_DIR}/esc-fault-missing.dtb"
+      "${TEST_DTB_DIR}/esc-fault-not-fault.dtb"
       "${TEST_DTB_DIR}/dma-request.dtb"
       "${TEST_DTB_DIR}/disabled-provider.dtb"
       "${TEST_DTB_DIR}/duplicate-phandle.dtb"
@@ -261,6 +268,11 @@ if(BUILD_TESTING)
   target_include_directories(test_stm32_tim_dma PRIVATE src/models tests)
   target_link_libraries(test_stm32_tim_dma PRIVATE athrill_device)
   add_test(NAME stm32-tim-dma COMMAND test_stm32_tim_dma)
+  add_executable(test_dshot_esc tests/test_dshot_esc.c)
+  target_compile_definitions(test_dshot_esc PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_dshot_esc PRIVATE src/models tests)
+  target_link_libraries(test_dshot_esc PRIVATE athrill_device)
+  add_test(NAME dshot-esc COMMAND test_dshot_esc)
   add_executable(test_stm32_tim_dma_burst tests/test_stm32_tim_dma_burst.c)
   target_compile_definitions(test_stm32_tim_dma_burst PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_stm32_tim_dma_burst PRIVATE src/models tests)
@@ -294,6 +306,19 @@ if(BUILD_TESTING)
   add_test(NAME tick-skip-dshot COMMAND test_tick_skip dshot)
   add_test(NAME tick-skip-contract
     COMMAND test_tick_skip contract $<TARGET_FILE:test_tick_skip_plugin>)
+
+  add_library(test_esc_fault_plugin MODULE tests/test_esc_fault_plugin.c)
+  target_compile_definitions(test_esc_fault_plugin PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_esc_fault_plugin PRIVATE include)
+  set_target_properties(test_esc_fault_plugin PROPERTIES PREFIX "")
+  add_executable(test_esc_fault tests/test_esc_fault.c)
+  target_compile_definitions(test_esc_fault PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES TEST_DTB_DIR="${TEST_DTB_DIR}")
+  target_include_directories(test_esc_fault PRIVATE tests)
+  target_link_libraries(test_esc_fault PRIVATE athrill_device)
+  add_dependencies(test_esc_fault generate-test-dtbs test_esc_fault_plugin)
+  add_test(NAME esc-fault
+    COMMAND test_esc_fault $<TARGET_FILE:test_esc_fault_plugin>)
 
   add_executable(test_channel tests/test_channel.c)
   target_compile_definitions(test_channel PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
@@ -329,7 +354,8 @@ if(BUILD_TESTING)
   target_include_directories(test_pixhawk4_dtb PRIVATE third_party/libfdt)
   target_compile_definitions(test_pixhawk4_dtb PRIVATE
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
-    PIXHAWK4_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4-hakoniwa.dtb")
+    PIXHAWK4_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4-hakoniwa.dtb"
+    PIXHAWK4_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4-hakoniwa-dshot.dtb")
 
   add_executable(test_pixhawk6c_dtb tests/test_pixhawk6c_dtb.c
     third_party/libfdt/libfdt.c)

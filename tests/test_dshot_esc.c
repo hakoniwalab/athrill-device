@@ -1,0 +1,654 @@
+/*
+ * The DShot ESC (src/models/dshot_esc.c) on the STM32 timer and DMA models,
+ * all real models on a fake bus, driven as PX4 v1.17 drives DShot on TIM1
+ * of a Pixhawk 4 (see tests/test_stm32_tim_dma_burst.c for the setup):
+ * the firmware fills 68 words (bit-major, 4 motors, 7 = 0 and 14 = 1 of a
+ * 21-count bit, the 17th word 0), starts DMA2 stream 5 and sets UDE.
+ *
+ * The frame (DShot): 11-bit value (0 stop, 1-47 commands, 48-2047
+ * throttle), 1 telemetry-request bit, 4-bit CRC = XOR of the nibbles of the
+ * 12 bits before it, sent first bit first.
+ *
+ * SPDX-License-Identifier: MIT
+ */
+#include "models.h"
+#include "test_check.h"
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#define TIM1_BASE	0x40010000U
+#define DMA2_BASE	0x40026400U
+#define RAM		0x20000000U
+#define CPU_HZ		216000000U
+
+#define TIM_CR1		0x00U
+#define TIM_DIER	0x0CU
+#define TIM_EGR		0x14U
+#define TIM_CCMR1	0x18U
+#define TIM_CCMR2	0x1CU
+#define TIM_CCER	0x20U
+#define TIM_PSC		0x28U
+#define TIM_ARR		0x2CU
+#define TIM_BDTR	0x44U
+#define TIM_DCR		0x48U
+#define TIM_DMAR	0x4CU
+#define DIER_UDE	(1U << 8)
+
+#define DMA_HIFCR	0x0CU
+#define S(n, r)		(0x10U + 0x18U * (n) + 4U * (r))
+#define UP_STREAM	5U
+#define UP_CHANNEL	6U
+#define WORDS		68U
+
+static const AthrillDeviceModelOps *tim = &athrill_device_stm32_tim_model;
+static const AthrillDeviceModelOps *dma = &athrill_device_stm32_dma_model;
+static const AthrillDeviceModelOps *esc_model = &athrill_device_dshot_esc_model;
+static void *timer;
+static void *dmac;
+static void *esc;
+static const AthrillDeviceDmaProviderOps *provider;
+
+static uint64 now;
+static uint32 ram[160U];
+static uint32 psc = 17U;		/* DShot600: 21 counts of 18 clocks */
+
+/* the sink: every actuator_output call */
+static float32 sink_values[256][4];
+static uint32 sink_count[256];
+static uint64 sink_time[256];
+static uint32 sink_calls;
+
+/* the fault model (a test one), when the ESC names it */
+static std_bool use_fault;
+static AthrillDeviceEscFaultAction fault_action;
+static uint32 fault_calls;
+static AthrillDeviceEscCommand fault_seen[64];
+static uint32 fault_motor[64];
+
+static uint32 timeout_us;		/* 0: the default */
+
+static uint32 tim_base = TIM1_BASE;
+static uint32 dma_base = DMA2_BASE;
+
+/* ---- the fake bus ---- */
+static sint32 memory_read(void *t, uint64 address, void *data, uint32 size)
+{
+	(void)t;
+	if (address >= RAM && address + size <= RAM + sizeof(ram)) {
+		memcpy(data, (uint8 *)ram + (address - RAM), size);
+		return 0;
+	}
+	if (address >= TIM1_BASE && address < TIM1_BASE + 0x400U) {
+		uint64 v = 0U;
+		if (tim->mmio->read(timer, address, size, &v) != 0) {
+			return -1;
+		}
+		memcpy(data, &v, size);
+		return 0;
+	}
+	return -1;
+}
+static sint32 memory_write(void *t, uint64 address, const void *data, uint32 size)
+{
+	uint32 v = 0U;
+	(void)t;
+	memcpy(&v, data, size);
+	if (address >= RAM && address + size <= RAM + sizeof(ram)) {
+		memcpy((uint8 *)ram + (address - RAM), data, size);
+		return 0;
+	}
+	if (address >= TIM1_BASE && address < TIM1_BASE + 0x400U) {
+		return tim->mmio->write(timer, address, size, v);
+	}
+	return -1;
+}
+static uint64 time_now(void *t) { (void)t; return now; }
+static uint64 time_frequency_hz(void *t) { (void)t; return CPU_HZ; }
+static sint32 irq_set(void *t, AthrillDeviceIrqLine l, std_bool on)
+{
+	(void)t; (void)l; (void)on;
+	return 0;
+}
+static std_bool irq_is_active(void *t, AthrillDeviceIrqLine l)
+{
+	(void)t; (void)l;
+	return FALSE;
+}
+
+/* ---- nodes ---- */
+static sint32 get_u32(void *c, const char *name, uint32 index, uint32 *value)
+{
+	if (c == &esc) {
+		if (strcmp(name, "athrill,signal-timeout-us") == 0 && timeout_us != 0U) {
+			*value = timeout_us;
+			return 0;
+		}
+		return -1;
+	}
+	if (strcmp(name, "reg") != 0 || index > 1U) {
+		return -1;
+	}
+	*value = (index == 0U) ? *(const uint32 *)c : 0x400U;
+	return 0;
+}
+static const uint32 one_cell = 1U;
+static sint32 get_property(void *c, const char *name, const void **value, uint32 *size)
+{
+	if (c == &esc && strcmp(name, "value-source") == 0) {
+		*value = &one_cell;
+		*size = sizeof(uint32);
+		return 0;
+	}
+	return -1;
+}
+static sint32 get_interrupt(void *c, const char *name, uint32 index, AthrillDeviceIrqLine *l)
+{
+	(void)c; (void)name;
+	memset(l, 0, sizeof(*l));
+	return (index < 8U) ? 0 : -1;
+}
+static sint32 dma_provide(void *c, const AthrillDeviceDmaProviderOps *ops, void *instance)
+{
+	(void)c; (void)instance;
+	provider = ops;
+	return 0;
+}
+static void request_tick(void *c) { (void)c; }
+static sint32 timer_dma_request(void *c, const char *name, std_bool asserted)
+{
+	AthrillDeviceDmaRequestLine l;
+	(void)c;
+	if (strcmp(name, "up") != 0) {
+		return -1;
+	}
+	memset(&l, 0, sizeof(l));
+	l.cell_count = 4U;
+	l.cells[0] = UP_STREAM;
+	l.cells[1] = UP_CHANNEL;
+	return provider->request(dmac, &l, asserted);
+}
+
+/* the ESC's resources: pwms = TIM1 CH1..CH4, the sink, the fault model */
+static sint32 get_pwm(void *c, const char *property, uint32 index, AthrillDevicePwmChannel *ch)
+{
+	(void)c;
+	if (strcmp(property, "pwms") != 0 || index >= 4U) {
+		return -1;
+	}
+	ch->ops = tim->pwm;
+	ch->instance = timer;
+	ch->channel = index + 1U;
+	return 0;
+}
+static sint32 sensor_sample(void *i, AthrillDeviceSensorSample *s) { (void)i; (void)s; return -1; }
+static sint32 gps_sample(void *i, AthrillDeviceGpsSample *s) { (void)i; (void)s; return -1; }
+static sint32 actuator_output(void *i, const float32 *values, uint32 count)
+{
+	uint32 k;
+	(void)i;
+	TEST_CHECK(sink_calls < 256U && count <= 4U);
+	for (k = 0U; k < count; k++) {
+		sink_values[sink_calls][k] = values[k];
+	}
+	sink_count[sink_calls] = count;
+	sink_time[sink_calls] = now;
+	sink_calls++;
+	return 0;
+}
+static const AthrillDeviceValueProviderOps sink_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceValueProviderOps), sensor_sample, gps_sample, actuator_output
+};
+static sint32 get_value_source(void *c, const char *property, AthrillDeviceValueSource *src)
+{
+	(void)c;
+	if (strcmp(property, "value-source") != 0) {
+		return -1;
+	}
+	src->ops = &sink_ops;
+	src->instance = NULL;
+	return 0;
+}
+static sint32 fault_command(void *i, uint32 motor, uint64 time, AthrillDeviceEscCommand *cmd,
+	AthrillDeviceEscFaultAction *action)
+{
+	(void)i; (void)time;
+	if (fault_calls < 64U) {
+		fault_seen[fault_calls] = *cmd;
+		fault_motor[fault_calls] = motor;
+	}
+	fault_calls++;
+	*action = fault_action;
+	if (fault_action == ATHRILL_DEVICE_ESC_FAULT_REPLACE) {
+		cmd->value = 48U;	/* the motor stop of the stage 4 goal */
+	}
+	return 0;
+}
+static sint32 fault_telemetry(void *i, uint32 motor, uint64 time, AthrillDeviceEscTelemetry *t,
+	AthrillDeviceEscFaultAction *action)
+{
+	(void)i; (void)motor; (void)time; (void)t;
+	*action = ATHRILL_DEVICE_ESC_FAULT_PASS;
+	return 0;
+}
+static const AthrillDeviceEscFaultOps fault_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceEscFaultOps), fault_command, fault_telemetry
+};
+static sint32 get_esc_fault(void *c, const char *property, const AthrillDeviceEscFaultOps **ops,
+	void **instance)
+{
+	(void)c;
+	if (!use_fault || strcmp(property, "fault-model") != 0) {
+		return -1;
+	}
+	*ops = &fault_ops;
+	*instance = NULL;
+	return 0;
+}
+
+static AthrillDeviceTargetOps target_ops;
+static AthrillDeviceNodeOps node_ops;
+static AthrillDeviceResourceOps tim_resources, dma_resources, esc_resources;
+static AthrillDeviceNode tim_node, dma_node, esc_node;
+
+static void *create(const AthrillDeviceModelOps *m, AthrillDeviceNode *node,
+	AthrillDeviceResourceOps *resources, void *context)
+{
+	AthrillDeviceCreateArgs args;
+	AthrillDeviceConnectArgs connect;
+	void *instance = NULL;
+	memset(&args, 0, sizeof(args));
+	args.target_ops = &target_ops;
+	args.node = node;
+	memset(&connect, 0, sizeof(connect));
+	connect.resources = resources;
+	connect.context = context;
+	TEST_CHECK(m->create(&args, &instance) == 0);
+	TEST_CHECK(m->connect(instance, &connect) == 0);
+	TEST_CHECK(m->reset(instance) == 0);
+	return instance;
+}
+
+/* every model new (the ESC watches the timer from its connect) */
+static void setup(void)
+{
+	if (esc != NULL) {
+		esc_model->destroy(esc);
+		tim->destroy(timer);
+		dma->destroy(dmac);
+	}
+	memset(&target_ops, 0, sizeof(target_ops));
+	target_ops.abi_major = ATHRILL_DEVICE_ABI_MAJOR;
+	target_ops.struct_size = sizeof(target_ops);
+	target_ops.time_now = time_now;
+	target_ops.time_frequency_hz = time_frequency_hz;
+	target_ops.irq_set = irq_set;
+	target_ops.irq_is_active = irq_is_active;
+	target_ops.memory_read = memory_read;
+	target_ops.memory_write = memory_write;
+	memset(&node_ops, 0, sizeof(node_ops));
+	node_ops.get_u32 = get_u32;
+	node_ops.get_property = get_property;
+	memset(&dma_resources, 0, sizeof(dma_resources));
+	dma_resources.get_interrupt = get_interrupt;
+	dma_resources.dma_provide = dma_provide;
+	memset(&tim_resources, 0, sizeof(tim_resources));
+	tim_resources.struct_size = sizeof(tim_resources);
+	tim_resources.get_interrupt = get_interrupt;
+	tim_resources.request_tick = request_tick;
+	tim_resources.dma_request = timer_dma_request;
+	memset(&esc_resources, 0, sizeof(esc_resources));
+	esc_resources.struct_size = sizeof(esc_resources);
+	esc_resources.get_pwm = get_pwm;
+	esc_resources.get_value_source = get_value_source;
+	esc_resources.get_esc_fault = get_esc_fault;
+	esc_resources.request_tick = request_tick;
+	dma_node.ops = &node_ops;
+	dma_node.path = "/soc/dma@40026400";
+	dma_node.context = &dma_base;
+	tim_node.ops = &node_ops;
+	tim_node.path = "/soc/timers@40010000";
+	tim_node.context = &tim_base;
+	esc_node.ops = &node_ops;
+	esc_node.path = "/dshot-esc";
+	esc_node.context = &esc;
+	now = 0U;
+	sink_calls = 0U;
+	fault_calls = 0U;
+	fault_action = ATHRILL_DEVICE_ESC_FAULT_PASS;
+	memset(ram, 0, sizeof(ram));
+	dmac = create(dma, &dma_node, &dma_resources, &dmac);
+	timer = create(tim, &tim_node, &tim_resources, &timer);
+	esc = create(esc_model, &esc_node, &esc_resources, &esc);
+}
+
+static uint32 trd(uint32 offset)
+{
+	uint64 v = 0U;
+	TEST_CHECK(tim->mmio->read(timer, TIM1_BASE + offset, 4U, &v) == 0);
+	return (uint32)v;
+}
+static void twr(uint32 offset, uint32 value)
+{
+	TEST_CHECK(tim->mmio->write(timer, TIM1_BASE + offset, 4U, value) == 0);
+}
+static uint32 drd(uint32 offset)
+{
+	uint64 v = 0U;
+	TEST_CHECK(dma->mmio->read(dmac, DMA2_BASE + offset, 4U, &v) == 0);
+	return (uint32)v;
+}
+static void dwr(uint32 offset, uint32 value)
+{
+	TEST_CHECK(dma->mmio->write(dmac, DMA2_BASE + offset, 4U, value) == 0);
+}
+
+/* the clock moves to t; the timer, then the ESC (its PWM dependent), are ticked */
+static uint64 tick_at(uint64 t)
+{
+	AthrillDeviceTickResult result;
+	now = t;
+	memset(&result, 0, sizeof(result));
+	TEST_CHECK(tim->tick(timer, now, &result) == 0);
+	memset(&result, 0, sizeof(result));
+	result.next_event_interval = ATHRILL_DEVICE_NO_EVENT;
+	TEST_CHECK(esc_model->tick(esc, now, &result) == 0);
+	return result.next_event_interval;
+}
+
+static void timer_dshot_mode(void)
+{
+	twr(TIM_CCMR1, 0x68U | (0x68U << 8));
+	twr(TIM_CCMR2, 0x68U | (0x68U << 8));
+	twr(TIM_CCER, 0x1111U);
+	twr(TIM_BDTR, 1U << 15);
+	twr(TIM_ARR, 20U);
+	twr(TIM_PSC, psc);
+	twr(TIM_EGR, 1U);
+	twr(TIM_DCR, 13U | (3U << 8));
+	twr(TIM_CR1, 0x81U);
+}
+
+/* dshot_start_timer_burst */
+static void start_burst(uint32 words)
+{
+	dwr(DMA_HIFCR, 0x3DU << 6);
+	dwr(S(UP_STREAM, 2), TIM1_BASE + TIM_DMAR);
+	dwr(S(UP_STREAM, 3), RAM);
+	dwr(S(UP_STREAM, 1), words);
+	dwr(S(UP_STREAM, 0), (UP_CHANNEL << 25) | (2U << 16) | (2U << 13) | (2U << 11) |
+		(1U << 10) | (1U << 6) | (1U << 4));
+	twr(TIM_DIER, trd(TIM_DIER) & ~DIER_UDE);
+	dwr(S(UP_STREAM, 0), drd(S(UP_STREAM, 0)) | 1U);
+	twr(TIM_DIER, trd(TIM_DIER) | DIER_UDE);
+}
+
+/* PX4's dshot_motor_data_set: value, telemetry bit, CRC, then the words */
+static uint16 packet(uint16 value, std_bool telemetry)
+{
+	uint16 data = (uint16)((value << 1) | (telemetry ? 1U : 0U));
+	uint16 crc = (uint16)((data ^ (data >> 4) ^ (data >> 8)) & 0xFU);
+	return (uint16)((data << 4) | crc);
+}
+static void fill(const uint16 values[4], std_bool telemetry)
+{
+	uint32 m, b;
+	for (m = 0U; m < 4U; m++) {
+		uint16 p = packet(values[m], telemetry);
+		for (b = 0U; b < 16U; b++) {
+			ram[4U * b + m] = ((p >> (15U - b)) & 1U) ? 14U : 7U;
+		}
+		ram[64U + m] = 0U;
+	}
+}
+
+/* one frame: fill, start, run every update (or one late tick) to its end */
+static uint64 frame(const uint16 values[4], std_bool late)
+{
+	uint64 start, clocks = 21U * ((uint64)psc + 1U);
+	fill(values, FALSE);
+	start_burst(WORDS);
+	start = now + clocks;
+	if (late) {
+		(void)tick_at(start + 20U * clocks);
+	} else {
+		uint32 u;
+		for (u = 0U; u <= 20U; u++) {
+			(void)tick_at(start + (uint64)u * clocks);
+		}
+	}
+	return now;
+}
+
+static float32 throttle(uint16 value)
+{
+	return (value < 48U) ? 0.0F : (float32)(value - 48U) / 1999.0F;
+}
+
+static void expect_last(const uint16 values[4])
+{
+	uint32 k;
+	TEST_CHECK(sink_calls > 0U && sink_count[sink_calls - 1U] == 4U);
+	for (k = 0U; k < 4U; k++) {
+		TEST_CHECK(sink_values[sink_calls - 1U][k] == throttle(values[k]));
+	}
+}
+
+/* [ADV-ESC-001.T1] one PX4 frame: every motor's value reaches the sink as
+ * its throttle (0, 1..47 as 0, 48..2047 as 0..1), ticked fine or late. */
+static void test_frame_values(void)
+{
+	static const uint16 v[4] = { 1000U, 48U, 2047U, 0U };
+	static const uint16 w[4] = { 1500U, 1500U, 5U, 2047U };
+	std_bool late;
+	for (late = FALSE; late <= TRUE; late++) {
+		setup();
+		timer_dshot_mode();
+		(void)tick_at(1000U);
+		(void)frame(v, late);
+		expect_last(v);
+		(void)tick_at(now + 5000U);
+		(void)frame(w, late);
+		expect_last(w);
+	}
+}
+
+/* [ADV-ESC-001.T2] the same frame again changes nothing: no sink call. */
+static void test_same_frame(void)
+{
+	static const uint16 v[4] = { 700U, 700U, 700U, 700U };
+	uint32 calls;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	calls = sink_calls;
+	(void)tick_at(now + 5000U);
+	(void)frame(v, FALSE);
+	TEST_CHECK(sink_calls == calls);
+	expect_last(v);
+}
+
+/* [ADV-ESC-002.T1] a bad CRC on one motor: that motor keeps its value,
+ * the others take theirs; the fault hook sees the frame as invalid. */
+static void test_bad_crc(void)
+{
+	static const uint16 v[4] = { 300U, 300U, 300U, 300U };
+	static const uint16 w[4] = { 900U, 900U, 900U, 900U };
+	setup();
+	use_fault = TRUE;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	fill(w, FALSE);
+	ram[4U * 15U + 1U] = (ram[4U * 15U + 1U] == 14U) ? 7U : 14U;	/* motor 1, last CRC bit */
+	start_burst(WORDS);
+	(void)tick_at(now + 30U * 378U);
+	TEST_CHECK(sink_values[sink_calls - 1U][0] == throttle(900U));
+	TEST_CHECK(sink_values[sink_calls - 1U][1] == throttle(300U));
+	TEST_CHECK(sink_values[sink_calls - 1U][2] == throttle(900U));
+	TEST_CHECK(fault_calls == 8U);
+	TEST_CHECK(fault_motor[5] == 1U && !fault_seen[5].valid);
+	TEST_CHECK(fault_seen[4].valid && fault_seen[4].value == 900U);
+	use_fault = FALSE;
+}
+
+/* [ADV-ESC-002.T2] bit periods: DShot300 is taken; a 2.5 us bit (no DShot
+ * rate) and pulses of 47.6 % (between 0 and 1) are not. */
+static void test_rates_and_widths(void)
+{
+	static const uint16 v[4] = { 1200U, 1200U, 1200U, 1200U };
+	uint32 m;
+	psc = 35U;					/* 3.5 us: DShot300 */
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	expect_last(v);
+	psc = 25U;					/* 26 x 21 / 216 MHz = 2.53 us */
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	TEST_CHECK(sink_calls == 0U);
+	psc = 17U;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	fill(v, FALSE);
+	for (m = 0U; m < 16U; m++) {
+		if (ram[4U * m] == 7U) {
+			/* motor 0: a 0 bit sent 10 / 21 high, neither 0 nor 1 (read as
+			 * a 0 it would keep the CRC) */
+			ram[4U * m] = 10U;
+			break;
+		}
+	}
+	start_burst(WORDS);
+	(void)tick_at(now + 30U * 378U);
+	TEST_CHECK(sink_calls == 3U);			/* motors 1-3, one call each */
+	TEST_CHECK(sink_values[2][0] == 0.0F && sink_values[2][1] == throttle(1200U) &&
+		sink_values[2][3] == throttle(1200U));
+}
+
+/* [ADV-ESC-002.T3] a frame cut short (10 bits, then the end word) changes nothing. */
+static void test_short_frame(void)
+{
+	static const uint16 v[4] = { 1800U, 1800U, 1800U, 1800U };
+	setup();
+	use_fault = TRUE;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	fill(v, FALSE);
+	ram[40] = 0U; ram[41] = 0U; ram[42] = 0U; ram[43] = 0U;	/* 10 bits, then idle */
+	start_burst(44U);
+	(void)tick_at(now + 30U * 378U);
+	TEST_CHECK(sink_calls == 0U);
+	TEST_CHECK(fault_calls == 4U && !fault_seen[0].valid);
+	use_fault = FALSE;
+}
+
+/* [ADV-ESC-002.T4] a frame right after another, with no idle between:
+ * the first is taken, the second is invalid. */
+static void test_no_gap(void)
+{
+	static const uint16 v[4] = { 500U, 500U, 500U, 500U };
+	static const uint16 w[4] = { 1500U, 1500U, 1500U, 1500U };
+	uint32 i;
+	setup();
+	use_fault = TRUE;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	{
+		uint32 second[64];
+		fill(w, FALSE);
+		memcpy(second, ram, sizeof(second));	/* the second frame: w */
+		fill(v, FALSE);				/* the first: v */
+		for (i = 0U; i < 64U; i++) {
+			ram[64U + i] = second[i];	/* right after it, no end word */
+		}
+	}
+	ram[128] = 0U; ram[129] = 0U; ram[130] = 0U; ram[131] = 0U;
+	start_burst(132U);
+	(void)tick_at(now + 40U * 378U);
+	expect_last(v);
+	TEST_CHECK(fault_calls == 8U && fault_seen[0].valid && !fault_seen[4].valid);
+	use_fault = FALSE;
+}
+
+/* [ADV-ESC-003.T1] the fault hook: drop keeps the motor as it was, replace
+ * with value 48 stops its thrust; the hook sees each motor's frame. */
+static void test_fault_hook(void)
+{
+	static const uint16 v[4] = { 1000U, 1000U, 1000U, 1000U };
+	static const uint16 w[4] = { 1600U, 1600U, 1600U, 1600U };
+	setup();
+	use_fault = TRUE;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	expect_last(v);
+	TEST_CHECK(fault_calls == 4U && fault_seen[2].value == 1000U && fault_motor[2] == 2U);
+	fault_action = ATHRILL_DEVICE_ESC_FAULT_DROP;
+	(void)tick_at(now + 5000U);
+	(void)frame(w, FALSE);
+	expect_last(v);
+	fault_action = ATHRILL_DEVICE_ESC_FAULT_REPLACE;
+	(void)tick_at(now + 5000U);
+	(void)frame(w, FALSE);
+	TEST_CHECK(sink_values[sink_calls - 1U][0] == 0.0F && sink_values[sink_calls - 1U][3] == 0.0F);
+	use_fault = FALSE;
+}
+
+/* [ADV-ESC-004.T1] signal loss: a running motor stops when no valid frame
+ * came for the timeout (1 ms here), not before; frames keep it running. */
+static void test_signal_loss(void)
+{
+	static const uint16 v[4] = { 1000U, 0U, 1000U, 1000U };
+	uint64 last, interval;
+	timeout_us = 1000U;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	last = frame(v, FALSE);
+	expect_last(v);
+	interval = tick_at(last + 100U);
+	TEST_CHECK(interval != ATHRILL_DEVICE_NO_EVENT && interval <= 216000U);
+	(void)tick_at(now + interval - 1U);
+	TEST_CHECK(sink_values[sink_calls - 1U][0] == throttle(1000U));
+	(void)tick_at(now + 1U);
+	TEST_CHECK(sink_values[sink_calls - 1U][0] == 0.0F && sink_values[sink_calls - 1U][2] == 0.0F);
+	TEST_CHECK(tick_at(now + 1U) == ATHRILL_DEVICE_NO_EVENT);	/* all stopped */
+	/* frames every 0.5 ms keep it running */
+	(void)frame(v, FALSE);
+	{
+		uint32 i;
+		for (i = 0U; i < 10U; i++) {
+			(void)tick_at(now + 108000U);
+			(void)frame(v, FALSE);
+		}
+	}
+	expect_last(v);
+	timeout_us = 0U;
+}
+
+int main(void)
+{
+	test_frame_values();
+	test_same_frame();
+	test_bad_crc();
+	test_rates_and_widths();
+	test_short_frame();
+	test_no_gap();
+	test_fault_hook();
+	test_signal_loss();
+	printf("dshot esc: all checks passed\n");
+	return 0;
+}

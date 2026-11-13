@@ -96,6 +96,9 @@ struct NodeRecord {
 	/* ABI 1.15: the SD card operations a card model offers */
 	const void *sd_card_ops;
 	void *sd_card_instance;
+	/* ABI 1.20: the ESC fault operations a fault model offers */
+	const AthrillDeviceEscFaultOps *esc_fault_ops;
+	void *esc_fault_instance;
 	std_bool uart_bound;
 };
 
@@ -461,6 +464,8 @@ static const char *const ublox_m8_compatibles[] = { "u-blox,m8" };
 static const char *const sdcard_compatibles[] = { "zephyr,sdmmc-disk" };
 static const char *const pwm_actuator_compatibles[] = { "athrill,pwm-actuator-map" };
 static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-source" };
+static const char *const esc_fault_bypass_compatibles[] = { "athrill,esc-fault-bypass" };
+static const char *const dshot_esc_compatibles[] = { "athrill,dshot-esc" };
 static const char *const stm32h7_spi_compatibles[] = { "st,stm32h7-spi" };
 static const char *const stm32h7_dmamux_compatibles[] = { "st,stm32-dmamux" };
 static const char *const bmi055_accel_compatibles[] = { "bosch,bma280" };
@@ -499,6 +504,8 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ sdcard_compatibles, 1U, &athrill_device_sdcard_model },
 	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
 	{ bench_sensor_compatibles, 1U, &athrill_device_bench_sensor_model },
+	{ esc_fault_bypass_compatibles, 1U, &athrill_device_esc_fault_bypass_model },
+	{ dshot_esc_compatibles, 1U, &athrill_device_dshot_esc_model },
 	{ stm32h7_spi_compatibles, 1U, &athrill_device_stm32h7_spi_model },
 	{ stm32h7_dmamux_compatibles, 1U, &athrill_device_stm32_dmamux_model },
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
@@ -1746,6 +1753,50 @@ static sint32 resource_get_sd_card(void *context, const void **ops, void **insta
 	return -1;
 }
 
+/* ABI 1.20: a fault model offers its operations (once, from connect). */
+static sint32 resource_esc_fault_provide(void *context,
+	const AthrillDeviceEscFaultOps *ops, void *instance)
+{
+	NodeRecord *node = context;
+	if (ops == NULL || node->esc_fault_ops != NULL ||
+	    !abi_header_ok(ops->abi_major, ops->abi_minor, ops->struct_size,
+	                   sizeof(AthrillDeviceEscFaultOps)) ||
+	    ops->command == NULL || ops->telemetry == NULL) {
+		return -1;
+	}
+	node->esc_fault_ops = ops;
+	node->esc_fault_instance = instance;
+	fprintf(stderr, "DEVICE_ESC_FAULT provider=%s\n", node->path);
+	return 0;
+}
+
+/* ABI 1.20: for an ESC, the fault model its phandle property names. */
+static sint32 resource_get_esc_fault(void *context, const char *property,
+	const AthrillDeviceEscFaultOps **ops, void **instance)
+{
+	NodeRecord *node = context;
+	const fdt32_t *cell;
+	NodeRecord *provider;
+	int length;
+	int provider_index;
+	if (property == NULL || ops == NULL || instance == NULL) {
+		return -1;
+	}
+	cell = fdt_getprop(node->runtime->dtb, node->offset, property, &length);
+	if (cell == NULL || length != 4 ||
+	    (provider_index = node_index_by_phandle(node->runtime,
+		fdt32_to_cpu(*cell))) < 0) {
+		return -1;
+	}
+	provider = &node->runtime->nodes[provider_index];
+	if (!provider->enabled || provider->esc_fault_ops == NULL) {
+		return -1;
+	}
+	*ops = provider->esc_fault_ops;
+	*instance = provider->esc_fault_instance;
+	return 0;
+}
+
 /* [ADV-UART-002] expose only enabled children bound to this controller */
 static sint32 resource_get_uart_child(void *context, uint32 index,
 	AthrillDeviceUartEndpoint *endpoint)
@@ -1823,7 +1874,7 @@ static const AthrillDeviceResourceOps resource_ops = {
 	resource_dma_request, resource_get_dma_master, resource_sd_card_provide,
 	resource_get_sd_card, resource_gpio_resolve, resource_gpio_drive,
 	resource_gpio_read, resource_gpio_subscribe, resource_console_listen,
-	resource_request_tick
+	resource_request_tick, resource_esc_fault_provide, resource_get_esc_fault
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,
@@ -1955,7 +2006,8 @@ static int build_dependencies(AthrillDeviceRuntime *runtime)
 			if (add_spec_dependencies(runtime, node, specs[j].property, specs[j].cells) != 0) {
 				return -1;
 			}
-		if (add_phandle_dependency(runtime, node, "value-source") != 0) {
+		if (add_phandle_dependency(runtime, node, "value-source") != 0 ||
+		    add_phandle_dependency(runtime, node, "fault-model") != 0) {
 			return -1;
 		}
 		{

@@ -27,7 +27,7 @@ PROPERTY_NAMES = [
     "athrill,test-uart-child", "status", "size",
     "int-gpios", "axis-align-x", "pwms", "pwm-names",
     "athrill,stm32h7-timer", "dma-channels", "dma-masters", "dma-requests",
-    "value-source",
+    "value-source", "fault-model",
 ]
 STRING_BLOCK = strings(*PROPERTY_NAMES)
 STRING_OFFSETS: dict[str, int] = {}
@@ -302,6 +302,34 @@ def main() -> None:
             ("dma-names", strings("up")),
         ], []),
     ])
+    # tests/test_esc_fault.c: the ABI 1.20 ESC fault entry point. The
+    # consumer (an ESC stand-in) comes first in each tree, so only the
+    # fault-model dependency connects its fault model before it.
+    def esc_consumer(fault: int | None, address: int = 0x6000,
+                     phandle: int | None = None) -> bytes:
+        extra = []
+        if fault is not None:
+            extra.append(("fault-model", be32(fault)))
+        if phandle is not None:
+            extra.append(("phandle", be32(phandle)))
+        return device(f"esc@{address:x}", address, 0x100,
+                      compatible="athrill,test-esc-consumer", extra=extra)
+    esc_fault_bypass = board([
+        esc_consumer(5),
+        node("esc-fault", [("compatible", strings("athrill,esc-fault-bypass")),
+                           ("phandle", be32(5))], []),
+    ])
+    esc_fault_none = board([esc_consumer(None)])
+    esc_fault_plugin = board([
+        esc_consumer(6),
+        device("fault@6100", 0x6100, 0x100, compatible="athrill,test-esc-fault",
+               extra=[("phandle", be32(6))]),
+    ])
+    esc_fault_missing = board([esc_consumer(9)])
+    esc_fault_not_fault = board([
+        esc_consumer(7),
+        esc_consumer(None, 0x6100, 7),
+    ])
     tick_skip_contract = board([
         device("tick-contract@6000", 0x6000, 0x100,
                compatible="athrill,test-tick-contract"),
@@ -349,6 +377,11 @@ def main() -> None:
         "tick-skip-contract.dtb": tick_skip_contract,
         "tick-skip-pwm.dtb": tick_skip_pwm,
         "tick-skip-dshot.dtb": tick_skip_dshot,
+        "esc-fault-bypass.dtb": esc_fault_bypass,
+        "esc-fault-none.dtb": esc_fault_none,
+        "esc-fault-plugin.dtb": esc_fault_plugin,
+        "esc-fault-missing.dtb": esc_fault_missing,
+        "esc-fault-not-fault.dtb": esc_fault_not_fault,
         "overlap.dtb": board([clock("clock", 1),
                               device("device@1000", 0x1000, 0x100, 1),
                               device("device@1080", 0x1080, 0x100, 1)]),

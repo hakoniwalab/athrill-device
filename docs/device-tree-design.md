@@ -646,6 +646,27 @@ uses `memory_read` and `memory_write` for guest RAM and named bus endpoints
 for peripheral transfers. It never dereferences guest memory or calls the
 Athrill bus directly.
 
+`athrill,dshot-esc` is a DShot ESC for the motors on its `pwms` channels,
+in `pwms` order. It watches every PWM period of each channel (ABI 1.20
+`watch`), decodes each motor's 16-bit frame, and checks it as a receiving
+ESC does: the bit rate, the 0/1 high times, 16 bits before idle, and the
+CRC. It gives each motor's throttle (0..47 none, 48..2047 as 0..1) to its
+`value-source` sink. With no valid frame for `athrill,signal-timeout-us`
+(default 100000), a running motor stops. The host value
+`DEVICE_CONFIG_DSHOT_ESC_FILE` traces every frame.
+
+An ESC model takes its fault-injection entry point from a `fault-model`
+phandle (ABI 1.20, `AthrillDeviceEscFaultOps`). The loader orders the named
+node before the ESC. That node offers its operations from `connect`
+(`esc_fault_provide`), and the ESC takes them with `get_esc_fault`. Its
+`command` hook sees every received frame, valid or not, before the value
+reaches the motor. Its `telemetry` hook sees every telemetry answer before it
+is sent. Each hook passes, drops or replaces what it is given. With no
+`fault-model`, the ESC passes everything. `athrill,esc-fault-bypass` is the
+same pass-through as a node, and it is also the template of a fault model.
+An edge that names a missing node is an error. An edge that names a node
+that offers no fault operations gives none.
+
 Clocks and resets are structural connections. The first implementation may
 model only the rates and reset effects required by the two boards, but it
 must reject an enabled consumer whose required clock cannot be resolved.

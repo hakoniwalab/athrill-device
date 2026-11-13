@@ -7,6 +7,7 @@
 |---|---|---|---|---|
 | ADV-PWM-001 | Each actuator output of the pwm-actuator map is taken from the timer channel at the same index in pwms. | generated | pwm-map | Devicetree Specification v0.4; Zephyr pwms binding; RM0410 Rev 5 section 26.3.9; RM0433 Rev 8 section 39.3.9 (PWM mode) |
 | ADV-PWM-002 | In edge-aligned PWM mode 1 a channel's high time is CCR x (PSC+1) / timer clock and its period (ARR+1) x (PSC+1) / timer clock, with the timer clock of the board's MCU. | unit | pwm-timer | none; RM0410 Rev 5 section 26.3.9 and section 5.2 (timer clocks); RM0433 Rev 8 sections 39.3.9 and 8.5 (timer clocks) |
+| ADV-PWM-003 | A PWM provider reports every period of a watched channel to its listener, in period order, with the period's high time and length and the clock at which it started (the update event that loads the period's shadow values), also when it catches up late; consecutive identical periods may come as one run with their count. UG starts a period unless UDIS is set. | unit | pwm-timer | none; RM0410 Rev 5 sections 25.3.1 (time-base unit, update event, preload) and 26.3.9 (PWM mode); 25.4.1 (UDIS, UG) |
 
 ## Test specifications
 
@@ -14,3 +15,6 @@
 |---|---|---|
 | ADV-PWM-001.T1 | Build the board and list the actuator map. | Index i maps to the timer and channel of pwms entry i decoded independently from the DTB. |
 | ADV-PWM-002.T1 | Program PSC, ARR and CCR for 1000, 1500 and 2000 us on F765 and H743 clock settings. | Measured pulse widths equal the programmed ones. |
+| ADV-PWM-003.T1 | PX4's DShot600 frame on TIM1 (DMA bursts), listeners on CH1-4, ticked at every update and once at the end. | Idle, the 16 bits (7 or 14 counts high), the end word, idle, each at its update clock; the same both ways. |
+| ADV-PWM-003.T2 | A steady channel without DMA over 1000 updates in one tick. | At most three calls whose periods add up to 1000, each period's start on the update clocks. |
+| ADV-PWM-003.T3 | UG with the counter stopped, then under UDIS; the listener removed; channels 0 and 5. | One period at UG's clock, none under UDIS, none after removal; the channels refused. |

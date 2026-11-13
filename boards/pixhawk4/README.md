@@ -10,12 +10,17 @@ The base board keeps `/sensor-device` disabled and leaves the chip models on
 the target-provided sensor source.  This is the DTB for self-contained PX4
 SIH and bench runs.  `pixhawk4-hakoniwa.dts` includes the base, enables the
 Hakoniwa node, and adds the `value-source` edges used by Hakoniwa and PIL.
+`pixhawk4-hakoniwa-dshot.dts` includes that and puts motors 1-4 on a DShot ESC
+(`athrill,dshot-esc` on TIM1 CH4..CH1, feeding the Hakoniwa sink) in place of
+the PWM actuator map. PX4 v1.17.0 drives them with DShot600 when
+`PWM_AUX_TIM0` is -3.
 
 The checked-in blobs have SHA-256:
 
 ```text
 cd3a21918920144f266486817916342f5f841f551bbfde0e9576f5a95f28b412  pixhawk4.dtb
 60c9e2dd35d89b919c39a1bb169ce1ab15929c6e52b1be439f959a653ea28fe0  pixhawk4-hakoniwa.dtb
+2e4339138d39ccc64fb5a5844221f80e4da40c1fe715022a374715efd6c3391f  pixhawk4-hakoniwa-dshot.dtb
 ```
 
 It was made with GNU cpp and dtc 1.7.x from a Linux container (Ubuntu
@@ -43,6 +48,14 @@ dtc -I dts -O dtb -o "$ROOT/boards/pixhawk4/pixhawk4.dtb" \
   "$ROOT/build/pixhawk4.pre.dts"
 dtc -I dts -O dtb -o "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa.dtb" \
   "$ROOT/build/pixhawk4-hakoniwa.pre.dts"
+cpp -nostdinc -undef -x assembler-with-cpp \
+  -I "$ZEPHYR/dts" -I "$ZEPHYR/dts/arm" -I "$ZEPHYR/dts/common" \
+  -I "$ZEPHYR/include" \
+  -I "$ROOT/boards/pixhawk4" \
+  "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa-dshot.dts" \
+  "$ROOT/build/pixhawk4-hakoniwa-dshot.pre.dts"
+dtc -I dts -O dtb -o "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa-dshot.dtb" \
+  "$ROOT/build/pixhawk4-hakoniwa-dshot.pre.dts"
 ```
 
 The Zephyr include remains an external build input; it is not copied into
