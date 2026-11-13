@@ -63,8 +63,22 @@ typedef struct {
 	std_bool asserted;
 } DmaEvent;
 
+/* a bus access a DMA model made through the target (address >= RAM_END: MMIO) */
+typedef struct {
+	uint64 time;
+	uint64 address;
+	uint64 value;
+	std_bool write;
+} BusEvent;
+
+#define RAM_BASE 0x20000000U
+#define RAM_WORDS 256U
+
 typedef struct {
 	Window windows[MAX_WINDOWS];
+	uint32 ram[RAM_WORDS];
+	BusEvent bus[MAX_EVENTS];
+	uint32 bus_count;
 	uint32 window_count;
 	uint64 now;
 	std_bool irq_active[128];
@@ -230,6 +244,59 @@ static sint32 dma_request(void *context, AthrillDeviceDmaChannel channel,
 	return 0;
 }
 
+static Window *find_window(Target *target, uint64 address);
+
+static void log_bus(Target *target, uint64 address, uint64 value, std_bool write)
+{
+	BusEvent *event;
+	if (target->bus_count >= MAX_EVENTS) {
+		return;
+	}
+	event = &target->bus[target->bus_count++];
+	memset(event, 0, sizeof(*event));
+	event->time = target->now;
+	event->address = address;
+	event->value = value;
+	event->write = write;
+}
+
+/* the DMA models' bus: RAM, or a model's MMIO window (logged) */
+static sint32 memory_read(void *context, uint64 address, void *data, uint32 size)
+{
+	Target *target = context;
+	Window *window;
+	uint64 value = 0U;
+	if (address >= RAM_BASE && address + size <= RAM_BASE + sizeof(target->ram)) {
+		memcpy(data, (uint8 *)target->ram + (address - RAM_BASE), size);
+		return 0;
+	}
+	window = find_window(target, address);
+	if (window == NULL || window->ops->read(window->instance, address, size, &value) != 0) {
+		return -1;
+	}
+	memcpy(data, &value, size);
+	log_bus(target, address, value, FALSE);
+	return 0;
+}
+
+static sint32 memory_write(void *context, uint64 address, const void *data, uint32 size)
+{
+	Target *target = context;
+	Window *window;
+	uint64 value = 0U;
+	if (address >= RAM_BASE && address + size <= RAM_BASE + sizeof(target->ram)) {
+		memcpy((uint8 *)target->ram + (address - RAM_BASE), data, size);
+		return 0;
+	}
+	memcpy(&value, data, size);
+	window = find_window(target, address);
+	if (window == NULL) {
+		return -1;
+	}
+	log_bus(target, address, value, TRUE);
+	return window->ops->write(window->instance, address, size, value);
+}
+
 static const AthrillDeviceTargetOps target_ops = {
 	.abi_major = ATHRILL_DEVICE_ABI_MAJOR,
 	.abi_minor = ATHRILL_DEVICE_ABI_MINOR,
@@ -243,6 +310,8 @@ static const AthrillDeviceTargetOps target_ops = {
 	.time_frequency_hz = time_frequency_hz,
 	.dma_resolve = dma_resolve,
 	.dma_request = dma_request,
+	.memory_read = memory_read,
+	.memory_write = memory_write,
 	.host_value = host_value,
 	.console_write = console_write,
 	.end_batch = end_batch,
@@ -296,6 +365,10 @@ static void compare_targets(const Pair *pair)
 	}
 	if (a->end_batches != b->end_batches) {
 		fail_mismatch("MMIO read barriers");
+	}
+	if (a->bus_count != b->bus_count ||
+		memcmp(a->bus, b->bus, a->bus_count * sizeof(a->bus[0])) != 0) {
+		fail_mismatch("DMA bus accesses, values or time");
 	}
 }
 
@@ -358,6 +431,7 @@ static void clear_observations(Target *target)
 	target->dma_count = 0U;
 	target->output_count = 0U;
 	target->end_batches = 0U;
+	target->bus_count = 0U;
 	memset(target->irq_active, 0, sizeof(target->irq_active));
 }
 
@@ -657,7 +731,147 @@ static void pwm_preload(void)
 	printf("tick-skip-pwm: preloaded PWM duties reach the actuator map at the same ticks\n");
 }
 
+/*
+ * PX4's DShot600 on TIM1 (ARR 20, PSC 17, DBA CCR1, DBL 3, CCR preload)
+ * served by DMA2 stream 5 channel 6, frame after frame with the ticks at
+ * random times, fine and coarse: the skipping runtime must make the same
+ * DMAR writes at the same times, the same DMA interrupts and register
+ * values as the reference. Between frames (the stream stopped, the request
+ * left raised) the timer is no event: no wakeups wasted.
+ */
+#define D_TIM 0x40010000U
+#define D_DMA 0x40026400U
+#define D_S5(r) (0x10U + 0x18U * 5U + 4U * (r))
+#define D_UPDATE (21U * 18U)
+#define D_WORDS 68U
+
+static void dshot_start(Pair *pair)
+{
+	uint32 dier;
+	pair_write(pair, D_DMA + 0x0CU, 0x3DU << 6);			/* HIFCR stream 5 */
+	pair_write(pair, D_DMA + D_S5(2), D_TIM + 0x4CU);		/* PAR = DMAR */
+	pair_write(pair, D_DMA + D_S5(3), RAM_BASE);
+	pair_write(pair, D_DMA + D_S5(1), D_WORDS);
+	pair_write(pair, D_DMA + D_S5(0), (6U << 25) | (2U << 16) | (2U << 13) | (2U << 11) |
+		(1U << 10) | (1U << 6) | (1U << 4));
+	dier = (uint32)pair_read(pair, D_TIM + TIM_DIER);
+	pair_write(pair, D_TIM + TIM_DIER, dier & ~0x100U);
+	pair_write(pair, D_DMA + D_S5(0), (uint32)pair_read(pair, D_DMA + D_S5(0)) | 1U);
+	pair_write(pair, D_TIM + TIM_DIER, dier | 0x100U);
+}
+
+static uint32 dmar_writes(const Target *target)
+{
+	uint32 i, n = 0U;
+	for (i = 0U; i < target->bus_count; i++) {
+		if (target->bus[i].write && target->bus[i].address == D_TIM + 0x4CU) {
+			n++;
+		}
+	}
+	return n;
+}
+
 static uint64 random_state;
+static uint32 random_u32(void);
+
+static void dshot(void)
+{
+	Pair pair;
+	uint64 now = 0U;
+	uint32 frame, i;
+	const uint64 seed = UINT64_C(0x5d1f00d5e5c0ffee);
+	build_pair_dtb(&pair, "dshot", "tick-skip-dshot.dtb", 2U, FALSE);
+	mismatch_seed = seed;
+	random_state = seed;
+	pair_reset(&pair);
+	pair_tick(&pair, now);
+	pair_write(&pair, D_TIM + TIM_CCMR1, 0x6868U);
+	pair_write(&pair, D_TIM + 0x1CU, 0x6868U);			/* CCMR2 */
+	pair_write(&pair, D_TIM + TIM_CCER, 0x1111U);
+	pair_write(&pair, D_TIM + 0x44U, 1U << 15);			/* BDTR MOE */
+	pair_write(&pair, D_TIM + TIM_ARR, 20U);
+	pair_write(&pair, D_TIM + TIM_PSC, 17U);
+	pair_write(&pair, D_TIM + TIM_EGR, 1U);
+	pair_write(&pair, D_TIM + 0x48U, 13U | (3U << 8));		/* DCR */
+	pair_write(&pair, D_TIM + TIM_CR1, 0x81U);			/* ARPE | CEN */
+	for (frame = 0U; frame < 64U; frame++) {
+		/* fine (1..50), medium (1..400) or coarse (1..3000) tick steps */
+		uint32 spread = (frame % 3U == 0U) ? 50U : ((frame % 3U == 1U) ? 400U : 3000U);
+		uint64 end;
+		mismatch_script = frame;
+		for (i = 0U; i < D_WORDS; i++) {
+			uint32 w = (i < D_WORDS - 4U) ? (((random_u32() & 1U) != 0U) ? 14U : 7U) : 0U;
+			pair.reference_target.ram[i] = w;
+			pair.skipping_target.ram[i] = w;
+		}
+		pair.reference_target.bus_count = 0U;
+		pair.skipping_target.bus_count = 0U;
+		now += 1U + (random_u32() % 700U);
+		pair_tick(&pair, now);
+		dshot_start(&pair);
+		end = now + 20U * D_UPDATE;
+		for (i = 0U; now < end; i++) {
+			uint32 r = random_u32();
+			mismatch_step = i;
+			now += 1U + (r % spread);
+			pair_tick(&pair, now);
+			if ((r >> 24) < 16U) {
+				(void)pair_read(&pair, D_DMA + D_S5(1));	/* NDTR */
+				(void)pair_read(&pair, D_TIM + TIM_CCR1 + 4U * ((r >> 16) & 3U));
+			}
+		}
+		TEST_CHECK(dmar_writes(&pair.reference_target) == D_WORDS);
+		for (i = 0U; i < D_WORDS; i++) {
+			TEST_CHECK(pair.reference_target.bus[i].value == pair.reference_target.ram[i]);
+		}
+		TEST_CHECK(pair_read(&pair, D_DMA + D_S5(1)) == 0U);
+		TEST_CHECK((pair_read(&pair, D_DMA + 0x04U) & (1U << 11)) != 0U);	/* TCIF5 */
+		/* stopped stream, request left raised, no interrupt enabled: no event */
+		pair_tick(&pair, now + 1U);
+		TEST_CHECK(pair.reference_tick.next_event_interval == ATHRILL_DEVICE_NO_EVENT);
+		now += 1U;
+	}
+	/*
+	 * Paced as the core paces a skipping runtime: the next tick at the
+	 * reported event, a DShot frame every millisecond (216000 clocks at
+	 * 216 MHz). The wakeups per frame are the 17 updates that move a
+	 * burst plus the one that leaves the request raised; none after.
+	 */
+	{
+		uint64 frame_start = now + 1U;
+		uint32 wakeups = 0U, max_wakeups = 0U;
+		for (frame = 0U; frame < 100U; frame++) {
+			mismatch_script = 1000U + frame;
+			pair_tick(&pair, frame_start);
+			dshot_start(&pair);
+			wakeups = 0U;
+			for (;;) {
+				uint64 interval;
+				pair_tick(&pair, now = (now < frame_start ? frame_start : now));
+				interval = pair.reference_tick.next_event_interval;
+				if (interval == ATHRILL_DEVICE_NO_EVENT ||
+				    now + interval >= frame_start + 216000U) {
+					break;
+				}
+				now += interval;
+				wakeups++;
+			}
+			TEST_CHECK(pair_read(&pair, D_DMA + D_S5(1)) == 0U);
+			if (wakeups > max_wakeups) {
+				max_wakeups = wakeups;
+			}
+			frame_start += 216000U;
+			now = frame_start - 1U;
+		}
+		printf("tick-skip-dshot: paced, at most %u timer wakeups per 1 ms frame\n", max_wakeups);
+		TEST_CHECK(max_wakeups <= 19U);
+	}
+	mismatch_seed = 0U;
+	athrill_device_destroy(pair.reference);	/* no UART: no output files */
+	athrill_device_destroy(pair.skipping);
+	puts("tick-skip-dshot: 64 frames, seed 0x5d1f00d5e5c0ffee: ok");
+}
+
 static uint32 random_u32(void)
 {
 	random_state ^= random_state >> 12;
@@ -818,6 +1032,8 @@ int main(int argc, char **argv)
 		random_tests();
 	} else if (strcmp(argv[1], "pwm") == 0) {
 		pwm_preload();
+	} else if (strcmp(argv[1], "dshot") == 0) {
+		dshot();
 	} else if (strcmp(argv[1], "contract") == 0 && argc == 3) {
 		contract_tests(argv[2]);
 	} else {
