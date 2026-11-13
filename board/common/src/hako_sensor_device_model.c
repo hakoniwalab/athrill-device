@@ -5,6 +5,9 @@
 
 #ifndef ATHRILL_HAKONIWA_PASSIVE
 #include "hako_sensor_device_link.h"
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+#include "hako_sensor_device_publish.h"
+#endif
 #endif
 
 #include <inttypes.h>
@@ -51,6 +54,14 @@ typedef struct {
 	uint32 pending_motor_count;
 	HakoMotorStatusSample motors[HAKO_MOTOR_STATUS_MAX];
 	uint32 motor_count;
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+	/* the visual state output when Athrill is the Hakoniwa asset */
+	HakoVehiclePoseSample pending_pose;
+	std_bool pending_has_pose;
+	HakoVisualStateOutput visual;
+	std_bool publish;
+	uint32 sequence;
+#endif
 #endif
 } HakoSensorModel;
 
@@ -205,6 +216,9 @@ static void wait_for_sample(HakoSensorModel *model)
 				}
 			}
 			model->pending_motor_count = i;
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+			model->pending_has_pose = hako_sensor_link_read_pose(&model->pending_pose) ? TRUE : FALSE;
+#endif
 			model->has_pending = TRUE;
 		} else {
 			(void)usleep(20);
@@ -279,6 +293,17 @@ static sint32 linked_tick(HakoSensorModel *model, uint64 now,
 				model->pending_gps.time_usec - model->time_offset_usec);
 		}
 		model->last_time_usec = model->pending_sensor.time_usec;
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+		/* the vehicle as it is with this sample, the duty as the motors run */
+		if (model->publish && model->pending_has_pose) {
+			uint32 count = (model->motor_count != 0U) ? model->motor_count : 4U;
+			if (count > HAKO_ACTUATOR_CHANNELS) {
+				count = HAKO_ACTUATOR_CHANNELS;
+			}
+			(void)hako_sensor_publish_visual_state(&model->visual, &model->pending_pose,
+				model->actuator.controls, count, model->sequence++);
+		}
+#endif
 		model->has_pending = FALSE;
 		model->actuator.time_usec = model->last_time_usec;
 		trace_actuator(model, model->last_time_usec - model->time_offset_usec);
@@ -351,6 +376,17 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 				model->linked = hako_sensor_link_initialize(&link);
 			}
 		}
+#endif
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+		/* athrill3 --hakoniwa <asset>: write the visual state to its PDU channel */
+		model->visual.asset_name = host_value(model, "HAKO_SENSOR_DEVICE_PUBLISH_ASSET");
+		model->visual.robot_name = host_value(model, "HAKO_SENSOR_DEVICE_VISUAL_ROBOT");
+		if (model->visual.robot_name == NULL) {
+			model->visual.robot_name = "DroneVisualStatePublisher";
+		}
+		model->visual.channel_id = host_u32(model, "HAKO_SENSOR_DEVICE_VISUAL_CHANNEL", 0U);
+		model->visual.pdu_size = host_u32(model, "HAKO_SENSOR_DEVICE_VISUAL_PDU_SIZE", 32768U);
+		model->publish = (model->visual.asset_name != NULL) ? TRUE : FALSE;
 #endif
 		if (path != NULL && !model->linked) {
 			if (model->trace != NULL) fclose(model->trace);

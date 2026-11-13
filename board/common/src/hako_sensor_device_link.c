@@ -144,3 +144,10 @@ bool hako_sensor_link_read_motor_status(uint32_t index, HakoMotorStatusSample *s
 	(void)status;
 	return false;
 }
+
+/* Nor a pose: the aircraft service publishes it itself. */
+bool hako_sensor_link_read_pose(HakoVehiclePoseSample *pose)
+{
+	(void)pose;
+	return false;
+}

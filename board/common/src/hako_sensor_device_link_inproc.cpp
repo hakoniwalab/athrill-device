@@ -173,6 +173,9 @@ struct InProcessLink {
 	 * and with the sample the device read last (hako_sensor_link_read) */
 	std::vector<HakoMotorStatusSample> worker_motors;
 	std::vector<HakoMotorStatusSample> read_motors;
+	HakoVehiclePoseSample worker_pose{};
+	HakoVehiclePoseSample read_pose{};
+	bool has_pose{false};
 };
 
 std::unique_ptr<InProcessLink> link;
@@ -248,6 +251,25 @@ bool stepUntilSensor(InProcessLink& state, uint64_t last_time_usec)
 		&& sensor.time_usec > last_time_usec;
 }
 
+/* The vehicle's pose now, in Hakoniwa's world frame (as the aircraft
+ * service's pos PDU: NED to ROS, y and z and their angles negated). */
+HakoVehiclePoseSample capturePose(InProcessLink& state)
+{
+	HakoVehiclePoseSample pose{};
+	auto aircraft = state.aircraft_container->getAirCraft(0U);
+	if (aircraft != nullptr) {
+		const auto pos = aircraft->get_drone_dynamics().get_pos();
+		const auto angle = aircraft->get_drone_dynamics().get_angle();
+		pose.x = pos.data.x;
+		pose.y = -pos.data.y;
+		pose.z = -pos.data.z;
+		pose.roll = angle.data.x;
+		pose.pitch = -angle.data.y;
+		pose.yaw = -angle.data.z;
+	}
+	return pose;
+}
+
 /* The aircraft's rotors now, in the thread that steps it. */
 std::vector<HakoMotorStatusSample> captureMotors(InProcessLink& state)
 {
@@ -291,8 +313,10 @@ void runAircraftWorker(InProcessLink *state)
 		lock.unlock();
 		const bool success = stepUntilSensor(*state, last_time_usec);
 		std::vector<HakoMotorStatusSample> motors = captureMotors(*state);
+		const HakoVehiclePoseSample pose = capturePose(*state);
 		lock.lock();
 		state->worker_motors = std::move(motors);
+		state->worker_pose = pose;
 
 		state->worker_pending = false;
 		state->worker_sample_ready = success;
@@ -327,6 +351,8 @@ bool readWorkerSample(
 		hako_sensor_link_decode_gps(&source_gps, gps);
 	}
 	state.read_motors = state.worker_motors;	/* with this sample */
+	state.read_pose = state.worker_pose;
+	state.has_pose = true;
 	state.worker_sample_ready = false;
 	return true;
 }
@@ -421,6 +447,8 @@ extern "C" bool hako_sensor_link_read(
 		return false;
 	}
 	link->read_motors = captureMotors(*link);
+	link->read_pose = capturePose(*link);
+	link->has_pose = true;
 	Hako_HakoHilSensor source_sensor{};
 	Hako_HakoHilGps source_gps{};
 	bool source_has_gps = false;
@@ -467,6 +495,15 @@ extern "C" uint64_t hako_sensor_link_async_sample_period_usec(void)
 
 extern "C" void hako_sensor_link_notify_time(uint64_t)
 {
+}
+
+extern "C" bool hako_sensor_link_read_pose(HakoVehiclePoseSample *pose)
+{
+	if (!link || pose == nullptr || !link->has_pose) {
+		return false;
+	}
+	*pose = link->read_pose;
+	return true;
 }
 
 extern "C" bool hako_sensor_link_read_motor_status(uint32_t index, HakoMotorStatusSample *status)
