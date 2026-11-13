@@ -1,0 +1,30 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Pixhawk 4 with Hakoniwa, motors 1-4 on DShot ESCs.
+ *
+ * PX4 v1.17.0 drives FMU outputs 1-4 (TIM1 CH4..CH1) with DShot when
+ * PWM_AUX_TIM0 is -5/-4/-3 (DShot150/300/600). The ESC decodes each motor's
+ * frame and gives its throttle to the Hakoniwa sink, in place of the PWM
+ * actuator map (both would set every actuator channel of the sink).
+ */
+
+#include "pixhawk4-hakoniwa.dts"
+
+&pwm_actuators {
+	status = "disabled";
+};
+
+/ {
+	dshot_esc: dshot-esc {
+		compatible = "athrill,dshot-esc";
+		/* FMU_CH1..FMU_CH4, the motor order of PWM_AUX_FUNC1..4 */
+		pwms = <&pwm1 4 20000000 0>,
+		       <&pwm1 3 20000000 0>,
+		       <&pwm1 2 20000000 0>,
+		       <&pwm1 1 20000000 0>;
+		pwm-names = "FMU_CH1", "FMU_CH2", "FMU_CH3", "FMU_CH4";
+		value-source = <&hakoniwa_sensor>;
+		athrill,tick-before-value-source;
+	};
+};

@@ -354,7 +354,8 @@ if(BUILD_TESTING)
   target_include_directories(test_pixhawk4_dtb PRIVATE third_party/libfdt)
   target_compile_definitions(test_pixhawk4_dtb PRIVATE
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
-    PIXHAWK4_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4-hakoniwa.dtb")
+    PIXHAWK4_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4-hakoniwa.dtb"
+    PIXHAWK4_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4-hakoniwa-dshot.dtb")
 
   add_executable(test_pixhawk6c_dtb tests/test_pixhawk6c_dtb.c
     third_party/libfdt/libfdt.c)

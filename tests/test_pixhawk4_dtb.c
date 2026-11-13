@@ -170,6 +170,37 @@ int main(void)
 	expect_boolean(blob, "/soc/serial@40011000/gnss",
 		"athrill,tick-before-value-source", 1);
 	free(blob);
+
+	/* DShot: motors 1-4 (TIM1 CH4..CH1, the actuator map's first four) on
+	 * the ESC, which feeds the Hakoniwa sink; the actuator map disabled */
+	blob = read_dtb(PIXHAWK4_HAKONIWA_DSHOT_DTB, &size);
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	sensor = sensor_node(blob, "okay");
+	sensor_phandle = fdt_get_phandle(blob, sensor);
+	{
+		int esc = fdt_path_offset(blob, "/dshot-esc");
+		int map = fdt_path_offset(blob, "/pwm-actuator-map");
+		const fdt32_t *esc_pwms;
+		const fdt32_t *map_pwms;
+		int esc_length, map_length;
+		TEST_CHECK(esc >= 0 && map >= 0);
+		status = fdt_getprop(blob, esc, "compatible", &length);
+		TEST_CHECK(status != NULL && strcmp(status, "athrill,dshot-esc") == 0);
+		status = fdt_getprop(blob, map, "status", &length);
+		TEST_CHECK(status != NULL && strcmp(status, "disabled") == 0);
+		esc_pwms = fdt_getprop(blob, esc, "pwms", &esc_length);
+		map_pwms = fdt_getprop(blob, map, "pwms", &map_length);
+		TEST_CHECK(esc_pwms != NULL && map_pwms != NULL &&
+			esc_length == (int)(4U * 4U * sizeof(fdt32_t)) &&
+			map_length >= esc_length &&
+			memcmp(esc_pwms, map_pwms, (size_t)esc_length) == 0);
+		TEST_CHECK(fdt_getprop(blob, esc, "fault-model", NULL) == NULL);
+	}
+	expect_value_source(blob, "/dshot-esc", sensor_phandle);
+	dma2_phandle = fdt_get_phandle(blob, fdt_path_offset(blob, "/soc/dma@40026400"));
+	expect_dmas(blob, "/soc/timers@40010000", dma2_phandle, tim1_dmas, 1U,
+		tim1_names, sizeof(tim1_names));
+	free(blob);
 	puts("Pixhawk 4 base and Hakoniwa DT wiring is valid");
 	return 0;
 }
