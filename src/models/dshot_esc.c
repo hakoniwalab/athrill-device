@@ -20,6 +20,18 @@
  * With no valid frame for athrill,signal-timeout-us (default 100000) a
  * running motor stops ([ADV-ESC-004]).
  *
+ * KISS telemetry ([ADV-ESC-005]): as a child of a UART (the telemetry
+ * line), a valid frame with the telemetry-request bit is answered with one
+ * 10-byte KISS frame for that motor: temperature (C), voltage (0.01 V,
+ * big-endian), current (0.01 A), consumption (mAh), eRPM / 100, CRC-8
+ * (polynomial 0x07) of the 9 bytes; through the fault-model telemetry
+ * hook first. The values come from a simple motor model: eRPM and current
+ * from the throttle t, eRPM = athrill,telemetry-full-erpm x t (default
+ * 70000), current = athrill,telemetry-full-current-ma x t^2 (default
+ * 30000 mA), voltage athrill,telemetry-voltage-mv (16000), temperature
+ * athrill,telemetry-temperature-c (30), consumption the integral of the
+ * current. Not a UART child: no answer.
+ *
  * Trace: host value DEVICE_CONFIG_DSHOT_ESC_FILE, one line per frame.
  *
  * SPDX-License-Identifier: MIT
@@ -56,6 +68,9 @@ typedef struct {
 	uint32 frames_valid;
 	uint32 frames_invalid;
 	uint32 frames_dropped;
+	/* the telemetry motor model */
+	float32 consumption_mah;
+	uint64 consumption_time;
 } Motor;
 
 typedef struct DshotEsc {
@@ -71,6 +86,13 @@ typedef struct DshotEsc {
 	uint64 timeout_clocks;
 	float32 commands[MAX_MOTORS];
 	FILE *trace;
+	/* KISS telemetry: the UART line and the motor model */
+	const AthrillDeviceResourceOps *resources;
+	void *resource_context;
+	float32 full_erpm;
+	float32 full_current_a;
+	float32 voltage_v;
+	float32 temperature_c;
 } DshotEsc;
 
 /* [ADV-ESC-002] DShot150/300/600/1200: bit times 20/3, 10/3, 5/3, 5/6 us */
@@ -142,6 +164,98 @@ static void set_command(DshotEsc *esc, Motor *m, float32 command)
 	}
 }
 
+/* [ADV-ESC-005] the consumption up to time, at the motor's present current */
+static void integrate(DshotEsc *esc, Motor *m, uint64 time)
+{
+	if (time > m->consumption_time) {
+		float32 seconds = (float32)(time - m->consumption_time) / (float32)esc->frequency;
+		float32 amps = esc->full_current_a * m->command * m->command;
+
+		m->consumption_mah += amps * seconds / 3.6F;
+	}
+	m->consumption_time = time;
+}
+
+/* [ADV-ESC-005] the KISS telemetry CRC: CRC-8, polynomial 0x07, initial 0 */
+static uint8 kiss_crc8(const uint8 *data, uint32 length)
+{
+	uint8 crc = 0U;
+	uint32 i, b;
+
+	for (i = 0U; i < length; i++) {
+		crc ^= data[i];
+		for (b = 0U; b < 8U; b++) {
+			crc = (uint8)(((crc & 0x80U) != 0U) ? ((crc << 1) ^ 0x07U) : (crc << 1));
+		}
+	}
+	return crc;
+}
+
+static uint16 clamp16(float32 value)
+{
+	if (!(value > 0.0F)) {
+		return 0U;
+	}
+	return (value >= 65535.0F) ? 65535U : (uint16)(value + 0.5F);
+}
+
+/* [ADV-ESC-005] one 10-byte KISS frame */
+static void kiss_frame(const AthrillDeviceEscTelemetry *tel, uint8 out[10])
+{
+	uint16 voltage = clamp16(tel->voltage_v * 100.0F);
+	uint16 current = clamp16(tel->current_a * 100.0F);
+	uint16 consumption = clamp16(tel->consumption_mah);
+	uint16 erpm = clamp16(tel->erpm / 100.0F);
+	float32 t = tel->temperature_c;
+
+	out[0] = (t <= 0.0F) ? 0U : ((t >= 255.0F) ? 255U : (uint8)(t + 0.5F));
+	out[1] = (uint8)(voltage >> 8);
+	out[2] = (uint8)voltage;
+	out[3] = (uint8)(current >> 8);
+	out[4] = (uint8)current;
+	out[5] = (uint8)(consumption >> 8);
+	out[6] = (uint8)consumption;
+	out[7] = (uint8)(erpm >> 8);
+	out[8] = (uint8)erpm;
+	out[9] = kiss_crc8(out, 9U);
+}
+
+/* [ADV-ESC-005] answer a telemetry request: the model, the fault hook, the line */
+static void telemetry(DshotEsc *esc, Motor *m, uint64 time)
+{
+	AthrillDeviceEscTelemetry tel;
+	AthrillDeviceEscFaultAction action = ATHRILL_DEVICE_ESC_FAULT_PASS;
+	uint8 frame[10];
+	uint32 i;
+
+	if ((esc->resources == NULL) || (esc->resources->uart_send == NULL)) {
+		return;
+	}
+	integrate(esc, m, time);
+	tel.temperature_c = esc->temperature_c;
+	tel.voltage_v = esc->voltage_v;
+	tel.current_a = esc->full_current_a * m->command * m->command;
+	tel.consumption_mah = m->consumption_mah;
+	tel.erpm = esc->full_erpm * m->command;
+	if ((esc->fault != NULL) &&
+	    (esc->fault->telemetry(esc->fault_instance, m->index, time, &tel, &action) != 0)) {
+		action = ATHRILL_DEVICE_ESC_FAULT_DROP;
+	}
+	if (esc->trace != NULL) {
+		fprintf(esc->trace, "time=%llu motor=%u telemetry action=%u current_a=%.3f erpm=%.0f\n",
+			(unsigned long long)time, m->index, (uint32)action, tel.current_a, tel.erpm);
+	}
+	if (action == ATHRILL_DEVICE_ESC_FAULT_DROP) {
+		return;
+	}
+	kiss_frame(&tel, frame);
+	for (i = 0U; i < sizeof(frame); i++) {
+		if (esc->resources->uart_send(esc->resource_context, frame[i]) != 0) {
+			return;	/* not on a telemetry line */
+		}
+	}
+}
+
 /* [ADV-ESC-003] a frame, valid or not, through the fault model to the motor */
 static void frame_done(DshotEsc *esc, Motor *m, uint64 time, uint16 bits, std_bool valid)
 {
@@ -171,7 +285,11 @@ static void frame_done(DshotEsc *esc, Motor *m, uint64 time, uint16 bits, std_bo
 	}
 	m->frames_valid++;
 	m->last_valid = time;
+	integrate(esc, m, time);
 	set_command(esc, m, command_of(cmd.value));
+	if (cmd.telemetry_request) {
+		telemetry(esc, m, time);
+	}
 }
 
 static void start_frame(Motor *m, uint64 period, std_bool broken)
@@ -253,6 +371,21 @@ static sint32 esc_create(const AthrillDeviceCreateArgs *args, void **instance)
 	esc->node = args->node;
 	(void)args->node->ops->get_u32(args->node->context, "athrill,signal-timeout-us", 0U,
 		&timeout_us);
+	{
+		uint32 erpm = 70000U, current_ma = 30000U, voltage_mv = 16000U, temperature = 30U;
+
+		(void)args->node->ops->get_u32(args->node->context, "athrill,telemetry-full-erpm", 0U, &erpm);
+		(void)args->node->ops->get_u32(args->node->context, "athrill,telemetry-full-current-ma", 0U,
+			&current_ma);
+		(void)args->node->ops->get_u32(args->node->context, "athrill,telemetry-voltage-mv", 0U,
+			&voltage_mv);
+		(void)args->node->ops->get_u32(args->node->context, "athrill,telemetry-temperature-c", 0U,
+			&temperature);
+		esc->full_erpm = (float32)erpm;
+		esc->full_current_a = (float32)current_ma / 1000.0F;
+		esc->voltage_v = (float32)voltage_mv / 1000.0F;
+		esc->temperature_c = (float32)temperature;
+	}
 	esc->timeout_clocks = (uint64)timeout_us * (esc->frequency / 1000000U);
 	if (args->target_ops->host_value != NULL &&
 	    args->target_ops->host_value(args->target, "DEVICE_CONFIG_DSHOT_ESC_FILE",
@@ -301,6 +434,8 @@ static sint32 esc_connect(void *instance, const AthrillDeviceConnectArgs *args)
 		m->index = index;
 	}
 	esc->motor_count = index;
+	esc->resources = r;
+	esc->resource_context = args->context;
 	if (r->get_esc_fault(args->context, "fault-model", &esc->fault, &esc->fault_instance) != 0) {
 		esc->fault = NULL;	/* none: bypass */
 	}
@@ -326,6 +461,8 @@ static sint32 esc_reset(void *instance)
 		m->frames_valid = 0U;
 		m->frames_invalid = 0U;
 		m->frames_dropped = 0U;
+		m->consumption_mah = 0.0F;
+		m->consumption_time = 0U;
 	}
 	memset(esc->commands, 0, sizeof(esc->commands));
 	return 0;
@@ -364,6 +501,19 @@ static sint32 esc_tick(void *instance, uint64 now, AthrillDeviceTickResult *resu
 	return 0;
 }
 
+/* the telemetry line carries nothing to the ESC */
+static sint32 esc_receive_byte(void *instance, uint8 data)
+{
+	(void)instance;
+	(void)data;
+	return 0;
+}
+
+static const AthrillDeviceUartPeripheralOps esc_uart_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceUartPeripheralOps), esc_receive_byte
+};
+
 const AthrillDeviceModelOps athrill_device_dshot_esc_model = {
 	.abi_major = ATHRILL_DEVICE_ABI_MAJOR,
 	.abi_minor = ATHRILL_DEVICE_ABI_MINOR,
@@ -375,4 +525,5 @@ const AthrillDeviceModelOps athrill_device_dshot_esc_model = {
 	.connect = esc_connect,
 	.reset = esc_reset,
 	.tick = esc_tick,
+	.uart = &esc_uart_ops,
 };

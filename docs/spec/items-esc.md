@@ -9,6 +9,7 @@
 | ADV-ESC-002 | A frame is valid only when every bit period is within 15 % of a DShot150/300/600/1200 bit and within 2 % of the frame's first, every high time is 20-45 % (0) or 55-90 % (1) of its period, 16 bits come before idle, and the CRC holds; an invalid frame changes nothing. | unit | esc | none; DShot protocol (bit rates, 0/1 duty), as a receiving ESC checks it |
 | ADV-ESC-003 | Every received frame, valid or not, goes through the fault-model hook before it reaches the motor; drop leaves the motor as it was and replace uses the rewritten command; with no fault-model it passes. | unit | esc | athrill,dshot-esc fault-model (ABI 1.20 AthrillDeviceEscFaultOps); none |
 | ADV-ESC-004 | A running motor stops when no valid frame came for athrill,signal-timeout-us (default 100 ms); the ESC reports that moment as its next event. | unit | esc | athrill,dshot-esc athrill,signal-timeout-us; none (an ESC's signal-loss behaviour; the time depends on its firmware) |
+| ADV-ESC-005 | As a UART child, the ESC answers a valid frame whose telemetry-request bit is set with one 10-byte KISS frame for that motor (temperature C, voltage 0.01 V, current 0.01 A, consumption mAh, eRPM/100, big-endian, CRC-8 polynomial 0x07 over 9 bytes), after the fault-model telemetry hook; its values come from the ESC's motor model (eRPM proportional to the throttle, current to its square, consumption the integral of the current). A dropped command, a dropped answer or a node that is not a UART child gives no answer. | unit | esc | athrill,dshot-esc under a UART; athrill,telemetry-* properties; KISS ESC telemetry frame as PX4 v1.17.0 DShotTelemetry reads it (CRC-8, field order and units) |
 
 ## Test specifications
 
@@ -22,3 +23,6 @@
 | ADV-ESC-002.T4 | Two frames back to back with no end word between them (values 500, then 1500). | The first is taken; the second is invalid. |
 | ADV-ESC-003.T1 | A test fault model passing, then dropping, then replacing with value 48. | Pass takes the frame, drop keeps the previous values, replace gives no thrust; the hook sees each motor's value and index. |
 | ADV-ESC-004.T1 | 1 ms timeout, one frame, then no frame; then a frame every 0.5 ms for 5 ms. | The motors run until 1 ms after the frame and stop then; the next event is that moment; frames keep them running. |
+| ADV-ESC-005.T1 | No request, then a request on each motor in turn at throttles 1048, 548, 2047, 1048. | No bytes, then one frame per request in order; PX4's CRC-8 holds; 30 C, 16.00 V, 30 A x t^2, 70000 eRPM x t. |
+| ADV-ESC-005.T2 | Full throttle for 0.36 s, then a request. | Consumption 3 mAh. |
+| ADV-ESC-005.T3 | The telemetry hook dropping, then replacing (current 0, eRPM 0); a dropped command; the ESC not on a UART. | No bytes; the rewritten values; no bytes; no bytes while the motors are still driven. |

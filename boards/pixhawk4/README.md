@@ -13,14 +13,15 @@ Hakoniwa node, and adds the `value-source` edges used by Hakoniwa and PIL.
 `pixhawk4-hakoniwa-dshot.dts` includes that and puts motors 1-4 on a DShot ESC
 (`athrill,dshot-esc` on TIM1 CH4..CH1, feeding the Hakoniwa sink) in place of
 the PWM actuator map. PX4 v1.17.0 drives them with DShot600 when
-`PWM_AUX_TIM0` is -3.
+`PWM_AUX_TIM0` is -3. The ESC sits on UART4 (TELEM4) and answers telemetry
+requests with KISS frames, which PX4 reads with `DSHOT_TEL_CFG` 104.
 
 The checked-in blobs have SHA-256:
 
 ```text
 cd3a21918920144f266486817916342f5f841f551bbfde0e9576f5a95f28b412  pixhawk4.dtb
 60c9e2dd35d89b919c39a1bb169ce1ab15929c6e52b1be439f959a653ea28fe0  pixhawk4-hakoniwa.dtb
-2e4339138d39ccc64fb5a5844221f80e4da40c1fe715022a374715efd6c3391f  pixhawk4-hakoniwa-dshot.dtb
+8bd0c9ce0f2efb77910f21dc5f677e69e6e41d8530815fa43573f66017bfd41d  pixhawk4-hakoniwa-dshot.dtb
 ```
 
 It was made with GNU cpp and dtc 1.7.x from a Linux container (Ubuntu
