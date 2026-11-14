@@ -262,6 +262,14 @@ static void check_common(const void *blob, int hakoniwa)
 	expect_interrupts(blob, "/soc/sdmmc@48022400", sdmmc2_irq, 1U);
 	expect_compatible(blob, "/soc/sdmmc@48022400", "st,stm32-sdmmc");
 	expect_reg(blob, "/soc/sdmmc@48022400", 0x48022400U);
+	/* D0 (PB14) read as a GPIO, driven high: NuttX ends each SD write when it reads it high */
+	{
+		int length;
+		const fdt32_t *d0 = fdt_getprop(blob, node(blob, "/soc/sdmmc@48022400"), "athrill,d0-gpios", &length);
+		TEST_CHECK(d0 != NULL && length == (int)(3U * sizeof(fdt32_t)));
+		TEST_CHECK(fdt32_to_cpu(d0[0]) == fdt_get_phandle(blob, node(blob, "/soc/pin-controller@58020000/gpio@58020400")));
+		TEST_CHECK(fdt32_to_cpu(d0[1]) == 14U && fdt32_to_cpu(d0[2]) == 0U);
+	}
 	expect_status(blob, "/soc/sdmmc@48022400", "okay");
 	expect_u32(blob, "/soc/sdmmc@48022400", "bus-width", 4U);
 	expect_compatible(blob, "/soc/sdmmc@48022400/sd-card",

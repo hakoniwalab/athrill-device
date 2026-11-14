@@ -19073,7 +19073,7 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
       "derived_properties": {
-        "dtb_size": 31764
+        "dtb_size": 31821
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -22412,7 +22412,7 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 31436
+        "dtb_size": 31493
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -25820,7 +25820,7 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
-        "dtb_size": 31323
+        "dtb_size": 31380
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
