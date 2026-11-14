@@ -83,7 +83,16 @@ bool hako_sensor_link_read_pose(HakoVehiclePoseSample *pose);
  * ("imu", "mag", "baro" or "gps"); false when the link has no such instance (or no
  * sensor host).
  */
-bool hako_sensor_link_sensor_instance(const char *name, const char **type);
+/* The sensor host's instance of this name (HAKO_SENSOR_DEVICE_SENSORS): its type and
+ * index; false when there is none. */
+bool hako_sensor_link_sensor_instance(const char *name, const char **type, uint32_t *index);
+
+/* The value of sensor instance index with the sample hako_sensor_link_read gave last, in
+ * the units of that sample (body FRD axes are the instance's sensor axes in FRD): an IMU
+ * fills acc and gyro (and temperature), a magnetometer mag, a barometer abs_pressure,
+ * pressure_alt and temperature, a GPS receiver *gps with *has_gps true. False when the
+ * index is out of range. */
+bool hako_sensor_link_read_instance(uint32_t index, HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps);
 
 void hako_sensor_link_cleanup(void);
 

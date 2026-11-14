@@ -98,6 +98,37 @@ The run loads the plugin for the instances too: next to `DEVICE_CONFIG_DEVICE_PL
 `boards/pixhawk6c/pixhawk6c-hakoniwa-dshot-sensors.dts` is the Pixhawk 6C with DShot wired this way, with the
 instances `bmi055`, `icm42688p`, `barometer`, `magnetometer` and `gps1`.
 
+### Adapter implementations
+
+An instance's `implementation` names one of the implementations built into the plugin. A name that is not built in,
+or an implementation without an adapter for the instance's type, stops the start-up. So does an adapter that refuses
+its configuration, for example a period shorter than the physics step or not a multiple of it.
+
+| Name | Built in with |
+| --- | --- |
+| `airsim` | `HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR`: the hakoniwa-sensor-adapter-airsim tree (IMU, magnetometer, barometer, GPS; needs the Boost headers). Its `config/*-ideal.json` files measure without errors |
+
+Each adapter gets the instance's name as its sensor name and a fixed random seed made from that name, so every chip
+has its own random stream and a run with the same configuration repeats.
+
+### What the chip receives
+
+The host turns each adapter's output into the units the chip models take: the sensor axes in FRD, the magnetic field
+in gauss, the pressure in hPa, the GPS altitude above mean sea level.
+
+- An IMU has no thermal model: its temperature is the sea-level temperature of the world.
+- A barometer gives its own temperature when its adapter has one.
+- A GPS adapter that gives no satellite count reports 10 satellites with a 3D fix.
+- The world is the airframe's `simulation.location`: the origin, its altitude, and the earth's magnetic field there.
+
+The autopilot's allowance for a sensor's delay must be the delay of that instance's adapter, by the same rule as for
+SITL: for PX4, `EKF2_BARO_DELAY` and `EKF2_GPS_DELAY`. The x500 parameters hold 60 ms and 100 ms, the delays of
+Hakoniwa Drone's barometer and GPS models; with adapters without delay they are 0.
+
+The chip reads the values of the sample the sensor device took last. The sensor device still takes a sample at the
+aircraft's SITL sensor period (`simulation.sitl.sensor_period_msec`). The adapters measure every physics step, but a
+chip sees the measurement only at those samples.
+
 The plugin is built with `HAKO_SENSOR_DEVICE_SENSOR_HOST=ON` and `HAKONIWA_SENSOR_ADAPTER_DIR` (the
 hakoniwa-sensor-adapter tree). Without it, nothing of this section exists and the sensor device works as before.
 
@@ -121,4 +152,4 @@ The log files use Hakoniwa Drone's logger and its formats (none, CSV, binary).
   would have to cross as PDUs.
 - The sensor host is chosen per run; the sensor device's previous behaviour (Hakoniwa Drone's sensor models, one
   sample for every chip) stays the default.
-- Random seeds follow the adapters' rule (Hakoniwa Drone's sensor specification 4.1), with each chip's name.
+- Random seeds: one per instance, made from its name (see Adapter implementations).

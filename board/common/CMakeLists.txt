@@ -110,6 +110,16 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
      NOT EXISTS "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_host.cpp")
     message(FATAL_ERROR "HAKO_SENSOR_DEVICE_SENSOR_HOST needs HAKONIWA_SENSOR_ADAPTER_DIR with src/host/sensor_host.cpp")
   endif()
+  # The adapters' implementations built into the plugin for the sensor instances, chosen by
+  # name in HAKO_SENSOR_DEVICE_SENSORS: "airsim" from hakoniwa-sensor-adapter-airsim (MIT, Boost headers).
+  set(HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR "" CACHE PATH
+      "hakoniwa-sensor-adapter-airsim source tree: the \"airsim\" adapters (empty: not built in)")
+  if(HAKO_SENSOR_DEVICE_SENSOR_HOST AND HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR)
+    if(NOT EXISTS "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/airsim_implementation.cpp")
+      message(FATAL_ERROR "HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR has no src/airsim_implementation.cpp")
+    endif()
+    find_package(Boost REQUIRED)
+  endif()
 
   function(configure_hako_inproc_target target)
     target_link_libraries(${target} PRIVATE "${HAKO_DRONE_SERVICE_LIBRARY}")
@@ -127,6 +137,17 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
       target_sources(${target} PRIVATE "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_host.cpp")
       target_include_directories(${target} PRIVATE "${HAKONIWA_SENSOR_ADAPTER_DIR}/include")
       target_compile_definitions(${target} PRIVATE HAKO_SENSOR_DEVICE_SENSOR_HOST)
+      if(HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR)
+        target_sources(${target} PRIVATE
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/projectairsim_imu_adapter.cpp"
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/projectairsim_gps_adapter.cpp"
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/projectairsim_baro_adapter.cpp"
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/projectairsim_mag_adapter.cpp"
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/airsim_implementation.cpp")
+        target_include_directories(${target} PRIVATE
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/include" ${Boost_INCLUDE_DIRS})
+        target_compile_definitions(${target} PRIVATE HAKO_SENSOR_DEVICE_WITH_AIRSIM)
+      endif()
     endif()
     if(APPLE)
       # Both release dylibs use @loader_path, so keep them beside each consumer.

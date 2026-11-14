@@ -4,10 +4,12 @@
 #include "service.hpp"
 #ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
 #include "hakoniwa/sensor_adapter/host/sensor_host.hpp"
+#include "hakoniwa/sensor_adapter/sensor_adapter_implementation.hpp"
 #include <fstream>
 #include <nlohmann/json.hpp>
 #endif
 
+#include <algorithm>
 #include <cmath>
 #include <condition_variable>
 #include <array>
@@ -191,8 +193,29 @@ struct InProcessLink {
 		std::string implementation;	/* the adapters' implementation name */
 		std::string config_path;	/* the adapter's configuration, absolute */
 		hakoniwa::sensor_adapter::host::MountPose mount;	/* FLU, from the FRD mount */
+		std::unique_ptr<hakoniwa::sensor_adapter::IImuSensorAdapter> imu;
+		std::unique_ptr<hakoniwa::sensor_adapter::IMagSensorAdapter> mag;
+		std::unique_ptr<hakoniwa::sensor_adapter::IBaroSensorAdapter> baro;
+		std::unique_ptr<hakoniwa::sensor_adapter::IGpsSensorAdapter> gps;
+		/* the adapter's output after the last physics step */
+		hakoniwa::sensor_adapter::ImuSample imu_out{};
+		hakoniwa::sensor_adapter::MagSample mag_out{};
+		hakoniwa::sensor_adapter::BaroSample baro_out{};
+		hakoniwa::sensor_adapter::GpsSample gps_out{};
+	};
+	/* one instance's value as the device takes it (hako_sensor_link_read_instance) */
+	struct InstanceValue {
+		HakoSensorSample sensor{};
+		HakoGpsSample gps{};
+		bool has_gps{false};
 	};
 	std::vector<SensorInstance> sensors;
+	hakoniwa::sensor_adapter::host::World world{};
+	uint64_t host_step_count{0};	/* physics steps the adapters have taken */
+	/* the instances' values with the sample prepared last (stepUntilSensor) and with
+	 * the sample the device read last (hako_sensor_link_read) */
+	std::vector<InstanceValue> prepared_values;
+	std::vector<InstanceValue> read_values;
 	/* the vehicle's true motion after the last physics step */
 	hakoniwa::sensor_adapter::host::RigidBodyMotion motion{};
 	hakoniwa::sensor_adapter::host::ImuVibration vibration{};
@@ -291,6 +314,110 @@ void captureTruth(InProcessLink& state)
 	state.has_motion = true;
 }
 
+/* Every instance's adapter, one physics step: the truth at its mount from the motion
+ * just captured, then its own errors and timing (docs/sensor-host.md, The pipeline). */
+bool stepSensorInstances(InProcessLink& state)
+{
+	if (state.sensors.empty()) {
+		return true;
+	}
+	const uint64_t time_ns = state.host_step_count * state.physics_step_usec * 1000U;
+	std::string error;
+	for (auto& sensor : state.sensors) {
+		bool ok = true;
+		if (sensor.imu) {
+			ok = sensor.imu->step(host::imu_truth(time_ns, state.motion, sensor.mount, state.world,
+				state.vibration), sensor.imu_out, error);
+		}
+		else if (sensor.mag) {
+			ok = sensor.mag->step(host::mag_truth(time_ns, state.motion, sensor.mount, state.world),
+				sensor.mag_out, error);
+		}
+		else if (sensor.baro) {
+			ok = sensor.baro->step(host::baro_truth(time_ns, state.motion, sensor.mount, state.world),
+				sensor.baro_out, error);
+		}
+		else if (sensor.gps) {
+			ok = sensor.gps->step(host::gps_truth(time_ns, state.motion, sensor.mount, state.world),
+				sensor.gps_out, error);
+		}
+		if (!ok) {
+			std::cerr << "ERROR: hako_sensor_device: sensor " << sensor.name << ": " << error << std::endl;
+			return false;
+		}
+	}
+	state.host_step_count++;
+	return true;
+}
+
+/* A FLU vector in the FRD axes of the same sensor. */
+void toFrd(const hakoniwa::sensor_adapter::Vector3& flu, double scale, float out[3])
+{
+	out[0] = static_cast<float>(flu.x * scale);
+	out[1] = static_cast<float>(-flu.y * scale);
+	out[2] = static_cast<float>(-flu.z * scale);
+}
+
+/* The instances' outputs now, in the units of the HIL sample of time hil_time_usec. */
+void prepareInstanceValues(InProcessLink& state, uint64_t hil_time_usec)
+{
+	if (state.sensors.empty()) {
+		return;
+	}
+	/* HIL time = host time + base: the adapters' times start at the first physics step */
+	const uint64_t host_time_usec = state.host_step_count * state.physics_step_usec;
+	const int64_t base_usec = static_cast<int64_t>(hil_time_usec) - static_cast<int64_t>(host_time_usec);
+	state.prepared_values.assign(state.sensors.size(), InProcessLink::InstanceValue{});
+	for (std::size_t i = 0U; i < state.sensors.size(); ++i) {
+		const auto& sensor = state.sensors[i];
+		auto& value = state.prepared_values[i];
+		value.sensor.time_usec = hil_time_usec;
+		/* no thermal model: a die at the sea-level temperature */
+		value.sensor.temperature = static_cast<float>(state.world.sea_level_temperature_c);
+		if (sensor.imu) {
+			toFrd(sensor.imu_out.accel.value, 1.0, value.sensor.acc);
+			toFrd(sensor.imu_out.gyro.value, 1.0, value.sensor.gyro);
+		}
+		else if (sensor.mag) {
+			toFrd(sensor.mag_out.value, 1.0e-5, value.sensor.mag);	/* nT to gauss */
+		}
+		else if (sensor.baro) {
+			value.sensor.abs_pressure = static_cast<float>(sensor.baro_out.pressure_pa / 100.0);
+			value.sensor.pressure_alt = static_cast<float>(sensor.baro_out.pressure_altitude_m);
+			if (sensor.baro->capabilities().temperature) {
+				value.sensor.temperature = static_cast<float>(sensor.baro_out.temperature_c);
+			}
+		}
+		else if (sensor.gps && sensor.gps_out.fix_type != 0U) {
+			const auto& out = sensor.gps_out;
+			auto& gps = value.gps;
+			gps.time_usec = static_cast<uint64_t>(static_cast<int64_t>(out.sample_time_ns / 1000U) + base_usec);
+			gps.lat = static_cast<int32_t>(std::llround(out.position.latitude_deg * 1e7));
+			gps.lon = static_cast<int32_t>(std::llround(out.position.longitude_deg * 1e7));
+			/* mean sea level, as HIL_GPS */
+			gps.alt = static_cast<int32_t>(std::llround((out.position.altitude_m - state.world.geoid_height_m) * 1000.0));
+			const auto cm = [](double m) {
+				return static_cast<uint16_t>(std::min(65535.0, std::max(0.0, std::round(m * 100.0))));
+			};
+			const auto cms = [](double mps) {
+				return static_cast<int16_t>(std::min(32767.0, std::max(-32767.0, std::round(mps * 100.0))));
+			};
+			gps.eph = cm(out.horizontal_accuracy_m);
+			gps.epv = cm(out.vertical_accuracy_m);
+			gps.vel = cm(out.ground_speed_mps);
+			gps.vn = cms(out.velocity_nwu.x);
+			gps.ve = cms(-out.velocity_nwu.y);
+			gps.vd = cms(-out.velocity_nwu.z);
+			gps.cog = out.course_valid ? static_cast<uint16_t>(std::llround(out.course_deg * 100.0)) % 36000U : 65535U;
+			/* an adapter without a receiver status gives no satellite count: a 3D fix as 10 */
+			gps.satellites_visible = (out.satellites_visible != 0U) ? static_cast<uint8_t>(out.satellites_visible)
+				: (out.fix_type >= 3U ? 10U : 0U);
+			gps.fix_type = static_cast<uint8_t>(out.fix_type);
+			value.has_gps = true;
+		}
+	}
+}
+
 /* The truth check: Drone PRO's accelerometer and gyro (its sensor models, FRD) beside
  * the host helpers' ideal IMU at the body origin from the captured truth (FRD). With an
  * error-free airframe the two must agree. */
@@ -370,8 +497,114 @@ bool loadSensorInstances(InProcessLink& state, const std::string& path)
 			<< sensor.implementation << ", " << sensor.config_path << ") mounted at FRD ["
 			<< position.x << ", " << position.y << ", " << position.z << "] m, roll " << roll
 			<< " pitch " << pitch << " yaw " << yaw << " deg" << std::endl;
-		state.sensors.push_back(sensor);
+		state.sensors.push_back(std::move(sensor));
 	}
+	if (state.sensors.size() > 16U) {	/* HAKO_SENSOR_INSTANCE_MAX of the device model */
+		std::cerr << "ERROR: hako_sensor_device: " << path << ": at most 16 sensors" << std::endl;
+		return false;
+	}
+	return true;
+}
+#endif
+
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+#ifdef HAKO_SENSOR_DEVICE_WITH_AIRSIM
+HAKO_SENSOR_ADAPTER_DECLARE_IMPLEMENTATION(airsim);
+#endif
+
+/* The adapters' implementations built into this plugin, by name. */
+const hakoniwa::sensor_adapter::SensorAdapterImplementation *findImplementation(const std::string& name)
+{
+	std::vector<const hakoniwa::sensor_adapter::SensorAdapterImplementation *> built;
+#ifdef HAKO_SENSOR_DEVICE_WITH_AIRSIM
+	built.push_back(HAKO_SENSOR_ADAPTER_IMPLEMENTATION_ENTRY(airsim)());
+#endif
+	for (const auto *implementation : built) {
+		if (implementation != nullptr
+			&& implementation->version == hakoniwa::sensor_adapter::kSensorAdapterImplementationVersion
+			&& name == implementation->name) {
+			return implementation;
+		}
+	}
+	return nullptr;
+}
+
+/* A seed from the instance's name (FNV-1a), so each chip has its own stream and a run
+ * repeats with the same configuration. */
+uint64_t seedFromName(const std::string& name)
+{
+	uint64_t hash = 14695981039346656037ULL;
+	for (const unsigned char c : name) {
+		hash = (hash ^ c) * 1099511628211ULL;
+	}
+	return hash;
+}
+
+/* The world of the airframe (simulation.location) and every instance's adapter. An
+ * adapter refuses a period it can not measure with this physics step. */
+bool createSensorAdapters(InProcessLink& state, const DroneConfig& config)
+{
+	if (state.sensors.empty()) {
+		return true;
+	}
+	state.world.origin = {config.getSimLatitude(), config.getSimLongitude(), config.getSimAltitude()};
+	const auto field = config.getSimMagneticField();
+	state.world.geomagnetic_field = {field.intensity_nT, field.declination_deg, field.inclination_deg};
+	for (auto& sensor : state.sensors) {
+		const auto *implementation = findImplementation(sensor.implementation);
+		if (implementation == nullptr) {
+			std::cerr << "ERROR: hako_sensor_device: sensor " << sensor.name << ": implementation "
+				<< sensor.implementation << " is not built into this plugin" << std::endl;
+			return false;
+		}
+		const auto setup = [&](auto& value) {
+			value.config_path = sensor.config_path;
+			value.vehicle_name = "aircraft0";
+			value.vehicle_index = 0U;
+			value.sensor_name = sensor.name;
+			value.physics_step_ns = state.physics_step_usec * 1000U;
+			value.has_random_seed = true;
+			value.random_seed = seedFromName(sensor.name);
+		};
+		std::string error;
+		bool provided = true;
+		if (sensor.type == "imu") {
+			hakoniwa::sensor_adapter::ImuAdapterSetup value;
+			setup(value);
+			provided = implementation->create_imu != nullptr;
+			if (provided) sensor.imu = implementation->create_imu(value, error);
+		}
+		else if (sensor.type == "mag") {
+			hakoniwa::sensor_adapter::MagAdapterSetup value;
+			setup(value);
+			provided = implementation->create_mag != nullptr;
+			if (provided) sensor.mag = implementation->create_mag(value, error);
+		}
+		else if (sensor.type == "baro") {
+			hakoniwa::sensor_adapter::BaroAdapterSetup value;
+			setup(value);
+			provided = implementation->create_baro != nullptr;
+			if (provided) sensor.baro = implementation->create_baro(value, error);
+		}
+		else {
+			hakoniwa::sensor_adapter::GpsAdapterSetup value;
+			setup(value);
+			value.origin = state.world.origin;
+			provided = implementation->create_gps != nullptr;
+			if (provided) sensor.gps = implementation->create_gps(value, error);
+		}
+		if (!provided) {
+			std::cerr << "ERROR: hako_sensor_device: sensor " << sensor.name << ": implementation "
+				<< sensor.implementation << " has no " << sensor.type << " adapter" << std::endl;
+			return false;
+		}
+		if (!sensor.imu && !sensor.mag && !sensor.baro && !sensor.gps) {
+			std::cerr << "ERROR: hako_sensor_device: sensor " << sensor.name << ": " << error << std::endl;
+			return false;
+		}
+	}
+	std::cout << "INFO: hako_sensor_device: " << state.sensors.size()
+		<< " sensor instances measure every physics step of " << state.physics_step_usec << " us" << std::endl;
 	return true;
 }
 #endif
@@ -391,6 +624,7 @@ bool stepUntilSensor(InProcessLink& state, uint64_t last_time_usec)
 			&& sensor.time_usec > last_time_usec) {
 #ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
 			logTruth(state, sensor);
+			prepareInstanceValues(state, sensor.time_usec);
 #endif
 			return true;
 		}
@@ -404,10 +638,19 @@ bool stepUntilSensor(InProcessLink& state, uint64_t last_time_usec)
 		}
 #ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
 		captureTruth(state);
+		if (!stepSensorInstances(state)) {
+			return false;
+		}
 #endif
 	}
-	return state.mavlink_service->readSensor(sensor, gps, has_gps)
-		&& sensor.time_usec > last_time_usec;
+	if (!state.mavlink_service->readSensor(sensor, gps, has_gps)
+		|| sensor.time_usec <= last_time_usec) {
+		return false;
+	}
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+	prepareInstanceValues(state, sensor.time_usec);
+#endif
+	return true;
 }
 
 /* The vehicle's pose now, in Hakoniwa's world frame (as the aircraft
@@ -510,6 +753,9 @@ bool readWorkerSample(
 		hako_sensor_link_decode_gps(&source_gps, gps);
 	}
 	state.read_motors = state.worker_motors;	/* with this sample */
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+	state.read_values = state.prepared_values;
+#endif
 	state.read_pose = state.worker_pose;
 	state.has_pose = true;
 	state.worker_sample_ready = false;
@@ -575,6 +821,11 @@ extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
 
 		state->aircraft_container = IAirCraftContainer::create();
 		state->aircraft_container->createAirCrafts(state->config_manager);
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+		if (!createSensorAdapters(*state, aircraft_config)) {
+			return false;
+		}
+#endif
 		state->mavlink_service = std::make_shared<InProcessMavLinkService>();
 		state->mavlink_container = std::make_shared<MavLinkServiceContainer>();
 		state->mavlink_container->addService(state->mavlink_service);
@@ -628,6 +879,9 @@ extern "C" bool hako_sensor_link_read(
 		return false;
 	}
 	link->read_motors = captureMotors(*link);
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+	link->read_values = link->prepared_values;
+#endif
 	link->read_pose = capturePose(*link);
 	link->has_pose = true;
 	Hako_HakoHilSensor source_sensor{};
@@ -696,13 +950,14 @@ extern "C" bool hako_sensor_link_read_motor_status(uint32_t index, HakoMotorStat
 	return true;
 }
 
-extern "C" bool hako_sensor_link_sensor_instance(const char *name, const char **type)
+extern "C" bool hako_sensor_link_sensor_instance(const char *name, const char **type, uint32_t *index)
 {
 #ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
-	if (link && name != nullptr && type != nullptr) {
-		for (const auto& sensor : link->sensors) {
-			if (sensor.name == name) {
-				*type = sensor.type.c_str();
+	if (link && name != nullptr && type != nullptr && index != nullptr) {
+		for (std::size_t i = 0U; i < link->sensors.size(); ++i) {
+			if (link->sensors[i].name == name) {
+				*type = link->sensors[i].type.c_str();
+				*index = static_cast<uint32_t>(i);
 				return true;
 			}
 		}
@@ -710,8 +965,30 @@ extern "C" bool hako_sensor_link_sensor_instance(const char *name, const char **
 #else
 	(void)name;
 	(void)type;
+	(void)index;
 #endif
 	return false;
+}
+
+extern "C" bool hako_sensor_link_read_instance(uint32_t index, HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps)
+{
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+	if (!link || sensor == nullptr || gps == nullptr || has_gps == nullptr
+		|| index >= link->read_values.size()) {
+		return false;
+	}
+	const auto& value = link->read_values[index];
+	*sensor = value.sensor;
+	*gps = value.gps;
+	*has_gps = value.has_gps;
+	return true;
+#else
+	(void)index;
+	(void)sensor;
+	(void)gps;
+	(void)has_gps;
+	return false;
+#endif
 }
 
 extern "C" void hako_sensor_link_cleanup(void)
