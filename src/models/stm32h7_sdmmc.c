@@ -6,9 +6,10 @@
  * Ported unchanged from athrill-target-stm32's stm32h7_sdmmc.c
  * (hakoniwalab/athrill-device#13 step 4-6): commands answered at once, the
  * data path moving DLEN bytes by IDMA to or from IDMABASE0 after the time
- * they take on the bus, DPSMACT while it runs, the interrupt the level of
- * STA & MASK. What changed with the move: one instance per node, the base
- * and interrupt from the node, the card from the node's child (an sdcard
+ * they take on the bus (started with the command, CMDTRANS, or by DCTRL
+ * DTEN), DPSMACT while it runs, the interrupt the level of STA & MASK.
+ * What changed with the move: one instance per node, the base and
+ * interrupt from the node, the card from the node's child (an sdcard
  * model, get_sd_card), the CPU clock from time_frequency_hz, and a register
  * read ends the CPU batch (as every moved controller does).
  *
@@ -41,6 +42,7 @@
 #define CMD_WAITRESP_SHIFT	8U
 #define CMD_CPSMEN		(1U << 12)
 
+#define DCTRL_DTEN	(1U << 0)	/* start the data path (without CMDTRANS) */
 #define DCTRL_DTDIR	(1U << 1)	/* card to controller */
 #define IDMACTRL_IDMAEN	(1U << 0)
 
@@ -63,6 +65,7 @@ struct H7Sdmmc {
 	uint64 now;
 	AthrillSdProtocol *protocol;
 	AthrillSdDataDirection pending;
+	std_bool started;	/* the data path was started: CMDTRANS, or DCTRL DTEN */
 	uint64 done_at;
 	uint32 asserted;
 };
@@ -109,7 +112,7 @@ static void try_start(H7Sdmmc *sd)
 {
 	std_bool read = sd->pending == ATHRILL_SD_DATA_READ;
 
-	if ((sd->pending == ATHRILL_SD_DATA_NONE) || (sd->done_at != 0U)
+	if ((sd->pending == ATHRILL_SD_DATA_NONE) || !sd->started || (sd->done_at != 0U)
 		|| ((reg(sd, R_IDMACTRL) & IDMACTRL_IDMAEN) == 0U) || (reg(sd, R_IDMABASE0) == 0U)
 		|| (((reg(sd, R_DCTRL) & DCTRL_DTDIR) != 0U) != read) || (reg(sd, R_DLEN) == 0U)) {
 		return;
@@ -135,6 +138,7 @@ static void finish(H7Sdmmc *sd)
 	free(data);
 	(void)athrill_sd_transfer_done(sd->protocol);
 	sd->pending = ATHRILL_SD_DATA_NONE;
+	sd->started = FALSE;
 	sd->done_at = 0U;
 	set_reg(sd, R_DCOUNT, 0U);
 	sd->sta |= STA_DATAEND | STA_DBCKEND;
@@ -176,8 +180,12 @@ static void command(H7Sdmmc *sd, uint32 cmd)
 		}
 		sd->sta |= STA_CMDREND;
 	}
-	if ((response.data != ATHRILL_SD_DATA_NONE) && ((cmd & CMD_CMDTRANS) != 0U)) {
+	/* RM0433 55.5.4: the data path starts with the command (CMDTRANS, as
+	 * NuttX does) or when DCTRL DTEN is written after it (ChibiOS's SDMMCv2
+	 * driver sends CMD17/18/24/25 without CMDTRANS, then sets DTEN). */
+	if (response.data != ATHRILL_SD_DATA_NONE) {
 		sd->pending = response.data;
+		sd->started = (cmd & CMD_CMDTRANS) != 0U;
 		set_reg(sd, R_DCOUNT, reg(sd, R_DLEN));
 		try_start(sd);
 	}
@@ -215,6 +223,9 @@ void stm32h7_sdmmc_write(H7Sdmmc *sd, uint32 offset, uint32 value, uint32 mask)
 	}
 	else if ((offset == R_DCTRL) || (offset == R_DLEN) || (offset == R_IDMACTRL)
 		|| (offset == R_IDMABASE0)) {
+		if ((offset == R_DCTRL) && ((value & DCTRL_DTEN) != 0U) && (sd->pending != ATHRILL_SD_DATA_NONE)) {
+			sd->started = TRUE;
+		}
 		if ((reg(sd, R_IDMACTRL) & IDMACTRL_IDMAEN) == 0U) {
 			sd->done_at = 0U;
 		}
