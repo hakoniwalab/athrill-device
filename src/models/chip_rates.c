@@ -7,7 +7,8 @@
  * firmwares write are cross-checked with their drivers: PX4 v1.17.0 sets data_high_bw on
  * both BMI055 dies (2 kHz) and GYRO_ODR/ACCEL_ODR 8 kHz with 2000 dps and 16 g; ArduPilot
  * writes PMU_BW 0x0F, ACCD_HBW 0x80, BW 0x81 (2 kHz each) and ODR codes 0x03-0x06
- * (8, 4, 2, 1 kHz).
+ * (8, 4, 2, 1 kHz). ICM-20689: the datasheet register map (CONFIG DLPF_CFG, GYRO_CONFIG
+ * FCHOICE_B, SMPLRT_DIV, ACCEL_CONFIG2 ACCEL_FCHOICE_B), with PX4's settings.
  *
  * Copyright 2026 Hakoniwa Laboratory
  * SPDX-License-Identifier: MIT
@@ -81,6 +82,31 @@ float32 chip_icm42688_accel_counts_per_g(uint8 accel_config0)
 {
 	static const float32 counts[8] = { 2048.0F, 4096.0F, 8192.0F, 16384.0F, 2048.0F, 2048.0F, 2048.0F, 2048.0F };
 	return counts[(accel_config0 >> 5) & 7U];
+}
+
+/* [ADV-CHIP-ICM20689-002] Gyroscope (the sample rate, the FIFO's): FCHOICE_B (GYRO_CONFIG bits
+ * 1:0) not 0 bypasses the DLPF at 32 kHz; otherwise DLPF_CFG (CONFIG bits 2:0) 0 or 7 runs at
+ * 8 kHz, 1-6 at 1 kHz / (1 + SMPLRT_DIV). Accelerometer: ACCEL_FCHOICE_B (ACCEL_CONFIG2 bit 3)
+ * bypasses its DLPF at 4 kHz; otherwise 1 kHz / (1 + SMPLRT_DIV). PX4 v1.17.0 sets DLPF_CFG 7,
+ * FCHOICE_B 0 and ACCEL_FCHOICE_B: 8 kHz and 4 kHz. */
+uint64 chip_icm20689_gyro_rate_mhz(uint8 config, uint8 gyro_config, uint8 smplrt_div)
+{
+	uint8 dlpf = (uint8)(config & 7U);
+	if ((gyro_config & 3U) != 0U) {
+		return 32000000U;
+	}
+	if (dlpf == 0U || dlpf == 7U) {
+		return 8000000U;
+	}
+	return 1000000U / (1U + (uint64)smplrt_div);
+}
+
+uint64 chip_icm20689_accel_rate_mhz(uint8 accel_config2, uint8 smplrt_div)
+{
+	if ((accel_config2 & 0x08U) != 0U) {
+		return 4000000U;
+	}
+	return 1000000U / (1U + (uint64)smplrt_div);
 }
 
 uint64 chip_rate_clocks(uint64 frequency_hz, uint64 rate_mhz)

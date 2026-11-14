@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include "models.h"
+#include "chip_rates.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -13,6 +14,7 @@
 #define REG_CONFIG           0x1aU
 #define REG_GYRO_CONFIG      0x1bU
 #define REG_ACCEL_CONFIG     0x1cU
+#define REG_ACCEL_CONFIG2    0x1dU
 #define REG_FIFO_EN          0x23U
 #define REG_INT_PIN_CFG      0x37U
 #define REG_INT_ENABLE       0x38U
@@ -62,7 +64,12 @@ typedef struct {
 	const AthrillDeviceNode *node;
 	AthrillDeviceValueSource source;
 	uint8 registers[128];
-	uint64 clocks_per_sample;
+	uint64 frequency_hz;
+	/* the sample periods the value source was told last (ABI 1.22), 0: none yet */
+	const AthrillDeviceSamplePeriodOps *period_ops;
+	void *period_instance;
+	uint64 reported_gyro_ns;
+	uint64 reported_accel_ns;
 	std_bool rotated;
 	std_bool started;
 	std_bool reading;
@@ -133,12 +140,36 @@ static void raw_sample(const Icm20689 *chip, RawSample *raw)
 		TEMP_SENSITIVITY);
 }
 
+/* [ADV-CHIP-ICM20689-002] The sample rate (the FIFO's and data-ready's) the registers set. */
+static uint64 gyro_rate_mhz(const Icm20689 *chip)
+{
+	return chip_icm20689_gyro_rate_mhz(chip->registers[REG_CONFIG], chip->registers[REG_GYRO_CONFIG],
+		chip->registers[REG_SMPLRT_DIV]);
+}
+
 static uint64 sample_clocks(const Icm20689 *chip)
 {
-	uint32 dlpf = chip->registers[REG_CONFIG] & 7U;
-	return (dlpf == 0U || dlpf == 7U) ? chip->clocks_per_sample :
-		chip->clocks_per_sample * 8U *
-		(1U + chip->registers[REG_SMPLRT_DIV]);
+	return chip_rate_clocks(chip->frequency_hz, gyro_rate_mhz(chip));
+}
+
+/* The value source learns each part's period once the chip samples into its FIFO or raises
+ * data-ready, and each change. */
+static void report_periods(Icm20689 *chip)
+{
+	uint64 gyro = chip_rate_period_ns(gyro_rate_mhz(chip));
+	uint64 accel = chip_rate_period_ns(chip_icm20689_accel_rate_mhz(chip->registers[REG_ACCEL_CONFIG2],
+		chip->registers[REG_SMPLRT_DIV]));
+	if (chip->period_ops == NULL) {
+		return;
+	}
+	if (gyro != chip->reported_gyro_ns) {
+		chip->reported_gyro_ns = gyro;
+		(void)chip->period_ops->sample_period(chip->period_instance, ATHRILL_DEVICE_SAMPLE_GYRO, gyro);
+	}
+	if (accel != chip->reported_accel_ns) {
+		chip->reported_accel_ns = accel;
+		(void)chip->period_ops->sample_period(chip->period_instance, ATHRILL_DEVICE_SAMPLE_ACCEL, accel);
+	}
 }
 
 static std_bool sampling(const Icm20689 *chip)
@@ -309,6 +340,9 @@ static void write_register(Icm20689 *chip, uint8 address, uint8 value)
 	if (!was_on && fifo_on(chip)) {
 		fifo_restart(chip);
 	}
+	if (fifo_on(chip) || (sampling(chip) && (chip->registers[REG_INT_ENABLE] & INT_ENABLE_DATA_RDY) != 0U)) {
+		report_periods(chip);
+	}
 }
 
 static void select_chip(void *instance, std_bool selected)
@@ -368,7 +402,7 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	chip->target_ops = args->target_ops;
 	chip->target = args->target;
 	chip->node = args->node;
-	chip->clocks_per_sample = frequency / 8000U;
+	chip->frequency_hz = frequency;
 	chip->rotated = args->node->ops->get_property(args->node->context,
 		"axis-align-x", &alignment, &size) == 0;
 	*instance = chip;
@@ -390,6 +424,13 @@ static sint32 connect_model(void *instance,
 	chip->gpio_resources = args->resources;
 	chip->gpio_context = args->context;
 	chip->data_ready_resolved = TRUE;
+	/* ABI 1.22: a value source that takes sample periods (optional) */
+	if (args->resources->struct_size >= offsetof(AthrillDeviceResourceOps, get_sample_period) +
+	    sizeof(args->resources->get_sample_period) && args->resources->get_sample_period != NULL &&
+	    args->resources->get_sample_period(args->context, "value-source", &chip->period_ops,
+		&chip->period_instance) != 0) {
+		chip->period_ops = NULL;
+	}
 	return 0;
 }
 

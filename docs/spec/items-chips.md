@@ -15,6 +15,7 @@
 | ADV-CHIP-BMI055G-002 | The gyroscope produces samples at the output data rate its registers set; with data_high_bw (RATE_HBW bit 7) at 2 kHz, otherwise by BW bits 2:0 (2000, 2000, 1000, 400, 200, 100, 200, 100 Hz). | unit | chip:bosch,bmg160 | bosch,bmg160; BMI055 datasheet BST-BMI055-DS000-06, gyroscope registers BW and RATE_HBW |
 | ADV-CHIP-ICM42688-002 | FIFO records come at the gyroscope's output data rate (GYRO_CONFIG0 bits 3:0), and each part's rate (also ACCEL_CONFIG0 bits 3:0) is the one its register sets; reserved codes give no rate. | unit | chip:invensense,icm42688 | invensense,icm42688; ICM-42688-P datasheet register map, GYRO_CONFIG0 and ACCEL_CONFIG0 (GYRO_ODR, ACCEL_ODR) |
 | ADV-CHIP-ICM42688-003 | 16-bit data is in the full scales GYRO_FS_SEL and ACCEL_FS_SEL (bits 7:5) set; 20-bit FIFO data keeps its fixed ±16 g and ±2000 dps. | unit | chip:invensense,icm42688 | invensense,icm42688; ICM-42688-P datasheet register map, GYRO_CONFIG0 and ACCEL_CONFIG0 (GYRO_FS_SEL, ACCEL_FS_SEL) |
+| ADV-CHIP-ICM20689-002 | Samples come at the rate the registers set; the gyroscope (the sample rate of the FIFO and data-ready) at 32 kHz with FCHOICE_B (GYRO_CONFIG bits 1:0) not 0, else 8 kHz with DLPF_CFG (CONFIG bits 2:0) 0 or 7, else 1 kHz / (1 + SMPLRT_DIV); the accelerometer at 4 kHz with ACCEL_FCHOICE_B (ACCEL_CONFIG2 bit 3), else 1 kHz / (1 + SMPLRT_DIV). | unit | chip:invensense,icm20689 | invensense,icm20689; ICM-20689 register map, CONFIG, GYRO_CONFIG, SMPLRT_DIV and ACCEL_CONFIG2 |
 
 ## Test specifications
 
@@ -30,3 +31,4 @@
 | ADV-CHIP-BMI055G-002.T1 | Every BW code, with and without bit 7, with RATE_HBW 0 and 0x80. | The rates of the statement; 2000 Hz with data_high_bw. |
 | ADV-CHIP-ICM42688-002.T1 | Every ODR code of both registers, with the full-scale bits set and clear. | 32, 16, 8, 4, 2, 1 kHz, 200, 100, 50, 25, 12.5 Hz, 500 Hz (code 15); the accelerometer's 12-14 at 6.25, 3.125, 1.5625 Hz; 0 and the gyroscope's 12-14 reserved. |
 | ADV-CHIP-ICM42688-003.T1 | Every full-scale code of both registers. | 16.4, 32.8, 65.5, 131, 262, 524.3, 1048.6, 2097.2 counts/dps; 2048, 4096, 8192, 16384 counts/g, reserved codes as ±16 g. |
+| ADV-CHIP-ICM20689-002.T1 | PX4's settings, every FCHOICE_B and DLPF_CFG code, and SMPLRT_DIV 0, 1, 4, 9; the accelerometer with and without ACCEL_FCHOICE_B. | 8 and 4 kHz for PX4; 32 kHz; 8 kHz; 1000, 500, 200, 100 Hz; 4 kHz or 1 kHz / (1 + SMPLRT_DIV). |
