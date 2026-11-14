@@ -403,8 +403,11 @@ static sint32 i2c_write(void *instance, uint64 address, uint32 size, uint64 inpu
 		} else if ((*reg(b, I2C_CR2) & CR2_START) != 0U) {
 			start(b);
 		} else if (((*reg(b, I2C_ISR) & ISR_TCR) != 0U) &&
-			   (((old ^ *reg(b, I2C_CR2)) >> CR2_NBYTES_SHIFT) & 0xFFU) != 0U) {
-			/* NBYTES written after TCR: the transfer goes on */
+			   (((mask >> CR2_NBYTES_SHIFT) & 0xFFU) != 0U) &&
+			   (((*reg(b, I2C_CR2) >> CR2_NBYTES_SHIFT) & 0xFFU) != 0U)) {
+			/* NBYTES written (non-zero) after TCR: the transfer goes on
+			 * (RM0410 33.7.7: TCR is cleared by writing a non-zero NBYTES;
+			 * NuttX and ChibiOS write 255|RELOAD again, the same value) */
 			*reg(b, I2C_ISR) &= ~ISR_TCR;
 			b->remaining = (*reg(b, I2C_CR2) >> CR2_NBYTES_SHIFT) & 0xFFU;
 			next_bytes(b);
