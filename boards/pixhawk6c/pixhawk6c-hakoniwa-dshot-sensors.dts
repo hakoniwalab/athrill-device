@@ -1,0 +1,36 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Pixhawk 6C with Hakoniwa and DShot, each sensor chip fed by its own sensor
+ * instance of the sensor host (docs/sensor-host.md). An instance's node name
+ * is its name in the run's HAKO_SENSOR_DEVICE_SENSORS, which gives its type,
+ * its adapter and its mount. The BMI055's accelerometer and gyro are one chip
+ * and share one instance. The motors stay on the sensor device.
+ */
+
+#include "pixhawk6c-hakoniwa-dshot.dts"
+
+&hakoniwa_sensor {
+	sensor_bmi055: bmi055 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_icm42688p: icm42688p {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_barometer: barometer {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_magnetometer: magnetometer {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_gps1: gps1 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+};
+
+&bmi055_accel { value-source = <&sensor_bmi055>; };
+&bmi055_gyro { value-source = <&sensor_bmi055>; };
+&icm42688p { value-source = <&sensor_icm42688p>; };
+&barometer { value-source = <&sensor_barometer>; };
+&magnetometer { value-source = <&sensor_magnetometer>; };
+&gps1 { value-source = <&sensor_gps1>; };

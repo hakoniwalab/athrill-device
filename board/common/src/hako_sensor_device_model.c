@@ -2,6 +2,7 @@
 #include "athrill_device_if.h"
 #include "hako_sensor_device.h"
 #include "hako_sensor_registers_model.h"
+#include "hako_sensor_instance_model.h"
 
 #ifndef ATHRILL_HAKONIWA_PASSIVE
 #include "hako_sensor_device_link.h"
@@ -325,6 +326,9 @@ static sint32 linked_tick(HakoSensorModel *model, uint64 now,
 }
 #endif
 
+/* The board's one sensor device, for its sensor instances (hako_sensor_instance_model.c). */
+static HakoSensorModel *the_device;
+
 static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 {
 	HakoSensorModel *model = calloc(1U, sizeof(*model));
@@ -373,6 +377,7 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 				link.physics_step_usec = (step == NULL) ? 0U : strtoull(step, NULL, 0);
 			}
 			link.truth_log_path = host_value(model, "HAKO_SENSOR_DEVICE_TRUTH_LOG");
+			link.sensors_config_path = host_value(model, "HAKO_SENSOR_DEVICE_SENSORS");
 			model->linked = hako_sensor_link_initialize(&link);
 		}
 #else
@@ -418,6 +423,7 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 		}
 	}
 #endif
+	the_device = model;
 	*instance = model;
 	return 0;
 }
@@ -425,6 +431,9 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 static void destroy(void *instance)
 {
 	HakoSensorModel *model = instance;
+	if (the_device == model) {
+		the_device = NULL;
+	}
 #ifndef ATHRILL_HAKONIWA_PASSIVE
 	if (model->linked) {
 		hako_sensor_link_cleanup();
@@ -471,6 +480,19 @@ static sint32 tick(void *instance, uint64 now,
 	(void)now;
 #endif
 	return 0;
+}
+
+static sint32 sensor_sample(void *instance, AthrillDeviceSensorSample *sample);
+static sint32 gps_sample(void *instance, AthrillDeviceGpsSample *sample);
+
+sint32 hako_sensor_device_sensor_sample(AthrillDeviceSensorSample *sample)
+{
+	return (the_device == NULL) ? -1 : sensor_sample(the_device, sample);
+}
+
+sint32 hako_sensor_device_gps_sample(AthrillDeviceGpsSample *sample)
+{
+	return (the_device == NULL) ? -1 : gps_sample(the_device, sample);
 }
 
 static sint32 sensor_sample(void *instance, AthrillDeviceSensorSample *sample)
@@ -628,9 +650,11 @@ static const AthrillDeviceModelOps model_ops = {
 
 static const char *const compatibles[] = { "hakoniwa,sensor-device" };
 static const char *const register_compatibles[] = { "hakoniwa,sensor-registers" };
+static const char *const instance_compatibles[] = { "hakoniwa,sensor-instance" };
 static const AthrillDeviceModelRegistration registrations[] = {
 	{compatibles, 1U, &model_ops},
-	{register_compatibles, 1U, &hako_sensor_registers_model_ops}
+	{register_compatibles, 1U, &hako_sensor_registers_model_ops},
+	{instance_compatibles, 1U, &hako_sensor_instance_model_ops}
 };
 
 #if defined(_WIN32)
@@ -642,5 +666,5 @@ static const AthrillDeviceModelRegistration registrations[] = {
 ATHRILL_PLUGIN_EXPORT const AthrillDevicePlugin athrill_device_plugin_v1 = {
 	ATHRILL_DEVICE_PLUGIN_MAGIC, ATHRILL_DEVICE_ABI_MAJOR,
 	ATHRILL_DEVICE_ABI_MINOR, sizeof(AthrillDevicePlugin),
-	"hakoniwa-sensor-device", "2", registrations, 2U
+	"hakoniwa-sensor-device", "2", registrations, 3U
 };

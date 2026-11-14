@@ -64,6 +64,7 @@ set(HAKO_PDU_REGISTRY_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../hakoniwa-pdu-regis
 add_library(hako_sensor_device SHARED
   src/hako_sensor_device_model.c
   src/hako_sensor_registers_model.c
+  src/hako_sensor_instance_model.c
   src/hako_sensor_device_exdev.c
   src/hako_sensor_device_link.c
   src/hako_sensor_device_link_mavlink.c)
@@ -140,6 +141,7 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
   add_library(hako_sensor_device_inproc SHARED
     src/hako_sensor_device_model.c
     src/hako_sensor_registers_model.c
+    src/hako_sensor_instance_model.c
     src/hako_sensor_device_exdev.c
     src/hako_sensor_device_link_inproc.cpp
     src/hako_sensor_device_link_mavlink.c)
@@ -160,6 +162,7 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
     add_library(hako_sensor_device_inproc_motor SHARED
       src/hako_sensor_device_model.c
       src/hako_sensor_registers_model.c
+    src/hako_sensor_instance_model.c
       src/hako_sensor_device_exdev.c
       src/hako_sensor_device_link_inproc.cpp
       src/hako_sensor_device_link_mavlink.c

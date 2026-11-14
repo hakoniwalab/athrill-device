@@ -83,6 +83,21 @@ MuJoCo steps the whole world with one timestep, so every aircraft in one world h
 | `HAKO_AIRCRAFT_PHYSICS_STEP_USEC` | the physics step [us] over the airframe's own |
 | `HAKO_SENSOR_DEVICE_TRUTH_LOG` | a file for the truth check: on every sample of Hakoniwa Drone's sensor models, their accelerometer and gyro beside the host helpers' ideal IMU at the body origin (both FRD). With an error-free airframe the two agree |
 
+| `HAKO_SENSOR_DEVICE_SENSORS` | the sensor instances: a JSON file `{"sensors": [ ... ]}`, one entry per instance with `name`, `type` (`imu`, `mag`, `baro`, `gps`), `implementation` (the adapters' implementation name), `config` (the adapter's configuration, relative to this file) and an optional `mount` (`positionM` in body FRD [m], `orientationDeg` `roll`/`pitch`/`yaw`). Each instance is reported as INFO at start-up |
+
+### Wiring the chips to their instances
+
+A sensor instance is a Devicetree node with compatible `hakoniwa,sensor-instance`, a child of the board's
+`hakoniwa,sensor-device` node. Its node name is its `name` in `HAKO_SENSOR_DEVICE_SENSORS`; a node without an entry
+there stops the start-up. A chip names its instance with `value-source`. One chip with two functions (the BMI055's
+accelerometer and gyro) has one instance. The motors stay on the sensor device.
+
+The run loads the plugin for the instances too: next to `DEVICE_CONFIG_DEVICE_PLUGIN_0` for
+`hakoniwa%2Csensor-device`, a `DEVICE_CONFIG_DEVICE_PLUGIN_1` for `hakoniwa%2Csensor-instance` with the same library.
+
+`boards/pixhawk6c/pixhawk6c-hakoniwa-dshot-sensors.dts` is the Pixhawk 6C with DShot wired this way, with the
+instances `bmi055`, `icm42688p`, `barometer`, `magnetometer` and `gps1`.
+
 The plugin is built with `HAKO_SENSOR_DEVICE_SENSOR_HOST=ON` and `HAKONIWA_SENSOR_ADAPTER_DIR` (the
 hakoniwa-sensor-adapter tree). Without it, nothing of this section exists and the sensor device works as before.
 

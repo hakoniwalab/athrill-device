@@ -4,6 +4,8 @@
 #include "service.hpp"
 #ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
 #include "hakoniwa/sensor_adapter/host/sensor_host.hpp"
+#include <fstream>
+#include <nlohmann/json.hpp>
 #endif
 
 #include <cmath>
@@ -182,7 +184,16 @@ struct InProcessLink {
 	HakoVehiclePoseSample read_pose{};
 	bool has_pose{false};
 #ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
-	/* the vehicle's true motion after the last physics step (athrill-device#129) */
+	/* one sensor instance of the configuration (HAKO_SENSOR_DEVICE_SENSORS) */
+	struct SensorInstance {
+		std::string name;
+		std::string type;		/* imu, mag, baro, gps */
+		std::string implementation;	/* the adapters' implementation name */
+		std::string config_path;	/* the adapter's configuration, absolute */
+		hakoniwa::sensor_adapter::host::MountPose mount;	/* FLU, from the FRD mount */
+	};
+	std::vector<SensorInstance> sensors;
+	/* the vehicle's true motion after the last physics step */
 	hakoniwa::sensor_adapter::host::RigidBodyMotion motion{};
 	hakoniwa::sensor_adapter::host::ImuVibration vibration{};
 	bool has_motion{false};
@@ -296,6 +307,72 @@ void logTruth(InProcessLink& state, const Hako_HakoHilSensor& sensor)
 		sensor.xacc, sensor.yacc, sensor.zacc, sensor.xgyro, sensor.ygyro, sensor.zgyro,
 		imu.specific_force.x, -imu.specific_force.y, -imu.specific_force.z,
 		imu.angular_velocity.x, -imu.angular_velocity.y, -imu.angular_velocity.z);
+}
+#endif
+
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+/* The sensor instances (docs/sensor-host.md, Configuration). The mount is written as
+ * Hakoniwa Drone's (positionM in body FRD, orientationDeg); absent, at the origin. */
+bool loadSensorInstances(InProcessLink& state, const std::string& path)
+{
+	std::ifstream file(path);
+	if (!file) {
+		std::cerr << "ERROR: hako_sensor_device: can not read " << path << std::endl;
+		return false;
+	}
+	const auto root = nlohmann::json::parse(file);
+	if (!root.contains("sensors") || !root["sensors"].is_array()) {
+		std::cerr << "ERROR: hako_sensor_device: " << path << ": sensors must be an array" << std::endl;
+		return false;
+	}
+	const std::filesystem::path base = std::filesystem::absolute(path).parent_path();
+	for (const auto& entry : root["sensors"]) {
+		InProcessLink::SensorInstance sensor;
+		sensor.name = entry.at("name").get<std::string>();
+		sensor.type = entry.at("type").get<std::string>();
+		sensor.implementation = entry.at("implementation").get<std::string>();
+		const std::filesystem::path config = entry.at("config").get<std::string>();
+		sensor.config_path = (config.is_absolute() ? config : base / config).lexically_normal().string();
+		if (sensor.type != "imu" && sensor.type != "mag" && sensor.type != "baro" && sensor.type != "gps") {
+			std::cerr << "ERROR: hako_sensor_device: " << path << ": " << sensor.name
+				<< ": type must be imu, mag, baro or gps" << std::endl;
+			return false;
+		}
+		for (const auto& other : state.sensors) {
+			if (other.name == sensor.name) {
+				std::cerr << "ERROR: hako_sensor_device: " << path << ": " << sensor.name
+					<< " is there twice" << std::endl;
+				return false;
+			}
+		}
+		hakoniwa::sensor_adapter::Vector3 position{};
+		double roll = 0.0, pitch = 0.0, yaw = 0.0;
+		if (entry.contains("mount")) {
+			const auto& mount = entry["mount"];
+			if (mount.contains("positionM")) {
+				const auto p = mount["positionM"].get<std::vector<double>>();
+				if (p.size() != 3U) {
+					std::cerr << "ERROR: hako_sensor_device: " << path << ": " << sensor.name
+						<< ": mount.positionM must have 3 values" << std::endl;
+					return false;
+				}
+				position = {p[0], p[1], p[2]};
+			}
+			if (mount.contains("orientationDeg")) {
+				const auto& o = mount["orientationDeg"];
+				roll = o.value("roll", 0.0);
+				pitch = o.value("pitch", 0.0);
+				yaw = o.value("yaw", 0.0);
+			}
+		}
+		sensor.mount = hakoniwa::sensor_adapter::host::mount_from_frd_rpy_deg(position, roll, pitch, yaw);
+		std::cout << "INFO: hako_sensor_device: sensor " << sensor.name << " (" << sensor.type << ", "
+			<< sensor.implementation << ", " << sensor.config_path << ") mounted at FRD ["
+			<< position.x << ", " << position.y << ", " << position.z << "] m, roll " << roll
+			<< " pitch " << pitch << " yaw " << yaw << " deg" << std::endl;
+		state.sensors.push_back(sensor);
+	}
+	return true;
 }
 #endif
 
@@ -483,6 +560,10 @@ extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
 			std::fprintf(state->truth_log,
 				"# time_usec hil_acc_x y z hil_gyro_x y z host_acc_x y z host_gyro_x y z (FRD)\n");
 		}
+		if (config->sensors_config_path != nullptr
+			&& !loadSensorInstances(*state, config->sensors_config_path)) {
+			return false;
+		}
 #endif
 		const double step_usec = aircraft_config.getSimTimeStep() * 1000000.0;
 		state->physics_step_usec = static_cast<uint64_t>(std::llround(step_usec));
@@ -613,6 +694,24 @@ extern "C" bool hako_sensor_link_read_motor_status(uint32_t index, HakoMotorStat
 	}
 	*status = link->read_motors[index];	/* read in the device's thread */
 	return true;
+}
+
+extern "C" bool hako_sensor_link_sensor_instance(const char *name, const char **type)
+{
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+	if (link && name != nullptr && type != nullptr) {
+		for (const auto& sensor : link->sensors) {
+			if (sensor.name == name) {
+				*type = sensor.type.c_str();
+				return true;
+			}
+		}
+	}
+#else
+	(void)name;
+	(void)type;
+#endif
+	return false;
 }
 
 extern "C" void hako_sensor_link_cleanup(void)
