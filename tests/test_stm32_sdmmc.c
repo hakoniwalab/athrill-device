@@ -534,6 +534,42 @@ static void test_idma_blocks(void)
 	now += 22500U;
 	tick();
 	CHECK_EQ("written block read back", ram[0x800U] | (ram[0x9FFU] << 8), 0xA5A5U);
+
+	/* ChibiOS's SDMMCv2 order: IDMA and DLEN, the command without CMDTRANS,
+	 * then DCTRL with DTEN starts the data path (RM0433 55.5.4) */
+	wr(IDMACTRL, 0U);
+	wr(IDMABASE0, ram_base + 0xC00U);
+	wr(IDMACTRL, 1U);
+	wr(MASK, DATAEND);
+	wr(DLEN, 512U);
+	(void)h7_command(17U, 3U, 1U, FALSE);
+	CHECK_EQ("no CMDTRANS, no DTEN: idle", rd(STA) & DPSMACT, 0U);
+	now += 22500U;
+	tick();
+	CHECK_EQ("no CMDTRANS, no DTEN: no DATAEND", rd(STA) & DATAEND, 0U);
+	start = now;
+	wr(DCTRL, (9U << 4) | (1U << 1) | 1U);
+	CHECK_EQ("DTEN starts the read", rd(STA) & DPSMACT, DPSMACT);
+	now = start + 22500U;
+	tick();
+	CHECK_EQ("DTEN read DATAEND", rd(STA) & DATAEND, DATAEND);
+	CHECK_EQ("DTEN read block 3", ram[0xC00U] | (ram[0xDFFU] << 8), 0x0303U);
+	memset(&ram[0xE00U], 0x5A, 512U);
+	wr(IDMACTRL, 0U);
+	wr(IDMABASE0, ram_base + 0xE00U);
+	wr(IDMACTRL, 1U);
+	wr(DLEN, 512U);
+	(void)h7_command(24U, 6U, 1U, FALSE);
+	start = now;
+	wr(DCTRL, (9U << 4) | 1U);
+	now = start + 22500U;
+	tick();
+	CHECK_EQ("DTEN write DATAEND", rd(STA) & DATAEND, DATAEND);
+	idma(ram_base + 0x800U, TRUE);
+	(void)h7_command(17U, 6U, 1U, TRUE);
+	now += 22500U;
+	tick();
+	CHECK_EQ("DTEN-written block read back", ram[0x800U] | (ram[0x9FFU] << 8), 0x5A5AU);
 }
 
 /* no image: the card answers nothing (as no card did before) */
