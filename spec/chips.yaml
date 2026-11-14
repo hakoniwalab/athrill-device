@@ -123,3 +123,18 @@
   - id: ADV-CHIP-ICM42688-003.T1
     stimulus: Every full-scale code of both registers.
     expect: 16.4, 32.8, 65.5, 131, 262, 524.3, 1048.6, 2097.2 counts/dps; 2048, 4096, 8192, 16384 counts/g, reserved codes as ±16 g.
+- id: ADV-CHIP-ICM20689-002
+  statement: Samples come at the rate the registers set; the gyroscope (the sample rate of the FIFO and data-ready) at
+    32 kHz with FCHOICE_B (GYRO_CONFIG bits 1:0) not 0, else 8 kHz with DLPF_CFG (CONFIG bits 2:0) 0 or 7, else 1 kHz /
+    (1 + SMPLRT_DIV); the accelerometer at 4 kHz with ACCEL_FCHOICE_B (ACCEL_CONFIG2 bit 3), else 1 kHz / (1 + SMPLRT_DIV).
+  source:
+    devicetree: invensense,icm20689
+    manual: ICM-20689 register map, CONFIG, GYRO_CONFIG, SMPLRT_DIV and ACCEL_CONFIG2
+  scope: The firmware's FIFO timing and the sensor host's check of the chip's rate against the sensor adapter.
+  verification: unit
+  applies_to: chip:invensense,icm20689
+  tests:
+  - id: ADV-CHIP-ICM20689-002.T1
+    stimulus: PX4's settings, every FCHOICE_B and DLPF_CFG code, and SMPLRT_DIV 0, 1, 4, 9; the accelerometer with and
+      without ACCEL_FCHOICE_B.
+    expect: 8 and 4 kHz for PX4; 32 kHz; 8 kHz; 1000, 500, 200, 100 Hz; 4 kHz or 1 kHz / (1 + SMPLRT_DIV).

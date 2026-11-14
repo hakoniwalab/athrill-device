@@ -68,6 +68,29 @@ int main(void)
 		}
 	}
 
+	/* [ADV-CHIP-ICM20689-002.T1] ICM-20689: gyroscope (sample rate) and accelerometer */
+	{
+		/* PX4: DLPF_CFG 7, FCHOICE_B 0, ACCEL_FCHOICE_B: 8 kHz and 4 kHz */
+		TEST_CHECK(chip_icm20689_gyro_rate_mhz(0x47U, 0x18U, 0U) == 8000000U);
+		TEST_CHECK(chip_icm20689_accel_rate_mhz(0x08U, 0U) == 4000000U);
+		/* DLPF_CFG 0 also bypasses the 1 kHz path: 8 kHz */
+		TEST_CHECK(chip_icm20689_gyro_rate_mhz(0x00U, 0x00U, 9U) == 8000000U);
+		/* FCHOICE_B 01, 10, 11: 32 kHz whatever DLPF_CFG */
+		TEST_CHECK(chip_icm20689_gyro_rate_mhz(0x03U, 0x01U, 0U) == 32000000U);
+		TEST_CHECK(chip_icm20689_gyro_rate_mhz(0x03U, 0x02U, 0U) == 32000000U);
+		TEST_CHECK(chip_icm20689_gyro_rate_mhz(0x03U, 0x03U, 0U) == 32000000U);
+		/* DLPF_CFG 1..6: 1 kHz / (1 + SMPLRT_DIV): 1000, 500, 200, 100 Hz for 0, 1, 4, 9 */
+		for (i = 1U; i <= 6U; i++) {
+			TEST_CHECK(chip_icm20689_gyro_rate_mhz((uint8)i, 0x00U, 0U) == 1000000U);
+		}
+		TEST_CHECK(chip_icm20689_gyro_rate_mhz(0x03U, 0x00U, 1U) == 500000U);
+		TEST_CHECK(chip_icm20689_gyro_rate_mhz(0x03U, 0x00U, 4U) == 200000U);
+		TEST_CHECK(chip_icm20689_gyro_rate_mhz(0x03U, 0x00U, 9U) == 100000U);
+		/* the accelerometer without ACCEL_FCHOICE_B: 1 kHz / (1 + SMPLRT_DIV) */
+		TEST_CHECK(chip_icm20689_accel_rate_mhz(0x00U, 0U) == 1000000U);
+		TEST_CHECK(chip_icm20689_accel_rate_mhz(0x07U, 4U) == 200000U);
+	}
+
 	/* periods: 2 kHz at a 400 MHz time base is 200000 clocks and 500000 ns; 15.625 Hz is 64 ms */
 	TEST_CHECK(chip_rate_clocks(400000000U, 2000000U) == 200000U);
 	TEST_CHECK(chip_rate_period_ns(2000000U) == 500000U);
