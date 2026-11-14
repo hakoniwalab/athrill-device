@@ -70,3 +70,56 @@
   - id: ADV-CHIP-MS5611-001.T1
     stimulus: Send reset, read PROM words 0-7.
     expect: CRC-4 computed per AN520 equals the stored CRC nibble.
+- id: ADV-CHIP-BMI055A-002
+  statement: The accelerometer produces samples at the output data rate its registers set; with data_high_bw (ACCD_HBW bit 7)
+    at 2 kHz, otherwise at twice the bandwidth of PMU_BW bits 4:0 (0x08..0x0F; codes below as 0x08, above as 0x0F).
+  source:
+    devicetree: bosch,bma280
+    manual: BMI055 datasheet BST-BMI055-DS000-06, accelerometer registers PMU_BW and ACCD_HBW
+  scope: The firmware's FIFO timing and the sensor host's check of the chip's rate against the sensor adapter.
+  verification: unit
+  applies_to: chip:bosch,bma280
+  tests:
+  - id: ADV-CHIP-BMI055A-002.T1
+    stimulus: Every PMU_BW code with ACCD_HBW 0 and 0x80.
+    expect: 15.625, 31.25, 62.5, 125, 250, 500, 1000, 2000 Hz for 0x08..0x0F, clamped below and above; 2000 Hz with data_high_bw.
+- id: ADV-CHIP-BMI055G-002
+  statement: The gyroscope produces samples at the output data rate its registers set; with data_high_bw (RATE_HBW bit 7) at
+    2 kHz, otherwise by BW bits 2:0 (2000, 2000, 1000, 400, 200, 100, 200, 100 Hz).
+  source:
+    devicetree: bosch,bmg160
+    manual: BMI055 datasheet BST-BMI055-DS000-06, gyroscope registers BW and RATE_HBW
+  scope: As ADV-CHIP-BMI055A-002.
+  verification: unit
+  applies_to: chip:bosch,bmg160
+  tests:
+  - id: ADV-CHIP-BMI055G-002.T1
+    stimulus: Every BW code, with and without bit 7, with RATE_HBW 0 and 0x80.
+    expect: The rates of the statement; 2000 Hz with data_high_bw.
+- id: ADV-CHIP-ICM42688-002
+  statement: FIFO records come at the gyroscope's output data rate (GYRO_CONFIG0 bits 3:0), and each part's rate (also
+    ACCEL_CONFIG0 bits 3:0) is the one its register sets; reserved codes give no rate.
+  source:
+    devicetree: invensense,icm42688
+    manual: ICM-42688-P datasheet register map, GYRO_CONFIG0 and ACCEL_CONFIG0 (GYRO_ODR, ACCEL_ODR)
+  scope: As ADV-CHIP-BMI055A-002.
+  verification: unit
+  applies_to: chip:invensense,icm42688
+  tests:
+  - id: ADV-CHIP-ICM42688-002.T1
+    stimulus: Every ODR code of both registers, with the full-scale bits set and clear.
+    expect: 32, 16, 8, 4, 2, 1 kHz, 200, 100, 50, 25, 12.5 Hz, 500 Hz (code 15); the accelerometer's 12-14 at 6.25, 3.125,
+      1.5625 Hz; 0 and the gyroscope's 12-14 reserved.
+- id: ADV-CHIP-ICM42688-003
+  statement: 16-bit data is in the full scales GYRO_FS_SEL and ACCEL_FS_SEL (bits 7:5) set; 20-bit FIFO data keeps its fixed
+    ±16 g and ±2000 dps.
+  source:
+    devicetree: invensense,icm42688
+    manual: ICM-42688-P datasheet register map, GYRO_CONFIG0 and ACCEL_CONFIG0 (GYRO_FS_SEL, ACCEL_FS_SEL)
+  scope: Firmware that programs another full scale than PX4 and ArduPilot (±16 g, ±2000 dps).
+  verification: unit
+  applies_to: chip:invensense,icm42688
+  tests:
+  - id: ADV-CHIP-ICM42688-003.T1
+    stimulus: Every full-scale code of both registers.
+    expect: 16.4, 32.8, 65.5, 131, 262, 524.3, 1048.6, 2097.2 counts/dps; 2048, 4096, 8192, 16384 counts/g, reserved codes as ±16 g.

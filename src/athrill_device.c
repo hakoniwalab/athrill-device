@@ -102,6 +102,9 @@ struct NodeRecord {
 	/* ABI 1.21: the motor state a value source offers */
 	const AthrillDeviceMotorStatusOps *motor_status_ops;
 	void *motor_status_instance;
+	/* ABI 1.22: the sample periods a value source takes */
+	const AthrillDeviceSamplePeriodOps *sample_period_ops;
+	void *sample_period_instance;
 	std_bool uart_bound;
 };
 
@@ -1864,6 +1867,49 @@ static sint32 resource_get_motor_status(void *context, const char *property,
 	return 0;
 }
 
+/* ABI 1.22: a value source takes chips' sample periods (once, from connect). */
+static sint32 resource_sample_period_provide(void *context,
+	const AthrillDeviceSamplePeriodOps *ops, void *instance)
+{
+	NodeRecord *node = context;
+	if (ops == NULL || node->sample_period_ops != NULL ||
+	    !abi_header_ok(ops->abi_major, ops->abi_minor, ops->struct_size,
+	                   sizeof(AthrillDeviceSamplePeriodOps)) ||
+	    ops->sample_period == NULL) {
+		return -1;
+	}
+	node->sample_period_ops = ops;
+	node->sample_period_instance = instance;
+	return 0;
+}
+
+/* ABI 1.22: for a chip, the sample-period table of the node its property names. */
+static sint32 resource_get_sample_period(void *context, const char *property,
+	const AthrillDeviceSamplePeriodOps **ops, void **instance)
+{
+	NodeRecord *node = context;
+	const fdt32_t *cell;
+	NodeRecord *provider;
+	int length;
+	int provider_index;
+	if (property == NULL || ops == NULL || instance == NULL) {
+		return -1;
+	}
+	cell = fdt_getprop(node->runtime->dtb, node->offset, property, &length);
+	if (cell == NULL || length != 4 ||
+	    (provider_index = node_index_by_phandle(node->runtime,
+		fdt32_to_cpu(*cell))) < 0) {
+		return -1;
+	}
+	provider = &node->runtime->nodes[provider_index];
+	if (!provider->enabled || provider->sample_period_ops == NULL) {
+		return -1;
+	}
+	*ops = provider->sample_period_ops;
+	*instance = provider->sample_period_instance;
+	return 0;
+}
+
 /* [ADV-UART-002] expose only enabled children bound to this controller */
 static sint32 resource_get_uart_child(void *context, uint32 index,
 	AthrillDeviceUartEndpoint *endpoint)
@@ -1942,7 +1988,8 @@ static const AthrillDeviceResourceOps resource_ops = {
 	resource_get_sd_card, resource_gpio_resolve, resource_gpio_drive,
 	resource_gpio_read, resource_gpio_subscribe, resource_console_listen,
 	resource_request_tick, resource_esc_fault_provide, resource_get_esc_fault,
-	resource_motor_status_provide, resource_get_motor_status
+	resource_motor_status_provide, resource_get_motor_status,
+	resource_sample_period_provide, resource_get_sample_period
 };
 
 static int add_spec_dependencies(AthrillDeviceRuntime *runtime, NodeRecord *node,

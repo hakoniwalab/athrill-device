@@ -217,6 +217,14 @@ struct InProcessLink {
 	 * the sample the device read last (hako_sensor_link_read) */
 	std::vector<InstanceValue> prepared_values;
 	std::vector<InstanceValue> read_values;
+	/* chips' sample periods, from the CPU's thread, checked before the next physics step */
+	struct PeriodReport {
+		uint32_t index;
+		uint32_t kind;
+		uint64_t period_ns;
+	};
+	std::mutex period_mutex;
+	std::vector<PeriodReport> period_reports;
 	/* the vehicle's true motion after the last physics step */
 	hakoniwa::sensor_adapter::host::RigidBodyMotion motion{};
 	hakoniwa::sensor_adapter::host::ImuVibration vibration{};
@@ -315,6 +323,64 @@ void captureTruth(InProcessLink& state)
 	state.has_motion = true;
 }
 
+/* [Chip rates] A chip's output data rate as its firmware programmed it, against the
+ * instance's adapter (docs/sensor-host.md). The physics step is fixed for the run: a
+ * chip faster than it is an error. Otherwise the adapter follows the chip where it can
+ * (hakoniwa-sensor-adapter update-period); where it can not, that is an error. */
+void checkChipPeriods(InProcessLink& state)
+{
+	std::vector<InProcessLink::PeriodReport> reports;
+	{
+		std::lock_guard<std::mutex> lock(state.period_mutex);
+		reports.swap(state.period_reports);
+	}
+	const uint64_t step_ns = state.physics_step_usec * 1000U;
+	for (const auto& report : reports) {
+		auto& sensor = state.sensors[report.index];
+		const bool gyro = report.kind == HAKO_SENSOR_SAMPLE_GYRO;
+		const char *part = gyro ? "gyro" : "accelerometer";
+		const auto us = [](uint64_t ns) { return static_cast<double>(ns) / 1000.0; };
+		if (!sensor.imu) {
+			std::cerr << "WARNING: hako_sensor_device: sensor " << sensor.name << " (" << sensor.type
+				<< ") got an IMU chip's sample period; not checked" << std::endl;
+			continue;
+		}
+		if (report.period_ns == 0U) {
+			std::cerr << "ERROR: hako_sensor_device: sensor " << sensor.name << " " << part
+				<< ": the chip's output data rate register holds a reserved setting" << std::endl;
+			continue;
+		}
+		if (report.period_ns < step_ns) {
+			std::cerr << "ERROR: hako_sensor_device: sensor " << sensor.name << " " << part << ": the chip samples every "
+				<< us(report.period_ns) << " us, finer than the physics step of " << us(step_ns)
+				<< " us, which can not change during the run; the chip repeats values. Run with a physics step of at most "
+				<< us(report.period_ns) << " us (HAKO_AIRCRAFT_PHYSICS_STEP_USEC)" << std::endl;
+			continue;
+		}
+		const auto imu_part = gyro ? hakoniwa::sensor_adapter::ImuPart::gyro : hakoniwa::sensor_adapter::ImuPart::accel;
+		uint64_t adapter_ns = 0;
+		if (!sensor.imu->part_update_period_ns(imu_part, adapter_ns)) {
+			std::cerr << "ERROR: hako_sensor_device: sensor " << sensor.name << " " << part << ": the chip samples every "
+				<< us(report.period_ns) << " us; the adapter does not say its period, so it can not be checked" << std::endl;
+			continue;
+		}
+		if (adapter_ns == report.period_ns) {
+			std::cout << "INFO: hako_sensor_device: sensor " << sensor.name << " " << part << ": chip and adapter every "
+				<< us(report.period_ns) << " us" << std::endl;
+			continue;
+		}
+		std::string error;
+		if (sensor.imu->set_part_update_period_ns(imu_part, report.period_ns, error)) {
+			std::cout << "INFO: hako_sensor_device: sensor " << sensor.name << " " << part << ": the adapter follows the chip, every "
+				<< us(adapter_ns) << " us -> " << us(report.period_ns) << " us" << std::endl;
+		} else {
+			std::cerr << "ERROR: hako_sensor_device: sensor " << sensor.name << " " << part << ": the chip samples every "
+				<< us(report.period_ns) << " us, the adapter every " << us(adapter_ns) << " us, and it can not follow: "
+				<< error << std::endl;
+		}
+	}
+}
+
 /* Every instance's adapter, one physics step: the truth at its mount from the motion
  * just captured, then its own errors and timing (docs/sensor-host.md, The pipeline). */
 bool stepSensorInstances(InProcessLink& state)
@@ -322,6 +388,7 @@ bool stepSensorInstances(InProcessLink& state)
 	if (state.sensors.empty()) {
 		return true;
 	}
+	checkChipPeriods(state);
 	const uint64_t time_ns = state.host_step_count * state.physics_step_usec * 1000U;
 	std::string error;
 	for (auto& sensor : state.sensors) {
@@ -997,6 +1064,23 @@ extern "C" bool hako_sensor_link_sensor_instance(const char *name, const char **
 	(void)index;
 #endif
 	return false;
+}
+
+extern "C" bool hako_sensor_link_instance_sample_period(uint32_t index, uint32_t kind, uint64_t period_ns)
+{
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+	if (!link || index >= link->sensors.size()) {
+		return false;
+	}
+	std::lock_guard<std::mutex> lock(link->period_mutex);
+	link->period_reports.push_back({index, kind, period_ns});
+	return true;
+#else
+	(void)index;
+	(void)kind;
+	(void)period_ns;
+	return false;
+#endif
 }
 
 extern "C" bool hako_sensor_link_read_instance(uint32_t index, HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps)

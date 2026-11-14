@@ -16,6 +16,7 @@ add_library(athrill_device STATIC
   src/protocol_uart.c
   src/athrill_device.c
   src/models/bmi055.c
+  src/models/chip_rates.c
   src/models/fm25v02.c
   src/models/icm20689.c
   src/models/icm42688p.c
@@ -295,6 +296,11 @@ if(BUILD_TESTING)
   target_include_directories(test_stm32_tim PRIVATE src/models)
   target_link_libraries(test_stm32_tim PRIVATE athrill_device)
   add_test(NAME stm32-tim COMMAND test_stm32_tim)
+  add_executable(test_chip_rates tests/test_chip_rates.c)
+  target_compile_definitions(test_chip_rates PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_chip_rates PRIVATE src/models)
+  target_link_libraries(test_chip_rates PRIVATE athrill_device)
+  add_test(NAME chip-rates COMMAND test_chip_rates)
   add_executable(test_fm25v02 tests/test_fm25v02.c)
   target_compile_definitions(test_fm25v02 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_fm25v02 PRIVATE src/models)

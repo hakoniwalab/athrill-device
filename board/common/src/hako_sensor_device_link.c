@@ -163,6 +163,14 @@ bool hako_sensor_link_read_instance(uint32_t index, HakoSensorSample *sensor, Ha
 	return false;
 }
 
+bool hako_sensor_link_instance_sample_period(uint32_t index, uint32_t kind, uint64_t period_ns)
+{
+	(void)index;
+	(void)kind;
+	(void)period_ns;
+	return false;
+}
+
 /* Nor a pose: the aircraft service publishes it itself. */
 bool hako_sensor_link_read_pose(HakoVehiclePoseSample *pose)
 {
