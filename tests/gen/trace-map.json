@@ -83,20 +83,22 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
       "chip_compatibles": {
+        "bosch,bma280": 1,
+        "bosch,bmg160": 1,
         "invensense,icm20689": 1,
         "isentek,ist8310": 1,
         "meas,ms5611": 1
       },
-      "chip_nodes": 3,
+      "chip_nodes": 5,
       "dma_controllers": 2,
       "dma_references": 36,
       "dt_boards": 1,
       "dt_irq_nodes": 31,
       "dt_mmio_nodes": 50,
       "dt_negative_nodes": 1,
-      "dt_nodes": 75,
-      "gpio_chip_selects": 3,
-      "gpio_interrupt_consumers": 1,
+      "dt_nodes": 77,
+      "gpio_chip_selects": 5,
+      "gpio_interrupt_consumers": 3,
       "pwm_entries": 0,
       "pwm_maps": 0,
       "sd_cards": 1,
@@ -107,20 +109,22 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
       "chip_compatibles": {
+        "bosch,bma280": 1,
+        "bosch,bmg160": 1,
         "invensense,icm20689": 1,
         "isentek,ist8310": 1,
         "meas,ms5611": 1
       },
-      "chip_nodes": 3,
+      "chip_nodes": 5,
       "dma_controllers": 2,
       "dma_references": 36,
       "dt_boards": 1,
       "dt_irq_nodes": 31,
       "dt_mmio_nodes": 50,
       "dt_negative_nodes": 1,
-      "dt_nodes": 75,
-      "gpio_chip_selects": 3,
-      "gpio_interrupt_consumers": 1,
+      "dt_nodes": 77,
+      "gpio_chip_selects": 5,
+      "gpio_interrupt_consumers": 3,
       "pwm_entries": 0,
       "pwm_maps": 0,
       "sd_cards": 1,
@@ -131,20 +135,22 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "chip_compatibles": {
+        "bosch,bma280": 1,
+        "bosch,bmg160": 1,
         "invensense,icm20689": 1,
         "isentek,ist8310": 1,
         "meas,ms5611": 1
       },
-      "chip_nodes": 3,
+      "chip_nodes": 5,
       "dma_controllers": 2,
       "dma_references": 36,
       "dt_boards": 1,
       "dt_irq_nodes": 31,
       "dt_mmio_nodes": 50,
       "dt_negative_nodes": 1,
-      "dt_nodes": 74,
-      "gpio_chip_selects": 3,
-      "gpio_interrupt_consumers": 1,
+      "dt_nodes": 76,
+      "gpio_chip_selects": 5,
+      "gpio_interrupt_consumers": 3,
       "pwm_entries": 8,
       "pwm_maps": 1,
       "sd_cards": 1,
@@ -155,20 +161,22 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "chip_compatibles": {
+        "bosch,bma280": 1,
+        "bosch,bmg160": 1,
         "invensense,icm20689": 1,
         "isentek,ist8310": 1,
         "meas,ms5611": 1
       },
-      "chip_nodes": 3,
+      "chip_nodes": 5,
       "dma_controllers": 2,
       "dma_references": 36,
       "dt_boards": 1,
       "dt_irq_nodes": 31,
       "dt_mmio_nodes": 50,
       "dt_negative_nodes": 1,
-      "dt_nodes": 73,
-      "gpio_chip_selects": 3,
-      "gpio_interrupt_consumers": 1,
+      "dt_nodes": 75,
+      "gpio_chip_selects": 5,
+      "gpio_interrupt_consumers": 3,
       "pwm_entries": 8,
       "pwm_maps": 1,
       "sd_cards": 1,
@@ -2763,9 +2771,11 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
       "derived_properties": {
-        "child_count": 1,
+        "child_count": 3,
         "reg": [
-          0
+          0,
+          1,
+          2
         ]
       },
       "item_id": "ADV-SPI-002",
@@ -2793,6 +2803,48 @@
       "known_defect": null,
       "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__imu@0__ADV-SPI-001.T1",
       "node_path": "/soc/spi@40013000/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            4,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021400"
+        },
+        "reg": 1
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__gyroscope@1__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            10,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021800"
+        },
+        "reg": 2
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__accelerometer@2__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
       "test_spec_id": "ADV-SPI-001.T1",
       "will_fail": false
@@ -3527,6 +3579,8 @@
           "/soc/sdmmc@40012c00/sd-card",
           "/soc/spi@40013000",
           "/soc/spi@40013000/imu@0",
+          "/soc/spi@40013000/gyroscope@1",
+          "/soc/spi@40013000/accelerometer@2",
           "/soc/spi@40013400",
           "/soc/spi@40013400/pressure@0",
           "/soc/interrupt-controller@40013c00",
@@ -5383,7 +5437,7 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
       "derived_properties": {
-        "dtb_size": 26825
+        "dtb_size": 27157
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -6004,6 +6058,60 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
       "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            14,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40020400"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__gyroscope@1__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            15,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40020400"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__accelerometer@2__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
+      "derived_properties": {
         "chip_select": 0,
         "controller": "/soc/spi@40003800",
         "cs_gpio": {
@@ -6048,6 +6156,50 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
       "derived_properties": {
+        "chip_select": 1,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            4,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021400"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__gyroscope@1__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
+      "derived_properties": {
+        "chip_select": 2,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            10,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021800"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__accelerometer@2__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
+      "derived_properties": {
         "chip_select": 0,
         "controller": "/soc/spi@40013400",
         "cs_gpio": {
@@ -6083,6 +6235,42 @@
       "node_path": "/soc/spi@40013000/imu@0",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
       "test_spec_id": "ADV-CHIP-ICM20689-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "bosch,bmg160",
+        "controller": "/soc/spi@40013000",
+        "expected": 15,
+        "register": 0,
+        "selector": 1
+      },
+      "item_id": "ADV-CHIP-BMI055G-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__gyroscope@1__ADV-CHIP-BMI055G-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
+      "test_spec_id": "ADV-CHIP-BMI055G-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "bosch,bma280",
+        "controller": "/soc/spi@40013000",
+        "expected": 250,
+        "register": 0,
+        "selector": 2
+      },
+      "item_id": "ADV-CHIP-BMI055A-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__accelerometer@2__ADV-CHIP-BMI055A-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
+      "test_spec_id": "ADV-CHIP-BMI055A-001.T1",
       "will_fail": false
     },
     {
@@ -6221,9 +6409,11 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
       "derived_properties": {
-        "child_count": 1,
+        "child_count": 3,
         "reg": [
-          0
+          0,
+          1,
+          2
         ]
       },
       "item_id": "ADV-SPI-002",
@@ -6251,6 +6441,48 @@
       "known_defect": null,
       "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__spi@40013000__imu@0__ADV-SPI-001.T1",
       "node_path": "/soc/spi@40013000/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            4,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021400"
+        },
+        "reg": 1
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__spi@40013000__gyroscope@1__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            10,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021800"
+        },
+        "reg": 2
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__spi@40013000__accelerometer@2__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
       "test_spec_id": "ADV-SPI-001.T1",
       "will_fail": false
@@ -6985,6 +7217,8 @@
           "/soc/sdmmc@40012c00/sd-card",
           "/soc/spi@40013000",
           "/soc/spi@40013000/imu@0",
+          "/soc/spi@40013000/gyroscope@1",
+          "/soc/spi@40013000/accelerometer@2",
           "/soc/spi@40013400",
           "/soc/spi@40013400/pressure@0",
           "/soc/interrupt-controller@40013c00",
@@ -8841,7 +9075,7 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
       "derived_properties": {
-        "dtb_size": 26841
+        "dtb_size": 27173
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -9462,6 +9696,60 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
       "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            14,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40020400"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__spi@40013000__gyroscope@1__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            15,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40020400"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__spi@40013000__accelerometer@2__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
         "chip_select": 0,
         "controller": "/soc/spi@40003800",
         "cs_gpio": {
@@ -9506,6 +9794,50 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
       "derived_properties": {
+        "chip_select": 1,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            4,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021400"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__spi@40013000__gyroscope@1__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "chip_select": 2,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            10,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021800"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__spi@40013000__accelerometer@2__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
         "chip_select": 0,
         "controller": "/soc/spi@40013400",
         "cs_gpio": {
@@ -9541,6 +9873,42 @@
       "node_path": "/soc/spi@40013000/imu@0",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
       "test_spec_id": "ADV-CHIP-ICM20689-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "bosch,bmg160",
+        "controller": "/soc/spi@40013000",
+        "expected": 15,
+        "register": 0,
+        "selector": 1
+      },
+      "item_id": "ADV-CHIP-BMI055G-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__spi@40013000__gyroscope@1__ADV-CHIP-BMI055G-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-CHIP-BMI055G-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "bosch,bma280",
+        "controller": "/soc/spi@40013000",
+        "expected": 250,
+        "register": 0,
+        "selector": 2
+      },
+      "item_id": "ADV-CHIP-BMI055A-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__spi@40013000__accelerometer@2__ADV-CHIP-BMI055A-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-CHIP-BMI055A-001.T1",
       "will_fail": false
     },
     {
@@ -9679,9 +10047,11 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
-        "child_count": 1,
+        "child_count": 3,
         "reg": [
-          0
+          0,
+          1,
+          2
         ]
       },
       "item_id": "ADV-SPI-002",
@@ -9709,6 +10079,48 @@
       "known_defect": null,
       "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__imu@0__ADV-SPI-001.T1",
       "node_path": "/soc/spi@40013000/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            4,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021400"
+        },
+        "reg": 1
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__gyroscope@1__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            10,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021800"
+        },
+        "reg": 2
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__accelerometer@2__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
       "test_spec_id": "ADV-SPI-001.T1",
       "will_fail": false
@@ -10427,6 +10839,8 @@
           "/soc/sdmmc@40012c00/sd-card",
           "/soc/spi@40013000",
           "/soc/spi@40013000/imu@0",
+          "/soc/spi@40013000/gyroscope@1",
+          "/soc/spi@40013000/accelerometer@2",
           "/soc/spi@40013400",
           "/soc/spi@40013400/pressure@0",
           "/soc/interrupt-controller@40013c00",
@@ -12283,7 +12697,7 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 26513
+        "dtb_size": 26845
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -12974,6 +13388,60 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            14,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40020400"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__gyroscope@1__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            15,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40020400"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__accelerometer@2__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
         "chip_select": 0,
         "controller": "/soc/spi@40003800",
         "cs_gpio": {
@@ -13018,6 +13486,50 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
+        "chip_select": 1,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            4,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021400"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__gyroscope@1__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "chip_select": 2,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            10,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021800"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__accelerometer@2__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
         "chip_select": 0,
         "controller": "/soc/spi@40013400",
         "cs_gpio": {
@@ -13053,6 +13565,42 @@
       "node_path": "/soc/spi@40013000/imu@0",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
       "test_spec_id": "ADV-CHIP-ICM20689-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "bosch,bmg160",
+        "controller": "/soc/spi@40013000",
+        "expected": 15,
+        "register": 0,
+        "selector": 1
+      },
+      "item_id": "ADV-CHIP-BMI055G-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__gyroscope@1__ADV-CHIP-BMI055G-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-CHIP-BMI055G-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "bosch,bma280",
+        "controller": "/soc/spi@40013000",
+        "expected": 250,
+        "register": 0,
+        "selector": 2
+      },
+      "item_id": "ADV-CHIP-BMI055A-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__spi@40013000__accelerometer@2__ADV-CHIP-BMI055A-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-CHIP-BMI055A-001.T1",
       "will_fail": false
     },
     {
@@ -13191,9 +13739,11 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
-        "child_count": 1,
+        "child_count": 3,
         "reg": [
-          0
+          0,
+          1,
+          2
         ]
       },
       "item_id": "ADV-SPI-002",
@@ -13221,6 +13771,48 @@
       "known_defect": null,
       "name": "pixhawk4__pixhawk4__soc__spi@40013000__imu@0__ADV-SPI-001.T1",
       "node_path": "/soc/spi@40013000/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            4,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021400"
+        },
+        "reg": 1
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__spi@40013000__gyroscope@1__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            10,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021800"
+        },
+        "reg": 2
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__spi@40013000__accelerometer@2__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
       "test_spec_id": "ADV-SPI-001.T1",
       "will_fail": false
@@ -13939,6 +14531,8 @@
           "/soc/sdmmc@40012c00/sd-card",
           "/soc/spi@40013000",
           "/soc/spi@40013000/imu@0",
+          "/soc/spi@40013000/gyroscope@1",
+          "/soc/spi@40013000/accelerometer@2",
           "/soc/spi@40013400",
           "/soc/spi@40013400/pressure@0",
           "/soc/interrupt-controller@40013c00",
@@ -15794,7 +16388,7 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
-        "dtb_size": 26424
+        "dtb_size": 26732
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -16485,6 +17079,60 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            14,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40020400"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__spi@40013000__gyroscope@1__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            15,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40020400"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__spi@40013000__accelerometer@2__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
         "chip_select": 0,
         "controller": "/soc/spi@40003800",
         "cs_gpio": {
@@ -16529,6 +17177,50 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
+        "chip_select": 1,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            4,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021400"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__spi@40013000__gyroscope@1__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "chip_select": 2,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            10,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@40020000/gpio@40021800"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__spi@40013000__accelerometer@2__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
         "chip_select": 0,
         "controller": "/soc/spi@40013400",
         "cs_gpio": {
@@ -16564,6 +17256,42 @@
       "node_path": "/soc/spi@40013000/imu@0",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
       "test_spec_id": "ADV-CHIP-ICM20689-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "bosch,bmg160",
+        "controller": "/soc/spi@40013000",
+        "expected": 15,
+        "register": 0,
+        "selector": 1
+      },
+      "item_id": "ADV-CHIP-BMI055G-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__spi@40013000__gyroscope@1__ADV-CHIP-BMI055G-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-CHIP-BMI055G-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "bosch,bma280",
+        "controller": "/soc/spi@40013000",
+        "expected": 250,
+        "register": 0,
+        "selector": 2
+      },
+      "item_id": "ADV-CHIP-BMI055A-001",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__spi@40013000__accelerometer@2__ADV-CHIP-BMI055A-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@2",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-CHIP-BMI055A-001.T1",
       "will_fail": false
     },
     {
