@@ -1,0 +1,43 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Pixhawk 6C with Hakoniwa, motors 1-4 on DShot ESCs.
+ *
+ * PX4 v1.17.0 drives FMU outputs 1-4 (TIM1 CH1..CH4) with DShot when
+ * PWM_AUX_TIM0 is -5/-4/-3 (DShot150/300/600). The ESC decodes each motor's
+ * frame and gives its throttle to the Hakoniwa sink, in place of the PWM
+ * actuator map, and answers telemetry requests with KISS frames on USART2
+ * (PX4 TELEM3, /dev/ttyS1; DSHOT_TEL_CFG 103).
+ */
+
+#include "pixhawk6c-hakoniwa.dts"
+
+&pwm_actuators {
+	status = "disabled";
+};
+
+/*
+ * The ESC's fault-injection point: a schedule fault model with no stop, so
+ * nothing changes until a run names one with the host value
+ * DEVICE_CONFIG_ESC_MOTOR_STOP ("motor@time-ms").
+ */
+/ {
+	esc_fault: esc-fault {
+		compatible = "athrill,esc-fault-schedule";
+	};
+};
+
+&usart2 {
+	dshot_esc: dshot-esc {
+		compatible = "athrill,dshot-esc";
+		/* FMU_CH1..FMU_CH4, the motor order of PWM_AUX_FUNC1..4 */
+		pwms = <&pwm1 1 20000000 0>,
+		       <&pwm1 2 20000000 0>,
+		       <&pwm1 3 20000000 0>,
+		       <&pwm1 4 20000000 0>;
+		pwm-names = "FMU_CH1", "FMU_CH2", "FMU_CH3", "FMU_CH4";
+		value-source = <&hakoniwa_sensor>;
+		athrill,tick-before-value-source;
+		fault-model = <&esc_fault>;
+	};
+};

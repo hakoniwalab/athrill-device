@@ -251,8 +251,19 @@
 	};
 };
 
+/*
+ * TIM1 drives motors 1-4 (CH1-CH4). For DShot, PX4 v1.17.0 (timer_config.cpp
+ * DMA{Index1}, dshot.c) bursts CCR1-CCR4 through DMAR on the update DMA
+ * request, routed by DMAMUX1 (request 15, TIM1_UP; RM0433 DMAMUX1 table) to a
+ * DMA1 stream it allocates. The configuration cell is PX4's stream setup
+ * (32-bit memory to peripheral, high priority). With PWM PX4 never sets UDE,
+ * so the request is never raised.
+ */
 &timers1 {
 	status = "okay";
+	dmas = <&dmamux1 0 15 (STM32_DMA_PERIPH_TX | STM32_DMA_MEM_32BITS |
+			       STM32_DMA_PERIPH_32BITS | STM32_DMA_PRIORITY_HIGH)>;
+	dma-names = "up";
 	pwm1: pwm { status = "okay"; };
 };
 

@@ -2701,7 +2701,7 @@ static int case_pixhawk6c__pixhawk6c__soc__dmamux_40020800__ADV_DMA_005_T1(void)
 	uint32 index;
 	CHECK(build_board() == 0);
 	CHECK(count_model_path(captured_stderr, "/soc/dmamux@40020800") == 1U);
-	CHECK(count_dma_provider("/soc/dmamux@40020800") == 18U);
+	CHECK(count_dma_provider("/soc/dmamux@40020800") == 19U);
 	{ static const uint32 wanted[] = {0U, 40U, 1088U};
 	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
 	                 0U, "tx")); }
@@ -2738,6 +2738,9 @@ static int case_pixhawk6c__pixhawk6c__soc__dmamux_40020800__ADV_DMA_005_T1(void)
 	{ static const uint32 wanted[] = {0U, 81U, 1152U};
 	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
 	                 1U, "rx")); }
+	{ static const uint32 wanted[] = {0U, 15U, 152640U};
+	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
+	                 0U, "up")); }
 	{ static const uint32 wanted[] = {0U, 42U, 1088U};
 	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
 	                 0U, "tx")); }
