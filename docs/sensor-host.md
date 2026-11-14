@@ -125,9 +125,10 @@ The autopilot's allowance for a sensor's delay must be the delay of that instanc
 SITL: for PX4, `EKF2_BARO_DELAY` and `EKF2_GPS_DELAY`. The x500 parameters hold 60 ms and 100 ms, the delays of
 Hakoniwa Drone's barometer and GPS models; with adapters without delay they are 0.
 
-The chip reads the values of the sample the sensor device took last. The sensor device still takes a sample at the
-aircraft's SITL sensor period (`simulation.sitl.sensor_period_msec`). The adapters measure every physics step, but a
-chip sees the measurement only at those samples.
+The chip reads the values of the sample the sensor device took last. With sensor instances the sensor device takes
+a sample, and gives the motors their commands, on every physics step, in place of the aircraft's SITL sensor period
+(`simulation.sitl.sensor_period_msec`; reported as INFO). So a chip sees each measurement in the physics step its
+adapter makes it, and the motors follow the firmware's output within one physics step.
 
 The plugin is built with `HAKO_SENSOR_DEVICE_SENSOR_HOST=ON` and `HAKONIWA_SENSOR_ADAPTER_DIR` (the
 hakoniwa-sensor-adapter tree). Without it, nothing of this section exists and the sensor device works as before.

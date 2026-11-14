@@ -839,6 +839,21 @@ extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
 			std::cerr << "ERROR: hako_sensor_device: invalid sensor update periods" << std::endl;
 			return false;
 		}
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+		if (!state->sensors.empty()) {
+			/* The chips see each instance's measurement in the physics step it is made:
+			 * the sensor device takes a sample, and gives the motors, every physics step. */
+			if (state->sensor_period_usec != state->physics_step_usec) {
+				std::cout << "INFO: hako_sensor_device: sensor instances: the sensor device samples every physics step ("
+					<< state->physics_step_usec << " us) in place of the aircraft's sensor period ("
+					<< state->sensor_period_usec << " us)" << std::endl;
+			}
+			state->sensor_period_usec = state->physics_step_usec;
+			if (!state->aircraft_service->setSitlSensorPeriodUsec(0U, state->physics_step_usec)) {
+				return false;
+			}
+		}
+#endif
 		state->aircraft_service->enableReceiveEvent(0U);
 		if (!state->aircraft_service->startService(true, state->physics_step_usec)) {
 			return false;
