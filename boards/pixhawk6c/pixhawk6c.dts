@@ -243,6 +243,11 @@
 &sdmmc2 {
 	status = "okay";
 	bus-width = <4>;
+	/* D0 (PB14) as the firmware reads it as a GPIO: high through the
+	 * board's pull-up while the card is not busy. NuttX's H7 SDMMC driver
+	 * (CONFIG_MMCSD_SDIOWAIT_WRCOMPLETE) ends each write when it reads D0
+	 * high; without this line every block write waited its 260 ms timeout. */
+	athrill,d0-gpios = <&gpiob 14 GPIO_ACTIVE_HIGH>;
 
 	sdcard: sd-card {
 		compatible = "zephyr,sdmmc-disk";

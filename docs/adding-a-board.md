@@ -297,9 +297,9 @@ and size. The checked-in blobs produce:
 | `boards/pixhawk4/pixhawk4-hakoniwa.dtb` | `DEVICE_TREE sha256=60c9e2dd35d89b919c39a1bb169ce1ab15929c6e52b1be439f959a653ea28fe0 size=26229` |
 | `boards/pixhawk4/pixhawk4-hakoniwa-dshot.dtb` | `DEVICE_TREE sha256=338872bd171ac2cc4c037d5174c5d9422ddc93d4c73cc6be91971e70a369fef3 size=26557` |
 | `boards/pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb` | `DEVICE_TREE sha256=a908983bd499399b7c82035c71adb259a0121cf6fbebcff0072070332ddcc8cc size=26541` |
-| `boards/pixhawk6c/pixhawk6c.dtb` | `DEVICE_TREE sha256=669120919cd12ce860f55edf014a6b6704e8b4947496a3aa7ca262e8a41c7093 size=31323` |
-| `boards/pixhawk6c/pixhawk6c-hakoniwa.dtb` | `DEVICE_TREE sha256=95460b4820b1527c8a731a00443ca02227cc7e9c5ccd01fc2e94415d362ccac2 size=31436` |
-| `boards/pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb` | `DEVICE_TREE sha256=cc7cb4bd211ac6106050c0c8cdeb47459b7ce8b99d9882986085abc02cddbe50 size=31764` |
+| `boards/pixhawk6c/pixhawk6c.dtb` | `DEVICE_TREE sha256=df101d83cc918571884495d46ed861ee5a44ceaee5f4644fa3d268ac1e0ca262 size=31380` |
+| `boards/pixhawk6c/pixhawk6c-hakoniwa.dtb` | `DEVICE_TREE sha256=cc7359fda3d1c779ff7f63cc48d2ab96119553c8f74227c50a231fa6c80876c3 size=31493` |
+| `boards/pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb` | `DEVICE_TREE sha256=601acc6b14f87aa34ee6144ae7ddac251ff3b8c5fcc3ae119497266e4e5a594c size=31821` |
 | `boards/nucleo-f767zi/nucleo-f767zi.dtb` | `DEVICE_TREE sha256=6a72e8dccf8e54f2c65f53beaa706622d7834a437920e77f0e8fa962ef6474e3 size=29491` |
 | `boards/nucleo-h743zi/nucleo-h743zi.dtb` | `DEVICE_TREE sha256=f14668b555edd421fe21b99294b854a47c676fd7d19c1f7730de2102b6f10c0f size=34742` |
 | `boards/erbium/erbium.dtb` | `DEVICE_TREE sha256=74d0308a9d6ded43a601f10e6b6be893b77acb5bee4a89259b111a15ee1afda8 size=1969` |

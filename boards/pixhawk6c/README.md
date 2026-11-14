@@ -23,7 +23,7 @@ stop: nothing changes until a run sets the host value
 The reviewed DTB hashes are filled in after compilation:
 
 ```text
-669120919cd12ce860f55edf014a6b6704e8b4947496a3aa7ca262e8a41c7093  pixhawk6c.dtb
-95460b4820b1527c8a731a00443ca02227cc7e9c5ccd01fc2e94415d362ccac2  pixhawk6c-hakoniwa.dtb
-cc7cb4bd211ac6106050c0c8cdeb47459b7ce8b99d9882986085abc02cddbe50  pixhawk6c-hakoniwa-dshot.dtb
+df101d83cc918571884495d46ed861ee5a44ceaee5f4644fa3d268ac1e0ca262  pixhawk6c.dtb
+cc7359fda3d1c779ff7f63cc48d2ab96119553c8f74227c50a231fa6c80876c3  pixhawk6c-hakoniwa.dtb
+601acc6b14f87aa34ee6144ae7ddac251ff3b8c5fcc3ae119497266e4e5a594c  pixhawk6c-hakoniwa-dshot.dtb
 ```
