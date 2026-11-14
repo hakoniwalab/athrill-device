@@ -59,6 +59,7 @@
 #define SxFCR		5U
 
 #define CR_EN		(1U << 0)
+#define CR_TEIE		(1U << 2)
 #define CR_HTIE		(1U << 3)
 #define CR_TCIE		(1U << 4)
 #define CR_DIR_SHIFT	6U
@@ -71,6 +72,7 @@
 #define DIR_P2M		0U
 #define DIR_M2P		1U
 
+#define FLAG_TE		(1U << 3)
 #define FLAG_HT		(1U << 4)
 #define FLAG_TC		(1U << 5)
 
@@ -96,6 +98,7 @@ struct DmaType {
 	/* request lines: bit c of requested[s] is the request on channel c of stream s */
 	uint32 requested[STREAMS];
 	std_bool servicing;
+	std_bool bus_error[STREAMS];	/* an access of the item being moved failed */
 };
 
 static uint64 clock_now(const DmaType *d)
@@ -121,52 +124,67 @@ static uint32 unit(uint32 cr, uint32 shift)
 	return 1U << ((cr >> shift) & 3U);	/* bytes: 1, 2, 4 */
 }
 
-static uint32 bus_read(DmaType *d, uint32 addr, uint32 size)
+/* One access of the item width; non-zero when the bus refused it (an
+ * address nothing answers): the item's transfer error (#113). */
+static sint32 bus_read(DmaType *d, uint32 addr, uint32 size, uint32 *value)
 {
 	uint8 v8 = 0U;
 	uint16 v16 = 0U;
 	uint32 v32 = 0U;
+	sint32 result;
 
-	/* one access of the item width */
 	if (size == 1U) {
-		(void)d->target_ops->memory_read(d->target, addr, &v8, 1U);
-		return v8;
+		result = d->target_ops->memory_read(d->target, addr, &v8, 1U);
+		*value = v8;
 	}
-	if (size == 2U) {
-		(void)d->target_ops->memory_read(d->target, addr, &v16, 2U);
-		return v16;
+	else if (size == 2U) {
+		result = d->target_ops->memory_read(d->target, addr, &v16, 2U);
+		*value = v16;
 	}
-	(void)d->target_ops->memory_read(d->target, addr, &v32, 4U);
-	return v32;
+	else {
+		result = d->target_ops->memory_read(d->target, addr, &v32, 4U);
+		*value = v32;
+	}
+	return result;
 }
 
-static void bus_write(DmaType *d, uint32 addr, uint32 size, uint32 value)
+static sint32 bus_write(DmaType *d, uint32 addr, uint32 size, uint32 value)
 {
 	uint8 v8 = (uint8)value;
 	uint16 v16 = (uint16)value;
 
-	/* one access of the item width */
 	if (size == 1U) {
-		(void)d->target_ops->memory_write(d->target, addr, &v8, 1U);
+		return d->target_ops->memory_write(d->target, addr, &v8, 1U);
 	}
-	else if (size == 2U) {
-		(void)d->target_ops->memory_write(d->target, addr, &v16, 2U);
+	if (size == 2U) {
+		return d->target_ops->memory_write(d->target, addr, &v16, 2U);
 	}
-	else {
-		(void)d->target_ops->memory_write(d->target, addr, &value, 4U);
+	return d->target_ops->memory_write(d->target, addr, &value, 4U);
+}
+
+/* The result of an endpoint's bus access: a failure marks the stream. */
+static sint32 bus_result(DmaEndpoint *endpoint, sint32 result)
+{
+	if (result != 0) {
+		endpoint->controller->bus_error[endpoint->stream] = TRUE;
+		return -1;
 	}
+	return 0;
 }
 
 static sint32 endpoint_memory_read(void *context, uint64 address, uint8 width,
 	uint64 *value)
 {
 	DmaEndpoint *endpoint = context;
+	uint32 data = 0U;
+	sint32 result;
 
 	if (value == NULL || address > 0xFFFFFFFFU) {
 		return -1;
 	}
-	*value = bus_read(endpoint->controller, (uint32)address, width);
-	return 0;
+	result = bus_read(endpoint->controller, (uint32)address, width, &data);
+	*value = data;
+	return bus_result(endpoint, result);
 }
 
 static sint32 endpoint_memory_write(void *context, uint64 address, uint8 width,
@@ -177,8 +195,7 @@ static sint32 endpoint_memory_write(void *context, uint64 address, uint8 width,
 	if (address > 0xFFFFFFFFU) {
 		return -1;
 	}
-	bus_write(endpoint->controller, (uint32)address, width, (uint32)value);
-	return 0;
+	return bus_result(endpoint, bus_write(endpoint->controller, (uint32)address, width, (uint32)value));
 }
 
 /* The peripheral side: the register at PAR on the bus. */
@@ -188,12 +205,15 @@ static sint32 endpoint_peripheral_read(void *context, uint32 request,
 	DmaEndpoint *endpoint = context;
 	DmaType *d = endpoint->controller;
 	uint32 *st = d->stream[endpoint->stream];
+	uint32 data = 0U;
+	sint32 result;
 
 	if (value == NULL || request != ((st[SxCR] >> CR_CHSEL_SHIFT) & 7U)) {
 		return -1;
 	}
-	*value = bus_read(d, st[SxPAR], width);
-	return 0;
+	result = bus_read(d, st[SxPAR], width, &data);
+	*value = data;
+	return bus_result(endpoint, result);
 }
 
 static sint32 endpoint_peripheral_write(void *context, uint32 request,
@@ -206,8 +226,7 @@ static sint32 endpoint_peripheral_write(void *context, uint32 request,
 	if (request != ((st[SxCR] >> CR_CHSEL_SHIFT) & 7U)) {
 		return -1;
 	}
-	bus_write(d, st[SxPAR], width, (uint32)value);
-	return 0;
+	return bus_result(endpoint, bus_write(d, st[SxPAR], width, (uint32)value));
 }
 
 static const AthrillDmaEndpointOps endpoint_ops = {
@@ -319,6 +338,26 @@ static void stream_half(DmaType *d, uint32 s, uint32 moved)
 	}
 }
 
+/* A transfer error (RM0410 8.3.19, RM0433 15.3.20): an access of
+ * the item failed. TEIF is set instead of any completion, the hardware
+ * clears EN, and TEIE raises the stream's interrupt (#113). A direct-mode
+ * error (DMEIF) does not arise here: the bus is never busy, a DMA access
+ * is granted at once. */
+static void stream_error(DmaType *d, uint32 s)
+{
+	uint32 *st = d->stream[s];
+
+	d->isr[s / 4U] |= FLAG_TE << flag_shift(s);
+	st[SxCR] &= ~CR_EN;
+	if (d->protocol[s] != NULL) {
+		(void)athrill_dma_stop(d->protocol[s], clock_now(d));
+	}
+	stream_destroy(d, s);
+	if ((st[SxCR] & CR_TEIE) != 0U) {
+		raise(d, s);
+	}
+}
+
 /* One item of stream s. */
 static std_bool stream_move(DmaType *d, uint32 s)
 {
@@ -329,10 +368,14 @@ static std_bool stream_move(DmaType *d, uint32 s)
 		return FALSE;
 	}
 	moved = ++d->transferred[s];
+	d->bus_error[s] = FALSE;
 	/* counted before the request: a last item's complete may reload a
 	 * circular count */
 	if (athrill_dma_request(d->protocol[s], request, clock_now(d)) != 1) {
 		d->transferred[s]--;
+		if (d->bus_error[s]) {
+			stream_error(d, s);
+		}
 		return FALSE;
 	}
 	d->stream[s][SxNDTR] = (uint32)athrill_dma_remaining(d->protocol[s]);
@@ -554,6 +597,7 @@ static sint32 dma_reset(void *instance)
 		d->ndtr_start[s] = 0U;
 		d->transferred[s] = 0U;
 		d->requested[s] = 0U;
+		d->bus_error[s] = FALSE;
 	}
 	d->servicing = FALSE;
 	return 0;
