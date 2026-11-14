@@ -2,9 +2,11 @@
 # in-process Hakoniwa aircraft
 # Checked by athrill-target-stm32 examples/px4-v6c-hakoniwa/verify-armed-inproc.sh.
 #
-# Valid only for this firmware: px4_fmu-v6c_default.elf built from PX4 v1.17.0
-# (make px4_fmu-v6c_default in px4io/px4-dev:v1.17.0-beta1). A rebuild may not
-# be bit-identical; with another firmware the values are not compared.
+# Valid only for this firmware: px4_fmu-v6c_default.elf of the
+# athrill-target-stm32 release px4-v1.17.0-fmu-v6c (PX4 v1.17.0, make
+# px4_fmu-v6c_default in px4io/px4-dev:v1.17.0-beta1; SHA-256 in the release's
+# SHA256SUMS). A rebuild may not be bit-identical; with another firmware the
+# values are not compared.
 # Aircraft: Hakoniwa Drone 5.0.0, x500-px4-sitl, lockstep, timeStep 0.001,
 # randomSeed 12345.
 #
@@ -28,15 +30,25 @@
 # depends on the batch), 5248904847 -> 5248909950; the console, the PWM trace
 # and the time-stamped sensor-device trace are unchanged, with the interpreter,
 # with tick skip and with the JIT and tick skip.
-seed_sha256 fram.bin b2325cf2b36ad1118b5076ae07efaff67098b23454693beaff985ca9c2cf277f
-seed_sha256 sd.img 1006b9fa1ed50fa2729932b482753fc64003b141600853da8d96ed7d46bb017e
-firmware_sha256 8719b2ea764d3185bbf4fbda7d7031763b03eac700d2fe355967eea57c4ffe78
-instructions 5248909950
-sha256 console.raw abe45c05b078454a3885d725a99d21e7af4741872b78c924777d7f71b687d70b
-sha256 pwm.trace 72244d73872b67884721bdb2a98a6a17e3a0535bef9436005938515e2e5be8c1
-sha256 sensor-device.trace 6a928ca49166fec8c07e0c39ccbddf4b23ed8e71b336519bf8351393e1e362f7
-sha256 fram.bin 6eb5c99119c5982c82c01da336d8d290f8adca1ee04973ebb92453d0efccc6e9
-sha256 sd.img 3ae38aba71cf7ab6a0d64de3b6d92221ac389dd0a63a1e83a85f27e924b04053
+# Re-recorded 2026-11-14 with athrill-device 6b6f588 for a published firmware:
+# the earlier reference firmware (8719b2ea...) was never published and could
+# not be rebuilt bit-identically, so the reference moved to the ELF of the
+# athrill-target-stm32 release px4-v1.17.0-fmu-v6c (e192cd79...). The models
+# also changed the run since the last recording: the DMA sets HTIF for a
+# one-item transfer (#102; NuttX's H7 serial driver freed its TX buffer only
+# then) and the SD card's D0 reads high (#103; each SD write had waited 260 ms).
+# Two runs gave identical values ("armed and took off"); the tick order is
+# unchanged. Aircraft: Hakoniwa Drone PRO (v5 code with the motor status
+# interface), x500-px4-sitl with randomSeed 12345, in process.
+seed_sha256 fram.bin b1c61973a65f1c9fb477cee730c7af5c427ad4ae43ec938c3161e3b26c8bee1c
+seed_sha256 sd.img 5c744bea0fd22577c8c215716f6e83973dc319c20c4879f4607cba8f218d9387
+firmware_sha256 e192cd7937ae03252969b12f9339c9a7af2dd4725189235119ed2ddc4c2bd2c4
+instructions 5346759285
+sha256 console.raw 3a56ed76be00dcdbb81dd22c91b0c868d37f3bda1263a1b4a2688ac8be8fb53b
+sha256 pwm.trace 9306712ff78059ca5b375c3d9eb60bbb0e5bfe34f74cd8b6edb83e3fa84dd8f3
+sha256 sensor-device.trace 7f0f299c6f3827a25ca70e51bf4c9f51ecaf40f122cc99ae8afcf7f8ed347c9e
+sha256 fram.bin 407321c474667d4fcb1f44c0f85cdf40110e2ebdc96ec530969c8c36fb6dbcc4
+sha256 sd.img 44a529915fcce680af151f58499a0ae165f33f01936b8c5647fc9aa72d2cd2cb
 # tick: the order the devices are ticked in (target TARGET_TICK lines, with
 # "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
 # 2026-11-08 with athrill-target-stm32 0050bb4 + the tick-order log.
