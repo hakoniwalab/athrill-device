@@ -99,6 +99,17 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
     message(FATAL_ERROR "Hakoniwa Drone release libraries were not found under ${HAKO_DRONE_PLATFORM_DIR}")
   endif()
 
+  # The sensor host (athrill-device#129): the vehicle's true motion read each physics step and
+  # made into sensor truths with hakoniwa-sensor-adapter's host helpers. Needs a Drone tree with
+  # IAirCraft::get_rotor_vibration and DroneConfig::setSimTimeStep.
+  option(HAKO_SENSOR_DEVICE_SENSOR_HOST "In process: the sensor host from the vehicle's true motion" OFF)
+  set(HAKONIWA_SENSOR_ADAPTER_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../hakoniwa-sensor-adapter"
+      CACHE PATH "hakoniwa-sensor-adapter source tree (host helpers)")
+  if(HAKO_SENSOR_DEVICE_SENSOR_HOST AND
+     NOT EXISTS "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_host.cpp")
+    message(FATAL_ERROR "HAKO_SENSOR_DEVICE_SENSOR_HOST needs HAKONIWA_SENSOR_ADAPTER_DIR with src/host/sensor_host.cpp")
+  endif()
+
   function(configure_hako_inproc_target target)
     target_link_libraries(${target} PRIVATE "${HAKO_DRONE_SERVICE_LIBRARY}")
     target_include_directories(${target} PRIVATE
@@ -111,6 +122,11 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
       "${HAKO_PDU_REGISTRY_DIR}/pdu/types")
     target_compile_features(${target} PRIVATE cxx_std_17)
     target_compile_definitions(${target} PRIVATE HAKO_ENABLE_SENSOR_MODEL_V2)
+    if(HAKO_SENSOR_DEVICE_SENSOR_HOST)
+      target_sources(${target} PRIVATE "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_host.cpp")
+      target_include_directories(${target} PRIVATE "${HAKONIWA_SENSOR_ADAPTER_DIR}/include")
+      target_compile_definitions(${target} PRIVATE HAKO_SENSOR_DEVICE_SENSOR_HOST)
+    endif()
     if(APPLE)
       # Both release dylibs use @loader_path, so keep them beside each consumer.
       add_custom_command(TARGET ${target} POST_BUILD

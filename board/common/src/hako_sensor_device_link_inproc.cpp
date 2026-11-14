@@ -2,9 +2,14 @@
 #include "hako_sensor_device_link_mavlink.h"
 
 #include "service.hpp"
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+#include "hakoniwa/sensor_adapter/host/sensor_host.hpp"
+#endif
 
 #include <cmath>
 #include <condition_variable>
+#include <array>
+#include <cstdio>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
@@ -176,6 +181,13 @@ struct InProcessLink {
 	HakoVehiclePoseSample worker_pose{};
 	HakoVehiclePoseSample read_pose{};
 	bool has_pose{false};
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+	/* the vehicle's true motion after the last physics step (athrill-device#129) */
+	hakoniwa::sensor_adapter::host::RigidBodyMotion motion{};
+	hakoniwa::sensor_adapter::host::ImuVibration vibration{};
+	bool has_motion{false};
+	FILE *truth_log{nullptr};
+#endif
 };
 
 std::unique_ptr<InProcessLink> link;
@@ -223,6 +235,70 @@ bool loadAircraftConfig(InProcessLink& state, const std::string& path)
 	return true;
 }
 
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+namespace host = hakoniwa::sensor_adapter::host;
+
+/* Drone PRO's world NED and body FRD to the sensor adapters' world NWU and body FLU. */
+hakoniwa::sensor_adapter::Vector3 nedToNwu(double x, double y, double z)
+{
+	return {x, -y, -z};
+}
+
+/* The vehicle's true motion now, as the host helpers take it (sensor spec 2.4:
+ * the body origin's motion; MuJoCo's free-joint body). The world acceleration
+ * is used, not get_acc_body_frame (that is d(v_body)/dt, without w x v). */
+void captureTruth(InProcessLink& state)
+{
+	auto aircraft = state.aircraft_container->getAirCraft(0U);
+	if (aircraft == nullptr) {
+		return;
+	}
+	auto& dynamics = aircraft->get_drone_dynamics();
+	const auto pos = dynamics.get_pos();
+	const auto vel = dynamics.get_vel();
+	const auto acc = dynamics.get_acc();
+	const auto angle = dynamics.get_angle();
+	const auto rate = dynamics.get_angular_vel_body_frame();
+	const auto alpha = dynamics.get_angular_acc_body_frame();
+	constexpr double kRadToDeg = 180.0 / 3.14159265358979323846;
+	state.motion.position_nwu = nedToNwu(pos.data.x, pos.data.y, pos.data.z);
+	state.motion.velocity_nwu = nedToNwu(vel.data.x, vel.data.y, vel.data.z);
+	state.motion.linear_acceleration_nwu = nedToNwu(acc.data.x, acc.data.y, acc.data.z);
+	state.motion.angular_velocity_body = nedToNwu(rate.data.x, rate.data.y, rate.data.z);
+	state.motion.angular_acceleration_body = nedToNwu(alpha.data.x, alpha.data.y, alpha.data.z);
+	/* The body's attitude in NWU/FLU (roll kept, pitch and yaw negated, as capturePose);
+	 * mount_from_rpy_deg's quaternion is the coordinate rotation from the outer frame
+	 * (here the world) into the rotated one (here the body). */
+	state.motion.orientation_world_to_body = host::mount_from_rpy_deg({}, angle.data.x * kRadToDeg,
+		-angle.data.y * kRadToDeg, -angle.data.z * kRadToDeg).orientation_body_to_sensor;
+	std::array<double, 3> vib_acc{};
+	std::array<double, 3> vib_gyro{};
+	if (aircraft->get_rotor_vibration(vib_acc, vib_gyro)) {
+		state.vibration.acceleration_body = nedToNwu(vib_acc[0], vib_acc[1], vib_acc[2]);
+		state.vibration.angular_velocity_body = nedToNwu(vib_gyro[0], vib_gyro[1], vib_gyro[2]);
+	}
+	state.has_motion = true;
+}
+
+/* The truth check: Drone PRO's accelerometer and gyro (its sensor models, FRD) beside
+ * the host helpers' ideal IMU at the body origin from the captured truth (FRD). With an
+ * error-free airframe the two must agree. */
+void logTruth(InProcessLink& state, const Hako_HakoHilSensor& sensor)
+{
+	if (state.truth_log == nullptr || !state.has_motion) {
+		return;
+	}
+	const host::World world{};
+	const auto imu = host::imu_truth(0U, state.motion, host::MountPose{}, world, state.vibration);
+	std::fprintf(state.truth_log,
+		"%llu %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g %.9g\n",
+		static_cast<unsigned long long>(sensor.time_usec),
+		sensor.xacc, sensor.yacc, sensor.zacc, sensor.xgyro, sensor.ygyro, sensor.zgyro,
+		imu.specific_force.x, -imu.specific_force.y, -imu.specific_force.z,
+		imu.angular_velocity.x, -imu.angular_velocity.y, -imu.angular_velocity.z);
+}
+#endif
+
 bool stepUntilSensor(InProcessLink& state, uint64_t last_time_usec)
 {
 	Hako_HakoHilSensor sensor{};
@@ -236,6 +312,9 @@ bool stepUntilSensor(InProcessLink& state, uint64_t last_time_usec)
 	for (uint64_t step = 0U; step < max_steps; step++) {
 		if (state.mavlink_service->readSensor(sensor, gps, has_gps)
 			&& sensor.time_usec > last_time_usec) {
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+			logTruth(state, sensor);
+#endif
 			return true;
 		}
 		if (state.has_actuator) {
@@ -246,6 +325,9 @@ bool stepUntilSensor(InProcessLink& state, uint64_t last_time_usec)
 		else if (!state.aircraft_service->flushSensorData(0U)) {
 			return false;
 		}
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+		captureTruth(state);
+#endif
 	}
 	return state.mavlink_service->readSensor(sensor, gps, has_gps)
 		&& sensor.time_usec > last_time_usec;
@@ -384,6 +466,24 @@ extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
 			return false;
 		}
 		DroneConfig& aircraft_config = state->config_manager.getConfig(0U);
+		if (config->physics_step_usec != 0U) {
+			/* before the aircraft is made: every part of it takes its step from here */
+			aircraft_config.setSimTimeStep(static_cast<double>(config->physics_step_usec) / 1000000.0);
+		}
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+		if (config->truth_log_path != nullptr) {
+			std::cout << "INFO: hako_sensor_device: truth check written to " << config->truth_log_path << std::endl;
+		}
+		if (config->truth_log_path != nullptr) {
+			state->truth_log = std::fopen(config->truth_log_path, "w");
+			if (state->truth_log == nullptr) {
+				std::cerr << "ERROR: hako_sensor_device: can not write " << config->truth_log_path << std::endl;
+				return false;
+			}
+			std::fprintf(state->truth_log,
+				"# time_usec hil_acc_x y z hil_gyro_x y z host_acc_x y z host_gyro_x y z (FRD)\n");
+		}
+#endif
 		const double step_usec = aircraft_config.getSimTimeStep() * 1000000.0;
 		state->physics_step_usec = static_cast<uint64_t>(std::llround(step_usec));
 		if (state->physics_step_usec == 0U
@@ -523,5 +623,11 @@ extern "C" void hako_sensor_link_cleanup(void)
 	stopAircraftWorker(*link);
 	link->aircraft_service->stopService();
 	link->mavlink_service->stopService();
+#ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
+	if (link->truth_log != nullptr) {
+		std::fclose(link->truth_log);
+		link->truth_log = nullptr;
+	}
+#endif
 	link.reset();
 }

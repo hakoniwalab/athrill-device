@@ -19,6 +19,12 @@ typedef struct {
 	uint32_t gps_channel;
 	uint32_t actuator_channel;
 	bool aircraft_worker;
+	/* in process: the physics step [us] set over the airframe's own (0: the airframe's),
+	 * HAKO_AIRCRAFT_PHYSICS_STEP_USEC; it also replaces the MuJoCo model's timestep */
+	uint64_t physics_step_usec;
+	/* in process with the sensor host (HAKO_SENSOR_DEVICE_SENSOR_HOST): a file the
+	 * truth check is written to (HAKO_SENSOR_DEVICE_TRUTH_LOG), or NULL */
+	const char *truth_log_path;
 } HakoSensorLinkConfig;
 
 /* One motor's state at the last sample read (hako_sensor_link_read_motor_status). */
