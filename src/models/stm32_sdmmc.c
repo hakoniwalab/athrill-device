@@ -1,7 +1,7 @@
 /*
  * STM32 SDMMC (st,stm32-sdmmc), one model per Devicetree node, with its SD
  * card as the node's child (an sdcard model, ABI 1.15 get_sd_card). The
- * F7 SDMMC v1 (RM0410 chapter 35, offsets and bits from 35.8) is here; a
+ * F7 SDMMC v1 (RM0410 Rev 5 chapter 39, offsets and bits from 39.8) is here; a
  * node marked athrill,stm32h7-sdmmc (the H7 SoC description: the H7 IP is
  * the SDMMC v2 with its internal DMA, RM0433 chapter 55) gets the H7 half
  * (stm32h7_sdmmc.c). Zephyr names both st,stm32-sdmmc.
@@ -231,7 +231,7 @@ static void finish(SdmmcType *sd)
 	uint8 *data;
 
 	/* A card that fails ends the data path with an error, never DATAEND
-	 * (RM0410, SDMMC_STA): no read data is a timeout, a refused write a CRC
+	 * (RM0410 39.8.11, SDMMC_STA): no read data is a timeout, a refused write a CRC
 	 * status error (#114). */
 	if (sd->pending == ATHRILL_SD_DATA_READ) {
 		/* the received bytes in the FIFO: the CPU or the DMA ("rx") takes them */
@@ -281,8 +281,8 @@ static void command(SdmmcType *sd, uint32 cmd)
 
 	memset(&response, 0, sizeof(response));
 	/* CMD12 (STOP_TRANSMISSION) before the data path ended: the card stops
-	 * sending, so the data path never completes and times out (RM0410, SDMMC
-	 * DTIMER and SDMMC_STA; the F7 SDMMC has no CMDSTOP). No data moves (#114). */
+	 * sending, so the data path never completes and times out (RM0410 39.8.7
+	 * DTIMER, 39.8.11 STA; the F7 SDMMC has no CMDSTOP). No data moves (#114). */
 	if (((cmd & 0x3FU) == 12U) && (sd->pending != ATHRILL_SD_DATA_NONE)) {
 		sd->pending = ATHRILL_SD_DATA_NONE;
 		sd->done_at = 0U;

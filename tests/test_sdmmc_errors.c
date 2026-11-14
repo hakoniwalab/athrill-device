@@ -2,11 +2,11 @@
  * STM32F7/H7 SDMMC data-error and CMD12 behaviour for issue #114.
  *
  * Sources for the expectations below:
- * - RM0410 Rev 5 sections 39.3, 39.7.7-.9 (35.8 in the revision used by
- *   the existing model): DCRCFAIL/DTIMEOUT are data failures, DATAEND means
+ * - RM0410 Rev 5 sections 39.3, 39.8.7 (DTIMER), 39.8.11 (STA) and
+ *   39.8.12 (ICR): DCRCFAIL/DTIMEOUT are data failures, DATAEND means
  *   the programmed data count ended, CMD12 stops an open-ended read, and
  *   ICR clears the corresponding static flags.
- * - RM0433 Rev 8 sections 55.6.2 and 55.10.11-.12: CMD12 with CMDSTOP may
+ * - RM0433 Rev 9 sections 55.6.2 and 55.10.11-.12: CMD12 with CMDSTOP may
  *   abort any active read, DABORT records that abort, DATAEND is only a
  *   correct data end, and ICR clears DABORT/data-error flags.
  * - NuttX stm32h7/stm32_sdmmc.c:2264-2283 emits CMDSTOP for MMCSD_STOPXFR;
@@ -327,7 +327,7 @@ static void test_card_read_failure(Fixture *fixture)
 	CHECK_EQ(kind, fixture->read_count, 1U);
 	/* SD Physical Layer block length and both drivers: one block is 512 bytes. */
 	CHECK_EQ("failed read length", fixture->read_length, 512U);
-	/* RM0410 39.7.8 / RM0433 55.10.11: a card data failure terminates
+	/* RM0410 39.8.11 / RM0433 55.10.11: a card data failure terminates
 	 * with DCRCFAIL or DTIMEOUT, never silent success. */
 	CHECK_EQ("failed read has data error",
 		(status & (DCRCFAIL | DTIMEOUT)) != 0U, 1U);
@@ -336,7 +336,7 @@ static void test_card_read_failure(Fixture *fixture)
 	/* A failed block cannot report the CRC-passed DBCKEND condition. */
 	CHECK_EQ("failed read has no DBCKEND", status & DBCKEND, 0U);
 	write_reg(fixture, ICR, DCRCFAIL | DTIMEOUT);
-	/* RM0410 39.7.9 / RM0433 55.10.12: ICR clears data-error flags. */
+	/* RM0410 39.8.12 / RM0433 55.10.12: ICR clears data-error flags. */
 	CHECK_EQ("ICR clears data errors",
 		read_reg(fixture, STA) & (DCRCFAIL | DTIMEOUT), 0U);
 }

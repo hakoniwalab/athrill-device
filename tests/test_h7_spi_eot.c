@@ -2,8 +2,7 @@
  * STM32H7 SPI TSIZE/end-of-transfer behaviour for issue #112.
  *
  * Sources for the expectations below:
- * - RM0433 Rev 8 sections 52.4.12 and 52.11.2/.6/.7 (49.4/49.11 in
- *   earlier revisions): CSTART begins a TSIZE session, CTSIZE reports the
+ * - RM0433 Rev 9 sections 50.4.11, 50.4.12 and 50.11.2/.6/.7: CSTART begins a TSIZE session, CTSIZE reports the
  *   remaining frames, TXTF is set when TSIZE frames have entered TxFIFO,
  *   EOT is set when those frames have finished, TXC mirrors EOT for
  *   TSIZE!=0, and EOTC/TXTFC clear the corresponding flags.  TSIZE=0 is an
@@ -171,37 +170,37 @@ static void test_sized_transfer(void)
 	/* NuttX lines 2181-2186 and ChibiOS lines 868-873: SPE then CSTART. */
 	write_reg(CR1, 4U, SPE | CSTART);
 	status = read_reg(SR);
-	/* RM0433 52.11.6 CTSIZE: all three frames remain at session start. */
+	/* RM0433 50.11.6 CTSIZE: all three frames remain at session start. */
 	CHECK_EQ("start CTSIZE", CTSIZE(status), FRAMES);
-	/* RM0433 52.11.6 EOT/TXC/TXTF: none is complete before frame 3. */
+	/* RM0433 50.11.6 EOT/TXC/TXTF: none is complete before frame 3. */
 	CHECK_EQ("start completion flags", status & (EOT | TXTF | TXC), 0U);
 
 	write_reg(TXDR, 1U, 0x11U);
 	status = read_reg(SR);
-	/* RM0433 52.11.6 CTSIZE counts one submitted/transmitted frame down. */
+	/* RM0433 50.11.6 CTSIZE counts one submitted/transmitted frame down. */
 	CHECK_EQ("after frame 1 CTSIZE", CTSIZE(status), 2U);
-	/* RM0433 52.11.6: frame 1 of 3 cannot set EOT, TXTF, or TXC. */
+	/* RM0433 50.11.6: frame 1 of 3 cannot set EOT, TXTF, or TXC. */
 	CHECK_EQ("after frame 1 completion flags", status & (EOT | TXTF | TXC), 0U);
 
 	write_reg(TXDR, 1U, 0x22U);
 	status = read_reg(SR);
-	/* RM0433 52.11.6 CTSIZE: one frame remains after the second unit. */
+	/* RM0433 50.11.6 CTSIZE: one frame remains after the second unit. */
 	CHECK_EQ("after frame 2 CTSIZE", CTSIZE(status), 1U);
-	/* RM0433 52.11.6: frame 2 of 3 still cannot complete the session. */
+	/* RM0433 50.11.6: frame 2 of 3 still cannot complete the session. */
 	CHECK_EQ("after frame 2 completion flags", status & (EOT | TXTF | TXC), 0U);
 
 	write_reg(TXDR, 1U, 0x33U);
 	status = read_reg(SR);
-	/* RM0433 52.11.6 CTSIZE reaches zero after TSIZE=3 data units. */
+	/* RM0433 50.11.6 CTSIZE reaches zero after TSIZE=3 data units. */
 	CHECK_EQ("after frame 3 CTSIZE", CTSIZE(status), 0U);
-	/* RM0433 52.11.6 TXTF: TSIZE units have now been written to TxFIFO. */
+	/* RM0433 50.11.6 TXTF: TSIZE units have now been written to TxFIFO. */
 	CHECK_EQ("TXTF at TSIZE", status & TXTF, TXTF);
-	/* RM0433 52.11.6 EOT/TXC: the third unit completes the sized transfer. */
+	/* RM0433 50.11.6 EOT/TXC: the third unit completes the sized transfer. */
 	CHECK_EQ("EOT and TXC at TSIZE", status & (EOT | TXC), EOT | TXC);
 
 	write_reg(IFCR, 4U, EOTC | TXTFC);
 	status = read_reg(SR);
-	/* RM0433 52.11.7: EOTC clears EOT and its TSIZE-mode TXC copy;
+	/* RM0433 50.11.7: EOTC clears EOT and its TSIZE-mode TXC copy;
 	 * TXTFC independently clears TXTF. */
 	CHECK_EQ("IFCR clears completion flags", status & (EOT | TXTF | TXC), 0U);
 }
@@ -213,13 +212,13 @@ static void test_endless_and_suspend(void)
 
 	reset_controller();
 	write_reg(CR2, 4U, 0U);
-	/* RM0433 52.11.2: CSTART with TSIZE=0 starts an endless transaction. */
+	/* RM0433 50.11.2: CSTART with TSIZE=0 starts an endless transaction. */
 	write_reg(CR1, 4U, SPE | CSTART);
-	/* RM0433 52.11.6: an endless transaction never produces EOT. */
+	/* RM0433 50.11.6: an endless transaction never produces EOT. */
 	CHECK_EQ("endless start has no EOT", read_reg(SR) & EOT, 0U);
 	for (i = 0U; i < 5U; i++) {
 		write_reg(TXDR, 1U, 0x40U + i);
-		/* RM0433 52.4.12: TSIZE=0 continues until software suspends it. */
+		/* RM0433 50.4.11: TSIZE=0 continues until software suspends it. */
 		CHECK_EQ("endless data has no EOT", read_reg(SR) & EOT, 0U);
 	}
 
@@ -227,11 +226,11 @@ static void test_endless_and_suspend(void)
 	 * active master session at a frame boundary. */
 	write_reg(CR1, 4U, SPE | CSTART | CSUSP);
 	status = read_reg(SR);
-	/* RM0433 52.11.6 SUSP: hardware acknowledges the CSUSP request. */
+	/* RM0433 50.11.6 SUSP: hardware acknowledges the CSUSP request. */
 	CHECK_EQ("CSUSP sets SUSP", status & SUSP, SUSP);
-	/* RM0433 52.4.12: a completed suspend clears the active CSTART state. */
+	/* RM0433 50.4.12: a completed suspend clears the active CSTART state. */
 	CHECK_EQ("CSUSP clears CSTART", read_reg(CR1) & CSTART, 0U);
-	/* RM0433 52.11.6: suspension of an endless session is not an EOT event. */
+	/* RM0433 50.11.6: suspension of an endless session is not an EOT event. */
 	CHECK_EQ("suspend has no EOT", read_reg(SR) & EOT, 0U);
 }
 
