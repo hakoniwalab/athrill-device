@@ -29,10 +29,18 @@
 # passes; the PX4 SIH flight checks pass; the ArduPilot bench and full bench
 # and the 6C armed reference are unchanged.
 firmware_sha256 f8a78a13f3a545305cce45eeef677e4d436325ee6a6065b1753c387283f3d05e
-instructions 2137231336
-sha256 fram.bin a9f7538d4454302d63b47b7ccc189df91d210adf3d1a06e019e82a437db8890a
-sha256 sd.img 145e32f6500903e397808a4ada6946ce2cb3c3456e0f7b0936f9d49dbfbd17c2
-sha256 console.norm 05e209fedc4118f5b794b62a8e9d7ab70d6528481205433d89860fbb1f7b023f
+# Re-recorded 2026-11-14 (instructions, F-RAM, SD card, console.norm): CAN1
+# and CAN2 acknowledge initialization (MSR INAK/SLAK follow MCR INRQ/SLEEP,
+# TSR TME0-2 read 1), so PX4's UAVCAN starts instead of failing with
+# "CAN driver init failed -1005" (15 times on the console before) and its
+# work queue runs every 3 ms. The console differs by those lines and by the
+# last digits of sensor values (the samples are read a few instructions
+# apart); every bench check passes, run1 = run2, and the tick order is
+# unchanged. With the previous DTB the same athrill3 gives the old values.
+instructions 2180400476
+sha256 fram.bin 00ee14df6986fc5baf43fdc3ea53db8088ed207dd2bd588b842d53053e7947fe
+sha256 sd.img 5b9f7b235fb80085077eabb9e501a27a764d5a8bf304de78cd357ff1ef4995c3
+sha256 console.norm 84614a81cf76f5bb98f21ca11422cf57c3d912d17a961bd7fb09301a49a69c25
 # tick: the order the devices are ticked in (target TARGET_TICK lines, with
 # "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
 # 2026-11-08 with athrill-target-stm32 0050bb4 + the tick-order log.

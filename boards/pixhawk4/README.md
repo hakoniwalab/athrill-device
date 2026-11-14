@@ -26,10 +26,10 @@ fault-model, for Athrill as the Hakoniwa asset with the aircraft in process
 The checked-in blobs have SHA-256:
 
 ```text
-cd3a21918920144f266486817916342f5f841f551bbfde0e9576f5a95f28b412  pixhawk4.dtb
-60c9e2dd35d89b919c39a1bb169ce1ab15929c6e52b1be439f959a653ea28fe0  pixhawk4-hakoniwa.dtb
-338872bd171ac2cc4c037d5174c5d9422ddc93d4c73cc6be91971e70a369fef3  pixhawk4-hakoniwa-dshot.dtb
-a908983bd499399b7c82035c71adb259a0121cf6fbebcff0072070332ddcc8cc  pixhawk4-hakoniwa-dshot-asset.dtb
+04d6db97f4528f5ec3c7574d3687c22c4df2a02cb0ee65ab590dd61203d5fd29  pixhawk4.dtb
+c44ce148aad800bfc16b4ee1ec4ad5ea9016cf5140c8b30cd09572cf6b33525a  pixhawk4-hakoniwa.dtb
+3d4649b0073d6a4221948e36d68a6694316c4e518c239fdca39b6f14bd79aa8f  pixhawk4-hakoniwa-dshot.dtb
+74c3a536a0dbe8dac178343e12f94acad358fe7392bf1141b22e59bf9590f0ac  pixhawk4-hakoniwa-dshot-asset.dtb
 ```
 
 It was made with GNU cpp and dtc 1.7.x from a Linux container (Ubuntu
