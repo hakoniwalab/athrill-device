@@ -259,6 +259,11 @@ if(BUILD_TESTING)
   target_include_directories(test_stm32_spi PRIVATE src/models)
   target_link_libraries(test_stm32_spi PRIVATE athrill_device)
   add_test(NAME stm32-spi COMMAND test_stm32_spi)
+  add_executable(test_h7_spi_eot tests/test_h7_spi_eot.c)
+  target_compile_definitions(test_h7_spi_eot PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_h7_spi_eot PRIVATE src/models)
+  target_link_libraries(test_h7_spi_eot PRIVATE athrill_device)
+  add_test(NAME h7-spi-eot COMMAND test_h7_spi_eot)
   # H7 SPI behaviour the model does not implement yet (RM0433 TSIZE, CFG
   # write protection, FIFO threshold, DMA requests): documented, WILL_FAIL.
   add_test(NAME stm32h7-spi-spec-gaps COMMAND test_stm32_spi spec-gaps)
