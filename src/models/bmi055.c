@@ -329,6 +329,11 @@ static void write_register(Bmi055 *chip, uint8 address, uint8 value)
 		chip->registers[REG_FIFO_DATA] = 0U;
 		fifo_restart(chip);
 	}
+	/* the chip produces samples once its FIFO runs, with or without its interrupt (ArduPilot
+	 * polls the FIFO): from then on, the value source learns the period and each change */
+	if (fifo_on(chip)) {
+		report_period(chip);
+	}
 }
 
 static void select_chip(void *instance, std_bool selected)

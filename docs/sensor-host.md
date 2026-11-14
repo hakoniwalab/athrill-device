@@ -94,7 +94,7 @@ need not be written for each firmware: they follow the chips. What the firmwares
 | Chip | PX4 v1.17.0 | ArduPilot |
 | --- | --- | --- |
 | BMI055 accelerometer and gyro | 2 kHz each (unfiltered data) | 2 kHz each |
-| ICM-42688-P | 8 kHz, ±16 g, ±2000 dps | 1 kHz by default; 2, 4 or 8 kHz with fast sampling; ±16 g, ±2000 dps |
+| ICM-42688-P | 8 kHz, ±16 g, ±2000 dps | 1 kHz, or 2, 4 or 8 kHz with fast sampling (2 kHz observed with ArduCopter on the 6C at its 400 Hz loop); ±16 g, ±2000 dps |
 
 An implementation linked into the plugin (`HAKO_SENSOR_DEVICE_IMPLEMENTATIONS`) is built against the same
 hakoniwa-sensor-adapter interface as the plugin, and built again whenever that interface changes: the interface is C++,

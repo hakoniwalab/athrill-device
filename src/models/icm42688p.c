@@ -418,6 +418,11 @@ static void write_register(Icm42688p *chip, uint8 address, uint8 value)
 	if (!was_on && fifo_on(chip)) {
 		fifo_restart(chip);
 	}
+	/* the chip produces samples once its FIFO runs, with or without its interrupt (ArduPilot
+	 * polls the FIFO): from then on, the value source learns the periods and each change */
+	if (fifo_on(chip)) {
+		report_periods(chip);
+	}
 }
 
 static void chip_select(void *p, std_bool selected)
