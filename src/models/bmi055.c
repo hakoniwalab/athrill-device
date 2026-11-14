@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include "models.h"
+#include "chip_rates.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -15,6 +16,8 @@
 #define REG_INT_STATUS_1        0x0aU
 #define REG_FIFO_STATUS         0x0eU
 #define REG_RANGE               0x0fU
+#define REG_BW                  0x10U   /* accelerometer PMU_BW, gyroscope BW */
+#define REG_HBW                 0x13U   /* accelerometer ACCD_HBW, gyroscope RATE_HBW */
 #define REG_SOFTRESET           0x14U
 #define REG_ACC_INT_EN_1        0x17U
 #define REG_ACC_INT_MAP_1       0x1aU
@@ -50,6 +53,11 @@ typedef struct {
 	Bmi055Kind kind;
 	std_bool yaw_180;
 	uint64 clocks_per_sample;
+	uint64 frequency_hz;
+	/* the sample period the value source was told last (ABI 1.22), 0: none yet */
+	const AthrillDeviceSamplePeriodOps *period_ops;
+	void *period_instance;
+	uint64 reported_period_ns;
 	std_bool started;
 	std_bool reading;
 	uint8 address;
@@ -253,6 +261,48 @@ static void reset_registers(Bmi055 *chip)
 	memset(chip->registers, 0, sizeof(chip->registers));
 	chip->registers[REG_CHIP_ID] = chip->kind == BMI055_ACCEL ? ACC_ID : GYRO_ID;
 	chip->registers[REG_RANGE] = chip->kind == BMI055_ACCEL ? 0x03U : 0U;
+	/* reset values: accelerometer PMU_BW 0x0F (1000 Hz bandwidth), gyroscope BW 0x80 (2 kHz) */
+	chip->registers[REG_BW] = chip->kind == BMI055_ACCEL ? 0x0FU : 0x80U;
+}
+
+/* [ADV-CHIP-BMI055A-002] [ADV-CHIP-BMI055G-002] The output data rate the registers set. */
+static uint64 rate_mhz(const Bmi055 *chip)
+{
+	return chip->kind == BMI055_ACCEL ?
+		chip_bmi055_accel_rate_mhz(chip->registers[REG_BW], chip->registers[REG_HBW]) :
+		chip_bmi055_gyro_rate_mhz(chip->registers[REG_BW], chip->registers[REG_HBW]);
+}
+
+/* Samples come at the rate the registers set. With the FIFO running, the frames already
+ * made stay; the next ones follow the new period. */
+static void apply_rate(Bmi055 *chip)
+{
+	uint64 clocks = chip_rate_clocks(chip->frequency_hz, rate_mhz(chip));
+	if (clocks == 0U || clocks == chip->clocks_per_sample) {
+		return;
+	}
+	if (fifo_on(chip)) {
+		uint64 made = (time_now(chip) - chip->fifo_start) / chip->clocks_per_sample;
+		uint64 available = made > chip->fifo_read_frames ? made - chip->fifo_read_frames : 0U;
+		uint64 now = time_now(chip);
+		chip->fifo_start = now > available * clocks ? now - available * clocks : 0U;
+		chip->fifo_read_frames = 0U;
+		chip->next_data_ready = 0U;
+	}
+	chip->clocks_per_sample = clocks;
+}
+
+/* The value source learns the period once the chip produces samples, and each change. */
+static void report_period(Bmi055 *chip)
+{
+	uint64 period_ns = chip_rate_period_ns(rate_mhz(chip));
+	if (chip->period_ops == NULL || period_ns == chip->reported_period_ns) {
+		return;
+	}
+	chip->reported_period_ns = period_ns;
+	(void)chip->period_ops->sample_period(chip->period_instance,
+		chip->kind == BMI055_ACCEL ? ATHRILL_DEVICE_SAMPLE_ACCEL : ATHRILL_DEVICE_SAMPLE_GYRO,
+		period_ns);
 }
 
 static void write_register(Bmi055 *chip, uint8 address, uint8 value)
@@ -262,6 +312,7 @@ static void write_register(Bmi055 *chip, uint8 address, uint8 value)
 		REG_ACC_FIFO_CONFIG_0 : REG_GYR_FIFO_CONFIG_0;
 	if (address == REG_SOFTRESET && value == SOFTRESET_VALUE) {
 		reset_registers(chip);
+		apply_rate(chip);
 		fifo_restart(chip);
 		return;
 	}
@@ -270,10 +321,18 @@ static void write_register(Bmi055 *chip, uint8 address, uint8 value)
 		return;
 	}
 	chip->registers[address & 0x3fU] = value;
+	if (address == REG_BW || address == REG_HBW) {
+		apply_rate(chip);
+	}
 	if (address == fifo_config_0 || address == REG_FIFO_CONFIG_1 ||
 	    (!was_on && fifo_on(chip))) {
 		chip->registers[REG_FIFO_DATA] = 0U;
 		fifo_restart(chip);
+	}
+	/* the chip produces samples once its FIFO runs, with or without its interrupt (ArduPilot
+	 * polls the FIFO): from then on, the value source learns the period and each change */
+	if (fifo_on(chip)) {
+		report_period(chip);
 	}
 }
 
@@ -321,6 +380,7 @@ static sint32 reset(void *instance)
 {
 	Bmi055 *chip = instance;
 	reset_registers(chip);
+	apply_rate(chip);
 	chip->started = FALSE;
 	chip->reading = FALSE;
 	chip->address = 0U;
@@ -346,7 +406,9 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	chip->node = args->node;
 	chip->kind = strcmp(args->node->matched_compatible, "bosch,bma280") == 0 ?
 		BMI055_ACCEL : BMI055_GYRO;
-	chip->clocks_per_sample = frequency / 2000U;
+	chip->frequency_hz = frequency;
+	reset_registers(chip);
+	chip->clocks_per_sample = chip_rate_clocks(frequency, rate_mhz(chip));
 	if (args->node->ops->get_string(args->node->context,
 		"athrill,mount-rotation", 0U, &rotation) == 0 &&
 	    strcmp(rotation, "yaw-180") == 0) {
@@ -369,6 +431,13 @@ static sint32 connect_model(void *instance,
 	chip->gpio_resources = args->resources;
 	chip->gpio_context = args->context;
 	chip->data_ready_resolved = TRUE;
+	/* ABI 1.22: a value source that takes sample periods (optional) */
+	if (args->resources->struct_size >= offsetof(AthrillDeviceResourceOps, get_sample_period) +
+	    sizeof(args->resources->get_sample_period) && args->resources->get_sample_period != NULL &&
+	    args->resources->get_sample_period(args->context, "value-source", &chip->period_ops,
+		&chip->period_instance) != 0) {
+		chip->period_ops = NULL;
+	}
 	(void)chip->gpio_resources->gpio_drive(chip->gpio_context, chip->data_ready, TRUE);
 	return 0;
 }
@@ -387,6 +456,7 @@ static sint32 tick(void *instance, uint64 now,
 	if (!fifo_on(chip) || !interrupt_enabled(chip)) {
 		return 0;
 	}
+	report_period(chip);
 	if (watermark == 0U) {
 		watermark = 1U;
 	}

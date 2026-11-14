@@ -15,6 +15,7 @@
 #include "hako_sensor_instance_model.h"
 #include "hako_sensor_device_link.h"
 
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,6 +79,35 @@ static sint32 actuator_output(void *instance, const float32 *values, uint32 coun
 	return -1;
 }
 
+/* ABI 1.22: the chips' sample periods go to the sensor host, which checks them against
+ * the instance's adapter. Without the sensor host there is nothing to check. */
+static sint32 sample_period(void *instance, uint32 kind, uint64 period_ns)
+{
+#ifdef ATHRILL_HAKONIWA_PASSIVE
+	(void)instance;
+	(void)kind;
+	(void)period_ns;
+	return -1;
+#else
+	return hako_sensor_link_instance_sample_period(((HakoSensorInstance *)instance)->index, kind, period_ns) ? 0 : -1;
+#endif
+}
+
+static const AthrillDeviceSamplePeriodOps sample_period_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceSamplePeriodOps), sample_period
+};
+
+static sint32 connect_model(void *instance, const AthrillDeviceConnectArgs *args)
+{
+	const AthrillDeviceResourceOps *r = args->resources;
+	if (r == NULL || r->struct_size < offsetof(AthrillDeviceResourceOps, sample_period_provide) +
+	    sizeof(r->sample_period_provide) || r->sample_period_provide == NULL) {
+		return 0;	/* an older runtime: no chip periods */
+	}
+	return r->sample_period_provide(args->context, &sample_period_ops, instance);
+}
+
 static const AthrillDeviceValueProviderOps value_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceValueProviderOps), sensor_sample, gps_sample, actuator_output
@@ -86,6 +116,6 @@ static const AthrillDeviceValueProviderOps value_ops = {
 const AthrillDeviceModelOps hako_sensor_instance_model_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceModelOps), "hakoniwa-sensor-instance", "1", NULL,
-	create, destroy, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+	create, destroy, NULL, NULL, NULL, NULL, connect_model, NULL, NULL, NULL,
 	&value_ops
 };

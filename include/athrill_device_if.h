@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       21U
+#define ATHRILL_DEVICE_ABI_MINOR       22U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -322,6 +322,25 @@ typedef struct AthrillDeviceMotorStatusOps {
 } AthrillDeviceMotorStatusOps;
 
 /*
+ * Added in ABI 1.22: a chip tells its value source the period at which it now
+ * produces samples of one kind, its output data rate as the firmware programmed it
+ * (docs/sensor-host.md, Chip rates). It is called when the chip starts producing
+ * samples and each time the period changes while it does. kind is one of
+ * ATHRILL_DEVICE_SAMPLE_*; period_ns is 0 for a reserved register setting. The
+ * source checks the period against what it can give (e.g. the sensor adapter's
+ * period); the return value is informational (-1: not checked).
+ */
+#define ATHRILL_DEVICE_SAMPLE_ACCEL 0U
+#define ATHRILL_DEVICE_SAMPLE_GYRO  1U
+
+typedef struct AthrillDeviceSamplePeriodOps {
+	uint32 abi_major;
+	uint32 abi_minor;
+	uint32 struct_size;
+	sint32 (*sample_period)(void *instance, uint32 kind, uint64 period_ns);
+} AthrillDeviceSamplePeriodOps;
+
+/*
  * Required interface: what athrill-device needs from the host. The target
  * implements it and the models call it; models never call the target or
  * the Athrill core directly.
@@ -583,6 +602,17 @@ typedef struct AthrillDeviceResourceOps {
 	sint32 (*get_motor_status)(void *context, const char *property,
 	                           const AthrillDeviceMotorStatusOps **ops,
 	                           void **instance);
+	/* Added in ABI 1.22; sample periods (AthrillDeviceSamplePeriodOps).
+	 * sample_period_provide: a value source takes chips' sample periods; called
+	 * from connect. get_sample_period: for a chip, the table of the node its
+	 * phandle property names (its value-source); -1 when that node takes none.
+	 * Check struct_size before calling. */
+	sint32 (*sample_period_provide)(void *context,
+	                                const AthrillDeviceSamplePeriodOps *ops,
+	                                void *instance);
+	sint32 (*get_sample_period)(void *context, const char *property,
+	                            const AthrillDeviceSamplePeriodOps **ops,
+	                            void **instance);
 } AthrillDeviceResourceOps;
 
 typedef struct {

@@ -94,6 +94,16 @@ bool hako_sensor_link_sensor_instance(const char *name, const char **type, uint3
  * index is out of range. */
 bool hako_sensor_link_read_instance(uint32_t index, HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps);
 
+/* The kinds of chip samples: the values of ATHRILL_DEVICE_SAMPLE_* (athrill_device_if.h). */
+#define HAKO_SENSOR_SAMPLE_ACCEL 0U
+#define HAKO_SENSOR_SAMPLE_GYRO  1U
+
+/* A chip of sensor instance index now produces samples of kind (HAKO_SENSOR_SAMPLE_*)
+ * every period_ns (its output data rate as the firmware programmed it). The sensor host
+ * checks it against the instance's adapter before the next physics step and reports the
+ * result (docs/sensor-host.md, Chip rates). False when there is no such instance. */
+bool hako_sensor_link_instance_sample_period(uint32_t index, uint32_t kind, uint64_t period_ns);
+
 void hako_sensor_link_cleanup(void);
 
 #ifdef __cplusplus

@@ -11,6 +11,10 @@
 | ADV-CHIP-BMI055G-001 | Gyroscope CHIP_ID (0x00) reads 0x0F. | generated | chip:bosch,bmg160 | bosch,bmg160; BMI055 datasheet BST-BMI055-DS000-06 section 8.2 (gyroscope register map) |
 | ADV-CHIP-IST8310-001 | WAI (0x00) reads 0x10. | generated | chip:isentek,ist8310 | isentek,ist8310; IST8310 datasheet register map (WAI) |
 | ADV-CHIP-MS5611-001 | After reset the PROM reads back coefficients whose CRC-4 is valid. | generated | chip:meas,ms5611 | meas,ms5611; MS5611-01BA03 datasheet (PROM read, CRC application note AN520) |
+| ADV-CHIP-BMI055A-002 | The accelerometer produces samples at the output data rate its registers set; with data_high_bw (ACCD_HBW bit 7) at 2 kHz, otherwise at twice the bandwidth of PMU_BW bits 4:0 (0x08..0x0F; codes below as 0x08, above as 0x0F). | unit | chip:bosch,bma280 | bosch,bma280; BMI055 datasheet BST-BMI055-DS000-06, accelerometer registers PMU_BW and ACCD_HBW |
+| ADV-CHIP-BMI055G-002 | The gyroscope produces samples at the output data rate its registers set; with data_high_bw (RATE_HBW bit 7) at 2 kHz, otherwise by BW bits 2:0 (2000, 2000, 1000, 400, 200, 100, 200, 100 Hz). | unit | chip:bosch,bmg160 | bosch,bmg160; BMI055 datasheet BST-BMI055-DS000-06, gyroscope registers BW and RATE_HBW |
+| ADV-CHIP-ICM42688-002 | FIFO records come at the gyroscope's output data rate (GYRO_CONFIG0 bits 3:0), and each part's rate (also ACCEL_CONFIG0 bits 3:0) is the one its register sets; reserved codes give no rate. | unit | chip:invensense,icm42688 | invensense,icm42688; ICM-42688-P datasheet register map, GYRO_CONFIG0 and ACCEL_CONFIG0 (GYRO_ODR, ACCEL_ODR) |
+| ADV-CHIP-ICM42688-003 | 16-bit data is in the full scales GYRO_FS_SEL and ACCEL_FS_SEL (bits 7:5) set; 20-bit FIFO data keeps its fixed ±16 g and ±2000 dps. | unit | chip:invensense,icm42688 | invensense,icm42688; ICM-42688-P datasheet register map, GYRO_CONFIG0 and ACCEL_CONFIG0 (GYRO_FS_SEL, ACCEL_FS_SEL) |
 
 ## Test specifications
 
@@ -22,3 +26,7 @@
 | ADV-CHIP-BMI055G-001.T1 | Read register 0x00. | 0x0F. |
 | ADV-CHIP-IST8310-001.T1 | Read register 0x00 at the node's I2C address. | 0x10. |
 | ADV-CHIP-MS5611-001.T1 | Send reset, read PROM words 0-7. | CRC-4 computed per AN520 equals the stored CRC nibble. |
+| ADV-CHIP-BMI055A-002.T1 | Every PMU_BW code with ACCD_HBW 0 and 0x80. | 15.625, 31.25, 62.5, 125, 250, 500, 1000, 2000 Hz for 0x08..0x0F, clamped below and above; 2000 Hz with data_high_bw. |
+| ADV-CHIP-BMI055G-002.T1 | Every BW code, with and without bit 7, with RATE_HBW 0 and 0x80. | The rates of the statement; 2000 Hz with data_high_bw. |
+| ADV-CHIP-ICM42688-002.T1 | Every ODR code of both registers, with the full-scale bits set and clear. | 32, 16, 8, 4, 2, 1 kHz, 200, 100, 50, 25, 12.5 Hz, 500 Hz (code 15); the accelerometer's 12-14 at 6.25, 3.125, 1.5625 Hz; 0 and the gyroscope's 12-14 reserved. |
+| ADV-CHIP-ICM42688-003.T1 | Every full-scale code of both registers. | 16.4, 32.8, 65.5, 131, 262, 524.3, 1048.6, 2097.2 counts/dps; 2048, 4096, 8192, 16384 counts/g, reserved codes as ±16 g. |

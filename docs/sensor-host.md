@@ -59,12 +59,46 @@ instance's mount by the same rules as for SITL.
     Hakoniwa Drone.
   - When the firmware programs a chip's output data rate faster than the physics rate, the chip model reports it.
 - **The chip comes first.** What the firmware sets in the chip's registers (range, output data rate, resolution) is
-  applied by the chip model. Settings that the chip model does not have come from the adapter's configuration. The
-  user fills the adapter's configuration from the chip's datasheet.
+  applied by the chip model, and the adapter's period follows the chip's output data rate (Chip rates). Settings that
+  the chip model does not have come from the adapter's configuration, which the user fills from the chip's datasheet;
+  a range or resolution written there as well is applied twice, so it is left to the chip.
 - **Δt is the output data rate.** With a noise density, σ = noiseDensity / √Δt, where Δt is the period at which the
   autopilot reads the sensor: the chip's output data rate. The adapter's `updatePeriodMsec` is written as that period.
 - Hakoniwa Drone's `softDelayMsec` (the autopilot's handling delay) is not used: the real firmware's own handling is
   that delay.
+
+## Chip rates
+
+The rule: **the period at which the firmware programs a chip to produce samples is the period of the chip's sensor
+adapter.** The firmware decides; the host checks and, where it can, makes the adapter follow.
+
+- The chip models take the output data rate and the full scale from the registers the firmware writes, with the
+  datasheets' tables (`spec/chips.yaml` ADV-CHIP-BMI055A-002, ADV-CHIP-BMI055G-002, ADV-CHIP-ICM42688-002 and -003).
+  No rate is fixed in the models.
+- When a chip starts producing samples (its FIFO runs with its interrupt), and each time its rate changes while it
+  does, it tells its sensor instance the period (ABI 1.22, `AthrillDeviceSamplePeriodOps`), per part: accelerometer
+  and gyro.
+- The sensor host checks it before the next physics step (hakoniwa-sensor-adapter `docs/spec/update-period.md`):
+
+| The chip's period | What the host does | Reported as |
+| --- | --- | --- |
+| equal to the adapter's | nothing | INFO |
+| a whole number of physics steps, different from the adapter's | asks the adapter to measure at the chip's period from its next multiple | INFO when it follows; ERROR with the adapter's reason when it can not (an adapter without the call can not) |
+| finer than the physics step | nothing: the physics step is fixed for the run, so the chip repeats values | ERROR, with the physics step to use (`HAKO_AIRCRAFT_PHYSICS_STEP_USEC`) |
+| not a whole number of physics steps | the adapter refuses it | ERROR |
+| a reserved register setting | nothing | ERROR |
+
+So the physics step is chosen at start-up for the finest rate the firmware will program, and the adapters' periods
+need not be written for each firmware: they follow the chips. What the firmwares program on the Pixhawk 6C:
+
+| Chip | PX4 v1.17.0 | ArduPilot |
+| --- | --- | --- |
+| BMI055 accelerometer and gyro | 2 kHz each (unfiltered data) | 2 kHz each |
+| ICM-42688-P | 8 kHz, ±16 g, ±2000 dps | 1 kHz, or 2, 4 or 8 kHz with fast sampling (2 kHz observed with ArduCopter on the 6C at its 400 Hz loop); ±16 g, ±2000 dps |
+
+An implementation linked into the plugin (`HAKO_SENSOR_DEVICE_IMPLEMENTATIONS`) is built against the same
+hakoniwa-sensor-adapter interface as the plugin, and built again whenever that interface changes: the interface is C++,
+so a library built against an older one fails at run time.
 
 ## The physics step from outside
 
