@@ -11,5 +11,4 @@ transient | Preflight Fail: height estimate not stable|MAG #0 failed: +STALE!|Ar
 board | WARNING: invalid sea-level atmosphere; keeping previous values | Printed by the Hakoniwa Drone barometer model, not by Athrill or PX4.
 firstboot | \[param\] importing from '/fs/mtd_params' failed|\[init\] param import failed | The F-RAM holds no parameters before the first boot writes them.
 firstboot | \[init\] No airframe file found for SYS_AUTOSTART value | SYS_AUTOSTART is 0 until the parameter script sets it.
-gap athrill-target-stm32#94 | \[param\] Parameter (SENS_GPS0_DELAY|SYS_AUTOCFG_CAL) not found | docs/px4/x500-hakoniwa-params.sh sets two parameters PX4 v1.17.0 does not have; they never took effect. To be removed or mapped (EKF2_GPS_DELAY).
 firstboot | \[health_and_arming_checks\] Too many arming check events | PX4 limits the arming-check messages it prints while the vehicle is not yet configured.
