@@ -1,0 +1,18 @@
+# Console allow-list: Pixhawk 4, PX4 v1.17.0 (px4-bench, px4-sih, the Hakoniwa examples).
+# Every ERROR/WARN/FAIL line of a run must match one entry below, or the check fails
+# (athrill-target-stm32 examples/console-check.py). Format: category | regex | reason.
+# Categories: board (the same on the real board), gap #N (an accepted emulator gap and the
+# issue that tracks it), transient (settling before arming), firstboot (before the parameter
+# script has run). Warnings that mean slowness (watchdog, CPU load) are never allowed.
+gap athrill-target-stm32 docs/hakoniwa.md | \[px4io\]|PX4IO start failed | The PX4IO co-processor (USART6) is not modelled; the motors are on the FMU outputs.
+board | \[bsondump\] open '/fs/mtd_caldata' failed | fmu-v5 has no caldata partition, but rcS always runs bsondump docsize /fs/mtd_caldata.
+gap athrill-device#115 | \[SPI_I2C\] bmi055: no instance started | The Pixhawk 4 board has no BMI055 yet (rc.board_sensors starts bmi055 -A and -G on SPI1).
+board | \[SPI_I2C\] ist8310: no instance started | ist8310 -X -b 1 probes for an external compass on the GPS1 bus; none is attached.
+firstboot | Preflight Fail: (Compass|Gyro|Accel) 0 uncalibrated | Before the parameter script writes the calibration IDs.
+firstboot | \[parameters\] BSON document size \(0\) doesn't match bytes decoded | The F-RAM is empty before the first parameter save.
+gap athrill-device#118 | Preflight Fail: Avionics Power low: +0\.00 Volt | The board ADC reads 0 V; the parameters set CBRK_SUPPLY_CHK, so it shows only before them.
+transient | Preflight Fail: height estimate not stable|MAG #0 failed: +STALE!|Arming denied: Resolve system health failures first | EKF settling before arming.
+firstboot | \[param\] importing from '/fs/mtd_params' failed|\[init\] param import failed | The F-RAM holds no parameters before the first boot writes them.
+firstboot | \[init\] No airframe file found for SYS_AUTOSTART value | SYS_AUTOSTART is 0 until the parameter script sets it.
+gap athrill-target-stm32#94 | \[param\] Parameter (SENS_GPS0_DELAY|SYS_AUTOCFG_CAL) not found | docs/px4/x500-hakoniwa-params.sh sets two parameters PX4 v1.17.0 does not have; they never took effect. To be removed or mapped (EKF2_GPS_DELAY).
+firstboot | \[health_and_arming_checks\] Too many arming check events | PX4 limits the arming-check messages it prints while the vehicle is not yet configured.

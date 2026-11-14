@@ -1,0 +1,15 @@
+# Console allow-list: Pixhawk 6C, PX4 v1.17.0 (px4-v6c-hakoniwa, px4-v6c-hakoniwa-dshot).
+# Same format and rules as boards/pixhawk4/regression/px4.allow.
+gap athrill-target-stm32 docs/hakoniwa.md | \[px4io\]|PX4IO start failed | The PX4IO co-processor (USART6) is not modelled; the motors are on the FMU outputs.
+gap athrill-device#116 | \[bsondump\] open '/fs/mtd_caldata' failed|\[PX4_MTD\] (failed to initialize EEPROM driver|mtd failure: -5 bus 4 address 80) | The 24LC64 EEPROM at I2C4 0x50 (caldata, mft_rev, id) is not on the 6C board yet.
+board | \[SPI_I2C\] ist8310: no instance started | ist8310 -X probes for an external compass; none is attached.
+board | nsh: (rc_input|payload_deliverer|icm20948_i2c_passthrough): command not found | rcS and rc.sensors start these; the fmu-v6c default build does not contain them.
+firstboot | Preflight Fail: (Compass|Gyro|Accel) [01] uncalibrated | Before the parameter script writes the calibration IDs.
+firstboot | \[parameters\] BSON document size \(0\) doesn't match bytes decoded | The F-RAM is empty before the first parameter save.
+gap athrill-device#118 | Preflight Fail: Avionics Power low: +0\.00 Volt | The board ADC reads 0 V; the parameters set CBRK_SUPPLY_CHK, so it shows only before them.
+transient | Preflight Fail: height estimate not stable|MAG #0 failed: +STALE!|Arming denied: Resolve system health failures first | EKF settling before arming.
+board | WARNING: invalid sea-level atmosphere; keeping previous values | Printed by the Hakoniwa Drone barometer model, not by Athrill or PX4.
+firstboot | \[param\] importing from '/fs/mtd_params' failed|\[init\] param import failed | The F-RAM holds no parameters before the first boot writes them.
+firstboot | \[init\] No airframe file found for SYS_AUTOSTART value | SYS_AUTOSTART is 0 until the parameter script sets it.
+gap athrill-target-stm32#94 | \[param\] Parameter (SENS_GPS0_DELAY|SYS_AUTOCFG_CAL) not found | docs/px4/x500-hakoniwa-params.sh sets two parameters PX4 v1.17.0 does not have; they never took effect. To be removed or mapped (EKF2_GPS_DELAY).
+firstboot | \[health_and_arming_checks\] Too many arming check events | PX4 limits the arming-check messages it prints while the vehicle is not yet configured.
