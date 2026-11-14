@@ -18,7 +18,7 @@ stream, measured on every physics step.
 ## The pipeline
 
 The order of the stages is Hakoniwa Drone's sensor specification
-(`hakoniwa-drone-pro` `docs/architecture/aircraft/sensor/README.md`, chapter 4):
+([hakoniwa-drone-core `docs/architecture/aircraft/sensor`](https://github.com/toppers/hakoniwa-drone-core/tree/main/docs/architecture/aircraft/sensor), chapter 4):
 
 ```text
 truth (MuJoCo) → mounting pose (position → orientation) → delay → measure → noise → drift → clamp → output

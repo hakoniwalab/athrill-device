@@ -273,7 +273,7 @@ bool loadAircraftConfig(InProcessLink& state, const std::string& path)
 #ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
 namespace host = hakoniwa::sensor_adapter::host;
 
-/* Drone PRO's world NED and body FRD to the sensor adapters' world NWU and body FLU. */
+/* Hakoniwa Drone's world NED and body FRD to the sensor adapters' world NWU and body FLU. */
 hakoniwa::sensor_adapter::Vector3 nedToNwu(double x, double y, double z)
 {
 	return {x, -y, -z};
@@ -419,7 +419,7 @@ void prepareInstanceValues(InProcessLink& state, uint64_t hil_time_usec)
 	}
 }
 
-/* The truth check: Drone PRO's accelerometer and gyro (its sensor models, FRD) beside
+/* The truth check: Hakoniwa Drone's accelerometer and gyro (its sensor models, FRD) beside
  * the host helpers' ideal IMU at the body origin from the captured truth (FRD). With an
  * error-free airframe the two must agree. */
 void logTruth(InProcessLink& state, const Hako_HakoHilSensor& sensor)
