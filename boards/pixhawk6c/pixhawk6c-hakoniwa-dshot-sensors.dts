@@ -5,7 +5,9 @@
  * instance of the sensor host (docs/sensor-host.md). An instance's node name
  * is its name in the run's HAKO_SENSOR_DEVICE_SENSORS, which gives its type,
  * its adapter and its mount. The BMI055's accelerometer and gyro are one chip
- * and share one instance. The motors stay on the sensor device.
+ * and share one instance. The motors stay on the sensor device. An instance
+ * has no tick of its own, so the chips drop the tick-before marker of the
+ * Hakoniwa board.
  */
 
 #include "pixhawk6c-hakoniwa-dshot.dts"
@@ -28,9 +30,27 @@
 	};
 };
 
-&bmi055_accel { value-source = <&sensor_bmi055>; };
-&bmi055_gyro { value-source = <&sensor_bmi055>; };
-&icm42688p { value-source = <&sensor_icm42688p>; };
-&barometer { value-source = <&sensor_barometer>; };
-&magnetometer { value-source = <&sensor_magnetometer>; };
-&gps1 { value-source = <&sensor_gps1>; };
+&bmi055_accel {
+	value-source = <&sensor_bmi055>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&bmi055_gyro {
+	value-source = <&sensor_bmi055>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&icm42688p {
+	value-source = <&sensor_icm42688p>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&barometer {
+	value-source = <&sensor_barometer>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&magnetometer {
+	value-source = <&sensor_magnetometer>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&gps1 {
+	value-source = <&sensor_gps1>;
+	/delete-property/ athrill,tick-before-value-source;
+};

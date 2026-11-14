@@ -20,10 +20,15 @@ answers telemetry requests with KISS frames, which PX4 reads with
 stop: nothing changes until a run sets the host value
 `DEVICE_CONFIG_ESC_MOTOR_STOP`, e.g. `2@40000` to stop PX4's motor 3 at 40 s.
 
+`pixhawk6c-hakoniwa-dshot-sensors.dts` includes that and gives each sensor chip its own sensor instance of the
+in-process sensor host (`docs/sensor-host.md`): `bmi055` (the BMI055's accelerometer and gyro), `icm42688p`,
+`barometer`, `magnetometer` and `gps1`, children of the Hakoniwa sensor device. The motors stay on the sensor device.
+
 The reviewed DTB hashes are filled in after compilation:
 
 ```text
 df101d83cc918571884495d46ed861ee5a44ceaee5f4644fa3d268ac1e0ca262  pixhawk6c.dtb
 cc7359fda3d1c779ff7f63cc48d2ab96119553c8f74227c50a231fa6c80876c3  pixhawk6c-hakoniwa.dtb
 601acc6b14f87aa34ee6144ae7ddac251ff3b8c5fcc3ae119497266e4e5a594c  pixhawk6c-hakoniwa-dshot.dtb
+71fd1159e80cedb38fd68f2d5efb4207d7e7a5f013021e483d2571860c70a454  pixhawk6c-hakoniwa-dshot-sensors.dtb
 ```

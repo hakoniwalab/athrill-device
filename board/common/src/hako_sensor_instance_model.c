@@ -25,13 +25,21 @@ typedef struct {
 
 static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 {
-	HakoSensorInstance *sensor;
 	const char *path = args->node->path;
 	const char *name = strrchr(path, '/');
 	const char *type = NULL;
 	uint32_t index = 0U;
 
 	name = (name == NULL) ? path : name + 1;
+#ifdef ATHRILL_HAKONIWA_PASSIVE
+	/* no aircraft here, so no sensor host */
+	(void)type;
+	(void)index;
+	(void)instance;
+	printf("ERROR: hako_sensor_device: %s: sensor instances need the in-process sensor host\n", path);
+	return -1;
+#else
+	HakoSensorInstance *sensor;
 	if (!hako_sensor_link_sensor_instance(name, &type, &index)) {
 		printf("ERROR: hako_sensor_device: %s has no entry in HAKO_SENSOR_DEVICE_SENSORS\n", path);
 		return -1;
@@ -45,6 +53,7 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	sensor->index = index;
 	*instance = sensor;
 	return 0;
+#endif
 }
 
 static void destroy(void *instance)
