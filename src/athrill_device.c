@@ -120,6 +120,8 @@ typedef struct {
 
 #define CONSOLE_CHANNELS 4U
 
+#define RUNTIME_GPIO_LINE_CACHE	64U	/* a power of two */
+
 typedef struct {
 	uint64 handle;
 	std_bool level;
@@ -151,6 +153,13 @@ struct AthrillDeviceRuntime {
 	/* ABI 1.16: the GPIO lines and their subscribers */
 	RuntimeGpioLine *gpio_lines;
 	uint32 gpio_line_count;
+	/* gpio_line_of's last finds, by handle: a sensor drives its line on
+	 * every tick, and the lines are searched in order otherwise. Indexes,
+	 * not pointers: gpio_lines grows. */
+	struct {
+		uint64 handle;
+		uint32 index;
+	} gpio_line_cache[RUNTIME_GPIO_LINE_CACHE];
 	RuntimeGpioSubscriber *gpio_subscribers;
 	uint32 gpio_subscriber_count;
 	/* ABI 1.17: the console input's receivers by channel */
@@ -1196,8 +1205,17 @@ static RuntimeGpioLine *gpio_line_of(AthrillDeviceRuntime *runtime, uint64 handl
 {
 	RuntimeGpioLine *grown;
 	uint32 i;
+	uint32 slot = (uint32)((handle ^ (handle >> 16) ^ (handle >> 32)) & (RUNTIME_GPIO_LINE_CACHE - 1U));
+
+	if ((runtime->gpio_line_cache[slot].handle == handle) &&
+	    (runtime->gpio_line_cache[slot].index < runtime->gpio_line_count) &&
+	    (runtime->gpio_lines[runtime->gpio_line_cache[slot].index].handle == handle)) {
+		return &runtime->gpio_lines[runtime->gpio_line_cache[slot].index];
+	}
 	for (i = 0U; i < runtime->gpio_line_count; i++) {
 		if (runtime->gpio_lines[i].handle == handle) {
+			runtime->gpio_line_cache[slot].handle = handle;
+			runtime->gpio_line_cache[slot].index = i;
 			return &runtime->gpio_lines[i];
 		}
 	}
