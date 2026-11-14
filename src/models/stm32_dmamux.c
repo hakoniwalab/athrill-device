@@ -32,6 +32,8 @@
 #define DMAMUX_MAX_CHANNELS	32U
 #define DMAMUX_REQUESTS	256U
 
+#define DMAMUX_MAX_MASTERS	4U
+
 typedef struct {
 	uint32 base;
 	uint32 regs[DMAMUX_SIZE / 4U];
@@ -48,6 +50,14 @@ typedef struct {
 	uint32 id_mask;
 	std_bool requested[DMAMUX_REQUESTS];	/* level of each request id */
 	std_bool passed[DMAMUX_MAX_CHANNELS];	/* level each channel passed on */
+	/* The masters of dma-masters (masters_of). */
+	struct {
+		const AthrillDeviceDmaProviderOps *ops;
+		void *instance;
+		uint32 count;
+	} masters[DMAMUX_MAX_MASTERS];
+	uint32 master_count;
+	std_bool masters_complete;
 } Stm32Dmamux;
 
 static sint32 dmamux_validate(const AthrillDeviceNode *node, char *error,
@@ -112,20 +122,44 @@ static void dmamux_destroy(void *instance)
 	free(instance);
 }
 
-/* Mux channel c to the stream of the master that takes it. */
-static void pass_on(Stm32Dmamux *dmamux, uint32 c, std_bool asserted)
+/* The masters of dma-masters, in order: kept once they cover every channel
+ * (they do not change after the board is connected, and a lookup reads the
+ * Devicetree); before that (a request during start-up) looked up each time. */
+static uint32 masters_of(Stm32Dmamux *dmamux)
 {
 	const AthrillDeviceDmaProviderOps *ops;
 	void *instance;
 	AthrillDeviceNodeId master;
+	uint32 m, count, total = 0U;
+
+	if (dmamux->masters_complete) {
+		return dmamux->master_count;
+	}
+	for (m = 0U; (m < DMAMUX_MAX_MASTERS) &&
+		(dmamux->resources->get_dma_master(dmamux->context, m, &ops,
+			&instance, &master, &count) == 0); m++) {
+		dmamux->masters[m].ops = ops;
+		dmamux->masters[m].instance = instance;
+		dmamux->masters[m].count = count;
+		total += count;
+	}
+	dmamux->master_count = m;
+	dmamux->masters_complete = (total >= dmamux->channels);
+	return m;
+}
+
+/* Mux channel c to the stream of the master that takes it. */
+static void pass_on(Stm32Dmamux *dmamux, uint32 c, std_bool asserted)
+{
 	AthrillDeviceDmaRequestLine line;
-	uint32 m, first = 0U, count;
+	uint32 m, n, first = 0U, count;
 
 	if (dmamux->resources == NULL || dmamux->resources->get_dma_master == NULL) {
 		return;
 	}
-	for (m = 0U; dmamux->resources->get_dma_master(dmamux->context, m, &ops,
-		&instance, &master, &count) == 0; m++) {
+	n = masters_of(dmamux);
+	for (m = 0U; m < n; m++) {
+		count = dmamux->masters[m].count;
 		if (c < first + count) {
 			memset(&line, 0, sizeof(line));
 			line.requester = dmamux->id;
@@ -133,7 +167,7 @@ static void pass_on(Stm32Dmamux *dmamux, uint32 c, std_bool asserted)
 			line.cell_count = 2U;
 			line.cells[0] = c - first;	/* the stream */
 			line.cells[1] = 0U;		/* selected here */
-			(void)ops->request(instance, &line, asserted);
+			(void)dmamux->masters[m].ops->request(dmamux->masters[m].instance, &line, asserted);
 			return;
 		}
 		first += count;
