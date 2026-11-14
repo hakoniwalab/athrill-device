@@ -508,6 +508,7 @@ static int raw_build_board(const char *dtb_path)
 
 	AthrillDevicePluginPath plugins[] = {
 		{"hakoniwa,sensor-device", NULL},
+		{"hakoniwa,sensor-instance", NULL},
 	};
 	if (plugin_path != NULL) {
 		uint32 plugin_index;
