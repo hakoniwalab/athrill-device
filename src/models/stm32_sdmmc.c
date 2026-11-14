@@ -68,7 +68,9 @@
 #define DCTRL_DTDIR	(1U << 1)	/* card to controller */
 #define DCTRL_DMAEN	(1U << 3)
 
+#define STA_DCRCFAIL	(1U << 1)
 #define STA_CTIMEOUT	(1U << 2)
+#define STA_DTIMEOUT	(1U << 3)
 #define STA_CMDREND	(1U << 6)
 #define STA_CMDSENT	(1U << 7)
 #define STA_DATAEND	(1U << 8)
@@ -225,25 +227,38 @@ static void try_start(SdmmcType *sd)
 static void finish(SdmmcType *sd)
 {
 	uint32 len = reg(sd, R_DLEN);
+	uint32 end = STA_DATAEND | STA_DBCKEND;
 	uint8 *data;
 
+	/* A card that fails ends the data path with an error, never DATAEND
+	 * (RM0410, SDMMC_STA): no read data is a timeout, a refused write a CRC
+	 * status error (#114). */
 	if (sd->pending == ATHRILL_SD_DATA_READ) {
 		/* the received bytes in the FIFO: the CPU or the DMA ("rx") takes them */
 		data = (uint8 *)calloc(len + 4U, 1U);
-		(void)athrill_sd_read(sd->protocol, data, len);
 		drop_fifo(sd);
-		sd->fifo = data;
-		sd->fifo_len = len;
+		if (athrill_sd_read(sd->protocol, data, len) == 0) {
+			sd->fifo = data;
+			sd->fifo_len = len;
+		}
+		else {
+			free(data);
+			end = STA_DTIMEOUT;
+		}
 	}
 	else {
-		(void)athrill_sd_write(sd->protocol, sd->fifo, len);
+		if (athrill_sd_write(sd->protocol, sd->fifo, len) != 0) {
+			end = STA_DCRCFAIL;
+		}
 		drop_fifo(sd);
 	}
-	(void)athrill_sd_transfer_done(sd->protocol);
+	if (end == (STA_DATAEND | STA_DBCKEND)) {
+		(void)athrill_sd_transfer_done(sd->protocol);
+		set_reg(sd, R_DCOUNT, 0U);
+	}
 	sd->pending = ATHRILL_SD_DATA_NONE;
 	sd->done_at = 0U;
-	set_reg(sd, R_DCOUNT, 0U);
-	sd->sta |= STA_DATAEND | STA_DBCKEND;
+	sd->sta |= end;
 	update_requests(sd);
 	update_interrupt(sd);
 }
@@ -265,6 +280,15 @@ static void command(SdmmcType *sd, uint32 cmd)
 	uint32 i;
 
 	memset(&response, 0, sizeof(response));
+	/* CMD12 (STOP_TRANSMISSION) before the data path ended: the card stops
+	 * sending, so the data path never completes and times out (RM0410, SDMMC
+	 * DTIMER and SDMMC_STA; the F7 SDMMC has no CMDSTOP). No data moves (#114). */
+	if (((cmd & 0x3FU) == 12U) && (sd->pending != ATHRILL_SD_DATA_NONE)) {
+		sd->pending = ATHRILL_SD_DATA_NONE;
+		sd->done_at = 0U;
+		drop_fifo(sd);
+		sd->sta |= STA_DTIMEOUT;
+	}
 	if (sd->protocol != NULL) {
 		(void)athrill_sd_command(sd->protocol, cmd & 0x3FU, reg(sd, R_ARG),
 			&response);
