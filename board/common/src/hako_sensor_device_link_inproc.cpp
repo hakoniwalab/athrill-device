@@ -5,7 +5,6 @@
 #ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
 #include "hakoniwa/sensor_adapter/host/sensor_host.hpp"
 #include "hakoniwa/sensor_adapter/sensor_adapter_implementation.hpp"
-#include "logger/ilog_file.hpp"
 #include <fstream>
 #include <nlohmann/json.hpp>
 #endif
@@ -203,11 +202,6 @@ struct InProcessLink {
 		hakoniwa::sensor_adapter::MagSample mag_out{};
 		hakoniwa::sensor_adapter::BaroSample baro_out{};
 		hakoniwa::sensor_adapter::GpsSample gps_out{};
-		/* the instance's log (docs/sensor-host.md, Logs), or none */
-		std::unique_ptr<hako::logger::ILogFile> log;
-		std::vector<hako::logger::LogDataType> log_row;
-		std::vector<double> adapter_values;
-		uint32_t log_unflushed{0};
 	};
 	/* one instance's value as the device takes it (hako_sensor_link_read_instance) */
 	struct InstanceValue {
@@ -320,8 +314,6 @@ void captureTruth(InProcessLink& state)
 	state.has_motion = true;
 }
 
-void logSensor(InProcessLink::SensorInstance& sensor, uint64_t time_ns);
-
 /* Every instance's adapter, one physics step: the truth at its mount from the motion
  * just captured, then its own errors and timing (docs/sensor-host.md, The pipeline). */
 bool stepSensorInstances(InProcessLink& state)
@@ -352,13 +344,6 @@ bool stepSensorInstances(InProcessLink& state)
 		if (!ok) {
 			std::cerr << "ERROR: hako_sensor_device: sensor " << sensor.name << ": " << error << std::endl;
 			return false;
-		}
-		const bool measured = sensor.imu ? (sensor.imu_out.accel.updated || sensor.imu_out.gyro.updated)
-			: sensor.mag ? sensor.mag_out.updated
-			: sensor.baro ? sensor.baro_out.updated
-			: sensor.gps_out.updated;
-		if (measured) {
-			logSensor(sensor, time_ns);
 		}
 	}
 	state.host_step_count++;
@@ -566,115 +551,6 @@ uint64_t seedFromName(const std::string& name)
 	return hash;
 }
 
-/* The columns a sensor host gives for an instance's output, in the chip's units. */
-std::vector<std::string> outputColumns(const std::string& type)
-{
-	if (type == "imu") {
-		return {"acc_x_mps2", "acc_y_mps2", "acc_z_mps2", "gyro_x_radps", "gyro_y_radps", "gyro_z_radps"};
-	}
-	if (type == "mag") {
-		return {"mag_x_gauss", "mag_y_gauss", "mag_z_gauss"};
-	}
-	if (type == "baro") {
-		return {"pressure_hpa", "pressure_altitude_m", "temperature_c"};
-	}
-	return {"latitude_deg", "longitude_deg", "altitude_msl_m", "velocity_n_mps", "velocity_e_mps",
-		"velocity_d_mps", "horizontal_accuracy_m", "vertical_accuracy_m", "fix_type", "satellites"};
-}
-
-const std::vector<hakoniwa::sensor_adapter::LogColumn>& adapterColumns(const InProcessLink::SensorInstance& sensor)
-{
-	if (sensor.imu) return sensor.imu->log_columns();
-	if (sensor.mag) return sensor.mag->log_columns();
-	if (sensor.baro) return sensor.baro->log_columns();
-	return sensor.gps->log_columns();
-}
-
-/* One log per instance, log_sensor_<name>.csv beside the airframe's logs, in its logging
- * mode (simulation.logging: csv or binary, Hakoniwa Drone's log files; none: no log). */
-bool openSensorLogs(InProcessLink& state, const DroneConfig& config)
-{
-	const auto logging = config.getSimLoggingConfig();
-	if (logging.mode != hako::config::LoggingMode::Csv && logging.mode != hako::config::LoggingMode::Binary) {
-		return true;
-	}
-	const auto type = logging.mode == hako::config::LoggingMode::Binary
-		? hako::logger::LOG_FILE_TYPE_BINARY : hako::logger::LOG_FILE_TYPE_CSV;
-	for (auto& sensor : state.sensors) {
-		std::vector<hako::logger::LogHeaderType> head;
-		head.push_back({"time_usec", hako::logger::LogType::LOG_TYPE_UINT64});
-		for (const auto& name : outputColumns(sensor.type)) {
-			head.push_back({name, hako::logger::LogType::LOG_TYPE_DOUBLE});
-		}
-		for (const auto& column : adapterColumns(sensor)) {
-			head.push_back({column.name, hako::logger::LogType::LOG_TYPE_DOUBLE});
-		}
-		const std::string path = config.getSimLogFullPathFromIndex(0, "log_sensor_" + sensor.name + ".csv");
-		std::filesystem::create_directories(std::filesystem::path(path).parent_path());
-		sensor.log = hako::logger::ILogFile::create(type, path, head, logging.float32);
-		if (!sensor.log) {
-			std::cerr << "ERROR: hako_sensor_device: can not write " << path << std::endl;
-			return false;
-		}
-		std::cout << "INFO: hako_sensor_device: sensor " << sensor.name << " logged to " << path << std::endl;
-	}
-	return true;
-}
-
-/* A row of the instance's log after a measurement: the host time, the output in the chip's
- * units, then the adapter's own columns unchanged. */
-void logSensor(InProcessLink::SensorInstance& sensor, uint64_t time_ns)
-{
-	if (!sensor.log) {
-		return;
-	}
-	auto& row = sensor.log_row;
-	row.clear();
-	row.emplace_back(static_cast<uint64_t>(time_ns / 1000U));
-	const auto frd = [&row](const hakoniwa::sensor_adapter::Vector3& v, double scale) {
-		row.emplace_back(v.x * scale);
-		row.emplace_back(-v.y * scale);
-		row.emplace_back(-v.z * scale);
-	};
-	if (sensor.imu) {
-		frd(sensor.imu_out.accel.value, 1.0);
-		frd(sensor.imu_out.gyro.value, 1.0);
-		sensor.imu->log_values(sensor.adapter_values);
-	}
-	else if (sensor.mag) {
-		frd(sensor.mag_out.value, 1.0e-5);
-		sensor.mag->log_values(sensor.adapter_values);
-	}
-	else if (sensor.baro) {
-		row.emplace_back(sensor.baro_out.pressure_pa / 100.0);
-		row.emplace_back(sensor.baro_out.pressure_altitude_m);
-		row.emplace_back(sensor.baro_out.temperature_c);
-		sensor.baro->log_values(sensor.adapter_values);
-	}
-	else {
-		const auto& out = sensor.gps_out;
-		row.emplace_back(out.position.latitude_deg);
-		row.emplace_back(out.position.longitude_deg);
-		row.emplace_back(out.position.altitude_m);
-		row.emplace_back(out.velocity_nwu.x);
-		row.emplace_back(-out.velocity_nwu.y);
-		row.emplace_back(-out.velocity_nwu.z);
-		row.emplace_back(out.horizontal_accuracy_m);
-		row.emplace_back(out.vertical_accuracy_m);
-		row.emplace_back(static_cast<double>(out.fix_type));
-		row.emplace_back(static_cast<double>(out.satellites_visible));
-		sensor.gps->log_values(sensor.adapter_values);
-	}
-	for (const double value : sensor.adapter_values) {
-		row.emplace_back(value);
-	}
-	sensor.log->write(row);
-	if (++sensor.log_unflushed >= 256U) {	/* a run may be stopped without a cleanup */
-		sensor.log->flush();
-		sensor.log_unflushed = 0U;
-	}
-}
-
 /* The world of the airframe (simulation.location) and every instance's adapter. An
  * adapter refuses a period it can not measure with this physics step. */
 bool createSensorAdapters(InProcessLink& state, const DroneConfig& config)
@@ -740,7 +616,7 @@ bool createSensorAdapters(InProcessLink& state, const DroneConfig& config)
 	}
 	std::cout << "INFO: hako_sensor_device: " << state.sensors.size()
 		<< " sensor instances measure every physics step of " << state.physics_step_usec << " us" << std::endl;
-	return openSensorLogs(state, config);
+	return true;
 }
 #endif
 

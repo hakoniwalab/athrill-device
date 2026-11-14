@@ -146,10 +146,7 @@ Next to the output, the host writes the columns each adapter declares (`ISensorA
 `log_values()`), unchanged. What they hold is the adapter's choice: an implementation that logs every stage of its
 model (the truth in, after the filter and the delay, the measured value, the zero offset, the noise, the drift, the
 saturation, the output) lets a flight be explained sensor by sensor. The host is the same for every implementation.
-The log files use Hakoniwa Drone's log files and the airframe's `simulation.logging` mode (`csv` or `binary`; `none`
-writes no sensor logs). Each instance has one, `log_sensor_<name>.csv` beside the airframe's own logs. A row is
-written on every physics step in which the adapter measured: `time_usec` (the simulation time), the values given to
-the chip (sensor axes in FRD, in the chip's units), then the adapter's columns.
+The log files use Hakoniwa Drone's logger and its formats (none, CSV, binary).
 
 ## Scope
 
