@@ -1,5 +1,5 @@
 /*
- * STM32H743 SPI-v2 controller (RM0433 chapter 52), one model per Devicetree
+ * STM32H743 SPI-v2 controller (RM0433 Rev 9 chapter 50), one model per Devicetree
  * node (st,stm32h7-spi), with the chips of its bus as its Devicetree
  * children, selected by its cs-gpios lines.
  *
@@ -20,7 +20,7 @@
  * the CPU batch through end_batch (the target's read barrier did it).
  * DMA (step 4-5): the controller raises its "tx" request while CFG1
  * TXDMAEN is set and SR TXP, its "rx" request while RXDMAEN is set and SR
- * RXP (RM0433 52.4.14), on its dmas tuples (ABI 1.14 dma_request); the
+ * RXP (RM0433 50.4.14), on its dmas tuples (ABI 1.14 dma_request); the
  * DMA writes TXDR and reads RXDR on the bus as the CPU does, so the
  * received bytes pass through the RX FIFO (before, the target's DMA
  * exchanged outside it).
@@ -107,7 +107,7 @@ typedef struct {
 	void *context;
 	std_bool tx_request;		/* the levels last told to the DMA */
 	std_bool rx_request;
-	/* The transfer session (RM0433 52.4.12): CSTART starts it with
+	/* The transfer session (RM0433 50.4.11): CSTART starts it with
 	 * CTSIZE = TSIZE; each data unit written counts it down (the exchange is
 	 * instantaneous, so a unit is sent and received at once); at zero TXTF
 	 * and EOT are set and CSTART clears. TSIZE = 0 is endless: no TXTF, no
@@ -176,7 +176,7 @@ static void update_requests(H7SpiType *s)
 	}
 }
 
-/* TXC (RM0433 52.11.6): a copy of EOT while TSIZE != 0; with TSIZE = 0
+/* TXC (RM0433 50.4.12, 50.11.6): a copy of EOT while TSIZE != 0; with TSIZE = 0
  * the TxFIFO is empty and its last frame sent, which the instantaneous
  * exchange always is. */
 static std_bool txc(const H7SpiType *s)
@@ -184,7 +184,7 @@ static std_bool txc(const H7SpiType *s)
 	return ((s->regs[CR2_OFFSET / 4U] & CR2_TSIZE) != 0U) ? s->eot : TRUE;
 }
 
-/* The global interrupt for EOTIE: EOT, SUSP or TXC (RM0433 52.11.5). NuttX
+/* The global interrupt for EOTIE: EOT, SUSP or TXC (RM0433 50.11.5). NuttX
  * enables EOTIE once its DMA is done and waits for it (TXC, TSIZE = 0); it
  * stays pending while the condition holds and the line is not active. */
 static void update_irq(H7SpiType *s)
@@ -200,7 +200,7 @@ static void update_irq(H7SpiType *s)
 }
 
 /* Data units in one TXDR access: the access size over the frame size
- * (CFG1 DSIZE = bits - 1), at least one (RM0433 52.4.9, data packing). */
+ * (CFG1 DSIZE = bits - 1), at least one (RM0433 50.4.13, data packing). */
 static void count_frames(H7SpiType *s, uint32 size)
 {
 	uint32 dsize = s->regs[CFG1_OFFSET / 4U] & CFG1_DSIZE;
@@ -219,7 +219,7 @@ static void count_frames(H7SpiType *s, uint32 size)
 }
 
 /* CR1 written: SPE off ends everything; CSTART set starts a session; CSUSP
- * suspends it (SUSP; CSTART and CSUSP clear, RM0433 52.4.12, 52.11.1). */
+ * suspends it (SUSP; CSTART and CSUSP clear, RM0433 50.4.11, 50.4.12, 50.11.1). */
 static void control(H7SpiType *s, uint32 before)
 {
 	uint32 *cr1 = &s->regs[CR1_OFFSET / 4U];
@@ -282,7 +282,7 @@ static void spi_write_value(H7SpiType *s, uint32 addr, uint32 size, uint32 value
 		return;
 	}
 	if (offset == IFCR_OFFSET) {
-		/* RM0433 52.11.7: EOTC clears EOT (and TXC, its copy while
+		/* RM0433 50.11.7: EOTC clears EOT (and TXC, its copy while
 		 * TSIZE != 0), TXTFC clears TXTF, SUSPC clears SUSP. */
 		if ((value & IFCR_EOTC) != 0U) {
 			s->eot = FALSE;
