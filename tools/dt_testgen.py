@@ -191,7 +191,7 @@ NATIVE_I2C_COMPATIBLES = {"st,stm32-i2c-v2"}
 # through the controller's registers (kind 0: F7 DR, 1: H7 TXDR/RXDR).
 NATIVE_SPI_COMPATIBLES = {"st,stm32-spi-fifo": 0, "st,stm32-spi": 0, "st,stm32h7-spi": 1}
 # Compatibles of the Hakoniwa sensor plugin (board/common).
-HAKONIWA_PLUGIN_COMPATIBLES = {"hakoniwa,sensor-device", "hakoniwa,sensor-registers"}
+HAKONIWA_PLUGIN_COMPATIBLES = {"hakoniwa,sensor-device", "hakoniwa,sensor-registers", "hakoniwa,sensor-instance"}
 TARGET_ARCHITECTURAL_COMPATIBLES = {
     "arm,armv7m-systick", "arm,v7m-nvic", "arm,cortex-m7", "arm,armv7m-mpu",
     # RISC-V (Erbium): the hart, its local interrupt controller and the PLIC

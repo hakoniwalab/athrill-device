@@ -145,6 +145,24 @@ bool hako_sensor_link_read_motor_status(uint32_t index, HakoMotorStatusSample *s
 	return false;
 }
 
+/* Nor sensor instances: the sensor host runs in process only. */
+bool hako_sensor_link_sensor_instance(const char *name, const char **type, uint32_t *index)
+{
+	(void)name;
+	(void)type;
+	(void)index;
+	return false;
+}
+
+bool hako_sensor_link_read_instance(uint32_t index, HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps)
+{
+	(void)index;
+	(void)sensor;
+	(void)gps;
+	(void)has_gps;
+	return false;
+}
+
 /* Nor a pose: the aircraft service publishes it itself. */
 bool hako_sensor_link_read_pose(HakoVehiclePoseSample *pose)
 {

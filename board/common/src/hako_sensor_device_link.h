@@ -19,6 +19,15 @@ typedef struct {
 	uint32_t gps_channel;
 	uint32_t actuator_channel;
 	bool aircraft_worker;
+	/* in process: the physics step [us] set over the airframe's own (0: the airframe's),
+	 * HAKO_AIRCRAFT_PHYSICS_STEP_USEC; it also replaces the MuJoCo model's timestep */
+	uint64_t physics_step_usec;
+	/* in process with the sensor host (HAKO_SENSOR_DEVICE_SENSOR_HOST): a file the
+	 * truth check is written to (HAKO_SENSOR_DEVICE_TRUTH_LOG), or NULL */
+	const char *truth_log_path;
+	/* in process with the sensor host: the sensor instances' configuration (a JSON file,
+	 * HAKO_SENSOR_DEVICE_SENSORS), or NULL */
+	const char *sensors_config_path;
 } HakoSensorLinkConfig;
 
 /* One motor's state at the last sample read (hako_sensor_link_read_motor_status). */
@@ -68,6 +77,22 @@ void hako_sensor_link_notify_time(uint64_t time_usec);
 bool hako_sensor_link_read_motor_status(uint32_t index, HakoMotorStatusSample *status);
 /* The vehicle's pose with the last sample read; false when this link has none. */
 bool hako_sensor_link_read_pose(HakoVehiclePoseSample *pose);
+
+/*
+ * The sensor instance name in the sensor host's configuration: true with its type
+ * ("imu", "mag", "baro" or "gps"); false when the link has no such instance (or no
+ * sensor host).
+ */
+/* The sensor host's instance of this name (HAKO_SENSOR_DEVICE_SENSORS): its type and
+ * index; false when there is none. */
+bool hako_sensor_link_sensor_instance(const char *name, const char **type, uint32_t *index);
+
+/* The value of sensor instance index with the sample hako_sensor_link_read gave last, in
+ * the units of that sample (body FRD axes are the instance's sensor axes in FRD): an IMU
+ * fills acc and gyro (and temperature), a magnetometer mag, a barometer abs_pressure,
+ * pressure_alt and temperature, a GPS receiver *gps with *has_gps true. False when the
+ * index is out of range. */
+bool hako_sensor_link_read_instance(uint32_t index, HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps);
 
 void hako_sensor_link_cleanup(void);
 

@@ -64,6 +64,7 @@ set(HAKO_PDU_REGISTRY_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../hakoniwa-pdu-regis
 add_library(hako_sensor_device SHARED
   src/hako_sensor_device_model.c
   src/hako_sensor_registers_model.c
+  src/hako_sensor_instance_model.c
   src/hako_sensor_device_exdev.c
   src/hako_sensor_device_link.c
   src/hako_sensor_device_link_mavlink.c)
@@ -99,6 +100,37 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
     message(FATAL_ERROR "Hakoniwa Drone release libraries were not found under ${HAKO_DRONE_PLATFORM_DIR}")
   endif()
 
+  # The sensor host (athrill-device#129): the vehicle's true motion read each physics step and
+  # made into sensor truths with hakoniwa-sensor-adapter's host helpers. Needs a Drone tree with
+  # IAirCraft::get_rotor_vibration and DroneConfig::setSimTimeStep.
+  option(HAKO_SENSOR_DEVICE_SENSOR_HOST "In process: the sensor host from the vehicle's true motion" OFF)
+  set(HAKONIWA_SENSOR_ADAPTER_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../hakoniwa-sensor-adapter"
+      CACHE PATH "hakoniwa-sensor-adapter source tree (host helpers)")
+  if(HAKO_SENSOR_DEVICE_SENSOR_HOST AND
+     NOT EXISTS "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_log.cpp")
+    message(FATAL_ERROR "HAKO_SENSOR_DEVICE_SENSOR_HOST needs HAKONIWA_SENSOR_ADAPTER_DIR with src/host/sensor_host.cpp and sensor_log.cpp")
+  endif()
+  # The adapters' implementations built into the plugin for the sensor instances, chosen by
+  # name in HAKO_SENSOR_DEVICE_SENSORS: "airsim" from hakoniwa-sensor-adapter-airsim (MIT, Boost headers).
+  set(HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR "" CACHE PATH
+      "hakoniwa-sensor-adapter-airsim source tree: the \"airsim\" adapters (empty: not built in)")
+  if(HAKO_SENSOR_DEVICE_SENSOR_HOST AND HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR)
+    if(NOT EXISTS "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/airsim_implementation.cpp")
+      message(FATAL_ERROR "HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR has no src/airsim_implementation.cpp")
+    endif()
+    find_package(Boost REQUIRED)
+  endif()
+  # Implementations built elsewhere, linked in by name: HAKO_SENSOR_DEVICE_IMPLEMENTATIONS lists the
+  # names (each defines HAKO_SENSOR_ADAPTER_IMPLEMENTATION_ENTRY(name)), and
+  # HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIBRARIES the libraries that hold them, built with the same
+  # compiler and position-independent.
+  set(HAKO_SENSOR_DEVICE_IMPLEMENTATIONS "" CACHE STRING "adapter implementations linked in (names)")
+  set(HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIBRARIES "" CACHE STRING "libraries of those implementations")
+  set(HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST "")
+  foreach(name IN LISTS HAKO_SENSOR_DEVICE_IMPLEMENTATIONS)
+    string(APPEND HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST "HAKO_SENSOR_DEVICE_IMPLEMENTATION(${name})")
+  endforeach()
+
   function(configure_hako_inproc_target target)
     target_link_libraries(${target} PRIVATE "${HAKO_DRONE_SERVICE_LIBRARY}")
     target_include_directories(${target} PRIVATE
@@ -111,6 +143,28 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
       "${HAKO_PDU_REGISTRY_DIR}/pdu/types")
     target_compile_features(${target} PRIVATE cxx_std_17)
     target_compile_definitions(${target} PRIVATE HAKO_ENABLE_SENSOR_MODEL_V2)
+    if(HAKO_SENSOR_DEVICE_SENSOR_HOST)
+      target_sources(${target} PRIVATE "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_host.cpp"
+        "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_log.cpp")
+      target_include_directories(${target} PRIVATE "${HAKONIWA_SENSOR_ADAPTER_DIR}/include")
+      target_compile_definitions(${target} PRIVATE HAKO_SENSOR_DEVICE_SENSOR_HOST)
+      if(HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR)
+        target_sources(${target} PRIVATE
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/projectairsim_imu_adapter.cpp"
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/projectairsim_gps_adapter.cpp"
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/projectairsim_baro_adapter.cpp"
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/projectairsim_mag_adapter.cpp"
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/src/airsim_implementation.cpp")
+        target_include_directories(${target} PRIVATE
+          "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/include" ${Boost_INCLUDE_DIRS})
+        target_compile_definitions(${target} PRIVATE HAKO_SENSOR_DEVICE_WITH_AIRSIM)
+      endif()
+      if(HAKO_SENSOR_DEVICE_IMPLEMENTATIONS)
+        target_compile_definitions(${target} PRIVATE
+          "HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST=${HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST}")
+        target_link_libraries(${target} PRIVATE ${HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIBRARIES})
+      endif()
+    endif()
     if(APPLE)
       # Both release dylibs use @loader_path, so keep them beside each consumer.
       add_custom_command(TARGET ${target} POST_BUILD
@@ -124,6 +178,7 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
   add_library(hako_sensor_device_inproc SHARED
     src/hako_sensor_device_model.c
     src/hako_sensor_registers_model.c
+    src/hako_sensor_instance_model.c
     src/hako_sensor_device_exdev.c
     src/hako_sensor_device_link_inproc.cpp
     src/hako_sensor_device_link_mavlink.c)
@@ -144,6 +199,7 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
     add_library(hako_sensor_device_inproc_motor SHARED
       src/hako_sensor_device_model.c
       src/hako_sensor_registers_model.c
+    src/hako_sensor_instance_model.c
       src/hako_sensor_device_exdev.c
       src/hako_sensor_device_link_inproc.cpp
       src/hako_sensor_device_link_mavlink.c

@@ -99,6 +99,7 @@ endif()
 add_library(athrill_hakoniwa_sensor MODULE
   board/common/src/hako_sensor_device_model.c
   board/common/src/hako_sensor_registers_model.c
+  board/common/src/hako_sensor_instance_model.c
   board/common/src/hako_sensor_device.c)
 target_include_directories(athrill_hakoniwa_sensor PRIVATE
   include board/common/src board/common/include)
