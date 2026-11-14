@@ -44,9 +44,17 @@
 	athrill,read-set = <0x10 0x80000000>;
 };
 
-/* CAN1 (bxCAN): keeps what is written (PX4's UAVCAN probes it). */
+/* CAN1 (bxCAN): keeps what is written, with the acknowledgements PX4's UAVCAN
+ * driver waits for (uc_stm32_can.cpp; RM0410 40.4, 40.9.2): MSR INAK and SLAK
+ * follow MCR INRQ and SLEEP (the controller enters and leaves initialization
+ * and sleep at once), and TSR TME0-2 read 1 (the three transmit mailboxes
+ * free). With no node on the bus a frame is never acknowledged, so the driver
+ * sees no transmit complete and aborts it at its deadline, as on the board.
+ * Without INAK, the driver failed with ErrMsrInakNotSet (-1005). */
 &can1 {
 	compatible = "athrill,register-block", "st,stm32-bxcan";
+	athrill,read-follow = <0x04 0x00 0x00000003 0>;
+	athrill,read-set = <0x08 0x1C000000>;
 };
 
 /* Backup SRAM: a register block (it keeps its bytes) before the memory
@@ -74,6 +82,19 @@
 			reg = <0x1ff0f400 0x100>;
 			athrill,reset-values = <0x20 0x52485441>, <0x24 0x204c4c49>,
 					       <0x28 0x374d5453>, <0x40 0x08000000>;
+		};
+
+		/* CAN2 (bxCAN, the slave of CAN1, whose filters it shares; RM0410
+		 * 2.2.2, 10.2): Zephyr defines it for the F745 but not for the
+		 * F765/F767 at the pinned revision. CAN1's acknowledgements. */
+		can2: can@40006800 {
+			compatible = "athrill,register-block", "st,stm32-bxcan";
+			reg = <0x40006800 0x400>;
+			interrupts = <63 0>, <64 0>, <65 0>, <66 0>;
+			interrupt-names = "TX", "RX0", "RX1", "SCE";
+			athrill,read-follow = <0x04 0x00 0x00000003 0>;
+			athrill,read-set = <0x08 0x1C000000>;
+			status = "disabled";
 		};
 
 		pwr: power@40007000 {

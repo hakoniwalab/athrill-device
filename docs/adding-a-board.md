@@ -293,14 +293,14 @@ and size. The checked-in blobs produce:
 
 | DTB | Startup line |
 | --- | --- |
-| `boards/pixhawk4/pixhawk4.dtb` | `DEVICE_TREE sha256=cd3a21918920144f266486817916342f5f841f551bbfde0e9576f5a95f28b412 size=26140` |
-| `boards/pixhawk4/pixhawk4-hakoniwa.dtb` | `DEVICE_TREE sha256=60c9e2dd35d89b919c39a1bb169ce1ab15929c6e52b1be439f959a653ea28fe0 size=26229` |
-| `boards/pixhawk4/pixhawk4-hakoniwa-dshot.dtb` | `DEVICE_TREE sha256=338872bd171ac2cc4c037d5174c5d9422ddc93d4c73cc6be91971e70a369fef3 size=26557` |
-| `boards/pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb` | `DEVICE_TREE sha256=a908983bd499399b7c82035c71adb259a0121cf6fbebcff0072070332ddcc8cc size=26541` |
+| `boards/pixhawk4/pixhawk4.dtb` | `DEVICE_TREE sha256=04d6db97f4528f5ec3c7574d3687c22c4df2a02cb0ee65ab590dd61203d5fd29 size=26424` |
+| `boards/pixhawk4/pixhawk4-hakoniwa.dtb` | `DEVICE_TREE sha256=c44ce148aad800bfc16b4ee1ec4ad5ea9016cf5140c8b30cd09572cf6b33525a size=26513` |
+| `boards/pixhawk4/pixhawk4-hakoniwa-dshot.dtb` | `DEVICE_TREE sha256=3d4649b0073d6a4221948e36d68a6694316c4e518c239fdca39b6f14bd79aa8f size=26841` |
+| `boards/pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb` | `DEVICE_TREE sha256=74c3a536a0dbe8dac178343e12f94acad358fe7392bf1141b22e59bf9590f0ac size=26825` |
 | `boards/pixhawk6c/pixhawk6c.dtb` | `DEVICE_TREE sha256=df101d83cc918571884495d46ed861ee5a44ceaee5f4644fa3d268ac1e0ca262 size=31380` |
 | `boards/pixhawk6c/pixhawk6c-hakoniwa.dtb` | `DEVICE_TREE sha256=cc7359fda3d1c779ff7f63cc48d2ab96119553c8f74227c50a231fa6c80876c3 size=31493` |
 | `boards/pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb` | `DEVICE_TREE sha256=601acc6b14f87aa34ee6144ae7ddac251ff3b8c5fcc3ae119497266e4e5a594c size=31821` |
-| `boards/nucleo-f767zi/nucleo-f767zi.dtb` | `DEVICE_TREE sha256=6a72e8dccf8e54f2c65f53beaa706622d7834a437920e77f0e8fa962ef6474e3 size=29491` |
+| `boards/nucleo-f767zi/nucleo-f767zi.dtb` | `DEVICE_TREE sha256=ac788811a44db3b79de4a07d370ebfc2b2e640828b5d5b411c5535e942a3cc30 size=29779` |
 | `boards/nucleo-h743zi/nucleo-h743zi.dtb` | `DEVICE_TREE sha256=f14668b555edd421fe21b99294b854a47c676fd7d19c1f7730de2102b6f10c0f size=34742` |
 | `boards/erbium/erbium.dtb` | `DEVICE_TREE sha256=74d0308a9d6ded43a601f10e6b6be893b77acb5bee4a89259b111a15ee1afda8 size=1969` |
 | `boards/erbium/erbium-hakoniwa.dtb` | `DEVICE_TREE sha256=1f27925e82d2a2441860445af2747aff41544a94dd7376e30305f16dcbd8176f size=2097` |

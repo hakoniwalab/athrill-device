@@ -25,7 +25,7 @@ Pinned inputs:
 Checked-in blob (SHA-256):
 
 ```text
-6a72e8dccf8e54f2c65f53beaa706622d7834a437920e77f0e8fa962ef6474e3  nucleo-f767zi.dtb
+ac788811a44db3b79de4a07d370ebfc2b2e640828b5d5b411c5535e942a3cc30  nucleo-f767zi.dtb
 ```
 
 Built with GNU cpp and dtc 1.7.0 in a Linux container, with Zephyr at

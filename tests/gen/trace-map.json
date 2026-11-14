@@ -91,10 +91,10 @@
       "dma_controllers": 2,
       "dma_references": 36,
       "dt_boards": 1,
-      "dt_irq_nodes": 30,
-      "dt_mmio_nodes": 49,
+      "dt_irq_nodes": 31,
+      "dt_mmio_nodes": 50,
       "dt_negative_nodes": 1,
-      "dt_nodes": 74,
+      "dt_nodes": 75,
       "gpio_chip_selects": 3,
       "gpio_interrupt_consumers": 1,
       "pwm_entries": 0,
@@ -115,10 +115,10 @@
       "dma_controllers": 2,
       "dma_references": 36,
       "dt_boards": 1,
-      "dt_irq_nodes": 30,
-      "dt_mmio_nodes": 49,
+      "dt_irq_nodes": 31,
+      "dt_mmio_nodes": 50,
       "dt_negative_nodes": 1,
-      "dt_nodes": 74,
+      "dt_nodes": 75,
       "gpio_chip_selects": 3,
       "gpio_interrupt_consumers": 1,
       "pwm_entries": 0,
@@ -139,10 +139,10 @@
       "dma_controllers": 2,
       "dma_references": 36,
       "dt_boards": 1,
-      "dt_irq_nodes": 30,
-      "dt_mmio_nodes": 49,
+      "dt_irq_nodes": 31,
+      "dt_mmio_nodes": 50,
       "dt_negative_nodes": 1,
-      "dt_nodes": 73,
+      "dt_nodes": 74,
       "gpio_chip_selects": 3,
       "gpio_interrupt_consumers": 1,
       "pwm_entries": 8,
@@ -163,10 +163,10 @@
       "dma_controllers": 2,
       "dma_references": 36,
       "dt_boards": 1,
-      "dt_irq_nodes": 30,
-      "dt_mmio_nodes": 49,
+      "dt_irq_nodes": 31,
+      "dt_mmio_nodes": 50,
       "dt_negative_nodes": 1,
-      "dt_nodes": 72,
+      "dt_nodes": 73,
       "gpio_chip_selects": 3,
       "gpio_interrupt_consumers": 1,
       "pwm_entries": 8,
@@ -1595,7 +1595,7 @@
     {
       "board": "nucleo-f767zi/nucleo-f767zi.dtb",
       "derived_properties": {
-        "dtb_size": 29491
+        "dtb_size": 29779
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -3530,6 +3530,7 @@
           "/soc/i2c@40006000",
           "/soc/debug@e0042000",
           "/soc/system-memory@1ff0f400",
+          "/soc/can@40006800",
           "/soc/power@40007000",
           "/soc/system-config@40013800",
           "/otghs_fs_phy",
@@ -4392,6 +4393,24 @@
       "known_defect": null,
       "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__system-memory@1ff0f400__ADV-DT-003.T1",
       "node_path": "/soc/system-memory@1ff0f400",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073768448,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__can@40006800__ADV-DT-003.T1",
+      "node_path": "/soc/can@40006800",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
       "test_spec_id": "ADV-DT-003.T1",
       "will_fail": false
@@ -5296,7 +5315,49 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
       "derived_properties": {
-        "dtb_size": 26541
+        "interrupts": [
+          {
+            "cells": [
+              63,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              64,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              65,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              66,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__can@40006800__ADV-DT-004.T1",
+      "node_path": "/soc/can@40006800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot_asset.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb",
+      "derived_properties": {
+        "dtb_size": 26825
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -6927,6 +6988,7 @@
           "/soc/i2c@40006000",
           "/soc/debug@e0042000",
           "/soc/system-memory@1ff0f400",
+          "/soc/can@40006800",
           "/soc/power@40007000",
           "/soc/system-config@40013800",
           "/otghs_fs_phy",
@@ -7789,6 +7851,24 @@
       "known_defect": null,
       "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__system-memory@1ff0f400__ADV-DT-003.T1",
       "node_path": "/soc/system-memory@1ff0f400",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073768448,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__can@40006800__ADV-DT-003.T1",
+      "node_path": "/soc/can@40006800",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
       "test_spec_id": "ADV-DT-003.T1",
       "will_fail": false
@@ -8693,7 +8773,49 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
       "derived_properties": {
-        "dtb_size": 26557
+        "interrupts": [
+          {
+            "cells": [
+              63,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              64,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              65,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              66,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa-dshot__soc__can@40006800__ADV-DT-004.T1",
+      "node_path": "/soc/can@40006800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dtb_size": 26841
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -10308,6 +10430,7 @@
           "/soc/i2c@40006000",
           "/soc/debug@e0042000",
           "/soc/system-memory@1ff0f400",
+          "/soc/can@40006800",
           "/soc/power@40007000",
           "/soc/system-config@40013800",
           "/otghs_fs_phy",
@@ -11170,6 +11293,24 @@
       "known_defect": null,
       "name": "pixhawk4__pixhawk4-hakoniwa__soc__system-memory@1ff0f400__ADV-DT-003.T1",
       "node_path": "/soc/system-memory@1ff0f400",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073768448,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__can@40006800__ADV-DT-003.T1",
+      "node_path": "/soc/can@40006800",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
       "test_spec_id": "ADV-DT-003.T1",
       "will_fail": false
@@ -12074,7 +12215,49 @@
     {
       "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 26229
+        "interrupts": [
+          {
+            "cells": [
+              63,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              64,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              65,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              66,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4-hakoniwa__soc__can@40006800__ADV-DT-004.T1",
+      "node_path": "/soc/can@40006800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4_hakoniwa.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4-hakoniwa.dtb",
+      "derived_properties": {
+        "dtb_size": 26513
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -13759,6 +13942,7 @@
           "/soc/i2c@40006000",
           "/soc/debug@e0042000",
           "/soc/system-memory@1ff0f400",
+          "/soc/can@40006800",
           "/soc/power@40007000",
           "/soc/system-config@40013800",
           "/otghs_fs_phy",
@@ -14620,6 +14804,24 @@
       "known_defect": null,
       "name": "pixhawk4__pixhawk4__soc__system-memory@1ff0f400__ADV-DT-003.T1",
       "node_path": "/soc/system-memory@1ff0f400",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073768448,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__can@40006800__ADV-DT-003.T1",
+      "node_path": "/soc/can@40006800",
       "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
       "test_spec_id": "ADV-DT-003.T1",
       "will_fail": false
@@ -15524,7 +15726,49 @@
     {
       "board": "pixhawk4/pixhawk4.dtb",
       "derived_properties": {
-        "dtb_size": 26140
+        "interrupts": [
+          {
+            "cells": [
+              63,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              64,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              65,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              66,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk4__pixhawk4__soc__can@40006800__ADV-DT-004.T1",
+      "node_path": "/soc/can@40006800",
+      "source_file": "tests/gen/test_gen_pixhawk4__pixhawk4.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk4/pixhawk4.dtb",
+      "derived_properties": {
+        "dtb_size": 26424
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,

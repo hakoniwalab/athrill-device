@@ -248,12 +248,13 @@
 };
 
 /* Start-up peripherals PX4 v1.17.0 touches on FMUv5 (RTC, the ADC block,
- * USB OTG FS, CAN1, the backup SRAM): register blocks with the SoC layer's
- * read rules. */
+ * USB OTG FS, CAN1 and CAN2 (UAVCAN), the backup SRAM): register blocks with
+ * the SoC layer's read rules. */
 &rtc { status = "okay"; };
 &adc123_common { status = "okay"; };
 &usbotg_fs { status = "okay"; };
 &can1 { status = "okay"; };
+&can2 { status = "okay"; };
 &backup_sram { status = "okay"; };
 /* The independent watchdog ArduPilot sets up (PX4 leaves it). */
 &iwdg { status = "okay"; };

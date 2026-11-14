@@ -277,9 +277,26 @@ static void test_f7(void)
 	TEST_CHECK(read32(0x40003000U) == 0xCCCCU);
 	close_node();
 	/* CAN1 and the backup SRAM keep what is written */
+	/* CAN1 (bxCAN): MSR INAK/SLAK follow MCR INRQ/SLEEP, TSR TME0-2 read 1
+	 * (PX4's UAVCAN driver waits for INAK set, then cleared) */
 	open_node("/soc/can@40006400");
-	write32(0x40006400U, 0x1U);
+	TEST_CHECK((read32(0x40006404U) & 0x3U) == 0U);		/* MSR */
+	TEST_CHECK((read32(0x40006408U) & 0x1C000000U) == 0x1C000000U);	/* TSR */
+	write32(0x40006400U, 0x1U);				/* MCR INRQ */
 	TEST_CHECK(read32(0x40006400U) == 0x1U);
+	TEST_CHECK((read32(0x40006404U) & 0x3U) == 0x1U);	/* INAK */
+	write32(0x40006400U, 0x2U);				/* MCR SLEEP, INRQ cleared */
+	TEST_CHECK((read32(0x40006404U) & 0x3U) == 0x2U);	/* SLAK, INAK cleared */
+	write32(0x40006400U, 0x0U);
+	TEST_CHECK((read32(0x40006404U) & 0x3U) == 0U);
+	close_node();
+	/* CAN2: the same acknowledgements */
+	open_node("/soc/can@40006800");
+	write32(0x40006800U, 0x1U);
+	TEST_CHECK((read32(0x40006804U) & 0x3U) == 0x1U);
+	TEST_CHECK((read32(0x40006808U) & 0x1C000000U) == 0x1C000000U);
+	write32(0x40006800U, 0x0U);
+	TEST_CHECK((read32(0x40006804U) & 0x3U) == 0U);
 	close_node();
 	open_node("/soc/memory@40024000");
 	write32(0x40024FFCU, 0xCAFEF00DU);
