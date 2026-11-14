@@ -40,15 +40,21 @@
 # Two runs gave identical values ("armed and took off"); the tick order is
 # unchanged. Aircraft: Hakoniwa Drone PRO (v5 code with the motor status
 # interface), x500-px4-sitl with randomSeed 12345, in process.
-seed_sha256 fram.bin b1c61973a65f1c9fb477cee730c7af5c427ad4ae43ec938c3161e3b26c8bee1c
-seed_sha256 sd.img 5c744bea0fd22577c8c215716f6e83973dc319c20c4879f4607cba8f218d9387
+# Re-recorded 2026-11-14 (athrill-target-stm32#94): the x500 parameter script
+# set SENS_GPS0_DELAY and SYS_AUTOCFG_CAL, which PX4 v1.17.0 does not have, so
+# they never took effect. It now sets EKF2_GPS_DELAY 100 (the v1.17.0 name of
+# the same delay; default 110) and no longer SYS_AUTOCFG_CAL, so the seeds and
+# the run changed. Two runs, each with its own first boot, gave identical
+# values ("armed and took off"); the tick order is unchanged.
+seed_sha256 fram.bin cdfca323cb1000e675f4797749684368f0e43d26fff590204ca01096d2d657a4
+seed_sha256 sd.img 5316b7f32d8b311b33af2c1996c38987515da4debcb3e17c9c577c0b1035b316
 firmware_sha256 e192cd7937ae03252969b12f9339c9a7af2dd4725189235119ed2ddc4c2bd2c4
-instructions 5346759285
-sha256 console.raw 3a56ed76be00dcdbb81dd22c91b0c868d37f3bda1263a1b4a2688ac8be8fb53b
-sha256 pwm.trace 9306712ff78059ca5b375c3d9eb60bbb0e5bfe34f74cd8b6edb83e3fa84dd8f3
-sha256 sensor-device.trace 7f0f299c6f3827a25ca70e51bf4c9f51ecaf40f122cc99ae8afcf7f8ed347c9e
-sha256 fram.bin 407321c474667d4fcb1f44c0f85cdf40110e2ebdc96ec530969c8c36fb6dbcc4
-sha256 sd.img 44a529915fcce680af151f58499a0ae165f33f01936b8c5647fc9aa72d2cd2cb
+instructions 5191900207
+sha256 console.raw a1ade8e8ace1ea0c03a1c843a7f6b132fc4848d1dde6d9a5ae7b1c11e96a7791
+sha256 pwm.trace fc3ef906e81b197e9464f1c216e23074cf4e8bc9f73981c35ac98f0c8dd9ca9a
+sha256 sensor-device.trace c4285b4188f1371490865042fb90b69f9f0582841f91384f040e25385d6c444f
+sha256 fram.bin 58a924fa40a76aac0ce1b757c9427c21d265b9c444836abee989f2002c1d9422
+sha256 sd.img 33f16fa97ef0890fa0ace67ec2435648b3d3fe30938236923ddb9cd857232c42
 # tick: the order the devices are ticked in (target TARGET_TICK lines, with
 # "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
 # 2026-11-08 with athrill-target-stm32 0050bb4 + the tick-order log.
