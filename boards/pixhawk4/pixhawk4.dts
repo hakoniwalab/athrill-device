@@ -86,10 +86,16 @@
  * that name.
  */
 
-/* SPI1 sensor bus: ICM-20689 CS PF2, DRDY PB4, PX4 rotation 2 (yaw 90). */
+/*
+ * SPI1 sensor bus, all PX4 rotation 2 (yaw 90):
+ *   ICM-20689 CS PF2, DRDY PB4;
+ *   BMI055 gyroscope CS PF4, DRDY PB14; BMI055 accelerometer CS PG10, DRDY PB15.
+ */
 &spi1 {
 	status = "okay";
-	cs-gpios = <&gpiof 2 GPIO_ACTIVE_LOW>;
+	cs-gpios = <&gpiof 2 GPIO_ACTIVE_LOW>,
+		   <&gpiof 4 GPIO_ACTIVE_LOW>,
+		   <&gpiog 10 GPIO_ACTIVE_LOW>;
 	dmas = <&dma2 3 3 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
 	       <&dma2 0 3 STM32_DMA_PERIPH_RX STM32_DMA_FIFO_FULL>,
 	       <&dma2 5 3 STM32_DMA_PERIPH_TX STM32_DMA_FIFO_FULL>,
@@ -106,6 +112,22 @@
 		axis-align-y = <SENSOR_AXIS_ALIGN_DT_X>;
 		axis-align-y-sign = <SENSOR_AXIS_ALIGN_DT_POS>;
 		axis-align-z = <SENSOR_AXIS_ALIGN_DT_Z>;
+	};
+
+	bmi055_gyro: gyroscope@1 {
+		compatible = "bosch,bmg160";
+		reg = <1>;
+		spi-max-frequency = <10000000>;
+		int-gpios = <&gpiob 14 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "yaw-90";
+	};
+
+	bmi055_accel: accelerometer@2 {
+		compatible = "bosch,bma280";
+		reg = <2>;
+		spi-max-frequency = <10000000>;
+		int-gpios = <&gpiob 15 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "yaw-90";
 	};
 };
 
@@ -316,6 +338,8 @@
 /* Their values: the bench sensor source above. */
 &pwm_actuators { value-source = <&bench_sensor>; };
 &icm20689 { value-source = <&bench_sensor>; };
+&bmi055_accel { value-source = <&bench_sensor>; };
+&bmi055_gyro { value-source = <&bench_sensor>; };
 &magnetometer { value-source = <&bench_sensor>; };
 &barometer { value-source = <&bench_sensor>; };
 &gps1 { value-source = <&bench_sensor>; };

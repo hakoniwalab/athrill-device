@@ -293,10 +293,10 @@ and size. The checked-in blobs produce:
 
 | DTB | Startup line |
 | --- | --- |
-| `boards/pixhawk4/pixhawk4.dtb` | `DEVICE_TREE sha256=04d6db97f4528f5ec3c7574d3687c22c4df2a02cb0ee65ab590dd61203d5fd29 size=26424` |
-| `boards/pixhawk4/pixhawk4-hakoniwa.dtb` | `DEVICE_TREE sha256=c44ce148aad800bfc16b4ee1ec4ad5ea9016cf5140c8b30cd09572cf6b33525a size=26513` |
-| `boards/pixhawk4/pixhawk4-hakoniwa-dshot.dtb` | `DEVICE_TREE sha256=3d4649b0073d6a4221948e36d68a6694316c4e518c239fdca39b6f14bd79aa8f size=26841` |
-| `boards/pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb` | `DEVICE_TREE sha256=74c3a536a0dbe8dac178343e12f94acad358fe7392bf1141b22e59bf9590f0ac size=26825` |
+| `boards/pixhawk4/pixhawk4.dtb` | `DEVICE_TREE sha256=8f74cfa490e65ea82cfa160cf61a5a9fca7853b2b6ad7f9c1ef57c54698f75b4 size=26732` |
+| `boards/pixhawk4/pixhawk4-hakoniwa.dtb` | `DEVICE_TREE sha256=2c0dfcc6102752ba0b0c7c0f53d1653ce0b8ecdc8b395c8aecd79b9be21a5f18 size=26845` |
+| `boards/pixhawk4/pixhawk4-hakoniwa-dshot.dtb` | `DEVICE_TREE sha256=136059ed6dbb3ae74a9444044cd196e547678b17f6bdcc3ca63a035596957838 size=27173` |
+| `boards/pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb` | `DEVICE_TREE sha256=9f90732e622c208d03eccaff354ad554ff4196df76c9d2c4a5cd1ca38a48179d size=27157` |
 | `boards/pixhawk6c/pixhawk6c.dtb` | `DEVICE_TREE sha256=df101d83cc918571884495d46ed861ee5a44ceaee5f4644fa3d268ac1e0ca262 size=31380` |
 | `boards/pixhawk6c/pixhawk6c-hakoniwa.dtb` | `DEVICE_TREE sha256=cc7359fda3d1c779ff7f63cc48d2ab96119553c8f74227c50a231fa6c80876c3 size=31493` |
 | `boards/pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb` | `DEVICE_TREE sha256=601acc6b14f87aa34ee6144ae7ddac251ff3b8c5fcc3ae119497266e4e5a594c size=31821` |

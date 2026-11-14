@@ -435,6 +435,8 @@ static const char *const target_compatibles[] = {
 	"athrill,dshot-esc",
 	"athrill,esc-fault-schedule",
 	"athrill,register-block",
+	"bosch,bma280",
+	"bosch,bmg160",
 	"fixed-layout",
 	"hakoniwa,sensor-device",
 	"holybro,pixhawk4",
@@ -1256,8 +1258,10 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__ADV_
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	CHECK(count_bindings("/soc/spi@40013000") == 1U);
+	CHECK(count_bindings("/soc/spi@40013000") == 3U);
 	CHECK(find_binding("/soc/spi@40013000", 0U) < target.binding_count);
+	CHECK(find_binding("/soc/spi@40013000", 1U) < target.binding_count);
+	CHECK(find_binding("/soc/spi@40013000", 2U) < target.binding_count);
 	destroy_board();
 	return 0;
 }
@@ -1272,6 +1276,36 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__imu_
 	CHECK(strcmp(target.bindings[index].gpio_provider, "/soc/pin-controller@40020000/gpio@40021400") == 0);
 	CHECK(target.bindings[index].gpio_cell_count == 2U);
 	CHECK(target.bindings[index].gpio_cells[0] == 2U);
+	CHECK(target.bindings[index].gpio_cells[1] == 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__gyroscope_1__ADV_SPI_001_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	index = find_binding("/soc/spi@40013000", 1U);
+	CHECK(index < target.binding_count);
+	CHECK(target.bindings[index].has_gpio);
+	CHECK(strcmp(target.bindings[index].gpio_provider, "/soc/pin-controller@40020000/gpio@40021400") == 0);
+	CHECK(target.bindings[index].gpio_cell_count == 2U);
+	CHECK(target.bindings[index].gpio_cells[0] == 4U);
+	CHECK(target.bindings[index].gpio_cells[1] == 1U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__accelerometer_2__ADV_SPI_001_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	index = find_binding("/soc/spi@40013000", 2U);
+	CHECK(index < target.binding_count);
+	CHECK(target.bindings[index].has_gpio);
+	CHECK(strcmp(target.bindings[index].gpio_provider, "/soc/pin-controller@40020000/gpio@40021800") == 0);
+	CHECK(target.bindings[index].gpio_cell_count == 2U);
+	CHECK(target.bindings[index].gpio_cells[0] == 10U);
 	CHECK(target.bindings[index].gpio_cells[1] == 1U);
 	destroy_board();
 	return 0;
@@ -1612,7 +1646,7 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__root__ADV_DT_002_T1(voi
 {
 	uint32 index;
 	CHECK(build_board() == 0);
-	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 75U);
+	CHECK(count_lines(captured_stderr, "DEVICE_MODEL path=") == 77U);
 	CHECK(count_model_path(captured_stderr, "/") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/timers@40000000") == 1U);
@@ -1648,6 +1682,8 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__root__ADV_DT_002_T1(voi
 	CHECK(count_model_path(captured_stderr, "/soc/sdmmc@40012c00/sd-card") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40013000") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40013000/imu@0") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/spi@40013000/gyroscope@1") == 1U);
+	CHECK(count_model_path(captured_stderr, "/soc/spi@40013000/accelerometer@2") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40013400") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/spi@40013400/pressure@0") == 1U);
 	CHECK(count_model_path(captured_stderr, "/soc/interrupt-controller@40013c00") == 1U);
@@ -2795,6 +2831,42 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__imu_
 	return 0;
 }
 
+static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__gyroscope_1__ADV_GPIO_001_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(mmio_write32(1073821716ULL, 256U) == 0);
+	CHECK(mmio_write32(1073822720ULL, 16384U) == 0);
+	CHECK(mmio_write32(1073822728ULL, 16384U) == 0);
+	CHECK(drive_named_gpio("/soc/pin-controller@40020000/gpio@40020400", 14U, FALSE) == 0);
+	clear_irq_assertions();
+	CHECK(drive_named_gpio("/soc/pin-controller@40020000/gpio@40020400", 14U, TRUE) == 0);
+	CHECK(mmio_read32(1073822740ULL, &index) == 0);
+	CHECK((index & 16384U) != 0U);
+	{ static const uint32 wanted[] = {40U, 0U};
+	  CHECK(irq_asserted("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__accelerometer_2__ADV_GPIO_001_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	CHECK(mmio_write32(1073821716ULL, 4096U) == 0);
+	CHECK(mmio_write32(1073822720ULL, 32768U) == 0);
+	CHECK(mmio_write32(1073822728ULL, 32768U) == 0);
+	CHECK(drive_named_gpio("/soc/pin-controller@40020000/gpio@40020400", 15U, FALSE) == 0);
+	clear_irq_assertions();
+	CHECK(drive_named_gpio("/soc/pin-controller@40020000/gpio@40020400", 15U, TRUE) == 0);
+	CHECK(mmio_read32(1073822740ULL, &index) == 0);
+	CHECK((index & 32768U) != 0U);
+	{ static const uint32 wanted[] = {40U, 0U};
+	  CHECK(irq_asserted("/soc/interrupt-controller@e000e100", wanted, 2U)); }
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40003800__fram_0__ADV_GPIO_002_T1(void)
 {
 	uint32 index;
@@ -2821,6 +2893,48 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__imu_
 	uint32 index;
 	CHECK(build_board() == 0);
 	index = find_binding("/soc/spi@40013000", 0U);
+	CHECK(index < target.binding_count);
+	{ uint8 miso[4]; uint32 at; std_bool driven = FALSE;
+	  CHECK(native_spi_select(&target.bindings[index], FALSE) == 0);
+	  CHECK(native_spi_byte(&target.bindings[index], 0xF5U, &miso[0]) == 0 && miso[0] == 0xFFU);
+	  CHECK(native_spi_select(&target.bindings[index], TRUE) == 0);
+	  for (at = 0U; at < 4U; at++) {
+		CHECK(native_spi_byte(&target.bindings[index], at == 0U ? 0xF5U : 0U, &miso[at]) == 0);
+		if (miso[at] != 0xFFU) driven = TRUE;
+	  }
+	  CHECK(driven);
+	  CHECK(native_spi_select(&target.bindings[index], FALSE) == 0);
+	  CHECK(native_spi_byte(&target.bindings[index], 0xF5U, &miso[0]) == 0 && miso[0] == 0xFFU); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__gyroscope_1__ADV_GPIO_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	index = find_binding("/soc/spi@40013000", 1U);
+	CHECK(index < target.binding_count);
+	{ uint8 miso[4]; uint32 at; std_bool driven = FALSE;
+	  CHECK(native_spi_select(&target.bindings[index], FALSE) == 0);
+	  CHECK(native_spi_byte(&target.bindings[index], 0xF5U, &miso[0]) == 0 && miso[0] == 0xFFU);
+	  CHECK(native_spi_select(&target.bindings[index], TRUE) == 0);
+	  for (at = 0U; at < 4U; at++) {
+		CHECK(native_spi_byte(&target.bindings[index], at == 0U ? 0xF5U : 0U, &miso[at]) == 0);
+		if (miso[at] != 0xFFU) driven = TRUE;
+	  }
+	  CHECK(driven);
+	  CHECK(native_spi_select(&target.bindings[index], FALSE) == 0);
+	  CHECK(native_spi_byte(&target.bindings[index], 0xF5U, &miso[0]) == 0 && miso[0] == 0xFFU); }
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__accelerometer_2__ADV_GPIO_002_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	index = find_binding("/soc/spi@40013000", 2U);
 	CHECK(index < target.binding_count);
 	{ uint8 miso[4]; uint32 at; std_bool driven = FALSE;
 	  CHECK(native_spi_select(&target.bindings[index], FALSE) == 0);
@@ -2871,6 +2985,32 @@ static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__imu_
 	return 0;
 }
 
+static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__gyroscope_1__ADV_CHIP_BMI055G_001_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	uint8 value;
+	index = find_binding("/soc/spi@40013000", 1U);
+	CHECK(index < target.binding_count);
+	CHECK(spi_register_read(index, 0U, 0U, &value) == 0);
+	CHECK(value == 15U);
+	destroy_board();
+	return 0;
+}
+
+static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__accelerometer_2__ADV_CHIP_BMI055A_001_T1(void)
+{
+	uint32 index;
+	CHECK(build_board() == 0);
+	uint8 value;
+	index = find_binding("/soc/spi@40013000", 2U);
+	CHECK(index < target.binding_count);
+	CHECK(spi_register_read(index, 0U, 0U, &value) == 0);
+	CHECK(value == 250U);
+	destroy_board();
+	return 0;
+}
+
 static int case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013400__pressure_0__ADV_CHIP_MS5611_001_T1(void)
 {
 	uint32 index;
@@ -2907,6 +3047,8 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40003800__ADV-SPI-006.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40003800__ADV_SPI_006_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__ADV-SPI-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__ADV_SPI_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__imu@0__ADV-SPI-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__imu_0__ADV_SPI_001_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__gyroscope@1__ADV-SPI-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__gyroscope_1__ADV_SPI_001_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__accelerometer@2__ADV-SPI-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__accelerometer_2__ADV_SPI_001_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__ADV-SPI-006.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__ADV_SPI_006_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013400__ADV-SPI-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013400__ADV_SPI_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013400__pressure@0__ADV-SPI-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013400__pressure_0__ADV_SPI_001_T1();
@@ -3020,10 +3162,16 @@ int main(int argc, char **argv)
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__dma@40026400__ADV-DMA-005.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__dma_40026400__ADV_DMA_005_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__sdmmc@40012c00__sd-card__ADV-SD-004.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__sdmmc_40012c00__sd_card__ADV_SD_004_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__imu@0__ADV-GPIO-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__imu_0__ADV_GPIO_001_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__gyroscope@1__ADV-GPIO-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__gyroscope_1__ADV_GPIO_001_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__accelerometer@2__ADV-GPIO-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__accelerometer_2__ADV_GPIO_001_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40003800__fram@0__ADV-GPIO-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40003800__fram_0__ADV_GPIO_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__imu@0__ADV-GPIO-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__imu_0__ADV_GPIO_002_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__gyroscope@1__ADV-GPIO-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__gyroscope_1__ADV_GPIO_002_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__accelerometer@2__ADV-GPIO-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__accelerometer_2__ADV_GPIO_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013400__pressure@0__ADV-GPIO-002.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013400__pressure_0__ADV_GPIO_002_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__imu@0__ADV-CHIP-ICM20689-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__imu_0__ADV_CHIP_ICM20689_001_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__gyroscope@1__ADV-CHIP-BMI055G-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__gyroscope_1__ADV_CHIP_BMI055G_001_T1();
+	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013000__accelerometer@2__ADV-CHIP-BMI055A-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013000__accelerometer_2__ADV_CHIP_BMI055A_001_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__spi@40013400__pressure@0__ADV-CHIP-MS5611-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__spi_40013400__pressure_0__ADV_CHIP_MS5611_001_T1();
 	if (strcmp(argv[1], "pixhawk4__pixhawk4-hakoniwa-dshot-asset__soc__i2c@40005c00__magnetometer@e__ADV-CHIP-IST8310-001.T1") == 0) return case_pixhawk4__pixhawk4_hakoniwa_dshot_asset__soc__i2c_40005c00__magnetometer_e__ADV_CHIP_IST8310_001_T1();
 	fprintf(stderr, "unknown generated trace case: %s\n", argv[1]);

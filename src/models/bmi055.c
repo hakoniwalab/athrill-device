@@ -51,7 +51,7 @@ typedef struct {
 	AthrillDeviceValueSource source;
 	uint8 registers[64];
 	Bmi055Kind kind;
-	std_bool yaw_180;
+	uint32 yaw_quarter_turns; /* athrill,mount-rotation yaw-90/180/270 = 1/2/3 */
 	uint64 clocks_per_sample;
 	uint64 frequency_hz;
 	/* the sample period the value source was told last (ABI 1.22), 0: none yet */
@@ -85,9 +85,20 @@ static void to_chip_axes(const Bmi055 *chip, const float32 *frd,
 {
 	float32 x = frd[0];
 	float32 y = frd[1];
-	if (chip->yaw_180) {
-		x = -x;
-		y = -y;
+	/* Undo the board's yaw mount into the chip frame (PX4 rotation convention). */
+	if (chip->yaw_quarter_turns == 1U) {
+		/* yaw 90: board = (-chip_y, chip_x) */
+		x = frd[1];
+		y = -frd[0];
+	}
+	else if (chip->yaw_quarter_turns == 2U) {
+		x = -frd[0];
+		y = -frd[1];
+	}
+	else if (chip->yaw_quarter_turns == 3U) {
+		/* yaw 270: board = (chip_y, -chip_x) */
+		x = -frd[1];
+		y = frd[0];
 	}
 	output[0] = x;
 	output[1] = -y;
@@ -411,8 +422,20 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	chip->clocks_per_sample = chip_rate_clocks(frequency, rate_mhz(chip));
 	if (args->node->ops->get_string(args->node->context,
 		"athrill,mount-rotation", 0U, &rotation) == 0 &&
-	    strcmp(rotation, "yaw-180") == 0) {
-		chip->yaw_180 = TRUE;
+	    rotation != NULL) {
+		if (strcmp(rotation, "yaw-90") == 0) {
+			chip->yaw_quarter_turns = 1U;
+		}
+		else if (strcmp(rotation, "yaw-180") == 0) {
+			chip->yaw_quarter_turns = 2U;
+		}
+		else if (strcmp(rotation, "yaw-270") == 0) {
+			chip->yaw_quarter_turns = 3U;
+		}
+		else {
+			free(chip);
+			return -1;
+		}
 	}
 	*instance = chip;
 	return 0;
