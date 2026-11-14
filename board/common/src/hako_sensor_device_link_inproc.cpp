@@ -4,6 +4,7 @@
 #include "service.hpp"
 #ifdef HAKO_SENSOR_DEVICE_SENSOR_HOST
 #include "hakoniwa/sensor_adapter/host/sensor_host.hpp"
+#include "hakoniwa/sensor_adapter/host/sensor_log.hpp"
 #include "hakoniwa/sensor_adapter/sensor_adapter_implementation.hpp"
 #include <fstream>
 #include <nlohmann/json.hpp>
@@ -551,8 +552,10 @@ uint64_t seedFromName(const std::string& name)
 	return hash;
 }
 
-/* The world of the airframe (simulation.location) and every instance's adapter. An
- * adapter refuses a period it can not measure with this physics step. */
+/* The world of the airframe (simulation.location) and every instance's adapter, with its
+ * sensor log when its configuration asks for one (hakoniwa-sensor-adapter
+ * docs/spec/sensor-log.md). An adapter refuses a period it can not measure with this
+ * physics step. */
 bool createSensorAdapters(InProcessLink& state, const DroneConfig& config)
 {
 	if (state.sensors.empty()) {
@@ -583,26 +586,26 @@ bool createSensorAdapters(InProcessLink& state, const DroneConfig& config)
 			hakoniwa::sensor_adapter::ImuAdapterSetup value;
 			setup(value);
 			provided = implementation->create_imu != nullptr;
-			if (provided) sensor.imu = implementation->create_imu(value, error);
+			if (provided) sensor.imu = host::create_logged_imu_sensor_adapter(value, error, implementation->create_imu);
 		}
 		else if (sensor.type == "mag") {
 			hakoniwa::sensor_adapter::MagAdapterSetup value;
 			setup(value);
 			provided = implementation->create_mag != nullptr;
-			if (provided) sensor.mag = implementation->create_mag(value, error);
+			if (provided) sensor.mag = host::create_logged_mag_sensor_adapter(value, error, implementation->create_mag);
 		}
 		else if (sensor.type == "baro") {
 			hakoniwa::sensor_adapter::BaroAdapterSetup value;
 			setup(value);
 			provided = implementation->create_baro != nullptr;
-			if (provided) sensor.baro = implementation->create_baro(value, error);
+			if (provided) sensor.baro = host::create_logged_baro_sensor_adapter(value, error, implementation->create_baro);
 		}
 		else {
 			hakoniwa::sensor_adapter::GpsAdapterSetup value;
 			setup(value);
 			value.origin = state.world.origin;
 			provided = implementation->create_gps != nullptr;
-			if (provided) sensor.gps = implementation->create_gps(value, error);
+			if (provided) sensor.gps = host::create_logged_gps_sensor_adapter(value, error, implementation->create_gps);
 		}
 		if (!provided) {
 			std::cerr << "ERROR: hako_sensor_device: sensor " << sensor.name << ": implementation "

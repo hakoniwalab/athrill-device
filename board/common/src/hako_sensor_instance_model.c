@@ -5,7 +5,9 @@
  * adapter and its mount; a node without an entry there is an error.
  *
  * It hands the chip the instance's own value with the sample the sensor device latched
- * last: what the instance's adapter measured at its mount.
+ * last: what the instance's adapter measured at its mount. In a build without the sensor
+ * host (the passive reference plugin) it hands the sensor device's own values, so that a
+ * board wired to instances can still be built and checked.
  *
  * Copyright 2026 Hakoniwa Laboratory
  * SPDX-License-Identifier: MIT
@@ -31,19 +33,16 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	uint32_t index = 0U;
 
 	name = (name == NULL) ? path : name + 1;
-#ifdef ATHRILL_HAKONIWA_PASSIVE
-	/* no aircraft here, so no sensor host */
-	(void)type;
-	(void)index;
-	(void)instance;
-	printf("ERROR: hako_sensor_device: %s: sensor instances need the in-process sensor host\n", path);
-	return -1;
-#else
 	HakoSensorInstance *sensor;
+#ifdef ATHRILL_HAKONIWA_PASSIVE
+	/* no sensor host here: the instance gives the sensor device's own values */
+	type = "device";
+#else
 	if (!hako_sensor_link_sensor_instance(name, &type, &index)) {
 		printf("ERROR: hako_sensor_device: %s has no entry in HAKO_SENSOR_DEVICE_SENSORS\n", path);
 		return -1;
 	}
+#endif
 	sensor = calloc(1U, sizeof(*sensor));
 	if (sensor == NULL) {
 		return -1;
@@ -53,7 +52,6 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	sensor->index = index;
 	*instance = sensor;
 	return 0;
-#endif
 }
 
 static void destroy(void *instance)

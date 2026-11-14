@@ -107,8 +107,8 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
   set(HAKONIWA_SENSOR_ADAPTER_DIR "${CMAKE_CURRENT_LIST_DIR}/../../../hakoniwa-sensor-adapter"
       CACHE PATH "hakoniwa-sensor-adapter source tree (host helpers)")
   if(HAKO_SENSOR_DEVICE_SENSOR_HOST AND
-     NOT EXISTS "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_host.cpp")
-    message(FATAL_ERROR "HAKO_SENSOR_DEVICE_SENSOR_HOST needs HAKONIWA_SENSOR_ADAPTER_DIR with src/host/sensor_host.cpp")
+     NOT EXISTS "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_log.cpp")
+    message(FATAL_ERROR "HAKO_SENSOR_DEVICE_SENSOR_HOST needs HAKONIWA_SENSOR_ADAPTER_DIR with src/host/sensor_host.cpp and sensor_log.cpp")
   endif()
   # The adapters' implementations built into the plugin for the sensor instances, chosen by
   # name in HAKO_SENSOR_DEVICE_SENSORS: "airsim" from hakoniwa-sensor-adapter-airsim (MIT, Boost headers).
@@ -144,7 +144,8 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
     target_compile_features(${target} PRIVATE cxx_std_17)
     target_compile_definitions(${target} PRIVATE HAKO_ENABLE_SENSOR_MODEL_V2)
     if(HAKO_SENSOR_DEVICE_SENSOR_HOST)
-      target_sources(${target} PRIVATE "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_host.cpp")
+      target_sources(${target} PRIVATE "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_host.cpp"
+        "${HAKONIWA_SENSOR_ADAPTER_DIR}/src/host/sensor_log.cpp")
       target_include_directories(${target} PRIVATE "${HAKONIWA_SENSOR_ADAPTER_DIR}/include")
       target_compile_definitions(${target} PRIVATE HAKO_SENSOR_DEVICE_SENSOR_HOST)
       if(HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR)

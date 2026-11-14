@@ -136,10 +136,19 @@ hakoniwa-sensor-adapter tree). Without it, nothing of this section exists and th
 
 ## Logs
 
-With `simulation.sensorModels: false`, Hakoniwa Drone writes no sensor logs (`log_acc.csv` and the others). The sensor
-host writes none either. A sensor's log belongs to its adapter implementation: an implementation that offers logs
-writes them from what the host gives the adapter (the truth at the mount) and what the adapter returns, where the
-adapter's configuration asks. The firmware's own log, a ULog or a DataFlash log, holds what the firmware read through
+With `simulation.sensorModels: false`, Hakoniwa Drone writes no sensor logs (`log_acc.csv` and the others). Their
+place is taken by the sensor logs of hakoniwa-sensor-adapter (`docs/spec/sensor-log.md`): the sensor host creates
+every instance's adapter through them, so any implementation can be logged. An instance is logged when its `config`
+is a sensor log configuration:
+
+```json
+{"model": "imu-ideal.json", "log": {"path": "logs/bmi055.bin", "format": "binary"}}
+```
+
+`model` is the implementation's own configuration for the sensor. The log has one row per physics step: the
+simulation time, the truth at the sensor's mount, the adapter's output (sensor axes FLU, SI units), then the
+adapter's own columns. The format is CSV or Hakoniwa Drone's binary log; the reader is hakoniwa-sensor-adapter's
+`tools/read_sensor_log.py`. The firmware's own log, a ULog or a DataFlash log, holds what the firmware read through
 the chip.
 
 ## Scope
