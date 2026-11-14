@@ -120,6 +120,16 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
     endif()
     find_package(Boost REQUIRED)
   endif()
+  # Implementations built elsewhere, linked in by name: HAKO_SENSOR_DEVICE_IMPLEMENTATIONS lists the
+  # names (each defines HAKO_SENSOR_ADAPTER_IMPLEMENTATION_ENTRY(name)), and
+  # HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIBRARIES the libraries that hold them, built with the same
+  # compiler and position-independent.
+  set(HAKO_SENSOR_DEVICE_IMPLEMENTATIONS "" CACHE STRING "adapter implementations linked in (names)")
+  set(HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIBRARIES "" CACHE STRING "libraries of those implementations")
+  set(HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST "")
+  foreach(name IN LISTS HAKO_SENSOR_DEVICE_IMPLEMENTATIONS)
+    string(APPEND HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST "HAKO_SENSOR_DEVICE_IMPLEMENTATION(${name})")
+  endforeach()
 
   function(configure_hako_inproc_target target)
     target_link_libraries(${target} PRIVATE "${HAKO_DRONE_SERVICE_LIBRARY}")
@@ -147,6 +157,11 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
         target_include_directories(${target} PRIVATE
           "${HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR}/include" ${Boost_INCLUDE_DIRS})
         target_compile_definitions(${target} PRIVATE HAKO_SENSOR_DEVICE_WITH_AIRSIM)
+      endif()
+      if(HAKO_SENSOR_DEVICE_IMPLEMENTATIONS)
+        target_compile_definitions(${target} PRIVATE
+          "HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST=${HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST}")
+        target_link_libraries(${target} PRIVATE ${HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIBRARIES})
       endif()
     endif()
     if(APPLE)

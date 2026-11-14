@@ -511,6 +511,12 @@ bool loadSensorInstances(InProcessLink& state, const std::string& path)
 #ifdef HAKO_SENSOR_DEVICE_WITH_AIRSIM
 HAKO_SENSOR_ADAPTER_DECLARE_IMPLEMENTATION(airsim);
 #endif
+/* the implementations linked in by name (HAKO_SENSOR_DEVICE_IMPLEMENTATIONS) */
+#ifdef HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST
+#define HAKO_SENSOR_DEVICE_IMPLEMENTATION(name) HAKO_SENSOR_ADAPTER_DECLARE_IMPLEMENTATION(name);
+HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST
+#undef HAKO_SENSOR_DEVICE_IMPLEMENTATION
+#endif
 
 /* The adapters' implementations built into this plugin, by name. */
 const hakoniwa::sensor_adapter::SensorAdapterImplementation *findImplementation(const std::string& name)
@@ -518,6 +524,11 @@ const hakoniwa::sensor_adapter::SensorAdapterImplementation *findImplementation(
 	std::vector<const hakoniwa::sensor_adapter::SensorAdapterImplementation *> built;
 #ifdef HAKO_SENSOR_DEVICE_WITH_AIRSIM
 	built.push_back(HAKO_SENSOR_ADAPTER_IMPLEMENTATION_ENTRY(airsim)());
+#endif
+#ifdef HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST
+#define HAKO_SENSOR_DEVICE_IMPLEMENTATION(name) built.push_back(HAKO_SENSOR_ADAPTER_IMPLEMENTATION_ENTRY(name)());
+	HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIST
+#undef HAKO_SENSOR_DEVICE_IMPLEMENTATION
 #endif
 	for (const auto *implementation : built) {
 		if (implementation != nullptr
@@ -529,13 +540,13 @@ const hakoniwa::sensor_adapter::SensorAdapterImplementation *findImplementation(
 	return nullptr;
 }
 
-/* A seed from the instance's name (FNV-1a), so each chip has its own stream and a run
- * repeats with the same configuration. */
+/* A seed from the instance's name (32-bit FNV-1a, which every adapter takes), so each chip
+ * has its own stream and a run repeats with the same configuration. */
 uint64_t seedFromName(const std::string& name)
 {
-	uint64_t hash = 14695981039346656037ULL;
+	uint32_t hash = 2166136261U;
 	for (const unsigned char c : name) {
-		hash = (hash ^ c) * 1099511628211ULL;
+		hash = (hash ^ c) * 16777619U;
 	}
 	return hash;
 }

@@ -107,6 +107,7 @@ its configuration, for example a period shorter than the physics step or not a m
 | Name | Built in with |
 | --- | --- |
 | `airsim` | `HAKONIWA_SENSOR_ADAPTER_AIRSIM_DIR`: the hakoniwa-sensor-adapter-airsim tree (IMU, magnetometer, barometer, GPS; needs the Boost headers). Its `config/*-ideal.json` files measure without errors |
+| any other | `HAKO_SENSOR_DEVICE_IMPLEMENTATIONS`: the names of implementations built elsewhere (each defines `HAKO_SENSOR_ADAPTER_IMPLEMENTATION_ENTRY(name)`), with `HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIBRARIES`: the static libraries that hold them, built position-independent with the same compiler |
 
 Each adapter gets the instance's name as its sensor name and a fixed random seed made from that name, so every chip
 has its own random stream and a run with the same configuration repeats.
