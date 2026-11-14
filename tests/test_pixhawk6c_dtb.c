@@ -238,6 +238,17 @@ static void check_common(const void *blob, int hakoniwa)
 	expect_interrupts(blob, "/soc/timers@40014400", tim16_irq, 1U);
 	expect_interrupts(blob, "/soc/timers@40014800", tim17_irq, 1U);
 	expect_boolean(blob, "/soc/timers@40010000", "athrill,stm32h7-timer");
+	/* TIM1_UP (PX4's DShot stream): DMAMUX1 request 15, 32-bit M2P, high priority */
+	{
+		int length;
+		const fdt32_t *cells = fdt_getprop(blob, node(blob, "/soc/timers@40010000"), "dmas", &length);
+		const char *names = fdt_getprop(blob, node(blob, "/soc/timers@40010000"), "dma-names", NULL);
+		TEST_CHECK(cells != NULL && length == (int)(4U * sizeof(fdt32_t)));
+		TEST_CHECK(fdt32_to_cpu(cells[0]) == fdt_get_phandle(blob, node(blob, "/soc/dmamux@40020800")));
+		TEST_CHECK(fdt32_to_cpu(cells[1]) == 0U && fdt32_to_cpu(cells[2]) == 15U &&
+			fdt32_to_cpu(cells[3]) == 0x25440U);
+		TEST_CHECK(names != NULL && strcmp(names, "up") == 0);
+	}
 	expect_boolean(blob, "/soc/timers@40000800", "athrill,stm32h7-timer");
 	expect_boolean(blob, "/soc/timers@40000c00", "athrill,stm32h7-timer");
 	expect_boolean(blob, "/soc/timers@40014000", "athrill,stm32h7-timer");
@@ -335,6 +346,36 @@ int main(void)
 	TEST_CHECK(fdt_check_full(blob, size) == 0);
 	check_common(blob, 1);
 	free(blob);
-	puts("Pixhawk 6C base and Hakoniwa DT allocation is valid");
+	/* DShot: FMU_CH1..4 (TIM1 CH1..CH4, the actuator map's first four) on the
+	 * ESC on USART2, which feeds the Hakoniwa sink; the actuator map disabled */
+	blob = read_dtb(PIXHAWK6C_HAKONIWA_DSHOT_DTB, &size);
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	check_common(blob, 1);
+	{
+		int esc = node(blob, "/soc/serial@40004400/dshot-esc");
+		int map = node(blob, "/pwm-actuator-map");
+		int fault = node(blob, "/esc-fault");
+		int esc_length, map_length, length;
+		const fdt32_t *esc_pwms = fdt_getprop(blob, esc, "pwms", &esc_length);
+		const fdt32_t *map_pwms = fdt_getprop(blob, map, "pwms", &map_length);
+		const fdt32_t *model = fdt_getprop(blob, esc, "fault-model", &length);
+		expect_compatible(blob, "/soc/serial@40004400/dshot-esc", "athrill,dshot-esc");
+		expect_status(blob, "/pwm-actuator-map", "disabled");
+		TEST_CHECK(esc_pwms != NULL && map_pwms != NULL &&
+			esc_length == (int)(4U * 4U * sizeof(fdt32_t)) &&
+			map_length >= esc_length &&
+			memcmp(esc_pwms, map_pwms, (size_t)esc_length) == 0);
+		expect_value_source(blob, "/soc/serial@40004400/dshot-esc",
+			fdt_get_phandle(blob, node(blob, "/sensor-device")), 1);
+		expect_boolean(blob, "/soc/serial@40004400/dshot-esc",
+			"athrill,tick-before-value-source");
+		/* the fault-injection point: a schedule with no stop */
+		TEST_CHECK(model != NULL && length == 4 &&
+			fdt32_to_cpu(*model) == fdt_get_phandle(blob, fault));
+		expect_compatible(blob, "/esc-fault", "athrill,esc-fault-schedule");
+		TEST_CHECK(fdt_getprop(blob, fault, "athrill,motor-stop", NULL) == NULL);
+	}
+	free(blob);
+	puts("Pixhawk 6C base, Hakoniwa and DShot DT allocation is valid");
 	return 0;
 }

@@ -363,7 +363,8 @@ if(BUILD_TESTING)
   target_include_directories(test_pixhawk6c_dtb PRIVATE third_party/libfdt)
   target_compile_definitions(test_pixhawk6c_dtb PRIVATE
     PIXHAWK6C_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6c/pixhawk6c.dtb"
-    PIXHAWK6C_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6c/pixhawk6c-hakoniwa.dtb")
+    PIXHAWK6C_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6c/pixhawk6c-hakoniwa.dtb"
+    PIXHAWK6C_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb")
 
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

@@ -177,6 +177,32 @@
       "uart_controllers_with_dmas": 7
     },
     {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "chip_compatibles": {
+        "bosch,bma280": 1,
+        "bosch,bmg160": 1,
+        "invensense,icm42688": 1,
+        "isentek,ist8310": 1,
+        "meas,ms5611": 1
+      },
+      "chip_nodes": 5,
+      "dma_controllers": 5,
+      "dma_references": 19,
+      "dt_boards": 1,
+      "dt_irq_nodes": 34,
+      "dt_mmio_nodes": 54,
+      "dt_negative_nodes": 1,
+      "dt_nodes": 85,
+      "gpio_chip_selects": 4,
+      "gpio_interrupt_consumers": 3,
+      "pwm_entries": 0,
+      "pwm_maps": 0,
+      "sd_cards": 1,
+      "uart_children": 2,
+      "uart_controllers": 7,
+      "uart_controllers_with_dmas": 7
+    },
+    {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "chip_compatibles": {
         "bosch,bma280": 1,
@@ -187,7 +213,7 @@
       },
       "chip_nodes": 5,
       "dma_controllers": 5,
-      "dma_references": 18,
+      "dma_references": 19,
       "dt_boards": 1,
       "dt_irq_nodes": 34,
       "dt_mmio_nodes": 54,
@@ -213,7 +239,7 @@
       },
       "chip_nodes": 5,
       "dma_controllers": 5,
-      "dma_references": 18,
+      "dma_references": 19,
       "dt_boards": 1,
       "dt_irq_nodes": 34,
       "dt_mmio_nodes": 54,
@@ -16307,6 +16333,3361 @@
       "will_fail": false
     },
     {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 1,
+        "reg": [
+          0
+        ]
+      },
+      "item_id": "ADV-SPI-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40003800__ADV-SPI-002.T1",
+      "node_path": "/soc/spi@40003800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            4,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020c00"
+        },
+        "reg": 0
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40003800__fram@0__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40003800/fram@0",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              40,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              39,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-SPI-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40003800__ADV-SPI-006.T1",
+      "node_path": "/soc/spi@40003800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 3,
+        "reg": [
+          0,
+          1,
+          2
+        ]
+      },
+      "item_id": "ADV-SPI-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__ADV-SPI-002.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            15,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020800"
+        },
+        "reg": 0
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__accelerometer@0__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@0",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            14,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020800"
+        },
+        "reg": 1
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__gyroscope@1__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            13,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020800"
+        },
+        "reg": 2
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__imu@2__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40013000/imu@2",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              38,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              37,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-SPI-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__ADV-SPI-006.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "reg": []
+      },
+      "item_id": "ADV-I2C-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@40005400__ADV-I2C-002.T1",
+      "node_path": "/soc/i2c@40005400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-I2C-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "reg": []
+      },
+      "item_id": "ADV-I2C-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@40005800__ADV-I2C-002.T1",
+      "node_path": "/soc/i2c@40005800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-I2C-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 2,
+        "reg": [
+          119,
+          12
+        ]
+      },
+      "item_id": "ADV-I2C-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@58001c00__ADV-I2C-002.T1",
+      "node_path": "/soc/i2c@58001c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-I2C-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": 119
+      },
+      "item_id": "ADV-I2C-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@58001c00__pressure@77__ADV-I2C-001.T1",
+      "node_path": "/soc/i2c@58001c00/pressure@77",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-I2C-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": 12
+      },
+      "item_id": "ADV-I2C-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@58001c00__magnetometer@c__ADV-I2C-001.T1",
+      "node_path": "/soc/i2c@58001c00/magnetometer@c",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-I2C-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 1,
+        "children": [
+          "/soc/serial@40004400/dshot-esc"
+        ]
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40004400__ADV-UART-002.T1",
+      "node_path": "/soc/serial@40004400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "controller": "/soc/serial@40004400"
+      },
+      "item_id": "ADV-UART-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40004400__dshot-esc__ADV-UART-001.T1",
+      "node_path": "/soc/serial@40004400/dshot-esc",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              44,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              43,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40004400__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "children": []
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40004800__ADV-UART-002.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              46,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              45,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40004800__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "children": []
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40005000__ADV-UART-002.T1",
+      "node_path": "/soc/serial@40005000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              66,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              65,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40005000__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40005000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "children": []
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40007800__ADV-UART-002.T1",
+      "node_path": "/soc/serial@40007800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              80,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              79,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40007800__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40007800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "children": []
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40007c00__ADV-UART-002.T1",
+      "node_path": "/soc/serial@40007c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              82,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              81,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40007c00__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40007c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 1,
+        "children": [
+          "/soc/serial@40011000/gnss"
+        ]
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40011000__ADV-UART-002.T1",
+      "node_path": "/soc/serial@40011000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "controller": "/soc/serial@40011000"
+      },
+      "item_id": "ADV-UART-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40011000__gnss__ADV-UART-001.T1",
+      "node_path": "/soc/serial@40011000/gnss",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              42,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              41,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40011000__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40011000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "child_count": 0,
+        "children": []
+      },
+      "item_id": "ADV-UART-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40011400__ADV-UART-002.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dma-names": [
+          "tx",
+          "rx"
+        ],
+        "dmas": [
+          {
+            "cells": [
+              0,
+              72,
+              1088
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          },
+          {
+            "cells": [
+              0,
+              71,
+              1152
+            ],
+            "provider_compatible": "st,stm32-dmamux",
+            "provider_path": "/soc/dmamux@40020800"
+          }
+        ]
+      },
+      "item_id": "ADV-UART-006",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40011400__ADV-UART-006.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-UART-006.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "mutated_property": "compatible",
+        "negative_dtb": "${ATHRILL_TRACE_BUILD_DIR}/pixhawk6c__pixhawk6c_hakoniwa_dshot__unknown-compatible.dtb"
+      },
+      "item_id": "ADV-DT-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__ADV-DT-001.T1",
+      "node_path": "/soc",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "enabled_compatible_nodes": [
+          "/",
+          "/soc",
+          "/soc/timers@40000000",
+          "/soc/timers@40000400",
+          "/soc/timers@40000800",
+          "/soc/timers@40000800/pwm",
+          "/soc/timers@40000c00",
+          "/soc/timers@40000c00/pwm",
+          "/soc/spi@40003800",
+          "/soc/spi@40003800/fram@0",
+          "/soc/serial@40004400",
+          "/soc/serial@40004400/dshot-esc",
+          "/soc/serial@40004800",
+          "/soc/serial@40005000",
+          "/soc/i2c@40005400",
+          "/soc/i2c@40005800",
+          "/soc/serial@40007800",
+          "/soc/serial@40007c00",
+          "/soc/can@4000a000",
+          "/soc/can@4000a400",
+          "/soc/timers@40010000",
+          "/soc/timers@40010000/pwm",
+          "/soc/timers@40010400",
+          "/soc/serial@40011000",
+          "/soc/serial@40011000/gnss",
+          "/soc/serial@40011400",
+          "/soc/spi@40013000",
+          "/soc/spi@40013000/accelerometer@0",
+          "/soc/spi@40013000/gyroscope@1",
+          "/soc/spi@40013000/imu@2",
+          "/soc/timers@40014000",
+          "/soc/timers@40014400",
+          "/soc/timers@40014800",
+          "/soc/dma@40020000",
+          "/soc/dma@40020400",
+          "/soc/dmamux@40020800",
+          "/soc/adc@40022000",
+          "/soc/rng@48021800",
+          "/soc/sdmmc@48022400",
+          "/soc/sdmmc@48022400/sd-card",
+          "/soc/flash-controller@52002000",
+          "/soc/flash-controller@52002000/flash@1ff1e000",
+          "/soc/flash-controller@52002000/flash@1ff1e000/nvmem-layout",
+          "/soc/flash-controller@52002000/flash@8000000",
+          "/soc/interrupt-controller@58000000",
+          "/soc/i2c@58001c00",
+          "/soc/i2c@58001c00/pressure@77",
+          "/soc/i2c@58001c00/magnetometer@c",
+          "/soc/rtc@58004000",
+          "/soc/watchdog@58004800",
+          "/soc/pin-controller@58020000",
+          "/soc/pin-controller@58020000/gpio@58020000",
+          "/soc/pin-controller@58020000/gpio@58020400",
+          "/soc/pin-controller@58020000/gpio@58020800",
+          "/soc/pin-controller@58020000/gpio@58020c00",
+          "/soc/pin-controller@58020000/gpio@58021000",
+          "/soc/pin-controller@58020000/gpio@58021400",
+          "/soc/pin-controller@58020000/gpio@58021800",
+          "/soc/pin-controller@58020000/gpio@58021c00",
+          "/soc/pin-controller@58020000/gpio@58022000",
+          "/soc/pin-controller@58020000/gpio@58022400",
+          "/soc/pin-controller@58020000/gpio@58022800",
+          "/soc/rcc@58024400",
+          "/soc/rcc@58024400/reset-controller",
+          "/soc/power@58024800",
+          "/soc/bdma@58025400",
+          "/soc/dmamux@58025800",
+          "/soc/adc@58026000",
+          "/soc/usb@40080000",
+          "/soc/axi-target@51008000",
+          "/soc/debug@5c001000",
+          "/soc/system-memory@1ff1e800",
+          "/soc/system-config@58000400",
+          "/memory@0",
+          "/memory@20000000",
+          "/memory@90000000",
+          "/otghs_fs_phy",
+          "/memory@24000000",
+          "/memory@30000000",
+          "/memory@30020000",
+          "/memory@38000000",
+          "/memory@30040000",
+          "/bench-sensor-source",
+          "/sensor-device",
+          "/esc-fault"
+        ]
+      },
+      "item_id": "ADV-DT-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__root__ADV-DT-002.T1",
+      "node_path": "/",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073741824,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40000000__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40000000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073742848,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40000400__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40000400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073743872,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40000800__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40000800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073744896,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40000c00__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40000c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073756160,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40003800__ADV-DT-003.T1",
+      "node_path": "/soc/spi@40003800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073759232,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40004400__ADV-DT-003.T1",
+      "node_path": "/soc/serial@40004400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073760256,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40004800__ADV-DT-003.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073762304,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40005000__ADV-DT-003.T1",
+      "node_path": "/soc/serial@40005000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073763328,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@40005400__ADV-DT-003.T1",
+      "node_path": "/soc/i2c@40005400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073764352,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@40005800__ADV-DT-003.T1",
+      "node_path": "/soc/i2c@40005800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073772544,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40007800__ADV-DT-003.T1",
+      "node_path": "/soc/serial@40007800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073773568,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40007c00__ADV-DT-003.T1",
+      "node_path": "/soc/serial@40007c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073782784,
+            "size": 1024
+          },
+          {
+            "address": 1073785856,
+            "size": 10240
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__can@4000a000__ADV-DT-003.T1",
+      "node_path": "/soc/can@4000a000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073783808,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__can@4000a400__ADV-DT-003.T1",
+      "node_path": "/soc/can@4000a400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073807360,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40010000__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40010000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073808384,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40010400__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40010400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073811456,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40011000__ADV-DT-003.T1",
+      "node_path": "/soc/serial@40011000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073812480,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40011400__ADV-DT-003.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073819648,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__ADV-DT-003.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073823744,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40014000__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40014000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073824768,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40014400__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40014400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073825792,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40014800__ADV-DT-003.T1",
+      "node_path": "/soc/timers@40014800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073872896,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dma@40020000__ADV-DT-003.T1",
+      "node_path": "/soc/dma@40020000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073873920,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dma@40020400__ADV-DT-003.T1",
+      "node_path": "/soc/dma@40020400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073874944,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dmamux@40020800__ADV-DT-003.T1",
+      "node_path": "/soc/dmamux@40020800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1073881088,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__adc@40022000__ADV-DT-003.T1",
+      "node_path": "/soc/adc@40022000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1208096768,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__rng@48021800__ADV-DT-003.T1",
+      "node_path": "/soc/rng@48021800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1208099840,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__sdmmc@48022400__ADV-DT-003.T1",
+      "node_path": "/soc/sdmmc@48022400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1375739904,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__flash-controller@52002000__ADV-DT-003.T1",
+      "node_path": "/soc/flash-controller@52002000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476395008,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__interrupt-controller@58000000__ADV-DT-003.T1",
+      "node_path": "/soc/interrupt-controller@58000000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476402176,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@58001c00__ADV-DT-003.T1",
+      "node_path": "/soc/i2c@58001c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476411392,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__rtc@58004000__ADV-DT-003.T1",
+      "node_path": "/soc/rtc@58004000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476413440,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__watchdog@58004800__ADV-DT-003.T1",
+      "node_path": "/soc/watchdog@58004800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476526080,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58020000__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58020000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476527104,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58020400__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58020400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476528128,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58020800__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58020800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476529152,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58020c00__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58020c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476530176,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58021000__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58021000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476531200,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58021400__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58021400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476532224,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58021800__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58021800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476533248,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58021c00__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58021c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476534272,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58022000__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58022000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476535296,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58022400__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58022400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476536320,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__pin-controller@58020000__gpio@58022800__ADV-DT-003.T1",
+      "node_path": "/soc/pin-controller@58020000/gpio@58022800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476543488,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__rcc@58024400__ADV-DT-003.T1",
+      "node_path": "/soc/rcc@58024400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476544512,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__power@58024800__ADV-DT-003.T1",
+      "node_path": "/soc/power@58024800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476547584,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__bdma@58025400__ADV-DT-003.T1",
+      "node_path": "/soc/bdma@58025400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476548608,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dmamux@58025800__ADV-DT-003.T1",
+      "node_path": "/soc/dmamux@58025800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476550656,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__adc@58026000__ADV-DT-003.T1",
+      "node_path": "/soc/adc@58026000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1074266112,
+            "size": 262144
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__usb@40080000__ADV-DT-003.T1",
+      "node_path": "/soc/usb@40080000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1358987264,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__axi-target@51008000__ADV-DT-003.T1",
+      "node_path": "/soc/axi-target@51008000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1543507968,
+            "size": 4096
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__debug@5c001000__ADV-DT-003.T1",
+      "node_path": "/soc/debug@5c001000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 535947264,
+            "size": 256
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__system-memory@1ff1e800__ADV-DT-003.T1",
+      "node_path": "/soc/system-memory@1ff1e800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "reg": [
+          {
+            "address": 1476396032,
+            "size": 1024
+          }
+        ]
+      },
+      "item_id": "ADV-DT-003",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__system-config@58000400__ADV-DT-003.T1",
+      "node_path": "/soc/system-config@58000400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-003.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              28,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40000000__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40000000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              29,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40000400__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40000400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              30,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40000800__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40000800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              50,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40000c00__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40000c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              36,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40003800__ADV-DT-004.T1",
+      "node_path": "/soc/spi@40003800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              38,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40004400__ADV-DT-004.T1",
+      "node_path": "/soc/serial@40004400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              39,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40004800__ADV-DT-004.T1",
+      "node_path": "/soc/serial@40004800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              53,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40005000__ADV-DT-004.T1",
+      "node_path": "/soc/serial@40005000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              31,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              32,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@40005400__ADV-DT-004.T1",
+      "node_path": "/soc/i2c@40005400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              33,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              34,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@40005800__ADV-DT-004.T1",
+      "node_path": "/soc/i2c@40005800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              82,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40007800__ADV-DT-004.T1",
+      "node_path": "/soc/serial@40007800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              83,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40007c00__ADV-DT-004.T1",
+      "node_path": "/soc/serial@40007c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              19,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              21,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              63,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__can@4000a000__ADV-DT-004.T1",
+      "node_path": "/soc/can@4000a000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              20,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              22,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              63,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__can@4000a400__ADV-DT-004.T1",
+      "node_path": "/soc/can@4000a400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              24,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              25,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              26,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              27,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40010000__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40010000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              43,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              44,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              45,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              46,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40010400__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40010400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              37,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40011000__ADV-DT-004.T1",
+      "node_path": "/soc/serial@40011000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              71,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__serial@40011400__ADV-DT-004.T1",
+      "node_path": "/soc/serial@40011400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              35,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__ADV-DT-004.T1",
+      "node_path": "/soc/spi@40013000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              116,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40014000__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40014000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              117,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40014400__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40014400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              118,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__timers@40014800__ADV-DT-004.T1",
+      "node_path": "/soc/timers@40014800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              11,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              12,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              13,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              14,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              15,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              16,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              17,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              47,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dma@40020000__ADV-DT-004.T1",
+      "node_path": "/soc/dma@40020000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              56,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              57,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              58,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              59,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              60,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              68,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              69,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              70,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dma@40020400__ADV-DT-004.T1",
+      "node_path": "/soc/dma@40020400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              102,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dmamux@40020800__ADV-DT-004.T1",
+      "node_path": "/soc/dmamux@40020800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              80,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__rng@48021800__ADV-DT-004.T1",
+      "node_path": "/soc/rng@48021800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              124,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__sdmmc@48022400__ADV-DT-004.T1",
+      "node_path": "/soc/sdmmc@48022400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              4,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__flash-controller@52002000__ADV-DT-004.T1",
+      "node_path": "/soc/flash-controller@52002000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              6,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              7,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              8,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              9,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              10,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              23,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              40,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__interrupt-controller@58000000__ADV-DT-004.T1",
+      "node_path": "/soc/interrupt-controller@58000000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              95,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              96,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@58001c00__ADV-DT-004.T1",
+      "node_path": "/soc/i2c@58001c00",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              41,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__rtc@58004000__ADV-DT-004.T1",
+      "node_path": "/soc/rtc@58004000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              129,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              130,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              131,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              132,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              133,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              134,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              135,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              136,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__bdma@58025400__ADV-DT-004.T1",
+      "node_path": "/soc/bdma@58025400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              128,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dmamux@58025800__ADV-DT-004.T1",
+      "node_path": "/soc/dmamux@58025800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "interrupts": [
+          {
+            "cells": [
+              101,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              98,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          },
+          {
+            "cells": [
+              99,
+              0
+            ],
+            "provider_path": "/soc/interrupt-controller@e000e100"
+          }
+        ]
+      },
+      "item_id": "ADV-DT-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__usb@40080000__ADV-DT-004.T1",
+      "node_path": "/soc/usb@40080000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "dtb_size": 31764
+      },
+      "item_id": "ADV-DT-005",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__root__ADV-DT-005.T1",
+      "node_path": "/",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DT-005.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "references": []
+      },
+      "item_id": "ADV-DMA-005",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dma@40020000__ADV-DMA-005.T1",
+      "node_path": "/soc/dma@40020000",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DMA-005.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "references": []
+      },
+      "item_id": "ADV-DMA-005",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dma@40020400__ADV-DMA-005.T1",
+      "node_path": "/soc/dma@40020400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DMA-005.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "references": [
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                40,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40003800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                39,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                44,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                43,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                46,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40004800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                45,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40005000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                66,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40005000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                65,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007800",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                80,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007800",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                79,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007c00",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                82,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40007c00",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                81,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/timers@40010000",
+            "index": 0,
+            "name": "up",
+            "provider": {
+              "cells": [
+                0,
+                15,
+                152640
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                42,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                41,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                72,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/serial@40011400",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                71,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013000",
+            "index": 0,
+            "name": "tx",
+            "provider": {
+              "cells": [
+                0,
+                38,
+                1088
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/spi@40013000",
+            "index": 1,
+            "name": "rx",
+            "provider": {
+              "cells": [
+                0,
+                37,
+                1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          }
+        ]
+      },
+      "item_id": "ADV-DMA-005",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dmamux@40020800__ADV-DMA-005.T1",
+      "node_path": "/soc/dmamux@40020800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DMA-005.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "references": []
+      },
+      "item_id": "ADV-DMA-005",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__bdma@58025400__ADV-DMA-005.T1",
+      "node_path": "/soc/bdma@58025400",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DMA-005.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "references": []
+      },
+      "item_id": "ADV-DMA-005",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__dmamux@58025800__ADV-DMA-005.T1",
+      "node_path": "/soc/dmamux@58025800",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-DMA-005.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "controller": "/soc/sdmmc@48022400"
+      },
+      "item_id": "ADV-SD-004",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__sdmmc@48022400__sd-card__ADV-SD-004.T1",
+      "node_path": "/soc/sdmmc@48022400/sd-card",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SD-004.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            4,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021000"
+        },
+        "interrupt": {
+          "cells": [
+            10,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__accelerometer@0__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@0",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            5,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021000"
+        },
+        "interrupt": {
+          "cells": [
+            23,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__gyroscope@1__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
+            6,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021000"
+        },
+        "interrupt": {
+          "cells": [
+            23,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__imu@2__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40013000/imu@2",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "chip_select": 0,
+        "controller": "/soc/spi@40003800",
+        "cs_gpio": {
+          "cells": [
+            4,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020c00"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40003800__fram@0__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40003800/fram@0",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "chip_select": 0,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            15,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020800"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__accelerometer@0__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@0",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "chip_select": 1,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            14,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020800"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__gyroscope@1__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "chip_select": 2,
+        "controller": "/soc/spi@40013000",
+        "cs_gpio": {
+          "cells": [
+            13,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020800"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__imu@2__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40013000/imu@2",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "bosch,bma280",
+        "controller": "/soc/spi@40013000",
+        "expected": 250,
+        "register": 0,
+        "selector": 0
+      },
+      "item_id": "ADV-CHIP-BMI055A-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__accelerometer@0__ADV-CHIP-BMI055A-001.T1",
+      "node_path": "/soc/spi@40013000/accelerometer@0",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-CHIP-BMI055A-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "bosch,bmg160",
+        "controller": "/soc/spi@40013000",
+        "expected": 15,
+        "register": 0,
+        "selector": 1
+      },
+      "item_id": "ADV-CHIP-BMI055G-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__gyroscope@1__ADV-CHIP-BMI055G-001.T1",
+      "node_path": "/soc/spi@40013000/gyroscope@1",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-CHIP-BMI055G-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "bus": "spi",
+        "compatible": "invensense,icm42688",
+        "controller": "/soc/spi@40013000",
+        "expected": 71,
+        "register": 117,
+        "selector": 2
+      },
+      "item_id": "ADV-CHIP-ICM42688-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__spi@40013000__imu@2__ADV-CHIP-ICM42688-001.T1",
+      "node_path": "/soc/spi@40013000/imu@2",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-CHIP-ICM42688-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "bus": "i2c",
+        "compatible": "meas,ms5611",
+        "controller": "/soc/i2c@58001c00",
+        "expected": null,
+        "register": null,
+        "selector": 119
+      },
+      "item_id": "ADV-CHIP-MS5611-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@58001c00__pressure@77__ADV-CHIP-MS5611-001.T1",
+      "node_path": "/soc/i2c@58001c00/pressure@77",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-CHIP-MS5611-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "bus": "i2c",
+        "compatible": "isentek,ist8310",
+        "controller": "/soc/i2c@58001c00",
+        "expected": 16,
+        "register": 0,
+        "selector": 12
+      },
+      "item_id": "ADV-CHIP-IST8310-001",
+      "known_defect": null,
+      "name": "pixhawk6c__pixhawk6c-hakoniwa-dshot__soc__i2c@58001c00__magnetometer@c__ADV-CHIP-IST8310-001.T1",
+      "node_path": "/soc/i2c@58001c00/magnetometer@c",
+      "source_file": "tests/gen/test_gen_pixhawk6c__pixhawk6c_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-CHIP-IST8310-001.T1",
+      "will_fail": false
+    },
+    {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
         "child_count": 1,
@@ -19031,7 +22412,7 @@
     {
       "board": "pixhawk6c/pixhawk6c-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 31392
+        "dtb_size": 31436
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -19234,6 +22615,20 @@
                 0,
                 81,
                 1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/timers@40010000",
+            "index": 0,
+            "name": "up",
+            "provider": {
+              "cells": [
+                0,
+                15,
+                152640
               ],
               "provider_compatible": "st,stm32-dmamux",
               "provider_path": "/soc/dmamux@40020800"
@@ -22425,7 +25820,7 @@
     {
       "board": "pixhawk6c/pixhawk6c.dtb",
       "derived_properties": {
-        "dtb_size": 31279
+        "dtb_size": 31323
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -22628,6 +26023,20 @@
                 0,
                 81,
                 1152
+              ],
+              "provider_compatible": "st,stm32-dmamux",
+              "provider_path": "/soc/dmamux@40020800"
+            }
+          },
+          {
+            "consumer_path": "/soc/timers@40010000",
+            "index": 0,
+            "name": "up",
+            "provider": {
+              "cells": [
+                0,
+                15,
+                152640
               ],
               "provider_compatible": "st,stm32-dmamux",
               "provider_path": "/soc/dmamux@40020800"
