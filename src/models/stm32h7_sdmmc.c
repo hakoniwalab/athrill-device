@@ -39,6 +39,7 @@
 #define CLKCR_WIDBUS_SHIFT	14U
 
 #define CMD_CMDTRANS		(1U << 6)
+#define CMD_CMDSTOP		(1U << 7)
 #define CMD_WAITRESP_SHIFT	8U
 #define CMD_CPSMEN		(1U << 12)
 
@@ -46,11 +47,14 @@
 #define DCTRL_DTDIR	(1U << 1)	/* card to controller */
 #define IDMACTRL_IDMAEN	(1U << 0)
 
+#define STA_DCRCFAIL	(1U << 1)
 #define STA_CTIMEOUT	(1U << 2)
+#define STA_DTIMEOUT	(1U << 3)
 #define STA_CMDREND	(1U << 6)
 #define STA_CMDSENT	(1U << 7)
 #define STA_DATAEND	(1U << 8)
 #define STA_DBCKEND	(1U << 10)
+#define STA_DABORT	(1U << 11)
 #define STA_DPSMACT	(1U << 12)
 #define ICR_MASK	0x1FE00FFFU
 
@@ -126,22 +130,34 @@ static void finish(H7Sdmmc *sd)
 	uint32 len = reg(sd, R_DLEN);
 	uint32 address = reg(sd, R_IDMABASE0);
 	uint8 *data = (uint8 *)calloc(len, 1U);
+	uint32 end = STA_DATAEND | STA_DBCKEND;
 
+	/* A card that fails ends the data path with an error, never DATAEND
+	 * (RM0433 55.10.11): no read data is a timeout, a refused write a CRC
+	 * status error (#114). */
 	if (sd->pending == ATHRILL_SD_DATA_READ) {
-		(void)athrill_sd_read(sd->protocol, data, len);
-		(void)sd->host.target_ops->memory_write(sd->host.target, address, data, len);
+		if (athrill_sd_read(sd->protocol, data, len) == 0) {
+			(void)sd->host.target_ops->memory_write(sd->host.target, address, data, len);
+		}
+		else {
+			end = STA_DTIMEOUT;
+		}
 	}
 	else {
 		(void)sd->host.target_ops->memory_read(sd->host.target, address, data, len);
-		(void)athrill_sd_write(sd->protocol, data, len);
+		if (athrill_sd_write(sd->protocol, data, len) != 0) {
+			end = STA_DCRCFAIL;
+		}
 	}
 	free(data);
-	(void)athrill_sd_transfer_done(sd->protocol);
+	if (end == (STA_DATAEND | STA_DBCKEND)) {
+		(void)athrill_sd_transfer_done(sd->protocol);
+		set_reg(sd, R_DCOUNT, 0U);
+	}
 	sd->pending = ATHRILL_SD_DATA_NONE;
 	sd->started = FALSE;
 	sd->done_at = 0U;
-	set_reg(sd, R_DCOUNT, 0U);
-	sd->sta |= STA_DATAEND | STA_DBCKEND;
+	sd->sta |= end;
 	update_interrupt(sd);
 }
 
@@ -163,6 +179,14 @@ static void command(H7Sdmmc *sd, uint32 cmd)
 	uint32 i;
 
 	memset(&response, 0, sizeof(response));
+	/* RM0433 55.6.2: a command with CMDSTOP (CMD12) aborts the data path
+	 * that is pending or running: no data moves, DABORT is set (#114). */
+	if (((cmd & CMD_CMDSTOP) != 0U) && (sd->pending != ATHRILL_SD_DATA_NONE)) {
+		sd->pending = ATHRILL_SD_DATA_NONE;
+		sd->started = FALSE;
+		sd->done_at = 0U;
+		sd->sta |= STA_DABORT;
+	}
 	if (sd->protocol != NULL) {
 		(void)athrill_sd_command(sd->protocol, cmd & 0x3FU, reg(sd, R_ARG),
 			&response);
