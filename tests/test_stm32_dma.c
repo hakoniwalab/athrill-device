@@ -243,6 +243,25 @@ int main(void)
 	TEST_CHECK(raised[14] == 0U);				/* no HTIE/TCIE */
 	line(3U, 4U, FALSE);
 
+	/* one item: HTIF with TCIF, as the chip (NuttX's H7 serial driver
+	 * tests bit 4 of the flags to free its TX buffer) */
+	reset_all();
+	memcpy(ram, "Z", 1U);
+	program(3U, TDR, RAM, 1U, CHSEL(4) | CR_MINC | CR_M2P | CR_HTIE | CR_TCIE | CR_EN);
+	line(3U, 4U, TRUE);
+	TEST_CHECK(tdr_len == 1U && tdr_out[0] == 'Z');
+	TEST_CHECK(rd(0x00U) == (0x30U << 22));			/* LISR: HTIF3, TCIF3 */
+	TEST_CHECK(raised[14] == 2U);
+	line(3U, 4U, FALSE);
+	/* two items: HTIF after the first only */
+	reset_all();
+	memcpy(ram, "PQ", 2U);
+	program(3U, TDR, RAM, 2U, CHSEL(4) | CR_MINC | CR_M2P | CR_HTIE | CR_EN);
+	line(3U, 4U, TRUE);
+	TEST_CHECK(tdr_len == 2U && rd(0x00U) == (0x30U << 22));
+	TEST_CHECK(raised[14] == 1U);				/* HTIE only */
+	line(3U, 4U, FALSE);
+
 	/* RDR to memory, circular: stream 1, channel 4 (USART3 RX), NDTR 3;
 	 * the peripheral raises its request per character and the RDR read
 	 * lowers it (a request it kept raised would move items on and on) */

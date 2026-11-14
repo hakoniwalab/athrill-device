@@ -297,12 +297,21 @@ static std_bool stream_create(DmaType *d, uint32 s)
 	return TRUE;
 }
 
-static void stream_half(DmaType *d, uint32 s)
+/* HTIF at the item that reaches half of the start count (RM0410 8.3.14,
+ * RM0433 15.3.15): item n/2, at least the first. A one-item transfer sets
+ * it with the item, as the chip: NuttX's H7 serial driver frees its TX
+ * buffer on a TX DMA callback only when the stream flags carry bit 4 (it
+ * tests DMA_SCR_TCIE against them), so a one-byte transfer without HTIF was
+ * resent for ever (MAVLink output stopped on the Pixhawk 6C). */
+static void stream_half(DmaType *d, uint32 s, uint32 moved)
 {
 	uint32 *st = d->stream[s];
+	uint32 half = d->ndtr_start[s] / 2U;
 
-	if (d->transferred[s] == (d->ndtr_start[s] / 2U) &&
-	    d->transferred[s] != 0U) {
+	if (half == 0U) {
+		half = 1U;
+	}
+	if (moved == half) {
 		d->isr[s / 4U] |= FLAG_HT << flag_shift(s);
 		if ((st[SxCR] & CR_HTIE) != 0U) {
 			raise(d, s);
@@ -314,17 +323,20 @@ static void stream_half(DmaType *d, uint32 s)
 static std_bool stream_move(DmaType *d, uint32 s)
 {
 	uint32 request = (d->stream[s][SxCR] >> CR_CHSEL_SHIFT) & 7U;
+	uint32 moved;
 
 	if (d->protocol[s] == NULL) {
 		return FALSE;
 	}
-	d->transferred[s]++;
+	moved = ++d->transferred[s];
+	/* counted before the request: a last item's complete may reload a
+	 * circular count */
 	if (athrill_dma_request(d->protocol[s], request, clock_now(d)) != 1) {
 		d->transferred[s]--;
 		return FALSE;
 	}
 	d->stream[s][SxNDTR] = (uint32)athrill_dma_remaining(d->protocol[s]);
-	stream_half(d, s);
+	stream_half(d, s, moved);
 	return TRUE;
 }
 
