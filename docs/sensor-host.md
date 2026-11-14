@@ -136,17 +136,11 @@ hakoniwa-sensor-adapter tree). Without it, nothing of this section exists and th
 
 ## Logs
 
-With `simulation.sensorModels: false`, Hakoniwa Drone writes no sensor logs (`log_acc.csv` and the others). Those
-logs held what the control received. Their place is taken by the sensor host: for every instance it writes the
-values it gave to the chip, with the simulation time, as each adapter measured them. These are the values the firmware
-reads through the chip, before the chip's own quantisation. The firmware's own log, a ULog or a DataFlash log, holds
-what it read after that.
-
-Next to the output, the host writes the columns each adapter declares (`ISensorAdapter::log_columns()` and
-`log_values()`), unchanged. What they hold is the adapter's choice: an implementation that logs every stage of its
-model (the truth in, after the filter and the delay, the measured value, the zero offset, the noise, the drift, the
-saturation, the output) lets a flight be explained sensor by sensor. The host is the same for every implementation.
-The log files use Hakoniwa Drone's logger and its formats (none, CSV, binary).
+With `simulation.sensorModels: false`, Hakoniwa Drone writes no sensor logs (`log_acc.csv` and the others). The sensor
+host writes none either. A sensor's log belongs to its adapter implementation: an implementation that offers logs
+writes them from what the host gives the adapter (the truth at the mount) and what the adapter returns, where the
+adapter's configuration asks. The firmware's own log, a ULog or a DataFlash log, holds what the firmware read through
+the chip.
 
 ## Scope
 
