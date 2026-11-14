@@ -15,6 +15,7 @@
 #include <condition_variable>
 #include <array>
 #include <cstdio>
+#include <cstdlib>
 #include <cstdint>
 #include <filesystem>
 #include <iostream>
@@ -948,6 +949,15 @@ extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
 			});
 		}
 		link = std::move(state);
+		/* At exit, the aircraft must go while Hakoniwa Drone's library is still whole. exit()
+		 * runs its handlers in the reverse order of registration: the host's own teardown was
+		 * registered at start-up, before this library and Hakoniwa Drone's were loaded, so it
+		 * would run after their static objects are destroyed and reach into them. Registered
+		 * now, this cleanup runs before those; the host's teardown then finds nothing left. */
+		static bool exit_cleanup_registered = false;
+		if (!exit_cleanup_registered) {
+			exit_cleanup_registered = std::atexit([] { hako_sensor_link_cleanup(); }) == 0;
+		}
 		return true;
 	}
 	catch (const std::exception& error) {
