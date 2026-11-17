@@ -18,6 +18,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* the timeout used when the node gives no timeout-usec */
+#define WDT_DEFAULT_TIMEOUT_USEC 5000U
+
 typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
 	void *target;
@@ -95,11 +98,15 @@ static sint32 wdt_create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	w->target_ops = args->target_ops;
 	w->target = args->target;
-	if (node->ops->get_reg(node->context, 0U, &w->reg_base, &size) != 0 || size < 4U ||
-	    node->ops->get_u32(node->context, "timeout-usec", 0U, &usec) != 0 || usec == 0U) {
-		fprintf(stderr, "test watchdog %s: needs reg (>=4 bytes) and timeout-usec\n", node->path);
+	if (node->ops->get_reg(node->context, 0U, &w->reg_base, &size) != 0 || size < 4U) {
+		fprintf(stderr, "test watchdog %s: needs reg (>=4 bytes)\n", node->path);
 		free(w);
 		return -1;
+	}
+	/* timeout-usec is optional; a node without it (e.g. a real board's watchdog
+	 * node reused for this test) falls back to the default */
+	if (node->ops->get_u32(node->context, "timeout-usec", 0U, &usec) != 0 || usec == 0U) {
+		usec = WDT_DEFAULT_TIMEOUT_USEC;
 	}
 	w->reg_size = size;
 	w->timeout_usec = usec;

@@ -470,7 +470,7 @@ static const char *const register_block_compatibles[] = {
 };
 /* RISC-V (Erbium) */
 static const char *const riscv_mtimer_compatibles[] = { "riscv,machine-timer" };
-static const char *const test_watchdog_compatibles[] = { "athrill,test-watchdog" };
+static const char *const test_watchdog_compatibles[] = { "athrill,test-wdog" };
 static const char *const shakti_uart_compatibles[] = { "openhwgroup,shakti-uart-v1" };
 static const char *const icm20689_compatibles[] = { "invensense,icm20689" };
 static const char *const fm25v02_compatibles[] = { "infineon,fm25xxx", "ramtron,fm25v02a" };
