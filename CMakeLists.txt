@@ -36,6 +36,7 @@ add_library(athrill_device STATIC
   src/models/register_block.c
   src/models/riscv_mtimer.c
   src/models/wdt_timer.c
+  src/models/stm32_iwdg.c
   src/models/shakti_uart.c
   src/models/shakti_uart_tcp.c
   src/models/bench_sensor.c
@@ -241,6 +242,11 @@ if(BUILD_TESTING)
   target_include_directories(test_wdt_timer PRIVATE src/models)
   target_link_libraries(test_wdt_timer PRIVATE athrill_device)
   add_test(NAME wdt-timer COMMAND test_wdt_timer)
+  add_executable(test_iwdg tests/test_iwdg.c)
+  target_compile_definitions(test_iwdg PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_iwdg PRIVATE src/models)
+  target_link_libraries(test_iwdg PRIVATE athrill_device)
+  add_test(NAME iwdg COMMAND test_iwdg)
   add_executable(test_shakti_uart tests/test_shakti_uart.c)
   target_compile_definitions(test_shakti_uart PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_shakti_uart PRIVATE src/models)
