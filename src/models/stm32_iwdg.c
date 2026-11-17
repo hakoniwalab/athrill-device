@@ -18,6 +18,11 @@
  * (request_system_reset, ABI 1.23) exactly as the hardware IWDG resets the
  * chip. The LSI frequency is the node's clock-frequency, else 32000 Hz.
  *
+ * The reset is OFF by default so a normal flight or bench can never be reset
+ * unexpectedly: the model still counts, but an underflow does nothing. A test
+ * that wants the real reset (a watchdog or denial-of-service test) turns it on
+ * with the host value DEVICE_CONFIG_IWDG_RESET=1.
+ *
  * Copyright 2026 Hakoniwa Laboratory
  * SPDX-License-Identifier: MIT
  */
@@ -157,6 +162,18 @@ static const AthrillDeviceMmioOps iwdg_mmio = {
 	sizeof(AthrillDeviceMmioOps), iwdg_read, iwdg_write
 };
 
+/* Whether a test asked for the real reset via DEVICE_CONFIG_IWDG_RESET. */
+static std_bool reset_requested(const AthrillDeviceTargetOps *ops, void *target)
+{
+	const char *value = NULL;
+
+	if (ops->host_value == NULL ||
+	    ops->host_value(target, "DEVICE_CONFIG_IWDG_RESET", &value) != 0 || value == NULL) {
+		return FALSE;
+	}
+	return (atoi(value) != 0) ? TRUE : FALSE;
+}
+
 static sint32 iwdg_create(const AthrillDeviceCreateArgs *args, void **instance)
 {
 	const AthrillDeviceNode *node = args->node;
@@ -186,9 +203,12 @@ static sint32 iwdg_create(const AthrillDeviceCreateArgs *args, void **instance)
 		lsi = IWDG_DEFAULT_LSI_HZ;
 	}
 	w->lsi_hz = lsi;
-	/* the reset capability is optional: only ABI >= 1.23 offers it */
-	w->can_reset = (args->target_ops->abi_minor >= 23U &&
-	                args->target_ops->request_system_reset != NULL);
+	/* The reset fires only when a test asks for it (DEVICE_CONFIG_IWDG_RESET=1)
+	 * and the runtime offers the capability (ABI >= 1.23). By default an
+	 * underflow does nothing, so normal flights and benches are never reset. */
+	w->can_reset = reset_requested(args->target_ops, args->target) &&
+	               args->target_ops->abi_minor >= 23U &&
+	               args->target_ops->request_system_reset != NULL;
 	*instance = w;
 	return 0;
 }
@@ -230,10 +250,10 @@ static sint32 iwdg_tick(void *instance, uint64 now, AthrillDeviceTickResult *res
 	if (w->enabled && !w->fired) {
 		if (now >= w->deadline) {
 			w->fired = TRUE;
+			/* reset only when a test enabled it; otherwise the underflow is
+			 * intentionally inert (no reset, no warning) */
 			if (w->can_reset) {
 				w->target_ops->request_system_reset(w->target, 0U /* watchdog */);
-			} else {
-				fprintf(stderr, "WARNING: iwdg underflow but the runtime offers no system reset\n");
 			}
 			result->next_event_interval = ATHRILL_DEVICE_NO_EVENT;
 		} else {
