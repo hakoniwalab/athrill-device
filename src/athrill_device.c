@@ -465,12 +465,13 @@ static const char *const register_block_compatibles[] = {
 	"st,stm32h7-pwr", "st,stm32-flash-controller", "st,stm32f7-flash-controller",
 	"st,stm32h7-flash-controller", "zephyr,flash-controller",
 	"st,stm32-rtc", "st,stm32-adc", "st,stm32f4-adc", "st,stm32-rng",
-	"zephyr,entropy", "st,stm32-otgfs", "st,stm32-watchdog", "zephyr,crc",
+	"zephyr,entropy", "st,stm32-otgfs", "zephyr,crc",
 	"openhwgroup,erbium-mram-controller"
 };
 /* RISC-V (Erbium) */
 static const char *const riscv_mtimer_compatibles[] = { "riscv,machine-timer" };
 static const char *const test_watchdog_compatibles[] = { "athrill,test-wdog" };
+static const char *const stm32_iwdg_compatibles[] = { "st,stm32-watchdog" };
 static const char *const shakti_uart_compatibles[] = { "openhwgroup,shakti-uart-v1" };
 static const char *const icm20689_compatibles[] = { "invensense,icm20689" };
 static const char *const fm25v02_compatibles[] = { "infineon,fm25xxx", "ramtron,fm25v02a" };
@@ -513,6 +514,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ register_block_compatibles, sizeof(register_block_compatibles) / sizeof(register_block_compatibles[0]), &athrill_device_register_block_model },
 	{ riscv_mtimer_compatibles, 1U, &athrill_device_riscv_mtimer_model },
 	{ test_watchdog_compatibles, 1U, &athrill_device_test_watchdog_model },
+	{ stm32_iwdg_compatibles, 1U, &athrill_device_stm32_iwdg_model },
 	{ shakti_uart_compatibles, 1U, &athrill_device_shakti_uart_model },
 	{ icm20689_compatibles, 1U, &athrill_device_icm20689_model },
 	{ fm25v02_compatibles, 2U, &athrill_device_fm25v02_model },
