@@ -82,6 +82,7 @@ sha256 console.norm 4ed97cabe0a7e7c24691f1518dc112940245257dca9402afb6a3c0ff5f2a
 # moves before USART1. The same models with the previous DTB keep the old
 # order; instructions, F-RAM, SD card and console are unchanged.
 tick arm_m_scs
+tick /soc/watchdog@40003000
 tick /soc/i2c@40005400
 tick /soc/i2c@40005800
 tick /soc/i2c@40005c00
