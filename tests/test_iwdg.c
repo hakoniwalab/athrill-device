@@ -45,9 +45,20 @@ static const AthrillDeviceNodeOps node_ops = {
 	get_property, get_u32, NULL, NULL, get_reg
 };
 
+static const char *reset_cfg = "1";	/* DEVICE_CONFIG_IWDG_RESET; NULL = unset */
+
 static uint64 time_now(void *t) { (void)t; return now; }
 static uint64 time_frequency(void *t) { (void)t; return CPU_HZ; }
 static void request_system_reset(void *t, uint32 reason) { (void)t; (void)reason; reset_calls++; }
+static sint32 host_value(void *t, const char *key, const char **value)
+{
+	(void)t;
+	if (reset_cfg != NULL && strcmp(key, "DEVICE_CONFIG_IWDG_RESET") == 0) {
+		*value = reset_cfg;
+		return 0;
+	}
+	return -1;
+}
 
 static const AthrillDeviceModelOps *m = &athrill_device_stm32_iwdg_model;
 static void *dev;
@@ -83,6 +94,7 @@ static void build(AthrillDeviceTargetOps *ops, AthrillDeviceCreateArgs *args,
 	ops->struct_size = sizeof(*ops);
 	ops->time_now = time_now;
 	ops->time_frequency_hz = time_frequency;
+	ops->host_value = host_value;
 	ops->request_system_reset = with_reset ? request_system_reset : NULL;
 	memset(node, 0, sizeof(*node));
 	node->path = "/soc/watchdog@40003000";
@@ -179,6 +191,21 @@ int main(void)
 	(void)tick(2U * TIMEOUT);
 	TEST_CHECK(reset_calls == 0U);
 	m->destroy(dev);
+
+	/* --- default (DEVICE_CONFIG_IWDG_RESET unset): counts but never resets --- */
+	reset_cfg = NULL;
+	build(&ops, &args, &node, TRUE);	/* capability present, but not enabled */
+	at(0U);
+	TEST_CHECK(m->create(&args, &dev) == 0);
+	TEST_CHECK(m->connect(dev, &connect) == 0);
+	TEST_CHECK(m->reset(dev) == 0);
+	reset_calls = 0U;
+	wr(KR, 0x5555U); wr(RLR, 7U);
+	at(0U); wr(KR, 0xCCCCU);
+	(void)tick(2U * TIMEOUT);	/* past the deadline */
+	TEST_CHECK(reset_calls == 0U);	/* gated off by default -> no reset */
+	m->destroy(dev);
+	reset_cfg = "1";
 
 	return 0;
 }
