@@ -70,6 +70,7 @@ sha256 sd.img 33f16fa97ef0890fa0ace67ec2435648b3d3fe30938236923ddb9cd857232c42
 # unchanged (also with every SDMMC register access ending the CPU batch,
 # which the target did only for H7 writes).
 tick arm_m_scs
+tick /soc/watchdog@58004800
 tick /soc/i2c@40005400
 tick /soc/i2c@40005800
 tick /soc/interrupt-controller@58000000
