@@ -253,6 +253,11 @@ static sint32 iwdg_tick(void *instance, uint64 now, AthrillDeviceTickResult *res
 			/* reset only when a test enabled it; otherwise the underflow is
 			 * intentionally inert (no reset, no warning) */
 			if (w->can_reset) {
+				/* Stable, once-per-underflow evidence for PILS security tests.
+				 * This is emitted only for actual enabled system resets, never
+				 * for the default inert timeout. */
+				fprintf(stderr, "IWDG_RESET: underflow cpu_clock=%llu\n",
+					(unsigned long long)now);
 				w->target_ops->request_system_reset(w->target, 0U /* watchdog */);
 			}
 			result->next_event_interval = ATHRILL_DEVICE_NO_EVENT;
