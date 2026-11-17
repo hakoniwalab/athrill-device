@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       22U
+#define ATHRILL_DEVICE_ABI_MINOR       23U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -472,6 +472,14 @@ typedef struct AthrillDeviceTargetOps {
 	 * see at once, e.g. a data register that consumes a stream or a register
 	 * that changes the machine state. */
 	void (*end_batch)(void *target);
+	/* Added in ABI 1.23 (host hook): request a full system reset of the
+	 * emulated MCU, as a hardware watchdog (IWDG) timeout does. The target
+	 * reboots every core from the vector table at the next clock, as at
+	 * power-on; `reason` is a model-defined code for the cause (0 = watchdog)
+	 * kept for diagnostics and a future reset-reason register. A model MUST
+	 * check target_ops->abi_minor >= 23 before calling; when the field is
+	 * absent the model has no reset capability and must not dereference it. */
+	void (*request_system_reset)(void *target, uint32 reason);
 } AthrillDeviceTargetOps;
 
 typedef struct AthrillDeviceResourceOps {
