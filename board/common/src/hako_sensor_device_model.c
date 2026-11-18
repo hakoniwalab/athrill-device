@@ -81,6 +81,11 @@ typedef struct {
 	HakoVisualStateOutput fault_input;
 	float fault_scale[HAKO_MOTOR_STATUS_MAX];
 	uint32 fault_count;
+	/* the flight trace: the vehicle's truth pose, rotor speeds and duty over virtual time */
+	FILE *flight;
+	uint64 flight_period_usec;
+	uint64 flight_next_usec;
+	std_bool flight_started;
 #endif
 #endif
 } HakoSensorModel;
@@ -297,6 +302,44 @@ static void latch_sample(HakoSensorModel *model)
 	}
 }
 
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+/*
+ * One flight-trace line, at most every flight_period_usec of virtual time:
+ *   flight time=<usec> pose=<x>,<y>,<z>,<roll>,<pitch>,<yaw> rpm=<r0>,... duty=<d0>,...
+ * The pose is the aircraft's truth in Hakoniwa's world frame (ROS: x north,
+ * y west, z up; rad); rpm the rotors' speeds; duty the actuator values the
+ * motors run with. For viewers and video, not for exact comparison.
+ */
+static void trace_flight(HakoSensorModel *model, uint64 time_usec)
+{
+	uint32 i;
+	uint32 count;
+	const HakoVehiclePoseSample *pose = &model->pending_pose;
+	if (model->flight == NULL || !model->pending_has_pose) {
+		return;
+	}
+	if (model->flight_started && time_usec < model->flight_next_usec) {
+		return;
+	}
+	model->flight_started = TRUE;
+	model->flight_next_usec = time_usec + model->flight_period_usec;
+	fprintf(model->flight, "flight time=%" PRIu64 " pose=%.5f,%.5f,%.5f,%.6f,%.6f,%.6f rpm=",
+		time_usec, pose->x, pose->y, pose->z, pose->roll, pose->pitch, pose->yaw);
+	for (i = 0U; i < model->motor_count; i++) {
+		fprintf(model->flight, "%s%.1f", i == 0U ? "" : ",", (double)model->motors[i].rpm);
+	}
+	count = (model->motor_count != 0U) ? model->motor_count : 4U;
+	if (count > HAKO_ACTUATOR_CHANNELS) {
+		count = HAKO_ACTUATOR_CHANNELS;
+	}
+	fprintf(model->flight, " duty=");
+	for (i = 0U; i < count; i++) {
+		fprintf(model->flight, "%s%.4f", i == 0U ? "" : ",", (double)model->actuator.controls[i]);
+	}
+	fprintf(model->flight, "\n");
+}
+#endif
+
 static sint32 linked_tick(HakoSensorModel *model, uint64 now,
 	AthrillDeviceTickResult *result)
 {
@@ -349,6 +392,7 @@ static sint32 linked_tick(HakoSensorModel *model, uint64 now,
 				model->fault_count = faults;
 			}
 		}
+		trace_flight(model, model->last_time_usec - model->time_offset_usec);
 #endif
 		model->has_pending = FALSE;
 		model->actuator.time_usec = model->last_time_usec;
@@ -449,9 +493,27 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 		}
 		model->fault_input.channel_id = host_u32(model, "HAKO_SENSOR_DEVICE_FAULT_CHANNEL", 3U);
 		model->fault_input.pdu_size = host_u32(model, "HAKO_SENSOR_DEVICE_FAULT_PDU_SIZE", 256U);
+		{
+			const char *flight_path = host_value(model, "HAKO_SENSOR_DEVICE_FLIGHT_TRACE_PATH");
+			if (flight_path != NULL) {
+				model->flight = fopen(flight_path, "w");
+				if (model->flight == NULL) {
+					printf("ERROR: hako_sensor_device: can not open flight trace %s\n", flight_path);
+					if (model->trace != NULL) fclose(model->trace);
+					free(model);
+					return -1;
+				}
+				(void)setvbuf(model->flight, NULL, _IOLBF, 0U);
+				model->flight_period_usec = host_u32(model,
+					"HAKO_SENSOR_DEVICE_FLIGHT_TRACE_USEC", 10000U);
+			}
+		}
 #endif
 		if (path != NULL && !model->linked) {
 			if (model->trace != NULL) fclose(model->trace);
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+			if (model->flight != NULL) fclose(model->flight);
+#endif
 			free(model);
 			return -1;
 		}
@@ -476,6 +538,11 @@ static void destroy(void *instance)
 	if (model->trace != NULL) {
 		(void)fclose(model->trace);
 	}
+#if !defined(ATHRILL_HAKONIWA_PASSIVE) && defined(HAKO_SENSOR_DEVICE_MOTOR_STATUS)
+	if (model->flight != NULL) {
+		(void)fclose(model->flight);
+	}
+#endif
 	free(model);
 }
 
@@ -495,6 +562,9 @@ static sint32 reset(void *instance)
 	model->time_offset_usec = 0U;
 	model->pending_motor_count = 0U;
 	model->motor_count = 0U;
+#ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
+	model->flight_started = FALSE;
+#endif
 #endif
 	return 0;
 }
