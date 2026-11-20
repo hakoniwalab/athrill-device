@@ -104,8 +104,15 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
     set(HAKO_DRONE_PLATFORM_DIR "${HAKO_DRONE_ROOT}/mac")
     set(HAKO_DRONE_SERVICE_LIBRARY "${HAKO_DRONE_PLATFORM_DIR}/libhako_service_c.dylib")
     set(HAKO_DRONE_MUJOCO_LIBRARY "${HAKO_DRONE_PLATFORM_DIR}/libmujoco.3.16.0.dylib")
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # lnx.zip: the release's shared libraries carry RUNPATH $ORIGIN; the Hakoniwa core libraries they
+    # need (libassets, libconductor, libshakoc) are not in lnx.zip and come from the core install
+    # (LD_LIBRARY_PATH at run time, e.g. the Business Pack Foundation's lib).
+    set(HAKO_DRONE_PLATFORM_DIR "${HAKO_DRONE_ROOT}/lnx")
+    set(HAKO_DRONE_SERVICE_LIBRARY "${HAKO_DRONE_PLATFORM_DIR}/libhako_service_c.so")
+    set(HAKO_DRONE_MUJOCO_LIBRARY "${HAKO_DRONE_PLATFORM_DIR}/libmujoco.so.3.16.0")
   else()
-    message(FATAL_ERROR "The in-process prototype currently supports the macOS v5 release")
+    message(FATAL_ERROR "The in-process build supports the macOS (mac.zip) and Linux (lnx.zip) releases")
   endif()
   if(NOT EXISTS "${HAKO_DRONE_SERVICE_LIBRARY}" OR NOT EXISTS "${HAKO_DRONE_MUJOCO_LIBRARY}")
     message(FATAL_ERROR "Hakoniwa Drone release libraries were not found under ${HAKO_DRONE_PLATFORM_DIR}")
@@ -143,7 +150,14 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
   endforeach()
 
   function(configure_hako_inproc_target target)
-    target_link_libraries(${target} PRIVATE "${HAKO_DRONE_SERVICE_LIBRARY}")
+    if(APPLE)
+      target_link_libraries(${target} PRIVATE "${HAKO_DRONE_SERVICE_LIBRARY}")
+    else()
+      # by name, so the plugin needs libhako_service_c.so and finds the copy beside it ($ORIGIN)
+      target_link_directories(${target} PRIVATE "${HAKO_DRONE_PLATFORM_DIR}")
+      target_link_libraries(${target} PRIVATE hako_service_c)
+      set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "$ORIGIN")
+    endif()
     target_include_directories(${target} PRIVATE
       "${HAKO_DRONE_ROOT}/include"
       "${HAKO_DRONE_SOURCE_DIR}/include"
@@ -176,14 +190,13 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
         target_link_libraries(${target} PRIVATE ${HAKO_SENSOR_DEVICE_IMPLEMENTATION_LIBRARIES})
       endif()
     endif()
-    if(APPLE)
-      # Both release dylibs use @loader_path, so keep them beside each consumer.
-      add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-          "${HAKO_DRONE_SERVICE_LIBRARY}" "$<TARGET_FILE_DIR:${target}>"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-          "${HAKO_DRONE_MUJOCO_LIBRARY}" "$<TARGET_FILE_DIR:${target}>")
-    endif()
+    # Both release libraries find each other beside them (@loader_path on macOS, $ORIGIN on Linux), so
+    # keep them beside each consumer.
+    add_custom_command(TARGET ${target} POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${HAKO_DRONE_SERVICE_LIBRARY}" "$<TARGET_FILE_DIR:${target}>"
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${HAKO_DRONE_MUJOCO_LIBRARY}" "$<TARGET_FILE_DIR:${target}>")
   endfunction()
 
   add_library(hako_sensor_device_inproc SHARED

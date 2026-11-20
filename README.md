@@ -104,9 +104,10 @@ for STM32, 64 for the current RISC-V target); there is no cross-target
 default. The EXDEV entry also rejects a width mismatch at load time, before
 starting Hakoniwa or supplying sensor samples.
 
-The macOS in-process prototype is an opt-in second target. It needs the public Hakoniwa Drone v5.2.0 or later: a
-`hakoniwa-drone-core` checkout at that tag with the release's `mac.zip` unpacked in it (the `mac/` folder beside
-`include/`):
+The in-process build is an opt-in second target, for macOS and Linux. It needs the public Hakoniwa Drone v5.2.0 or
+later: a `hakoniwa-drone-core` checkout at that tag with the release's `mac.zip` (macOS) or `lnx.zip` (Linux)
+unpacked in it (the `mac/` or `lnx/` folder beside `include/`). On Linux the release's libraries need the Hakoniwa
+core's libraries at run time (`LD_LIBRARY_PATH` with the core's `lib`), because `lnx.zip` does not carry them:
 
 ```bash
 cmake -S board/common -B build-stm32-inproc -DCMAKE_BUILD_TYPE=Release \
