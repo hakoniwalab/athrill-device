@@ -104,26 +104,26 @@ for STM32, 64 for the current RISC-V target); there is no cross-target
 default. The EXDEV entry also rejects a width mismatch at load time, before
 starting Hakoniwa or supplying sensor samples.
 
-The macOS in-process prototype is an opt-in second target. It links the v5 release binaries; because that archive
-omits some transitive public C++ headers, it also needs a matching v5 source tree for headers only:
+The macOS in-process prototype is an opt-in second target. It needs the public Hakoniwa Drone v5.2.0 or later: a
+`hakoniwa-drone-core` checkout at that tag with the release's `mac.zip` unpacked in it (the `mac/` folder beside
+`include/`):
 
 ```bash
 cmake -S board/common -B build-stm32-inproc -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH="$HAKONIWA_FOUNDATION_PREFIX" \
   -DHAKO_SENSOR_DEVICE_BUILD_INPROC=ON \
   -DATHRILL_SOURCE_DIR=/path/to/athrill -DATHRILL_ADDRESS_WIDTH=32 \
-  -DHAKO_DRONE_ROOT=/path/to/hakoniwa-drone-core \
-  -DHAKO_DRONE_SOURCE_DIR=/path/to/matching-hakoniwa-drone-v5-source
+  -DHAKO_DRONE_ROOT=/path/to/hakoniwa-drone-core
 cmake --build build-stm32-inproc -j
 ```
 
 This produces `libhako_sensor_device_inproc.dylib` beside the default library and copies its two runtime release
-dependencies beside it.
+dependencies beside it. Add `-DHAKO_SENSOR_DEVICE_BUILD_INPROC_MOTOR=ON` for
+`libhako_sensor_device_inproc_motor.dylib`, which also gives the aircraft's rotor state to the DShot ESCs.
 
-> **Known issue: the in-process build does not compile with the public Hakoniwa Drone v5.0.0.** Its interface
-> header `include/aircraft/iaircraft.hpp` includes `aircraft/impl/fault_injection/fault_rotor.hpp`. That header is
-> not in the public release or in its source repository, so the compiler stops there. This will be fixed in the
-> next release of Hakoniwa Drone; please wait for it. The default library (the Hakoniwa link) is not affected.
+The public headers include `nlohmann/json.hpp`. The build takes it from the Hakoniwa core install on
+`CMAKE_PREFIX_PATH`, or from `HAKO_NLOHMANN_JSON_INCLUDE_DIR`. `HAKO_DRONE_SOURCE_DIR` is optional; leave it empty.
+Hakoniwa Drone v5.0.0 does not work here, because its public headers include headers that it does not publish.
 
 ## Use it
 

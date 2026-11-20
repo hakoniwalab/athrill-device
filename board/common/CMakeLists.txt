@@ -86,8 +86,19 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
   if(NOT EXISTS "${HAKO_DRONE_ROOT}/include/service/aircraft/iaircraft_service_container.hpp")
     message(FATAL_ERROR "Set HAKO_DRONE_ROOT to the unpacked Hakoniwa Drone v5 release")
   endif()
-  if(NOT EXISTS "${HAKO_DRONE_SOURCE_DIR}/src/aircraft/impl/fault_injection/fault_rotor.hpp")
-    message(FATAL_ERROR "Set HAKO_DRONE_SOURCE_DIR to the matching Drone v5 source tree")
+  # From v5.2.0 the public headers compile on their own (with glm and nlohmann/json), so the
+  # source tree is optional: empty means the release root itself (the hakoniwa-drone-core checkout).
+  if(NOT HAKO_DRONE_SOURCE_DIR)
+    set(HAKO_DRONE_SOURCE_DIR "${HAKO_DRONE_ROOT}")
+  endif()
+  if(NOT EXISTS "${HAKO_DRONE_SOURCE_DIR}/include/aircraft/interfaces/rotor_count.hpp")
+    message(FATAL_ERROR "HAKO_DRONE_SOURCE_DIR (or HAKO_DRONE_ROOT) needs the Drone v5.2.0 or later public headers")
+  endif()
+  # nlohmann/json: the Drone source tree's copy, else one on CMAKE_PREFIX_PATH (the Hakoniwa core install has it).
+  find_path(HAKO_NLOHMANN_JSON_INCLUDE_DIR nlohmann/json.hpp
+    HINTS "${HAKO_DRONE_SOURCE_DIR}/thirdparty/nolman/single_include")
+  if(NOT HAKO_NLOHMANN_JSON_INCLUDE_DIR)
+    message(FATAL_ERROR "nlohmann/json.hpp not found: set HAKO_NLOHMANN_JSON_INCLUDE_DIR")
   endif()
   if(APPLE)
     set(HAKO_DRONE_PLATFORM_DIR "${HAKO_DRONE_ROOT}/mac")
@@ -138,7 +149,7 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
       "${HAKO_DRONE_SOURCE_DIR}/include"
       "${HAKO_DRONE_SOURCE_DIR}/include/aircraft/interfaces"
       "${HAKO_DRONE_SOURCE_DIR}/src"
-      "${HAKO_DRONE_SOURCE_DIR}/thirdparty/nolman/single_include"
+      "${HAKO_NLOHMANN_JSON_INCLUDE_DIR}"
       "${HAKO_DRONE_SOURCE_DIR}/thirdparty/glm"
       "${HAKO_PDU_REGISTRY_DIR}/pdu/types")
     target_compile_features(${target} PRIVATE cxx_std_17)
