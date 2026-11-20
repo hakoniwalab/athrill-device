@@ -8,6 +8,7 @@
 #include "hako_sensor_device_link.h"
 #ifdef HAKO_SENSOR_DEVICE_MOTOR_STATUS
 #include "hako_sensor_device_publish.h"
+#include "hako_sensor_rotor_fault.h"
 #endif
 #endif
 
@@ -77,10 +78,12 @@ typedef struct {
 	HakoVisualStateOutput visual;
 	std_bool publish;
 	uint32 sequence;
-	/* rotor faults from outside (a Disturbance PDU), for the ESC fault hook */
+	/* rotor faults from outside (a Disturbance PDU, or a file), for the ESC fault hook */
 	HakoVisualStateOutput fault_input;
 	float fault_scale[HAKO_MOTOR_STATUS_MAX];
 	uint32 fault_count;
+	const char *fault_file;
+	uint64 fault_file_next_usec;
 	/* the flight trace: the vehicle's truth pose, rotor speeds and duty over virtual time */
 	FILE *flight;
 	uint64 flight_period_usec;
@@ -385,7 +388,17 @@ static sint32 linked_tick(HakoSensorModel *model, uint64 now,
 			(void)hako_sensor_publish_visual_state(&model->visual, &model->pending_pose,
 				model->actuator.controls, count, model->sequence++);
 		}
-		if (model->publish) {
+		if (model->fault_file != NULL) {
+			/* the file, read every 20 ms of virtual time */
+			if (model->last_time_usec >= model->fault_file_next_usec) {
+				uint32_t faults = 0U;
+				if (hako_sensor_read_rotor_fault_file(model->fault_file, model->fault_scale,
+					HAKO_MOTOR_STATUS_MAX, &faults)) {
+					model->fault_count = faults;
+				}
+				model->fault_file_next_usec = model->last_time_usec + 20000U;
+			}
+		} else if (model->publish) {
 			uint32 faults = 0U;
 			if (hako_sensor_read_rotor_fault(&model->fault_input, model->fault_scale,
 				HAKO_MOTOR_STATUS_MAX, &faults)) {
@@ -493,6 +506,9 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 		}
 		model->fault_input.channel_id = host_u32(model, "HAKO_SENSOR_DEVICE_FAULT_CHANNEL", 3U);
 		model->fault_input.pdu_size = host_u32(model, "HAKO_SENSOR_DEVICE_FAULT_PDU_SIZE", 256U);
+		/* rotor faults from a file instead (no Hakoniwa runtime needed), e.g. Athrill Studio */
+		model->fault_file = host_value(model, "HAKO_SENSOR_DEVICE_ROTOR_FAULT_FILE");
+		model->fault_file_next_usec = 0U;
 		{
 			const char *flight_path = host_value(model, "HAKO_SENSOR_DEVICE_FLIGHT_TRACE_PATH");
 			if (flight_path != NULL) {

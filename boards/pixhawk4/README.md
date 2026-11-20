@@ -21,7 +21,9 @@ to stop PX4's motor 3 at 40 s.
 `pixhawk4-hakoniwa-dshot-asset.dts` makes the Hakoniwa sensor device the ESC's
 fault-model, for Athrill as the Hakoniwa asset with the aircraft in process
 (the in-process motor plugin): rotor faults then come from a
-`hako_msgs/Disturbance` PDU, e.g. hakoniwa-threejs-drone's Rotor Fault Injection.
+`hako_msgs/Disturbance` PDU, e.g. hakoniwa-threejs-drone's Rotor Fault Injection, or, without a Hakoniwa
+runtime, from a file named by the host value `HAKO_SENSOR_DEVICE_ROTOR_FAULT_FILE` (one scale per motor, `1 1 0 1`
+stops motor 3; read every 20 ms of virtual time), e.g. Athrill Studio's fault buttons.
 
 The checked-in blobs have SHA-256:
 
