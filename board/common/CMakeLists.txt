@@ -227,7 +227,8 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
       src/hako_sensor_device_exdev.c
       src/hako_sensor_device_link_inproc.cpp
       src/hako_sensor_device_link_mavlink.c
-      src/hako_sensor_device_publish.cpp)
+      src/hako_sensor_device_publish.cpp
+      src/hako_sensor_rotor_fault.c)
     # writes Hakoniwa PDUs through Athrill's asset (athrill3 --hakoniwa)
     target_link_libraries(hako_sensor_device_inproc_motor PRIVATE hakoniwa-core::shakoc)
     target_include_directories(hako_sensor_device_inproc_motor PRIVATE
