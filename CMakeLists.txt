@@ -171,6 +171,9 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/timer-h7-pwm.dtb"
       "${TEST_DTB_DIR}/tick-skip-runtime.dtb"
       "${TEST_DTB_DIR}/tick-skip-contract.dtb"
+      "${TEST_DTB_DIR}/sensor-host-no-wiring.dtb"
+      "${TEST_DTB_DIR}/sensor-host-direct-wiring.dtb"
+      "${TEST_DTB_DIR}/sensor-host-missing-plugin.dtb"
       "${TEST_DTB_DIR}/tick-skip-pwm.dtb"
       "${TEST_DTB_DIR}/tick-skip-dshot.dtb"
       "${TEST_DTB_DIR}/esc-fault-bypass.dtb"
@@ -193,6 +196,32 @@ if(BUILD_TESTING)
     ATHRILL_DEVICE_STANDALONE_TYPES TEST_DTB_DIR="${TEST_DTB_DIR}")
   target_link_libraries(test_device_tree PRIVATE athrill_device)
   add_dependencies(test_device_tree generate-test-dtbs)
+  add_executable(test_sensor_host_config tests/test_sensor_host_config.c)
+  target_compile_definitions(test_sensor_host_config PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_link_libraries(test_sensor_host_config PRIVATE athrill_device)
+  add_dependencies(test_sensor_host_config generate-test-dtbs)
+  add_test(NAME ADV-SENSOR-HOST-001.T1
+    COMMAND test_sensor_host_config no-wiring
+      "${TEST_DTB_DIR}/sensor-host-no-wiring.dtb"
+      $<TARGET_FILE:athrill_hakoniwa_sensor>)
+  set_tests_properties(ADV-SENSOR-HOST-001.T1 PROPERTIES
+    PASS_REGULAR_EXPRESSION
+      "HAKO_SENSOR_DEVICE_SENSORS is set, but no sensor chip value-source points to hakoniwa,sensor-instance")
+  add_test(NAME ADV-SENSOR-HOST-002.T1
+    COMMAND test_sensor_host_config direct-wiring
+      "${TEST_DTB_DIR}/sensor-host-direct-wiring.dtb"
+      $<TARGET_FILE:athrill_hakoniwa_sensor>)
+  set_tests_properties(ADV-SENSOR-HOST-002.T1 PROPERTIES
+    PASS_REGULAR_EXPRESSION
+      "chip /gyroscope value-source points to hakoniwa,sensor-device while hakoniwa,sensor-instance nodes exist")
+  add_test(NAME ADV-SENSOR-HOST-004.T1
+    COMMAND test_sensor_host_config missing-plugin
+      "${TEST_DTB_DIR}/sensor-host-missing-plugin.dtb"
+      $<TARGET_FILE:athrill_hakoniwa_sensor>)
+  set_tests_properties(ADV-SENSOR-HOST-004.T1 PROPERTIES
+    PASS_REGULAR_EXPRESSION
+      "DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance=<same library as DEVICE_CONFIG_DEVICE_PLUGIN_0>")
 
   add_executable(test_bindings tests/test_bindings.c)
   target_compile_definitions(test_bindings PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
@@ -271,6 +300,10 @@ if(BUILD_TESTING)
   target_include_directories(test_hako_sensor_history PRIVATE
     include board/common/src tests)
   add_test(NAME hako-sensor-history COMMAND test_hako_sensor_history)
+  add_executable(test_sensor_period_check tests/test_sensor_period_check.c
+    board/common/src/hako_sensor_period_check.c)
+  target_include_directories(test_sensor_period_check PRIVATE board/common/src)
+  add_test(NAME ADV-SENSOR-HOST-003.T2 COMMAND test_sensor_period_check)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
@@ -329,13 +362,13 @@ if(BUILD_TESTING)
   target_compile_definitions(test_imu_fifo_history PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_imu_fifo_history PRIVATE src/models)
   target_link_libraries(test_imu_fifo_history PRIVATE athrill_device)
-  add_test(NAME imu-fifo-bmi055-accel
+  add_test(NAME ADV-SENSOR-HOST-003.T1-bmi055-accel
     COMMAND test_imu_fifo_history bmi055-accel)
-  add_test(NAME imu-fifo-bmi055-gyro
+  add_test(NAME ADV-SENSOR-HOST-003.T1-bmi055-gyro
     COMMAND test_imu_fifo_history bmi055-gyro)
-  add_test(NAME imu-fifo-icm42688p
+  add_test(NAME ADV-SENSOR-HOST-003.T1-icm42688p
     COMMAND test_imu_fifo_history icm42688p)
-  add_test(NAME imu-fifo-icm20689
+  add_test(NAME ADV-SENSOR-HOST-003.T1-icm20689
     COMMAND test_imu_fifo_history icm20689)
   add_executable(test_imu_filters tests/test_imu_filters.c)
   target_compile_definitions(test_imu_filters PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

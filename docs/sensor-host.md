@@ -88,6 +88,17 @@ adapter.** The firmware decides; the host checks and, where it can, makes the ad
 | not a whole number of physics steps | the adapter refuses it | ERROR |
 | a reserved register setting | nothing | ERROR |
 
+For an IMU adapter with one shared accelerometer/gyro period, the host first asks to change the reported part. If
+that is not supported, it changes the shared period when the other part is not known yet or has reported the same
+period. This is how the AirSim adapter follows a BMI055 whose two parts are both at 2 kHz, or an ICM-42688-P whose
+two parts are both at 8 kHz. If the two chip parts differ, the host does not change the shared period back and forth:
+it reports an ERROR naming the instance, part, chip period, adapter period and the adapter's reason.
+
+The reference AirSim IMU adapter implements `part_update_period_ns`, `set_part_update_period_ns` and the shared
+`set_update_period_ns`. Its part setter deliberately refuses an independent change because its two parts share one
+period; the shared fallback above is therefore required. A plugin built from an older AirSim tree without the
+update-period implementation cannot follow and is reported as an ERROR.
+
 So the physics step is chosen at start-up for the finest rate the firmware will program, and the adapters' periods
 need not be written for each firmware: they follow the chips. What the firmwares program on the Pixhawk 6C:
 
@@ -128,6 +139,23 @@ accelerometer and gyro) has one instance. The motors stay on the sensor device.
 
 The run loads the plugin for the instances too: next to `DEVICE_CONFIG_DEVICE_PLUGIN_0` for
 `hakoniwa%2Csensor-device`, a `DEVICE_CONFIG_DEVICE_PLUGIN_1` for `hakoniwa%2Csensor-instance` with the same library.
+
+### Wiring consistency
+
+The runtime checks the sensor-host wiring before the firmware starts:
+
+- If `HAKO_SENSOR_DEVICE_SENSORS` is set but no enabled sensor chip's `value-source` points to a
+  `hakoniwa,sensor-instance`, construction stops. This normally means the board used the ordinary Hakoniwa DTB
+  instead of its `-sensors` DTB.
+- If any sensor-instance node exists, every enabled sensor chip must point to an instance. A chip still pointing to
+  `hakoniwa,sensor-device` stops construction with an error naming the chip and both compatibles. Actuator consumers
+  such as the DShot ESC continue to point to the sensor device.
+- If an instance node has no plugin mapping, the error names the line to add:
+  `DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance=<same library as DEVICE_CONFIG_DEVICE_PLUGIN_0>`.
+
+These are errors, not warnings: each setup would otherwise run while measuring a different signal from the one the
+sensor-instance configuration describes. The first programmed IMU FIFO period is checked before the next physics
+step. A slower adapter then follows the chip or produces an ERROR that names both periods.
 
 `boards/pixhawk6c/pixhawk6c-hakoniwa-dshot-sensors.dts` is the Pixhawk 6C with DShot wired this way, with the
 instances `bmi055`, `icm42688p`, `barometer`, `magnetometer` and `gps1`.
@@ -192,3 +220,12 @@ the chip.
 - The sensor host is chosen per run; the sensor device's previous behaviour (Hakoniwa Drone's sensor models, one
   sample for every chip) stays the default.
 - Random seeds: one per instance, made from its name (see Adapter implementations).
+
+## Requirements
+
+| ID | Requirement |
+|---|---|
+| ADV-SENSOR-HOST-001 | With `HAKO_SENSOR_DEVICE_SENSORS`, at least one enabled sensor chip is wired by `value-source` to a `hakoniwa,sensor-instance`; otherwise construction stops with an actionable error. |
+| ADV-SENSOR-HOST-002 | When instance nodes exist, no enabled sensor chip remains wired to `hakoniwa,sensor-device`; an error names the chip and both compatibles. |
+| ADV-SENSOR-HOST-003 | An operating IMU FIFO reports each part's initial and changed programmed period; the host makes the adapter follow before the next physics step or reports an ERROR naming the instance, part and both periods. |
+| ADV-SENSOR-HOST-004 | A sensor-instance node without its plugin mapping stops with a message naming the `DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance` line. |

@@ -34,6 +34,9 @@ typedef struct {
 	uint64 now;
 	TestSource source;
 	const AthrillDeviceValueProviderOps *value_ops;
+	uint32 period_count;
+	uint32 period_kind[16];
+	uint64 period_ns[16];
 } Harness;
 
 typedef struct {
@@ -217,6 +220,34 @@ static sint32 gpio_drive(void *context, AthrillDeviceGpioLine line,
 	return 0;
 }
 
+static sint32 sample_period(void *instance, uint32 kind, uint64 period_ns)
+{
+	Harness *harness = instance;
+	if (harness->period_count >= 16U) {
+		return -1;
+	}
+	harness->period_kind[harness->period_count] = kind;
+	harness->period_ns[harness->period_count] = period_ns;
+	harness->period_count++;
+	return 0;
+}
+
+static const AthrillDeviceSamplePeriodOps period_ops = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceSamplePeriodOps), sample_period
+};
+
+static sint32 get_sample_period(void *context, const char *property,
+	const AthrillDeviceSamplePeriodOps **ops, void **instance)
+{
+	if (strcmp(property, "value-source") != 0) {
+		return -1;
+	}
+	*ops = &period_ops;
+	*instance = context;
+	return 0;
+}
+
 static const AthrillDeviceTargetOps target_ops = {
 	.abi_major = ATHRILL_DEVICE_ABI_MAJOR,
 	.abi_minor = ATHRILL_DEVICE_ABI_MINOR,
@@ -239,7 +270,8 @@ static const AthrillDeviceResourceOps resource_ops = {
 	.struct_size = sizeof(AthrillDeviceResourceOps),
 	.get_gpio = get_gpio,
 	.get_value_source = get_value_source,
-	.gpio_drive = gpio_drive
+	.gpio_drive = gpio_drive,
+	.get_sample_period = get_sample_period
 };
 
 static const ChipSpec chips[] = {
@@ -492,12 +524,85 @@ static void test_constant_equivalence(const ChipSpec *spec)
 	spec->model->destroy(legacy.chip);
 }
 
+static std_bool reported(const Harness *harness, uint32 kind,
+	uint64 period_ns)
+{
+	uint32 i;
+	for (i = 0U; i < harness->period_count; i++) {
+		if (harness->period_kind[i] == kind &&
+		    harness->period_ns[i] == period_ns) {
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
+/* [ADV-SENSOR-HOST-003.T1] FIFO start and a programmed rate change are reported. */
+static void test_period_reports(const ChipSpec *spec)
+{
+	Fixture fixture;
+	uint32 initial_count;
+	if (setup_fixture(&fixture, spec, &history_ops, FALSE) != 0) {
+		CHECK(spec->name, FALSE, "period-report fixture setup");
+		return;
+	}
+	configure_fifo(&fixture);
+	initial_count = fixture.harness.period_count;
+	switch (spec->kind) {
+	case CHIP_BMI_ACCEL:
+		CHECK(spec->name, reported(&fixture.harness,
+			ATHRILL_DEVICE_SAMPLE_ACCEL, 500000U),
+			"BMI055 accelerometer did not report its FIFO period");
+		spi_write(&fixture, 0x13U, 0x00U);
+		spi_write(&fixture, 0x10U, 0x0eU);
+		CHECK(spec->name, reported(&fixture.harness,
+			ATHRILL_DEVICE_SAMPLE_ACCEL, 1000000U),
+			"BMI055 accelerometer did not report a rate change");
+		break;
+	case CHIP_BMI_GYRO:
+		CHECK(spec->name, reported(&fixture.harness,
+			ATHRILL_DEVICE_SAMPLE_GYRO, 500000U),
+			"BMI055 gyroscope did not report its FIFO period");
+		spi_write(&fixture, 0x10U, 0x03U);
+		CHECK(spec->name, reported(&fixture.harness,
+			ATHRILL_DEVICE_SAMPLE_GYRO, 2500000U),
+			"BMI055 gyroscope did not report a rate change");
+		break;
+	case CHIP_ICM42688:
+		CHECK(spec->name, reported(&fixture.harness,
+			ATHRILL_DEVICE_SAMPLE_GYRO, 125000U) &&
+			reported(&fixture.harness,
+			ATHRILL_DEVICE_SAMPLE_ACCEL, 125000U),
+			"ICM-42688-P did not report both FIFO periods");
+		spi_write(&fixture, 0x4fU, 0x06U);
+		CHECK(spec->name, reported(&fixture.harness,
+			ATHRILL_DEVICE_SAMPLE_GYRO, 1000000U),
+			"ICM-42688-P did not report a rate change");
+		break;
+	case CHIP_ICM20689:
+		CHECK(spec->name, reported(&fixture.harness,
+			ATHRILL_DEVICE_SAMPLE_GYRO, 125000U) &&
+			reported(&fixture.harness,
+			ATHRILL_DEVICE_SAMPLE_ACCEL, 1000000U),
+			"ICM-20689 did not report both FIFO periods");
+		spi_write(&fixture, 0x1aU, 0x01U);
+		CHECK(spec->name, reported(&fixture.harness,
+			ATHRILL_DEVICE_SAMPLE_GYRO, 1000000U),
+			"ICM-20689 did not report a rate change");
+		break;
+	}
+	CHECK(spec->name, fixture.harness.period_count > initial_count,
+		"rate change produced no new period report");
+	spec->model->destroy(fixture.chip);
+}
+
 static int run_chip(const ChipSpec *spec)
 {
 	test_bursts(spec);
 	test_overflow(spec);
 	test_legacy_fallback(spec);
 	test_constant_equivalence(spec);
+	test_period_reports(spec);
 	return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 

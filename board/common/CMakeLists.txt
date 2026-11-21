@@ -206,6 +206,7 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
     src/hako_sensor_registers_model.c
     src/hako_sensor_instance_model.c
     src/hako_sensor_device_exdev.c
+    src/hako_sensor_period_check.c
     src/hako_sensor_device_link_inproc.cpp
     src/hako_sensor_device_link_mavlink.c)
   target_include_directories(hako_sensor_device_inproc PRIVATE
@@ -226,8 +227,9 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
       src/hako_sensor_device_model.c
       src/hako_sensor_history.c
       src/hako_sensor_registers_model.c
-    src/hako_sensor_instance_model.c
+      src/hako_sensor_instance_model.c
       src/hako_sensor_device_exdev.c
+      src/hako_sensor_period_check.c
       src/hako_sensor_device_link_inproc.cpp
       src/hako_sensor_device_link_mavlink.c
       src/hako_sensor_device_publish.cpp
@@ -247,6 +249,7 @@ if(HAKO_SENSOR_DEVICE_BUILD_INPROC)
 
   add_executable(hako_sensor_inproc_test
     test/hako_sensor_inproc_test.cpp
+    src/hako_sensor_period_check.c
     src/hako_sensor_device_link_inproc.cpp
     src/hako_sensor_device_link_mavlink.c)
   target_include_directories(hako_sensor_inproc_test PRIVATE src include)
