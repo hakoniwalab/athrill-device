@@ -162,6 +162,22 @@ def main() -> None:
             ("value-source", be32(9)),
         ], [])]),
     ])
+    bmm150 = node("", [
+        ("compatible", strings("athrill,test-board")),
+        ("#address-cells", be32(1)),
+        ("#size-cells", be32(1)),
+        ("athrill,test-chip-only", b""),
+    ], [
+        node("bench-sensor-source", [
+            ("compatible", strings("athrill,bench-sensor-source")),
+            ("phandle", be32(9)),
+        ], []),
+        bus_controller("i2c", 0x3000, [node("magnetometer@10", [
+            ("compatible", strings("bosch,bmm150")),
+            ("reg", be32(0x10)),
+            ("value-source", be32(9)),
+        ], [])]),
+    ])
     gps = board([
         bus_controller("uart", 0x4000, [node("gnss", [
             ("compatible", strings("u-blox,m8")),
@@ -430,6 +446,7 @@ def main() -> None:
         "fram.dtb": fram,
         "barometer.dtb": barometer,
         "magnetometer.dtb": magnetometer,
+        "bmm150.dtb": bmm150,
         "gps.dtb": gps,
         "imu.dtb": imu,
         "adis16470.dtb": adis16470,

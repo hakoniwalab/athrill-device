@@ -1,6 +1,6 @@
 model: magnetometer
 version: 1.0.0
-summary: Single-measurement 3-axis magnetometer on I2C (IST8310). Values come from the common sensor source.
+summary: Three-axis I2C magnetometers (IST8310 and BMM150). Values come from the common sensor source.
 
 terms:
   - {name: identity,        kind: status,  feature: base, meaning: "WAI register value (ADV-CHIP-IST8310-001)."}
@@ -14,6 +14,7 @@ terms:
 
 features:
   base: Identity, single measurement, data.
+  bmm150: Bosch compensated normal-mode data.
 
 behaviour:
   - id: ADV-MAG-B001
@@ -25,6 +26,12 @@ behaviour:
   - id: ADV-MAG-B003
     feature: base
     rule: Multi-byte reads auto-increment and return all axes of one sample.
+  - id: ADV-MAG-B004
+    feature: bmm150
+    rule: BMM150 normal mode samples the value-source history at its ODR boundary; fixed trim and inverse raw generation make the PX4 compensation result equal the source field within one raw LSB.
+  - id: ADV-MAG-B005
+    feature: bmm150
+    rule: Re-reading BMM150 data at the same virtual time returns the same coherent bytes; out-of-range axes use the datasheet overflow codes and status bit.
 
 timing: Measurement completes the datasheet's time after single_measure in model time.
 out_of_scope:

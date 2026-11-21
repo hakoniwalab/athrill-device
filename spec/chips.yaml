@@ -261,3 +261,75 @@
   - id: ADV-CHIP-ADIS16470-006.T1
     stimulus: Read at target clock 4100 with a 500 us output boundary at clock 4000 and known 1 g, 0.1 degree/s and 25 degree C source values.
     expect: The history request is for clock 4000 and burst values are 800, 1 and 250 LSB with no filtering delay.
+- id: ADV-CHIP-BMM150-001
+  statement: In suspend, CHIP_ID (0x40) reads 0x00; after POWER_CONTROL bit 0 is set it reads 0x32. A soft reset requested with 0x4B bits 7 and 1 set restores sleep mode (OP_MODE 0x06), clears those request bits, and preserves power.
+  source:
+    devicetree: bosch,bmm150
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4, sections 4.2.2, 5.3 and 5.6
+  scope: PX4 v1.17.0 probe and reset sequence.
+  verification: generated
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-001.T1
+    stimulus: On a generated I2C fixture at address 0x10, set POWER_CONTROL bit 0 and read CHIP_ID 0x40; the behaviour test also checks suspend and PX4's soft-reset sequence.
+    expect: CHIP_ID is 0x32 while powered; suspend returned 0x00, and soft reset produced powered sleep defaults.
+- id: ADV-CHIP-BMM150-002
+  statement: The normal self-test completes successfully by clearing OP_MODE bit 0 and setting the X, Y and Z result bits. The PX4-read trim blocks 0x5D..0x5E, 0x62..0x65 and 0x68..0x71 contain dig_x1=0, dig_y1=0, dig_x2=-128, dig_y2=-128, dig_z1=32768, dig_z2=24576, dig_z3=0, dig_z4=0, dig_xy1=0, dig_xy2=0 and dig_xyz1=8192.
+  source:
+    devicetree: bosch,bmm150
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4 section 4.4.1; PX4-Autopilot v1.17.0 BMM150.cpp READ_TRIM state
+  scope: Successful PX4 v1.17.0 self-test and the trim values chosen for deterministic inverse compensation.
+  verification: unit
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-002.T1
+    stimulus: Replay PX4's reset and self-test writes and its three trim-block reads in driver order.
+    expect: Self-test clears and succeeds on all axes; every signed and unsigned trim field decodes to the stated fixed value.
+- id: ADV-CHIP-BMM150-003
+  statement: OP_MODE ODR codes 0..7 select 10, 2, 6, 8, 15, 20, 25 and 30 Hz. REPXY and REPZ store the programmed repetition controls; the PX4 high-accuracy values 0x17 and 0x52 mean 47 XY and 83 Z repetitions. Entering powered normal mode reports its magnetic-sample period, 50000000 ns for PX4's 20 Hz setting.
+  source:
+    devicetree: bosch,bmm150
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4, sections 5.6 and 5.8, Tables 17, 24 and 26
+  scope: Normal-mode settings used by PX4 v1.17.0 and the sensor-host period contract.
+  verification: unit
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-003.T1
+    stimulus: Evaluate all eight ODR codes, then run PX4 configuration (20 Hz, REPXY 0x17, REPZ 0x52).
+    expect: All rates equal Table 17, repetition registers read back, and one 50000000 ns magnetic period is reported.
+- id: ADV-CHIP-BMM150-004
+  statement: In normal mode each data burst is a coherent sample from sensor_sample_at at the latest BMM150 output boundary not after the read. Revision-6 rotation 0 is identity. Two reads at the same virtual time return identical bytes and do not resample.
+  source:
+    devicetree: bosch,bmm150; Pixhawk 6X revision 6 rotation 0
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4 sections 4.2.4 and 5.4; athrill-device ABI 1.24 sensor_sample_at
+  scope: Lazy 20 Hz normal-mode sampling; no mount-rotation feature.
+  verification: unit
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-004.T1
+    stimulus: Advance a 1 MHz target in 50000-clock periods with negative and positive fields, read 0x42..0x4A, then repeat a read without advancing time.
+    expect: History is requested at each measurement's own boundary, axes retain identity, and the repeated burst is byte-identical.
+- id: ADV-CHIP-BMM150-005
+  statement: Data registers encode signed 13-bit X/Y, signed 15-bit Z, 14-bit RHALL=8192 and DRDY in RHALL_LSB bit 0. With the fixed trims, PX4 v1.17.0 compensation returns raw/16 microtesla, so raw=round(field_gauss*1600) inversely represents the source field to within one 0.0625 microtesla raw LSB.
+  source:
+    devicetree: bosch,bmm150
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4 section 5.4 Tables 6-13; PX4-Autopilot v1.17.0 BMM150.cpp compensate_x/y/z
+  scope: Valid X/Y range -4095..4095 and Z range -16383..16383, including negative fields.
+  verification: unit
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-005.T1
+    stimulus: Replay PX4 startup, read trim, sweep signed raw values across the valid X/Y and Z ranges, decode the register fields, and apply the PX4 compensation equations independently.
+    expect: Compensated values differ from the input field converted to microtesla by no more than 0.0625 microtesla.
+- id: ADV-CHIP-BMM150-006
+  statement: A field outside an axis's encodable range produces the datasheet overflow code -4096 for X/Y or -16384 for Z and sets STATUS (0x4A) Overflow bit 6.
+  source:
+    devicetree: bosch,bmm150
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4 section 4.6.6 and section 5.5 Table 14
+  scope: Overflow result consumed by PX4 v1.17.0.
+  verification: unit
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-006.T1
+    stimulus: Supply X=2.56 G, Y=-2.56 G and Z=10.24 G, one count outside the selected inverse ranges.
+    expect: X and Y decode as -4096, Z as -16384, and STATUS bit 6 is set.

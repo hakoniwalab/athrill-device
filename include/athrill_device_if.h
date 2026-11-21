@@ -337,6 +337,7 @@ typedef struct AthrillDeviceMotorStatusOps {
  */
 #define ATHRILL_DEVICE_SAMPLE_ACCEL 0U
 #define ATHRILL_DEVICE_SAMPLE_GYRO  1U
+#define ATHRILL_DEVICE_SAMPLE_MAG   2U
 
 typedef struct AthrillDeviceSamplePeriodOps {
 	uint32 abi_major;
