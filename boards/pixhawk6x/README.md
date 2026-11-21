@@ -235,6 +235,7 @@ The revision-0 family remains `pixhawk6x.dts`, `pixhawk6x-hakoniwa.dts`,
 | common Hakoniwa value source | `pixhawk6x-rev6-hakoniwa.dtb` |
 | common source + DShot outputs 1-4 | `pixhawk6x-rev6-hakoniwa-dshot.dtb` |
 | DShot + one source per chip | `pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb` |
+| the same, light: IIM-42652 disabled (ADIS16470 only; one EKF, faster) | `pixhawk6x-rev6-hakoniwa-dshot-sensors-lite.dtb` |
 
 The per-chip file uses these `HAKO_SENSOR_DEVICE_SENSORS` names:
 
@@ -268,4 +269,5 @@ f88b7fd364d876cfb4c85f37672b739b69f6dd644445775059cb398db03860be  pixhawk6x-rev6
 b74c11a1be80729f52df1c43b23db4dd636e8a590e460ddb10083ff54189f6d4  pixhawk6x-rev6-hakoniwa.dtb
 a76104875cd1fa67e5f19b91ed4863fc8909989e7dd3c36bcd60dedea630687f  pixhawk6x-rev6-hakoniwa-dshot.dtb
 319f3612d1d28623d988f63b6cf3c6f16cf305294940a879d258c425ac93890e  pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb
+7f5fca0855fb2458ba2cf40a3b376187c1d6b8e4504e4484e6b6e9aee96bbaec  pixhawk6x-rev6-hakoniwa-dshot-sensors-lite.dtb
 ```
