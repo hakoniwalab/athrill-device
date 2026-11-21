@@ -25,6 +25,10 @@ fault-model, for Athrill as the Hakoniwa asset with the aircraft in process
 runtime, from a file named by the host value `HAKO_SENSOR_DEVICE_ROTOR_FAULT_FILE` (one scale per motor, `1 1 0 1`
 stops motor 3; read every 20 ms of virtual time), e.g. Athrill Studio's fault buttons.
 
+`pixhawk4-hakoniwa-dshot-sensors.dts` includes the DShot board and gives each sensor chip its own sensor instance of
+the in-process sensor host (`docs/sensor-host.md`): `icm20689`, `bmi055` (shared by its accelerometer and gyro),
+`barometer`, `magnetometer` and `gps1`. The motors stay on the sensor device.
+
 The checked-in blobs have SHA-256:
 
 ```text
@@ -32,6 +36,7 @@ The checked-in blobs have SHA-256:
 2c0dfcc6102752ba0b0c7c0f53d1653ce0b8ecdc8b395c8aecd79b9be21a5f18  pixhawk4-hakoniwa.dtb
 136059ed6dbb3ae74a9444044cd196e547678b17f6bdcc3ca63a035596957838  pixhawk4-hakoniwa-dshot.dtb
 9f90732e622c208d03eccaff354ad554ff4196df76c9d2c4a5cd1ca38a48179d  pixhawk4-hakoniwa-dshot-asset.dtb
+2b3e5a66cafdf242f7e7051f8ad04f2367dabc11ec056f223323be2bc8ab22e4  pixhawk4-hakoniwa-dshot-sensors.dtb
 ```
 
 It was made with GNU cpp and dtc 1.7.x from a Linux container (Ubuntu
@@ -75,6 +80,14 @@ cpp -nostdinc -undef -x assembler-with-cpp \
   "$ROOT/build/pixhawk4-hakoniwa-dshot-asset.pre.dts"
 dtc -I dts -O dtb -o "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa-dshot-asset.dtb" \
   "$ROOT/build/pixhawk4-hakoniwa-dshot-asset.pre.dts"
+cpp -nostdinc -undef -x assembler-with-cpp \
+  -I "$ZEPHYR/dts" -I "$ZEPHYR/dts/arm" -I "$ZEPHYR/dts/common" \
+  -I "$ZEPHYR/include" \
+  -I "$ROOT/boards/pixhawk4" \
+  "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa-dshot-sensors.dts" \
+  "$ROOT/build/pixhawk4-hakoniwa-dshot-sensors.pre.dts"
+dtc -I dts -O dtb -o "$ROOT/boards/pixhawk4/pixhawk4-hakoniwa-dshot-sensors.dtb" \
+  "$ROOT/build/pixhawk4-hakoniwa-dshot-sensors.pre.dts"
 ```
 
 The Zephyr include remains an external build input; it is not copied into
