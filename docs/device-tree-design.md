@@ -1,5 +1,7 @@
 # Devicetree-built devices
 
+Which facts belong to the Devicetree, to the SVD, and to manuals and data sheets: [sources-of-truth.md](sources-of-truth.md).
+
 Status: design decision and migration contract.
 
 This design makes a compiled Devicetree (DTS to DTB) the description of a
