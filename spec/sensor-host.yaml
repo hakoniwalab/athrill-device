@@ -49,3 +49,15 @@
   - id: ADV-SENSOR-HOST-004.T1
     stimulus: Build a board containing hakoniwa,sensor-instance with only the hakoniwa,sensor-device plugin mapping.
     expect: Construction fails and the diagnostic names DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance and says to use the same library as plugin 0.
+- id: ADV-SENSOR-HOST-005
+  statement: Sample-period reports for pressure (kind 2), magnetometer (kind 3), and unknown future non-IMU kinds are informational; the sensor host does not reinterpret them as accelerometer periods, change an IMU adapter, or fail the run.
+  source:
+    devicetree: sensor-chip value-source to hakoniwa,sensor-instance
+    manual: docs/sensor-host.md, Wiring consistency; AthrillDeviceSamplePeriodOps ABI 1.22
+  scope: Barometer and magnetometer instances can report their chip rates without entering the IMU-only adapter rate contract.
+  verification: unit
+  applies_to: sensor-host
+  tests:
+  - id: ADV-SENSOR-HOST-005.T1
+    stimulus: Report pressure, magnetometer, and an unknown future sample kind to the sensor-host period checker.
+    expect: Each report is identified as informational and ignored without an error or modification of IMU period state.

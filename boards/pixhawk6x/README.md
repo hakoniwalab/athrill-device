@@ -13,6 +13,7 @@ principally `spi.cpp`, `i2c.cpp`, `timer_config.cpp`, `board_config.h`,
 | ADV-BOARD-6X-002 | Select one real FMUv6X sensor revision through the same version/revision ADC result PX4 uses and expose only chips that have stage-1 models. |
 | ADV-BOARD-6X-003 | Preserve PX4 v1.17.0 bus, chip-select, interrupt, output, DMA and connector ordering in the board DTB. |
 | ADV-BOARD-6X-004 | Supply base, Hakoniwa, Hakoniwa DShot and per-sensor Hakoniwa DTBs, with every enabled functional node resolving to a model. |
+| ADV-BOARD-6X-005 | Supply a revision-6 DTB family that selects `V6X006` through PX4's ADC ladder and models ADIS16470, ICP201xx and BMM150 at their real buses and rotations. |
 
 ## MCU and memory map
 
@@ -53,10 +54,13 @@ is the currently declared EEPROM sensor set. The ordinal low-sample windows
 in 12-bit ADC counts are 0, 1-579, 580-967, 968-1356, 1357-1756,
 1757-2137, 2138-2519, 2520-2919, 2920-3308, 3309-3699 and 3700-4095.
 
-The inherited ADC3 register rule returns zero from `DR`. PX4 consequently
-detects no ladder for both PH3 and PH4 and prints version 0, revision 0,
-`V6X000`. This is intentional and tested; it selects the first real sensor
-set without adding a special ADC/GPIO coupling model.
+The unchanged revision-0 family inherits the ADC3 rule that returns zero from
+`DR`. PX4 consequently detects no ladder for both PH3 and PH4 and prints
+version 0, revision 0, `V6X000`. The revision-6 family adds the optional
+`athrill,adc-select-gpios` and `athrill,adc-channel-values` properties. The
+register-block model then returns the selected SQR1 channel's high or low
+conversion code from DR according to PG0. Boards without those properties
+keep the original zero behavior.
 
 PX4 v1.17.0 declares these revision-dependent internal sensors:
 
@@ -87,6 +91,11 @@ Issue #152 selected PX4 sensor-set revision 6, reported by PX4 as `V6X006`.
 The source below is PX4-Autopilot tag `v1.17.0`; the runtime comparison is the
 reference log `75ac4a47-a73a-44ea-8016-24d79a164147.ulg`, whose software hash
 is from that tag and whose `ver_hw` / subtype are `PX4_FMU_V6X` / `V6X006`.
+The ULog has no base-board version field or retained `[boot] Rev ... Ver ...`
+message, so the revision-6 DTBs use the requested fallback base-board ordinal
+0. ADC3 channel 14 therefore returns high `65535`, low `0`; channel 15 returns
+high `65535`, low `36800`. PX4 configures 16-bit right-aligned conversion and
+scales the latter by 16 to 2300 for its 12-bit ladder table.
 
 PX4 drives PG0 high, reads revision input PH4 as ADC3 channel 15, then drives
 PG0 low and reads it again. The high reading must exceed 97.5% of full scale
@@ -143,22 +152,14 @@ direct gyro/accel sample per burst and therefore does not publish a gyro FIFO
 topic. The ICM-45686 raw rate in the log is about 6402.32 Hz, consistent with
 its configured 6.4 kHz rate.
 
-Before this stage the repository modeled the revision-0 ICM-42688-P and the
-external IST8310, but none of revision 6's three internal IMUs, its BMM150 or
-ICP201xx. This stage adds only ADIS16470. IIM-42652, ICM-45686, BMM150,
-ICP201xx and the log's external BMP388 remain missing. ADIS supplies a primary
-accel and gyro, but a normal EKF2 hover also needs pressure altitude and a
-heading source: ICP201xx and BMM150 are therefore the missing internal chips
-needed for a self-contained revision-6 arm/hover path (the existing external
-IST8310 can provide heading when that GPS puck is present, and BMP388 is an
-external pressure alternative).
-
-The remaining implementation stages follow the issue decision: IIM-42652,
-then ICM-45686, then ICP201xx and BMM150, optionally external BMP388, and
-finally revision-6 DTBs, ADC/boot selection, hover and same-chip real-log
-comparison. If the shortest path to initial arming is preferred, the barometer
-and magnetometer work can be brought ahead of the two redundant IMUs without
-changing the required final set.
+The revision-6 DTBs now enable the modeled ADIS16470, ICP201xx and BMM150, plus
+the existing external IST8310 and GPS. ICM-45686 and IIM-42652 still have no
+models: SPI1 CS PI9 and SPI2 CS PH5 remain allocated but have no child device.
+PX4's probes therefore fail normally with
+`ERROR [icm45686] no instance started (no device on bus?)` and
+`ERROR [iim42652] no instance started (no device on bus?)`; ADIS16470 remains
+the primary IMU. The external BMP388 and the two redundant IMUs remain outside
+this board-model scope.
 
 ## Bus and pin allocation
 
@@ -222,11 +223,37 @@ interrupt status and time-resolved data/FIFO behavior where applicable:
 
 ## DTBs
 
-`pixhawk6x-hakoniwa.dts` redirects every modeled sensor and output to the
-Hakoniwa sensor device. `-hakoniwa-dshot` replaces PWM outputs 1-4 with the
-DShot ESC on USART2. `-hakoniwa-dshot-sensors` gives the modeled ICM-42688-P,
-external IST8310 and GPS their own sensor-host instances; stage 2 will add
-instances for newly modeled internal chips.
+The revision-0 family remains `pixhawk6x.dts`, `pixhawk6x-hakoniwa.dts`,
+`pixhawk6x-hakoniwa-dshot.dts` and
+`pixhawk6x-hakoniwa-dshot-sensors.dts`. The parallel revision-6 family is:
+
+| Use | Devicetree |
+| --- | --- |
+| bench / SIH | `pixhawk6x-rev6.dtb` |
+| common Hakoniwa value source | `pixhawk6x-rev6-hakoniwa.dtb` |
+| common source + DShot outputs 1-4 | `pixhawk6x-rev6-hakoniwa-dshot.dtb` |
+| DShot + one source per chip | `pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb` |
+
+The per-chip file uses these `HAKO_SENSOR_DEVICE_SENSORS` names:
+
+| Instance | Type | Chip sample-period reports |
+| --- | --- | --- |
+| `adis16470` | `imu` | ACCEL=0 and GYRO=1 |
+| `icp201xx` | `baro` | PRESSURE=2 |
+| `bmm150` | `mag` | MAG=3 |
+| `ist8310` | `mag` | none (magnetic samples only) |
+| `gps1` | `gps` | none |
+
+Only ACCEL and GYRO participate in the sensor host's adapter-period contract.
+PRESSURE, MAG and unknown future kinds are logged as informational and ignored,
+so ICP201xx and BMM150 cannot be mistaken for an accelerometer or fail a run.
+
+To run PX4, keep `DEVICE_CONFIG_STM32_BOARD fmu-v6c` and select one of the
+four revision-6 DTBs with `DEVICE_CONFIG_DEVICE_TREE`. For the Hakoniwa files,
+configure the `hakoniwa,sensor-device` plugin; for the `-sensors` file also
+configure the `hakoniwa,sensor-instance` plugin and the five instance names
+above, as described in `docs/sensor-host.md`. No different firmware ELF is
+needed to switch between revision 0 and revision 6.
 
 Reviewed deterministic hashes:
 
@@ -235,4 +262,8 @@ Reviewed deterministic hashes:
 87d549cad1d5b62b5ee880975347d23e5c74899266a1870a0cfec2bd83f948c9  pixhawk6x-hakoniwa.dtb
 0aedb053157ed6b2d6a79b005931414fbbd5a9d10312129d2ba5ecd477b1414e  pixhawk6x-hakoniwa-dshot.dtb
 8297a58eea209cb390f672c3cab59742d836dc76a478cade0c6ace36834363aa  pixhawk6x-hakoniwa-dshot-sensors.dtb
+fbc66053d62d0413d01fa5affd332abb572e4098c623f34ecc91080b2be87089  pixhawk6x-rev6.dtb
+0c245eb41d63e51bc4ea5316647c38cf5b26946f5bae1a0174edc5aa5b3d13c6  pixhawk6x-rev6-hakoniwa.dtb
+37992e7217364d56728f180a95cf57dc1d2e98545fe1ae87837640b8eed0d9b0  pixhawk6x-rev6-hakoniwa-dshot.dtb
+1da99288a5d21fb2f4173f9cad13efb93028e2ae12580baa607f5c17a37f0327  pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb
 ```

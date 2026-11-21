@@ -21,6 +21,10 @@
  *   athrill,read-random  = <offset>...            a fixed sequence of numbers
  *        (x * 1664525 + 1013904223, from athrill,random-seed, default
  *        0x7436c001)
+ *   athrill,adc-select-gpios = <...>              resistor-ladder drive
+ *   athrill,adc-channel-values = <channel high low>...
+ *        on an STM32H7 ADC, DR returns the selected SQR1 channel's value
+ *        for the current drive level (16-bit, right-aligned conversion code)
  * Rules read the stored words (not each other's results). A write stores
  * its bytes and ends the CPU batch (as the target's register files did).
  * The node's interrupts are connected and never raised.
@@ -36,6 +40,20 @@
 
 #define MAX_WINDOWS	4U
 #define MAX_RULES	64U
+#define MAX_ADC_CHANNELS 20U
+
+#define H7_ADC_CR	0x08U
+#define H7_ADC_CFGR	0x0cU
+#define H7_ADC_CFGR2	0x10U
+#define H7_ADC_SQR1	0x30U
+#define H7_ADC_DR	0x40U
+#define H7_ADC_ADSTART	(1U << 2)
+#define H7_ADC_SQ1_SHIFT 6U
+#define H7_ADC_SQ1_MASK	0x1fU
+#define H7_ADC_RES_SHIFT 2U
+#define H7_ADC_RES_MASK	7U
+#define H7_ADC_LSHIFT_SHIFT 28U
+#define H7_ADC_LSHIFT_MASK 0xfU
 
 typedef enum { RULE_COPY, RULE_FOLLOW, RULE_CLEAR, RULE_SET, RULE_RANDOM } RuleKind;
 
@@ -57,6 +75,12 @@ typedef struct {
 } Window;
 
 typedef struct {
+	uint32 channel;
+	uint32 high;
+	uint32 low;
+} AdcChannelValue;
+
+typedef struct {
 	const AthrillDeviceTargetOps *target_ops;
 	void *target;
 	Window windows[MAX_WINDOWS];
@@ -67,6 +91,12 @@ typedef struct {
 	uint32 reset_count;
 	uint32 seed;
 	uint32 random;
+	AdcChannelValue adc_values[MAX_ADC_CHANNELS];
+	uint32 adc_value_count;
+	const AthrillDeviceResourceOps *resources;
+	void *resource_context;
+	AthrillDeviceGpioLine adc_select;
+	std_bool adc_select_connected;
 } RegisterBlock;
 
 /* The cells of a u32 list property; 0 when absent. */
@@ -200,6 +230,54 @@ static uint32 apply_rules(RegisterBlock *b, uint32 offset, uint32 v)
 	return v;
 }
 
+static uint32 adc_resolution_bits(uint32 cfgr)
+{
+	switch ((cfgr >> H7_ADC_RES_SHIFT) & H7_ADC_RES_MASK) {
+	case 0U: return 16U;
+	case 1U: return 14U;
+	case 2U: return 12U;
+	case 3U: return 10U;
+	case 7U: return 8U;
+	default: return 16U;
+	}
+}
+
+/* [ADV-DT-006] The optional H7 ADC ladder rule follows the conversion
+ * sequence used by PX4: SQ1 selects the channel and ADSTART makes the
+ * conversion value available in DR. Devicetree values are 16-bit codes;
+ * CFGR resolution and CFGR2 left shift determine the DR representation. */
+static std_bool adc_conversion(RegisterBlock *b, uint32 offset, uint32 *value)
+{
+	std_bool high;
+	uint32 channel;
+	uint32 bits;
+	uint32 left_shift;
+	uint32 i;
+
+	if (offset != H7_ADC_DR || b->adc_value_count == 0U ||
+	    !b->adc_select_connected ||
+	    (stored(b, H7_ADC_CR) & H7_ADC_ADSTART) == 0U ||
+	    b->resources->gpio_read(b->resource_context, b->adc_select, &high) != 0) {
+		return FALSE;
+	}
+	channel = (stored(b, H7_ADC_SQR1) >> H7_ADC_SQ1_SHIFT) & H7_ADC_SQ1_MASK;
+	bits = adc_resolution_bits(stored(b, H7_ADC_CFGR));
+	left_shift = (stored(b, H7_ADC_CFGR2) >> H7_ADC_LSHIFT_SHIFT) &
+		H7_ADC_LSHIFT_MASK;
+	for (i = 0U; i < b->adc_value_count; i++) {
+		const AdcChannelValue *entry = &b->adc_values[i];
+
+		if (entry->channel == channel) {
+			uint32 conversion = high ? entry->high : entry->low;
+
+			conversion >>= 16U - bits;
+			*value = conversion << left_shift;
+			return TRUE;
+		}
+	}
+	return FALSE;
+}
+
 static sint32 block_read(void *instance, uint64 address, uint32 size, uint64 *result)
 {
 	RegisterBlock *b = instance;
@@ -213,6 +291,7 @@ static sint32 block_read(void *instance, uint64 address, uint32 size, uint64 *re
 	memcpy(&v, &w->data[aligned], 4U);
 	offset = (uint32)(w->base + aligned - b->windows[0].base);
 	v = apply_rules(b, offset, v);
+	(void)adc_conversion(b, offset, &v);
 	v >>= 8U * ((uint32)address & 3U);
 	*result = (size == 4U) ? v : (v & ((1U << (8U * size)) - 1U));
 	return 0;
@@ -290,6 +369,25 @@ static sint32 block_create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	b->seed = cells_of(node, "athrill,random-seed") != 0U ?
 		cell(node, "athrill,random-seed", 0U) : 0x7436C001U;
+	n = cells_of(node, "athrill,adc-channel-values");
+	if ((n % 3U) != 0U || n / 3U > MAX_ADC_CHANNELS) {
+		fprintf(stderr, "register block %s: athrill,adc-channel-values needs <channel high low> triples\n",
+			node->path);
+		goto fail;
+	}
+	for (i = 0U; i < n; i += 3U) {
+		AdcChannelValue *entry = &b->adc_values[b->adc_value_count++];
+
+		entry->channel = cell(node, "athrill,adc-channel-values", i);
+		entry->high = cell(node, "athrill,adc-channel-values", i + 1U);
+		entry->low = cell(node, "athrill,adc-channel-values", i + 2U);
+		if (entry->channel >= MAX_ADC_CHANNELS || entry->high > 0xffffU ||
+		    entry->low > 0xffffU) {
+			fprintf(stderr, "register block %s: invalid ADC channel or 16-bit conversion value\n",
+				node->path);
+			goto fail;
+		}
+	}
 	*instance = b;
 	return 0;
 fail:
@@ -334,10 +432,21 @@ static sint32 block_reset(void *instance)
 /* The node's interrupts, connected (ADV-DT-004) and never raised. */
 static sint32 block_connect(void *instance, const AthrillDeviceConnectArgs *args)
 {
+	RegisterBlock *b = instance;
 	AthrillDeviceIrqLine line;
 	uint32 i;
 
-	(void)instance;
+	if (b->adc_value_count != 0U) {
+		if (args->resources->get_gpio(args->context,
+		    "athrill,adc-select-gpios", 0U, &b->adc_select) != 0 ||
+		    args->resources->gpio_read == NULL) {
+			fprintf(stderr, "register block: ADC channel values need one athrill,adc-select-gpios line\n");
+			return -1;
+		}
+		b->resources = args->resources;
+		b->resource_context = args->context;
+		b->adc_select_connected = TRUE;
+	}
 	for (i = 0U; i < 32U; i++) {
 		if (args->resources->get_interrupt(args->context, NULL, i, &line) != 0) {
 			break;

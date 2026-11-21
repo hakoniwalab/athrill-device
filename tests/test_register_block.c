@@ -68,6 +68,46 @@ static const AthrillDeviceNodeOps node_ops = {
 };
 static uint32 batches;
 static void end_batch(void *t) { (void)t; batches++; }
+static std_bool adc_select_high;
+
+static sint32 no_interrupt(void *context, const char *name, uint32 index,
+	AthrillDeviceIrqLine *line)
+{
+	(void)context;
+	(void)name;
+	(void)index;
+	(void)line;
+	return -1;
+}
+
+static sint32 get_gpio(void *context, const char *property, uint32 index,
+	AthrillDeviceGpioLine *line)
+{
+	(void)context;
+	if (strcmp(property, "athrill,adc-select-gpios") != 0 || index != 0U) {
+		return -1;
+	}
+	line->value = 7U;
+	return 0;
+}
+
+static sint32 gpio_read(void *context, AthrillDeviceGpioLine line,
+	std_bool *level)
+{
+	(void)context;
+	TEST_CHECK(line.value == 7U);
+	*level = adc_select_high;
+	return 0;
+}
+
+static const AthrillDeviceResourceOps resource_ops = {
+	.abi_major = ATHRILL_DEVICE_ABI_MAJOR,
+	.abi_minor = ATHRILL_DEVICE_ABI_MINOR,
+	.struct_size = sizeof(AthrillDeviceResourceOps),
+	.get_interrupt = no_interrupt,
+	.get_gpio = get_gpio,
+	.gpio_read = gpio_read,
+};
 
 static const AthrillDeviceModelOps *m = &athrill_device_register_block_model;
 static void *dev;
@@ -88,6 +128,7 @@ static void *make(const Prop *p, uint32 n)
 	static AthrillDeviceTargetOps target_ops;
 	static AthrillDeviceNode node;
 	AthrillDeviceCreateArgs args;
+	AthrillDeviceConnectArgs connect_args;
 	void *instance = NULL;
 
 	memset(&target_ops, 0, sizeof(target_ops));
@@ -103,6 +144,12 @@ static void *make(const Prop *p, uint32 n)
 	args.target = NULL;
 	args.node = &node;
 	if (m->create(&args, &instance) != 0) {
+		return NULL;
+	}
+	connect_args.resources = &resource_ops;
+	connect_args.context = NULL;
+	if (m->connect(instance, &connect_args) != 0) {
+		m->destroy(instance);
 		return NULL;
 	}
 	TEST_CHECK(m->reset(instance) == 0);
@@ -142,6 +189,34 @@ int main(void)
 	};
 	static const uint32 bad_follow[] = { 0x00U, 0x00U, 0x1U };
 	static const Prop bad[] = { { "reg", reg, 2U }, { "athrill,read-follow", bad_follow, 3U } };
+	/* RM0433 ADC3 offsets and the exact PX4 single-conversion sequence. */
+	static const uint32 adc_reg[] = { 0x58026000U, 0x400U };
+	static const uint32 adc_follow[] = {
+		0x00U, 0x08U, 0x00000001U, 0U,
+		0x00U, 0x08U, 0x00000004U, 0U,
+		0x00U, 0x08U, 0x00000004U, 1U,
+	};
+	static const uint32 adc_clear[] = {
+		0x08U, 0x80000002U,
+		0x40U, 0xffffffffU,
+	};
+	static const uint32 adc_values[] = {
+		14U, 0xffffU, 0U,
+		15U, 0xffffU, 36800U,
+	};
+	static const uint32 adc_gpio[] = { 1U, 0U, 0U };
+	static const Prop adc[] = {
+		{ "reg", adc_reg, 2U },
+		{ "athrill,read-follow", adc_follow, 12U },
+		{ "athrill,read-clear", adc_clear, 4U },
+		{ "athrill,adc-channel-values", adc_values, 6U },
+		{ "athrill,adc-select-gpios", adc_gpio, 3U },
+	};
+	static const Prop adc_plain[] = {
+		{ "reg", adc_reg, 2U },
+		{ "athrill,read-follow", adc_follow, 12U },
+		{ "athrill,read-clear", adc_clear, 4U },
+	};
 
 	dev = make(rcc, 4U);
 	TEST_CHECK(dev != NULL);
@@ -198,6 +273,48 @@ int main(void)
 	/* the second window keeps its bytes */
 	wr(0x4802200CU, 4U, 0x12345678U);
 	TEST_CHECK(rd(0x4802200CU, 4U) == 0x12345678U);
+	m->destroy(dev);
+
+	/* [ADV-DT-006.T1] PX4 programs 64.5-cycle sampling, 16-bit/right
+	 * alignment, SQ1, ADSTART, EOC polling and DR reading. The sample-time
+	 * registers do not change the board-defined DC ladder value. */
+	dev = make(adc, 5U);
+	TEST_CHECK(dev != NULL);
+	wr(0x58026008U, 4U, 1U << 31);
+	TEST_CHECK((rd(0x58026008U, 4U) & (1U << 31)) == 0U);
+	wr(0x58026008U, 4U, 1U);
+	TEST_CHECK((rd(0x58026000U, 4U) & 1U) != 0U);
+	wr(0x58026014U, 4U, 0xdb6db6dbU);
+	wr(0x58026018U, 4U, 0x000006dbU);
+	wr(0x5802600cU, 4U, 0U);
+	wr(0x58026010U, 4U, 0U);
+	wr(0x5802601cU, 4U, 1U << 15);
+	wr(0x58026030U, 4U, 15U << 6);
+	wr(0x58026008U, 4U, rd(0x58026008U, 4U) | (1U << 2));
+	TEST_CHECK((rd(0x58026000U, 4U) & 0x0cU) == 0x0cU);
+	adc_select_high = TRUE;
+	TEST_CHECK(rd(0x58026040U, 4U) == 0xffffU);
+	adc_select_high = FALSE;
+	TEST_CHECK(rd(0x58026040U, 4U) == 36800U);
+	wr(0x58026030U, 4U, 14U << 6);
+	TEST_CHECK(rd(0x58026040U, 4U) == 0U);
+	/* A 12-bit configuration scales the same physical code; CFGR2 LSHIFT
+	 * controls its alignment in DR. PX4 leaves both at 16-bit/right above. */
+	wr(0x58026030U, 4U, 15U << 6);
+	wr(0x5802600cU, 4U, 2U << 2);
+	TEST_CHECK(rd(0x58026040U, 4U) == 2300U);
+	wr(0x58026010U, 4U, 1U << 28);
+	TEST_CHECK(rd(0x58026040U, 4U) == 4600U);
+	m->destroy(dev);
+
+	/* [ADV-DT-006.T2] Existing ADC register blocks have no ladder property;
+	 * their inherited read-clear rule continues to force DR to zero. */
+	dev = make(adc_plain, 3U);
+	TEST_CHECK(dev != NULL);
+	wr(0x58026030U, 4U, 15U << 6);
+	wr(0x58026008U, 4U, 1U << 2);
+	adc_select_high = TRUE;
+	TEST_CHECK(rd(0x58026040U, 4U) == 0U);
 	m->destroy(dev);
 
 	/* a rule with a wrong cell count is refused */

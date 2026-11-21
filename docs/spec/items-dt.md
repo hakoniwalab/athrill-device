@@ -10,6 +10,7 @@
 | ADV-DT-003 | Each instantiated node owns exactly the address windows given by its reg (translated through ranges), and no two windows overlap. | generated | dt-mmio-node | Devicetree Specification v0.4 2.3.6 (reg), 2.3.8 (ranges); RM0410 section 2.2.2; RM0433 section 2.3 |
 | ADV-DT-004 | Each interrupts entry of an instantiated node is connected to that interrupt line of its interrupt parent. | generated | dt-irq-node | Devicetree Specification v0.4 2.4 (interrupts, interrupt-parent); RM0410 table 46; RM0433 table 145 (vector tables) |
 | ADV-DT-005 | Board construction from the same DTB and configuration is deterministic: same instances, same order, same description hash. | generated | dt-board | Devicetree Specification v0.4; none |
+| ADV-DT-006 | An STM32H7 ADC register block with athrill,adc-channel-values returns the selected channel's Devicetree conversion code for the level of athrill,adc-select-gpios; without those properties DR keeps its existing zero behavior. | test | stm32h7-adc-register-block | Devicetree Specification v0.4 2.2.4.2 (phandle and specifier), 2.3.8 (#gpio-cells); RM0433 revision 8 sections 25.4.19 (CFGR), 25.4.20 (CFGR2), 25.4.30 (SQR1), 25.4.35 (DR) |
 
 ## Test specifications
 
@@ -20,3 +21,5 @@
 | ADV-DT-003.T1 | Build the board and list registered address windows. | Base and size equal reg decoded independently from the DTB; windows are pairwise disjoint. |
 | ADV-DT-004.T1 | Build the board and list interrupt connections. | Each node's lines equal its interrupts decoded independently from the DTB. |
 | ADV-DT-005.T1 | Build the board twice from the same DTB. | Instance list, order and recorded DTB hash are identical. |
+| ADV-DT-006.T1 | Run PX4's single-channel sequence at 16-bit right alignment for channels 14 and 15 with the selector GPIO high and low. | EOC is observable and DR returns each channel's configured high or low conversion code. |
+| ADV-DT-006.T2 | Run the same register sequence on a register block without ADC channel properties. | DR remains zero, preserving existing boards unchanged. |

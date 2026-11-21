@@ -94,10 +94,40 @@ static void test_long_adapter_error(void)
 	CHECK(strstr(result.message, "shared change refused") != NULL);
 }
 
+/* [ADV-SENSOR-HOST-005.T1] Pressure, magnetic and future kinds are harmless. */
+static void test_non_imu_periods_are_informational(void)
+{
+	FakeAdapter fake = {4000000U, false};
+	HakoSensorPeriodState state = {0};
+	HakoSensorPeriodAdapterOps adapter = {
+		get_part, refuse_part, set_shared, &fake
+	};
+	HakoSensorPeriodCheck check = {
+		"icp201xx", 125000U, HAKO_SENSOR_PERIOD_PRESSURE, 25000000U
+	};
+	HakoSensorPeriodResult result;
+	hako_sensor_period_check(&state, &check, &adapter, &result);
+	CHECK(!result.error);
+	CHECK(!state.has_accel && !state.has_gyro);
+	CHECK(strstr(result.message, "sensor icp201xx pressure") != NULL);
+	CHECK(strstr(result.message, "informational and ignored") != NULL);
+	check.sensor_name = "bmm150";
+	check.kind = HAKO_SENSOR_PERIOD_MAG;
+	check.chip_period_ns = 50000000U;
+	hako_sensor_period_check(&state, &check, &adapter, &result);
+	CHECK(!result.error);
+	CHECK(strstr(result.message, "sensor bmm150 magnetometer") != NULL);
+	check.kind = 99U;
+	hako_sensor_period_check(&state, &check, &adapter, &result);
+	CHECK(!result.error);
+	CHECK(strstr(result.message, "unknown") != NULL);
+}
+
 int main(void)
 {
 	test_shared_period_follows();
 	test_long_adapter_error();
+	test_non_imu_periods_are_informational();
 	printf("ADV-SENSOR-HOST-003.T2: %d failures\n", failures);
 	return failures == 0 ? 0 : 1;
 }

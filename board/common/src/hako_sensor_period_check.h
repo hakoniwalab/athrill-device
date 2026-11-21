@@ -8,6 +8,8 @@
 
 #define HAKO_SENSOR_PERIOD_ACCEL 0U
 #define HAKO_SENSOR_PERIOD_GYRO  1U
+#define HAKO_SENSOR_PERIOD_PRESSURE 2U
+#define HAKO_SENSOR_PERIOD_MAG 3U
 #define HAKO_SENSOR_PERIOD_MESSAGE_SIZE 512U
 
 typedef struct {
@@ -42,8 +44,9 @@ typedef struct {
 extern "C" {
 #endif
 
-/* Compare one part's newly reported chip period with its adapter. The state remembers
- * the other part, so a shared-period fallback is used only while it is compatible. */
+/* Compare one IMU part's newly reported chip period with its adapter. The state
+ * remembers the other part, so a shared-period fallback is used only while it
+ * is compatible. Non-IMU kinds are informational and return without an error. */
 void hako_sensor_period_check(HakoSensorPeriodState *state,
 	const HakoSensorPeriodCheck *check,
 	const HakoSensorPeriodAdapterOps *adapter,

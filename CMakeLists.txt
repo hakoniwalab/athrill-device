@@ -283,6 +283,8 @@ if(BUILD_TESTING)
   target_include_directories(test_register_block PRIVATE src/models)
   target_link_libraries(test_register_block PRIVATE athrill_device)
   add_test(NAME register-block COMMAND test_register_block)
+  add_test(NAME ADV-DT-006.T1 COMMAND test_register_block)
+  add_test(NAME ADV-DT-006.T2 COMMAND test_register_block)
   add_executable(test_riscv_mtimer tests/test_riscv_mtimer.c)
   target_compile_definitions(test_riscv_mtimer PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_riscv_mtimer PRIVATE src/models)
@@ -321,6 +323,7 @@ if(BUILD_TESTING)
     board/common/src/hako_sensor_period_check.c)
   target_include_directories(test_sensor_period_check PRIVATE board/common/src)
   add_test(NAME ADV-SENSOR-HOST-003.T2 COMMAND test_sensor_period_check)
+  add_test(NAME ADV-SENSOR-HOST-005.T1 COMMAND test_sensor_period_check)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
@@ -576,7 +579,11 @@ if(BUILD_TESTING)
     PIXHAWK6X_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x.dtb"
     PIXHAWK6X_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa.dtb"
     PIXHAWK6X_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa-dshot.dtb"
-    PIXHAWK6X_HAKONIWA_DSHOT_SENSORS_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa-dshot-sensors.dtb")
+    PIXHAWK6X_HAKONIWA_DSHOT_SENSORS_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa-dshot-sensors.dtb"
+    PIXHAWK6X_REV6_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6.dtb"
+    PIXHAWK6X_REV6_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa.dtb"
+    PIXHAWK6X_REV6_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot.dtb"
+    PIXHAWK6X_REV6_HAKONIWA_DSHOT_SENSORS_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb")
 
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

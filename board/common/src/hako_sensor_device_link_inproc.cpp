@@ -377,6 +377,15 @@ void checkChipPeriods(InProcessLink& state)
 	}
 	for (const auto& report : reports) {
 		auto& sensor = state.sensors[report.index];
+		if (report.kind != HAKO_SENSOR_PERIOD_ACCEL &&
+			report.kind != HAKO_SENSOR_PERIOD_GYRO) {
+			const char *part = report.kind == HAKO_SENSOR_PERIOD_PRESSURE ? "pressure" :
+				report.kind == HAKO_SENSOR_PERIOD_MAG ? "magnetometer" : "unknown";
+			std::cout << "INFO: hako_sensor_device: sensor " << sensor.name << " " << part
+				<< ": chip every " << (static_cast<double>(report.period_ns) / 1000.0)
+				<< " us; non-IMU period is informational and ignored" << std::endl;
+			continue;
+		}
 		if (!sensor.imu) {
 			std::cerr << "WARNING: hako_sensor_device: sensor " << sensor.name << " (" << sensor.type
 				<< ") got an IMU chip's sample period; not checked" << std::endl;

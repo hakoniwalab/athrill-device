@@ -70,6 +70,11 @@ static void expect_value_source(const void *blob, const char *path,
 	TEST_CHECK(fdt32_to_cpu(*actual) == wanted);
 }
 
+static void expect_absent(const void *blob, const char *path)
+{
+	TEST_CHECK(fdt_path_offset(blob, path) == -FDT_ERR_NOTFOUND);
+}
+
 /* ADV-BOARD-6X-001: H753 firmware uses the H743-compatible memory map. */
 static void ADV_BOARD_6X_001_memory_map(const void *blob)
 {
@@ -171,6 +176,84 @@ static void ADV_BOARD_6X_004_overlays(void)
 	free(blob);
 }
 
+/* ADV-BOARD-6X-002/003: the revision-6 ADC identity and real bus wiring. */
+static void ADV_BOARD_6X_002_revision_six(const void *blob)
+{
+	int length;
+	const fdt32_t *cells;
+
+	cells = fdt_getprop(blob, node(blob, "/soc/adc@58026000"),
+		"athrill,adc-channel-values", &length);
+	TEST_CHECK(cells != NULL && length == 6 * (int)sizeof(*cells));
+	TEST_CHECK(fdt32_to_cpu(cells[0]) == 14U);
+	TEST_CHECK(fdt32_to_cpu(cells[1]) == 65535U);
+	TEST_CHECK(fdt32_to_cpu(cells[2]) == 0U);
+	TEST_CHECK(fdt32_to_cpu(cells[3]) == 15U);
+	TEST_CHECK(fdt32_to_cpu(cells[4]) == 65535U);
+	TEST_CHECK(fdt32_to_cpu(cells[5]) == 36800U);
+	cells = fdt_getprop(blob, node(blob, "/soc/adc@58026000"),
+		"athrill,adc-select-gpios", &length);
+	TEST_CHECK(cells != NULL && length == 3 * (int)sizeof(*cells));
+	TEST_CHECK(fdt32_to_cpu(cells[1]) == 0U);
+
+	expect_absent(blob, "/soc/spi@40013000/imu@0");
+	expect_absent(blob, "/soc/spi@40003800/imu@0");
+	expect_compatible(blob, "/soc/spi@40003c00/imu@0", "adi,adis16470");
+	cells = fdt_getprop(blob, node(blob, "/soc/spi@40003c00"),
+		"cs-gpios", &length);
+	TEST_CHECK(cells != NULL && length == 3 * (int)sizeof(*cells));
+	TEST_CHECK(fdt32_to_cpu(cells[1]) == 4U);
+	cells = fdt_getprop(blob, node(blob, "/soc/spi@40003c00/imu@0"),
+		"int-gpios", &length);
+	TEST_CHECK(cells != NULL && length == 3 * (int)sizeof(*cells));
+	TEST_CHECK(fdt32_to_cpu(cells[1]) == 7U);
+	expect_compatible(blob, "/soc/i2c@58001c00/pressure@64",
+		"invensense,icp201xx");
+	expect_compatible(blob, "/soc/i2c@58001c00/magnetometer@10",
+		"bosch,bmm150");
+	expect_compatible(blob, "/soc/i2c@40005400/magnetometer@e",
+		"isentek,ist8310");
+}
+
+/* ADV-BOARD-6X-004: all revision-6 overlay layers wire every modeled chip. */
+static void ADV_BOARD_6X_004_revision_six_overlays(void)
+{
+	size_t size;
+	void *blob = read_dtb(PIXHAWK6X_REV6_HAKONIWA_DTB, &size);
+	uint32_t source;
+
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	source = phandle(blob, "/sensor-device");
+	expect_value_source(blob, "/pwm-actuator-map", source);
+	expect_value_source(blob, "/soc/spi@40003c00/imu@0", source);
+	expect_value_source(blob, "/soc/i2c@58001c00/pressure@64", source);
+	expect_value_source(blob, "/soc/i2c@58001c00/magnetometer@10", source);
+	expect_value_source(blob, "/soc/i2c@40005400/magnetometer@e", source);
+	expect_value_source(blob, "/soc/serial@40011000/gnss", source);
+	free(blob);
+
+	blob = read_dtb(PIXHAWK6X_REV6_HAKONIWA_DSHOT_DTB, &size);
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	expect_status(blob, "/pwm-actuator-map", "disabled");
+	expect_compatible(blob, "/soc/serial@40004400/dshot-esc",
+		"athrill,dshot-esc");
+	free(blob);
+
+	blob = read_dtb(PIXHAWK6X_REV6_HAKONIWA_DSHOT_SENSORS_DTB, &size);
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	expect_value_source(blob, "/soc/spi@40003c00/imu@0",
+		phandle(blob, "/sensor-device/adis16470"));
+	expect_value_source(blob, "/soc/i2c@58001c00/pressure@64",
+		phandle(blob, "/sensor-device/icp201xx"));
+	expect_value_source(blob, "/soc/i2c@58001c00/magnetometer@10",
+		phandle(blob, "/sensor-device/bmm150"));
+	expect_value_source(blob, "/soc/i2c@40005400/magnetometer@e",
+		phandle(blob, "/sensor-device/ist8310"));
+	expect_value_source(blob, "/soc/serial@40011000/gnss",
+		phandle(blob, "/sensor-device/gps1"));
+	free(blob);
+}
+
 int main(void)
 {
 	size_t size;
@@ -182,6 +265,12 @@ int main(void)
 	ADV_BOARD_6X_003_wiring(blob);
 	free(blob);
 	ADV_BOARD_6X_004_overlays();
-	puts("Pixhawk 6X revision 0 DT allocation is valid");
+	blob = read_dtb(PIXHAWK6X_REV6_DTB, &size);
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	ADV_BOARD_6X_001_memory_map(blob);
+	ADV_BOARD_6X_002_revision_six(blob);
+	free(blob);
+	ADV_BOARD_6X_004_revision_six_overlays();
+	puts("Pixhawk 6X revision 0 and revision 6 DT allocations are valid");
 	return 0;
 }

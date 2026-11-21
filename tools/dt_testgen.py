@@ -1337,17 +1337,9 @@ def render_case(case: dict[str, object]) -> str:
         chip = case["chip"]
         assert isinstance(chip, ChipCase)
         if chip.operation == "spi-word-register":
-            lines.extend([
-                "\tSpiConnection word_connection;",
-                "\tuint8 discarded;",
-                "\tuint8 high;",
-                "\tuint8 low;",
-                "\tuint16 word;",
-            ])
+            lines.append("\tuint16 word;")
         else:
             lines.append("\tuint8 value;")
-            if chip.operation == "bmm150-id":
-                lines.append("\tI2cConnection write_connection;")
         if chip.bus == "spi":
             lines.extend([
                 f"\tindex = find_binding({c_string(chip.controller_path)}, {chip.selector}U);",
@@ -1361,25 +1353,7 @@ def render_case(case: dict[str, object]) -> str:
         if chip.operation == "spi-word-register":
             assert chip.register is not None and chip.expected is not None
             lines.extend([
-                "\tCHECK(spi_connection_open(index, &word_connection) == 0);",
-                "\tCHECK(athrill_spi_select(word_connection.protocol,",
-                "\t    word_connection.binding->chip_select, word_connection.time++) == 1);",
-                f"\tCHECK(athrill_spi_exchange(word_connection.protocol, {chip.register}U,",
-                "\t    &discarded, word_connection.time++) == 0);",
-                "\tCHECK(athrill_spi_exchange(word_connection.protocol, 0U,",
-                "\t    &discarded, word_connection.time++) == 0);",
-                "\tCHECK(athrill_spi_deselect(word_connection.protocol,",
-                "\t    word_connection.time++) == 0);",
-                "\tCHECK(athrill_spi_select(word_connection.protocol,",
-                "\t    word_connection.binding->chip_select, word_connection.time++) == 1);",
-                "\tCHECK(athrill_spi_exchange(word_connection.protocol, 0U, &high,",
-                "\t    word_connection.time++) == 0);",
-                "\tCHECK(athrill_spi_exchange(word_connection.protocol, 0U, &low,",
-                "\t    word_connection.time++) == 0);",
-                "\tCHECK(athrill_spi_deselect(word_connection.protocol,",
-                "\t    word_connection.time++) == 0);",
-                "\tspi_connection_close(&word_connection);",
-                "\tword = (uint16)(((uint16)high << 8) | low);",
+                f"\tCHECK(spi_word_register_read(index, {chip.register}U, &word) == 0);",
                 f"\tCHECK(word == {chip.expected}U);",
             ])
         elif chip.operation.startswith("spi-register"):
@@ -1398,13 +1372,7 @@ def render_case(case: dict[str, object]) -> str:
         elif chip.operation == "bmm150-id":
             assert chip.register is not None and chip.expected is not None
             lines.extend([
-                "\tCHECK(i2c_connection_open(index, &write_connection) == 0);",
-                "\tCHECK(athrill_i2c_start(write_connection.protocol,",
-                "\t    write_connection.binding->address, FALSE, write_connection.time++) == 1);",
-                "\tCHECK(i2c_write_byte(&write_connection, 0x4bU) == 0);",
-                "\tCHECK(i2c_write_byte(&write_connection, 1U) == 0);",
-                "\tCHECK(athrill_i2c_stop(write_connection.protocol, write_connection.time++) == 0);",
-                "\ti2c_connection_close(&write_connection);",
+                "\tCHECK(i2c_register_write(index, 0x4bU, 1U) == 0);",
                 f"\tCHECK(i2c_register_read(index, {chip.register}U, &value) == 0);",
                 f"\tCHECK(value == {chip.expected}U);",
             ])
@@ -2308,6 +2276,51 @@ static sint32 spi_register_read(uint32 index, uint8 address, uint32 dummy_count,
 \treturn 0;
 }}
 
+static sint32 spi_word_register_read(uint32 index, uint8 address, uint16 *value)
+{{
+\tSpiConnection connection;
+\tBinding *binding;
+\tuint8 discarded;
+\tuint8 high;
+\tuint8 low;
+
+\tif (index >= target.binding_count) return -1;
+\tbinding = &target.bindings[index];
+\tif (binding->native_base != 0U) {{
+\t\tif (native_spi_select(binding, FALSE) != 0 ||
+\t\t    native_spi_select(binding, TRUE) != 0 ||
+\t\t    native_spi_byte(binding, address, &discarded) != 0 ||
+\t\t    native_spi_byte(binding, 0U, &discarded) != 0 ||
+\t\t    native_spi_select(binding, FALSE) != 0 ||
+\t\t    native_spi_select(binding, TRUE) != 0 ||
+\t\t    native_spi_byte(binding, 0U, &high) != 0 ||
+\t\t    native_spi_byte(binding, 0U, &low) != 0 ||
+\t\t    native_spi_select(binding, FALSE) != 0) return -1;
+\t}} else {{
+\t\tif (spi_connection_open(index, &connection) != 0) return -1;
+\t\tif (athrill_spi_select(connection.protocol, binding->chip_select,
+\t\t    connection.time++) != 1 ||
+\t\t    athrill_spi_exchange(connection.protocol, address, &discarded,
+\t\t    connection.time++) != 0 ||
+\t\t    athrill_spi_exchange(connection.protocol, 0U, &discarded,
+\t\t    connection.time++) != 0 ||
+\t\t    athrill_spi_deselect(connection.protocol, connection.time++) != 0 ||
+\t\t    athrill_spi_select(connection.protocol, binding->chip_select,
+\t\t    connection.time++) != 1 ||
+\t\t    athrill_spi_exchange(connection.protocol, 0U, &high,
+\t\t    connection.time++) != 0 ||
+\t\t    athrill_spi_exchange(connection.protocol, 0U, &low,
+\t\t    connection.time++) != 0 ||
+\t\t    athrill_spi_deselect(connection.protocol, connection.time++) != 0) {{
+\t\t\tspi_connection_close(&connection);
+\t\t\treturn -1;
+\t\t}}
+\t\tspi_connection_close(&connection);
+\t}}
+\t*value = (uint16)(((uint16)high << 8) | low);
+\treturn 0;
+}}
+
 static std_bool i2c_child_start(void *context, std_bool read,
 \tstd_bool repeated, uint64 time)
 {{
@@ -2379,6 +2392,41 @@ static sint32 i2c_write_byte(I2cConnection *connection, uint8 data)
 \tstd_bool ack;
 \treturn athrill_i2c_write(connection->protocol, data, &ack,
 \t    connection->time++) == 0 && ack ? 0 : -1;
+}}
+
+static sint32 i2c_register_write(uint32 index, uint8 address, uint8 value)
+{{
+\tI2cBinding *binding;
+\tI2cConnection connection;
+\tuint32 isr;
+\tuint32 sadd;
+
+\tif (index >= target.i2c_binding_count) return -1;
+\tbinding = &target.i2c_bindings[index];
+\tif (binding->native_base != 0U) {{
+\t\tsadd = (uint32)binding->address << 1;
+\t\tif (mmio_write32(binding->native_base + NI2C_CR2,
+\t\t    sadd | (2U << 16) | (1U << 25) | (1U << 13)) != 0 ||
+\t\t    mmio_read32(binding->native_base + NI2C_ISR, &isr) != 0 ||
+\t\t    (isr & (1U << 1)) == 0U ||
+\t\t    mmio_write32(binding->native_base + NI2C_TXDR, address) != 0 ||
+\t\t    mmio_read32(binding->native_base + NI2C_ISR, &isr) != 0 ||
+\t\t    (isr & (1U << 1)) == 0U ||
+\t\t    mmio_write32(binding->native_base + NI2C_TXDR, value) != 0 ||
+\t\t    mmio_read32(binding->native_base + NI2C_ISR, &isr) != 0 ||
+\t\t    (isr & (1U << 5)) == 0U) return -1;
+\t\treturn mmio_write32(binding->native_base + NI2C_ICR, 1U << 5);
+\t}}
+\tif (i2c_connection_open(index, &connection) != 0) return -1;
+\tif (athrill_i2c_start(connection.protocol, binding->address, FALSE,
+\t    connection.time++) != 1 || i2c_write_byte(&connection, address) != 0 ||
+\t    i2c_write_byte(&connection, value) != 0 ||
+\t    athrill_i2c_stop(connection.protocol, connection.time++) != 0) {{
+\t\ti2c_connection_close(&connection);
+\t\treturn -1;
+\t}}
+\ti2c_connection_close(&connection);
+\treturn 0;
 }}
 
 static sint32 i2c_command_read(uint32 index, uint8 command, uint8 *data, uint32 count)
