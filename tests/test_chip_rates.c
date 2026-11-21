@@ -92,6 +92,12 @@ int main(void)
 	}
 
 	/* periods: 2 kHz at a 400 MHz time base is 200000 clocks and 500000 ns; 15.625 Hz is 64 ms */
+	/* [ADV-CHIP-ADIS16470-005.T1] ADIS16470 DEC_RATE divides its 2 kHz clock. */
+	TEST_CHECK(chip_adis16470_rate_mhz(0U) == 2000000U);
+	TEST_CHECK(chip_adis16470_rate_mhz(1U) == 1000000U);
+	TEST_CHECK(chip_adis16470_rate_mhz(3U) == 500000U);
+	TEST_CHECK(chip_adis16470_rate_mhz(1999U) == 1000U);
+	TEST_CHECK(chip_adis16470_rate_mhz(0xffffU) == 976U);
 	TEST_CHECK(chip_rate_clocks(400000000U, 2000000U) == 200000U);
 	TEST_CHECK(chip_rate_period_ns(2000000U) == 500000U);
 	TEST_CHECK(chip_rate_period_ns(15625U) == 64000000U);

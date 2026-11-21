@@ -81,6 +81,85 @@ F-RAM and u-blox M8 are also already modeled. Missing internal chips remain
 visible but disabled in `pixhawk6x.dts`, so probes fail normally instead of a
 different chip being impersonated.
 
+## Revision 6
+
+Issue #152 selected PX4 sensor-set revision 6, reported by PX4 as `V6X006`.
+The source below is PX4-Autopilot tag `v1.17.0`; the runtime comparison is the
+reference log `75ac4a47-a73a-44ea-8016-24d79a164147.ulg`, whose software hash
+is from that tag and whose `ver_hw` / subtype are `PX4_FMU_V6X` / `V6X006`.
+
+PX4 drives PG0 high, reads revision input PH4 as ADC3 channel 15, then drives
+PG0 low and reads it again. The high reading must exceed 97.5% of full scale
+to recognize the ladder. A low reading from 2138 through 2519 counts maps to
+ordinal 6 (the narrower nominal tolerance window in the board table is
+2161..2476). PH3 / ADC3 channel 14 selects the base-board version by the same
+method. The sensor-set ordinal selects the `V6X_6` SPI table and the `V6X006`
+subtype.
+
+`rc.board_sensors`, the revision-six SPI table and the individual drivers
+start the following devices. “Chip ODR” is the rate programmed in the part;
+FIFO batching explains why the two TDK devices publish more slowly.
+
+| Device | PX4 bus, address / CS and pins | PX4 configuration |
+| --- | --- | --- |
+| ICM-45686, rotation 10 | SPI1 CS0: CS PI9, DRDY PF2, bus reset PI11 | gyro and accel 6.4 kHz; batches about 8 samples and publishes about 800 Hz |
+| IIM-42652, rotation 6 | SPI2 CS0: CS PH5, DRDY PA10, bus reset PF4 | gyro and accel 8 kHz; batches 10 samples and publishes about 800 Hz |
+| ADIS16470, rotation 0 | SPI3 CS0: CS PI4, DRDY PI7, bus reset PE7 | fixed/default 2 kHz, one 176-bit burst per data-ready sample; PX4 clears MSC_CTRL bit 0 for falling-edge DRDY |
+| BMM150, rotation 0 | internal I2C4 address `0x10`; SCL PF14, SDA PF15 | 20 Hz |
+| ICP201xx | internal I2C4 address `0x64`; SCL PF14, SDA PF15 | mode 2, 40 Hz sensor ODR; the driver drains its FIFO on a 30 Hz schedule when `SENS_INT_BARO_EN=1` |
+| IST8310, rotation 10 | external GPS1 I2C1 address `0x0e`; SCL PB8, SDA PB9 | single-measurement loop every 20 ms (50 Hz), with 16 internal averages |
+| BMP388 | external I2C2 address `0x76` in the reference log; SCL PF1, SDA PF0, DRDY provision PG5 | PX4 writes the 50 Hz ODR code but uses forced mode, pressure x16 / temperature x2, with a 43.3 ms measurement interval (about 23.1 Hz); probed on external buses for every revision except V6X001 |
+
+The log's nonzero sensor device IDs decode with the PX4 `drv_sensor.h`
+layout as follows. SPI “address” is the chip-select index; the two UAVCAN
+IDs are included because they are sensor device IDs in the log even though
+they are not FMUv6X board chips.
+
+| ID (hex / decimal) | Device type | Bus |
+| --- | --- | --- |
+| `0x0058001a` / 5767194 | ADIS16470 (`0x58`), accel/gyro instance 0 | SPI3, address 0 |
+| `0x002b0012` / 2818066 | IIM-42652 (`0x2b`), accel/gyro instance 1 | SPI2, address 0 |
+| `0x0034000a` / 3407882 | ICM-45686 (`0x34`), accel/gyro instance 2 | SPI1, address 0 |
+| `0x00431021` / 4395041 | BMM150 (`0x43`) | I2C4, address `0x10` |
+| `0x00b86421` / 12084257 | ICP201xx (`0xb8`) | I2C4, address `0x64` |
+| `0x00677611` / 6780433 | BMP388 (`0x67`) | I2C2, address `0x76` |
+| `0x00847d03` / 8682755 | UAVCAN optical flow (`0x84`) | UAVCAN bus 0, node `0x7d` |
+| `0x00897d03` / 9010435 | UAVCAN distance sensor (`0x89`) | UAVCAN bus 0, node `0x7d` |
+
+Zero device IDs in estimator aid/status topics mean “no device”; they do not
+describe another sensor. `vehicle_imu_status` reports these rates in Hz
+(min / median / mean / max over the log):
+
+| IMU | gyro_rate_hz | accel_rate_hz |
+| --- | --- | --- |
+| ADIS16470 instance 0 | 2011.168823 / 2011.506470 / 2011.512695 / 2011.624634 | 2011.030884 / 2011.506714 / 2011.516113 / 2011.856567 |
+| IIM-42652 instance 1 | 810.667664 / 810.676636 / 810.682556 / 810.702881 | the same values |
+| ICM-45686 instance 2 | 799.974121 / 799.999939 / 799.999451 / 800.001343 | the same values |
+
+The logged `sensor_gyro_fifo` is the IIM-42652: every message contains 10
+samples at `dt=119.466675 us`, an implied FIFO sample rate of 8370.535 Hz.
+The ADIS is nevertheless the primary instance; its PX4 driver publishes one
+direct gyro/accel sample per burst and therefore does not publish a gyro FIFO
+topic. The ICM-45686 raw rate in the log is about 6402.32 Hz, consistent with
+its configured 6.4 kHz rate.
+
+Before this stage the repository modeled the revision-0 ICM-42688-P and the
+external IST8310, but none of revision 6's three internal IMUs, its BMM150 or
+ICP201xx. This stage adds only ADIS16470. IIM-42652, ICM-45686, BMM150,
+ICP201xx and the log's external BMP388 remain missing. ADIS supplies a primary
+accel and gyro, but a normal EKF2 hover also needs pressure altitude and a
+heading source: ICP201xx and BMM150 are therefore the missing internal chips
+needed for a self-contained revision-6 arm/hover path (the existing external
+IST8310 can provide heading when that GPS puck is present, and BMP388 is an
+external pressure alternative).
+
+The remaining implementation stages follow the issue decision: IIM-42652,
+then ICM-45686, then ICP201xx and BMM150, optionally external BMP388, and
+finally revision-6 DTBs, ADC/boot selection, hover and same-chip real-log
+comparison. If the shortest path to initial arming is preferred, the barometer
+and magnetometer work can be brought ahead of the two redundant IMUs without
+changing the required final set.
+
 ## Bus and pin allocation
 
 | Function | Bus / address | Pins from PX4 v1.17.0 |

@@ -109,6 +109,13 @@ uint64 chip_icm20689_accel_rate_mhz(uint8 accel_config2, uint8 smplrt_div)
 	return 1000000U / (1U + (uint64)smplrt_div);
 }
 
+/* [ADV-CHIP-ADIS16470-005] The internal 2 kHz clock is divided by DEC_RATE + 1. */
+uint64 chip_adis16470_rate_mhz(uint16 dec_rate)
+{
+	uint64 divider = ((uint64)dec_rate & 0x7ffU) + 1U;
+	return 2000000U / divider;
+}
+
 uint64 chip_rate_clocks(uint64 frequency_hz, uint64 rate_mhz)
 {
 	return rate_mhz == 0U ? 0U : (frequency_hz * 1000U) / rate_mhz;

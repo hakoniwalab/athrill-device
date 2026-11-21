@@ -15,6 +15,7 @@ add_library(athrill_device STATIC
   src/protocol_spi.c
   src/protocol_uart.c
   src/athrill_device.c
+  src/models/adis16470.c
   src/models/bmi055.c
   src/models/chip_rates.c
   src/models/fm25v02.c
@@ -115,8 +116,17 @@ set_target_properties(athrill_hakoniwa_sensor PROPERTIES
 
 if(BUILD_TESTING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  set(TEST_DTB_DIR "${CMAKE_CURRENT_BINARY_DIR}/tests/dtb")
+  execute_process(
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/make_test_dtbs.py"
+            "${TEST_DTB_DIR}"
+    RESULT_VARIABLE TEST_DTB_RESULT)
+  if(NOT TEST_DTB_RESULT EQUAL 0)
+    message(FATAL_ERROR "test DTB generation failed")
+  endif()
   file(GLOB_RECURSE TRACE_BOARD_DTBS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/boards/*.dtb")
+  list(APPEND TRACE_BOARD_DTBS "${TEST_DTB_DIR}/adis16470.dtb")
   set(TRACE_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/traceability")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/spi.yaml"
@@ -129,6 +139,7 @@ if(BUILD_TESTING)
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/gpio.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/chips.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/make_test_dtbs.py"
     # The tests are generated at configure time: a changed board DTB must
     # re-run it (the glob above only sees DTBs added or removed, #59).
     ${TRACE_BOARD_DTBS})
@@ -151,7 +162,6 @@ if(BUILD_TESTING)
   endif()
   include("${TRACE_GENERATED_DIR}/trace-tests.cmake")
 
-  set(TEST_DTB_DIR "${CMAKE_CURRENT_BINARY_DIR}/tests/dtb")
   add_custom_target(generate-test-dtbs
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/make_test_dtbs.py"
             "${TEST_DTB_DIR}"
@@ -165,6 +175,7 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/magnetometer.dtb"
       "${TEST_DTB_DIR}/gps.dtb"
       "${TEST_DTB_DIR}/imu.dtb"
+      "${TEST_DTB_DIR}/adis16470.dtb"
       "${TEST_DTB_DIR}/gpio.dtb"
       "${TEST_DTB_DIR}/exti.dtb"
       "${TEST_DTB_DIR}/timer-pwm.dtb"
@@ -358,6 +369,21 @@ if(BUILD_TESTING)
   target_include_directories(test_chip_rates PRIVATE src/models)
   target_link_libraries(test_chip_rates PRIVATE athrill_device)
   add_test(NAME chip-rates COMMAND test_chip_rates)
+  add_test(NAME ADV-CHIP-ADIS16470-005.T1 COMMAND test_chip_rates)
+  add_executable(test_adis16470 tests/test_adis16470.c)
+  target_compile_definitions(test_adis16470 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_adis16470 PRIVATE src/models tests)
+  target_link_libraries(test_adis16470 PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-ADIS16470-002.T1
+    COMMAND test_adis16470 protocol)
+  add_test(NAME ADV-CHIP-ADIS16470-003.T1
+    COMMAND test_adis16470 reset)
+  add_test(NAME ADV-CHIP-ADIS16470-004.T1
+    COMMAND test_adis16470 burst)
+  add_test(NAME ADV-CHIP-ADIS16470-005.T2
+    COMMAND test_adis16470 timing)
+  add_test(NAME ADV-CHIP-ADIS16470-006.T1
+    COMMAND test_adis16470 burst)
   add_executable(test_imu_fifo_history tests/test_imu_fifo_history.c)
   target_compile_definitions(test_imu_fifo_history PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_imu_fifo_history PRIVATE src/models)

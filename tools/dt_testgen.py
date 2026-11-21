@@ -448,8 +448,10 @@ def negative_dtb(fdt: Fdt, output: Path) -> Node:
 
 
 def is_spi_controller(node: Node) -> bool:
-    return enabled(node) and any(
-        item.startswith("st,stm32") and "spi" in item for item in compatible(node)
+    return enabled(node) and (
+        "athrill,test-spi-controller" in compatible(node) or
+        any(item.startswith("st,stm32") and "spi" in item
+            for item in compatible(node))
     )
 
 
@@ -661,6 +663,7 @@ def find_gpio_chip_selects(fdt: Fdt, controllers: list[SpiController]) -> list[G
 
 
 CHIP_TESTS = {
+    "adi,adis16470": ("ADV-CHIP-ADIS16470-001", "spi-word-register", 0x72, 0x4056),
     "invensense,icm42688": ("ADV-CHIP-ICM42688-001", "spi-register", 0x75, 0x47),
     "invensense,icm20689": ("ADV-CHIP-ICM20689-001", "spi-register", 0x75, 0x98),
     "bosch,bma280": ("ADV-CHIP-BMI055A-001", "spi-register", 0x00, 0xFA),
@@ -1327,7 +1330,16 @@ def render_case(case: dict[str, object]) -> str:
     elif case["kind"] == "chip":
         chip = case["chip"]
         assert isinstance(chip, ChipCase)
-        lines.append("\tuint8 value;")
+        if chip.operation == "spi-word-register":
+            lines.extend([
+                "\tSpiConnection word_connection;",
+                "\tuint8 discarded;",
+                "\tuint8 high;",
+                "\tuint8 low;",
+                "\tuint16 word;",
+            ])
+        else:
+            lines.append("\tuint8 value;")
         if chip.bus == "spi":
             lines.extend([
                 f"\tindex = find_binding({c_string(chip.controller_path)}, {chip.selector}U);",
@@ -1338,7 +1350,31 @@ def render_case(case: dict[str, object]) -> str:
                 f"\tindex = find_i2c_binding({c_string(chip.controller_path)}, {chip.selector}U);",
                 "\tCHECK(index < target.i2c_binding_count);",
             ])
-        if chip.operation.startswith("spi-register"):
+        if chip.operation == "spi-word-register":
+            assert chip.register is not None and chip.expected is not None
+            lines.extend([
+                "\tCHECK(spi_connection_open(index, &word_connection) == 0);",
+                "\tCHECK(athrill_spi_select(word_connection.protocol,",
+                "\t    word_connection.binding->chip_select, word_connection.time++) == 1);",
+                f"\tCHECK(athrill_spi_exchange(word_connection.protocol, {chip.register}U,",
+                "\t    &discarded, word_connection.time++) == 0);",
+                "\tCHECK(athrill_spi_exchange(word_connection.protocol, 0U,",
+                "\t    &discarded, word_connection.time++) == 0);",
+                "\tCHECK(athrill_spi_deselect(word_connection.protocol,",
+                "\t    word_connection.time++) == 0);",
+                "\tCHECK(athrill_spi_select(word_connection.protocol,",
+                "\t    word_connection.binding->chip_select, word_connection.time++) == 1);",
+                "\tCHECK(athrill_spi_exchange(word_connection.protocol, 0U, &high,",
+                "\t    word_connection.time++) == 0);",
+                "\tCHECK(athrill_spi_exchange(word_connection.protocol, 0U, &low,",
+                "\t    word_connection.time++) == 0);",
+                "\tCHECK(athrill_spi_deselect(word_connection.protocol,",
+                "\t    word_connection.time++) == 0);",
+                "\tspi_connection_close(&word_connection);",
+                "\tword = (uint16)(((uint16)high << 8) | low);",
+                f"\tCHECK(word == {chip.expected}U);",
+            ])
+        elif chip.operation.startswith("spi-register"):
             assert chip.register is not None and chip.expected is not None
             dummy = 1 if chip.operation == "spi-register-dummy" else 0
             lines.extend([
@@ -2609,20 +2645,29 @@ def main() -> int:
         gpio_interrupt_consumers = find_gpio_interrupt_consumers(fdt)
         gpio_chip_selects = find_gpio_chip_selects(fdt, spi_controllers)
         chip_cases = find_chip_cases(spi_controllers, i2c_controllers)
-        relative = dtb.as_posix().split("/boards/", 1)[-1]
+        path = dtb.as_posix()
+        if "/boards/" in path:
+            relative = path.split("/boards/", 1)[1]
+        elif "/tests/dtb/" in path:
+            relative = "test/" + path.split("/tests/dtb/", 1)[1]
+        else:
+            relative = dtb.name
         board = relative.replace("/", "__").removesuffix(".dtb")
         negative_path = args.out / f"{c_identifier(board)}__unknown-compatible.dtb"
         negative_node = negative_dtb(fdt, negative_path)
-        cases = (generated_spi_cases(board, spi_controllers) +
-                 generated_i2c_cases(board, i2c_controllers) +
-                 generated_uart_cases(board, uart_controllers) +
-                 generated_dt_cases(board, fdt, negative_path, negative_node) +
-                 generated_dma_cases(board, dma_controllers) +
-                 generated_sd_cases(board, sd_cards) +
-                 generated_pwm_cases(board, pwm_maps) +
-                 generated_gpio_cases(board, gpio_interrupt_consumers,
-                                      gpio_chip_selects) +
-                 generated_chip_cases(board, chip_cases))
+        if "athrill,test-chip-only" in fdt.root.properties:
+            cases = generated_chip_cases(board, chip_cases)
+        else:
+            cases = (generated_spi_cases(board, spi_controllers) +
+                     generated_i2c_cases(board, i2c_controllers) +
+                     generated_uart_cases(board, uart_controllers) +
+                     generated_dt_cases(board, fdt, negative_path, negative_node) +
+                     generated_dma_cases(board, dma_controllers) +
+                     generated_sd_cases(board, sd_cards) +
+                     generated_pwm_cases(board, pwm_maps) +
+                     generated_gpio_cases(board, gpio_interrupt_consumers,
+                                          gpio_chip_selects) +
+                     generated_chip_cases(board, chip_cases))
         dt_instances = [node for node in fdt.nodes if is_model_instance(node)]
         dt_mmio_nodes = [node for node in fdt.nodes
                          if enabled(node) and MMIO_MODEL_COMPATIBLES.intersection(compatible(node))

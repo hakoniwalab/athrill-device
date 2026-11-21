@@ -475,6 +475,7 @@ static const char *const test_watchdog_compatibles[] = { "athrill,test-wdog" };
 static const char *const stm32_iwdg_compatibles[] = { "st,stm32-watchdog" };
 static const char *const shakti_uart_compatibles[] = { "openhwgroup,shakti-uart-v1" };
 static const char *const icm20689_compatibles[] = { "invensense,icm20689" };
+static const char *const adis16470_compatibles[] = { "adi,adis16470" };
 static const char *const fm25v02_compatibles[] = { "infineon,fm25xxx", "ramtron,fm25v02a" };
 static const char *const ist8310_compatibles[] = { "isentek,ist8310" };
 static const char *const ms5611_compatibles[] = { "meas,ms5611" };
@@ -517,6 +518,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ test_watchdog_compatibles, 1U, &athrill_device_test_watchdog_model },
 	{ stm32_iwdg_compatibles, 1U, &athrill_device_stm32_iwdg_model },
 	{ shakti_uart_compatibles, 1U, &athrill_device_shakti_uart_model },
+	{ adis16470_compatibles, 1U, &athrill_device_adis16470_model },
 	{ icm20689_compatibles, 1U, &athrill_device_icm20689_model },
 	{ fm25v02_compatibles, 2U, &athrill_device_fm25v02_model },
 	{ ist8310_compatibles, 1U, &athrill_device_ist8310_model },
@@ -1003,7 +1005,8 @@ static int sensor_host_configured(const AthrillDeviceBuildOptions *options)
 
 static int sensor_chip_model(const AthrillDeviceModelOps *model)
 {
-	return model == &athrill_device_bmi055_model ||
+	return model == &athrill_device_adis16470_model ||
+		model == &athrill_device_bmi055_model ||
 		model == &athrill_device_icm42688p_model ||
 		model == &athrill_device_icm20689_model ||
 		model == &athrill_device_ist8310_model ||

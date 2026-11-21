@@ -186,3 +186,78 @@
   - id: ADV-CHIP-ICM20689-003.T1
     stimulus: Select gyroscope DLPF_CFG 3 (41 Hz) and accelerometer A_DLPF_CFG 3 (44.8 Hz) at 1 kHz; for each, apply constant input and four bin-centred sine frequencies, plus athrill,ideal-filters.
     expect: DC gain is one; sine gains are within 0.035 of the prewarped second-order response; each register and DT bypass returns unfiltered values.
+- id: ADV-CHIP-ADIS16470-001
+  statement: PROD_ID (0x72) reads 0x4056 through the ADIS one-word-pipelined 16-bit SPI register protocol.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Table 9 and Table 11 (PROD_ID)
+  scope: PX4 v1.17.0 adis16470 driver probe.
+  verification: generated
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-001.T1
+    stimulus: Send the 16-bit read command for 0x72, then clock one further 16-bit word at the test node's chip select.
+    expect: The second word is 0x4056.
+- id: ADV-CHIP-ADIS16470-002
+  statement: Normal SPI accesses are MSB-first 16-bit words; a read result is returned in the next word, and writes update the addressed low or high byte. Ending chip select after one byte sets sticky DIAG_STAT SPI communication error bit 3; reading DIAG_STAT clears it.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Figure 29, Figure 30, Table 9, and DIAG_STAT
+  scope: Register traffic used by PX4 v1.17.0; the controller supplies SPI mode 3, at most 2 MHz and the normal-access 16 us stall and 24 us read-rate timing.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-002.T1
+    stimulus: Read MSC_CTRL through the pipeline, write its low and high bytes, then end a transaction after one byte and read DIAG_STAT twice.
+    expect: The initial default and written 16-bit values are returned; bit 3 is set on the first DIAG_STAT read and clear on the second.
+- id: ADV-CHIP-ADIS16470-003
+  statement: Software reset through GLOB_CMD bit 7 restores PROD_ID 0x4056, MSC_CTRL 0x00C1, FILT_CTRL 0, DEC_RATE 0 and clears diagnostics; GLOB_CMD bit 2 runs the modeled successful self-test without setting DIAG_STAT sensor-failure bit 5.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Table 9, GLOB_CMD, MSC_CTRL, FILT_CTRL and DEC_RATE
+  scope: Reset and self-test sequence used by PX4 v1.17.0.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-003.T1
+    stimulus: Change MSC_CTRL, issue software reset, read the default registers, issue self-test and read DIAG_STAT.
+    expect: Reset defaults are restored and the successful self-test leaves bit 5 clear.
+- id: ADV-CHIP-ADIS16470-004
+  statement: The 0x6800 burst command returns DIAG_STAT, three 16-bit gyro outputs, three 16-bit acceleration outputs, temperature, DATA_CNTR and the unsigned byte sum of those nine response words, all from one coherent output sample. The modeled PX4 path is the 176-bit burst; PX4 v1.17.0 does not request 32-bit output data.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Burst Read Function and Figure 31
+  scope: PX4 v1.17.0 22-byte burst transfer at at most 1 MHz.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-004.T1
+    stimulus: Clock a complete burst with known acceleration, angular velocity and temperature.
+    expect: Word order, counter and checksum match the data sheet and all values belong to the same sample.
+- id: ADV-CHIP-ADIS16470-005
+  statement: In internal-clock mode the output data rate is 2000 / (DEC_RATE + 1) samples/s; PX4 leaves DEC_RATE zero, so gyro and acceleration periods are reported as 500000 ns and data ready pulses every 500 us with polarity from MSC_CTRL bit 0.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, DEC_RATE, MSC_CTRL and Data Ready Indicator
+  scope: PX4 v1.17.0 internal-clock configuration and the sensor-host period contract.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-005.T1
+    stimulus: Evaluate representative DEC_RATE values including 0, 1, 3, 1999 and the masked maximum.
+    expect: Rates follow 2000 / (DEC_RATE + 1), including 2 kHz at reset.
+  - id: ADV-CHIP-ADIS16470-005.T2
+    stimulus: Connect at the reset configuration, tick across one output boundary, then write DEC_RATE 1.
+    expect: Gyro and acceleration report 500000 ns then 1000000 ns, and the default active-high data-ready pulse occurs at the 500 us boundary.
+- id: ADV-CHIP-ADIS16470-006
+  statement: The 16-bit burst outputs use 0.1 degree/s/LSB gyroscope, 1.25 mg/LSB acceleration and 0.1 degree C/LSB temperature scales. FILT_CTRL 0 and DEC_RATE 0, the values left by PX4 v1.17.0, are a bypass at 2 kHz; a lazy burst samples the value-source history at the latest ADIS output time not after the read.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Table 1, Table 9, FILT_CTRL and DEC_RATE
+  scope: The 16-bit burst path PX4 uses; the data sheet's 32-bit gyro scale is 0.1 / 65536 degree/s/LSB but that path is outside this PX4-scoped model.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-006.T1
+    stimulus: Read at target clock 4100 with a 500 us output boundary at clock 4000 and known 1 g, 0.1 degree/s and 25 degree C source values.
+    expect: The history request is for clock 4000 and burst values are 800, 1 and 250 LSB with no filtering delay.
