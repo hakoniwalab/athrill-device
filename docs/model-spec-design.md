@@ -1,5 +1,7 @@
 # Device behaviour model specifications
 
+Which facts belong to the Devicetree, to the SVD, and to manuals and data sheets: [sources-of-truth.md](sources-of-truth.md).
+
 athrill-device models must not depend on a board, and as far as possible not on
 one vendor IP version. This document defines how the behaviour of a device
 class is written once, in abstract terms, and bound to the registers of each IP
