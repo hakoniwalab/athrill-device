@@ -1,0 +1,28 @@
+/* SPDX-License-Identifier: MIT */
+
+#include "pixhawk6x-hakoniwa-dshot.dts"
+
+&hakoniwa_sensor {
+	sensor_icm42688p: icm42688p {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_magnetometer: magnetometer {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_gps1: gps1 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+};
+
+&icm42688p {
+	value-source = <&sensor_icm42688p>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&external_magnetometer {
+	value-source = <&sensor_magnetometer>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&gps1 {
+	value-source = <&sensor_gps1>;
+	/delete-property/ athrill,tick-before-value-source;
+};

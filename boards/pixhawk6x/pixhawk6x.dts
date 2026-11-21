@@ -1,0 +1,309 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Athrill Holybro Pixhawk 6X / FMUv6X sensor-set revision 0.
+ *
+ * PX4-Autopilot v1.17.0 wiring sources:
+ *   boards/px4/fmu-v6x/src/{spi.cpp,i2c.cpp,timer_config.cpp,board_config.h}
+ *   boards/px4/fmu-v6x/nuttx-config/{nsh/defconfig,include/board_dma_map.h}
+ *   boards/px4/fmu-v6x/init/rc.board_sensors
+ */
+
+/dts-v1/;
+
+#include "../pixhawk6c/stm32h743-athrill.dtsi"
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/dma/stm32_dma.h>
+
+/ {
+	model = "Holybro Pixhawk 6X (FMUv6X revision 0) for Athrill";
+	compatible = "holybro,pixhawk6x", "st,stm32h753", "st,stm32h743";
+
+	aliases {
+		gnss0 = &gps1;
+	};
+
+	bench_sensor: bench-sensor-source {
+		compatible = "athrill,bench-sensor-source";
+	};
+
+	hakoniwa_sensor: sensor-device {
+		compatible = "hakoniwa,sensor-device";
+		status = "disabled";
+	};
+
+	/* FMU outputs 1..8 in firmware output order. */
+	pwm_actuators: pwm-actuator-map {
+		compatible = "athrill,pwm-actuator-map";
+		pwms = <&pwm5 4 20000000 0>,
+		       <&pwm5 3 20000000 0>,
+		       <&pwm5 2 20000000 0>,
+		       <&pwm5 1 20000000 0>,
+		       <&pwm4 2 20000000 0>,
+		       <&pwm4 3 20000000 0>,
+		       <&pwm12 1 20000000 0>,
+		       <&pwm12 2 20000000 0>;
+		pwm-names = "FMU_CH1", "FMU_CH2", "FMU_CH3", "FMU_CH4",
+			    "FMU_CH5", "FMU_CH6", "FMU_CH7", "FMU_CH8";
+		athrill,output-pins = "PI0", "PH12", "PH11", "PH10",
+				      "PD13", "PD14", "PH6", "PH9";
+	};
+
+	soc {
+		syscfg: system-config@58000400 {
+			compatible = "st,stm32h7-syscfg";
+			reg = <0x58000400 0x400>;
+		};
+	};
+};
+
+/* H753 and H743 share the memory and peripheral map used by PX4. */
+&dma1 { status = "okay"; };
+&dma2 { status = "okay"; };
+&dmamux1 { status = "okay"; };
+&bdma1 { status = "okay"; };
+&dmamux2 { status = "okay"; };
+&adc12_common { status = "okay"; };
+&adc1 { status = "okay"; };
+&adc3_common { status = "okay"; };
+&adc3 { status = "okay"; };
+&rng { status = "okay"; };
+&rtc { status = "okay"; };
+&iwdg { status = "okay"; };
+&usbotg_fs { status = "okay"; };
+
+&fdcan1 {
+	status = "okay";
+	reg = <0x4000a000 0x400>, <0x4000ac00 0x2800>;
+};
+&fdcan2 {
+	status = "okay";
+	reg = <0x4000a400 0x400>;
+};
+
+/* NuttX enables Ethernet. Keep its registers and make reset/MDIO complete. */
+&mac {
+	compatible = "athrill,register-block", "st,stm32h7-ethernet";
+	status = "okay";
+	athrill,read-clear = <0x0200 0x00000001>, <0x1000 0x00000001>;
+};
+&mdio { status = "disabled"; };
+&ptp_clock { status = "disabled"; };
+
+/* Revision 0 SPI1: ICM-20649, not modeled in stage 1. */
+&spi1 {
+	status = "okay";
+	cs-gpios = <&gpioi 9 GPIO_ACTIVE_LOW>;
+	dmas = <&dmamux1 0 38 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 37 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+
+	icm20649: imu@0 {
+		compatible = "invensense,icm20649";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+		int-gpios = <&gpiof 2 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "roll-180-yaw-270";
+		status = "disabled";
+	};
+};
+
+/* Revision 0 SPI2: the modeled ICM-42688-P. */
+&spi2 {
+	status = "okay";
+	cs-gpios = <&gpioh 5 GPIO_ACTIVE_LOW>;
+	dmas = <&dmamux1 0 40 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 39 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+
+	icm42688p: imu@0 {
+		compatible = "invensense,icm42688", "invensense,icm4268x";
+		reg = <0>;
+		spi-max-frequency = <24000000>;
+		int-gpios = <&gpioa 10 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "yaw-270";
+	};
+};
+
+/* Revision 0 SPI3: BMI088 gyro and accelerometer, stage-2 models. */
+&spi3 {
+	status = "okay";
+	cs-gpios = <&gpioi 8 GPIO_ACTIVE_LOW>,
+		   <&gpioi 4 GPIO_ACTIVE_LOW>;
+	dmas = <&dmamux1 0 62 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 61 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+
+	bmi088_gyro: gyroscope@0 {
+		compatible = "bosch,bmi088-gyro";
+		reg = <0>;
+		spi-max-frequency = <10000000>;
+		int-gpios = <&gpioi 7 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "yaw-180";
+		status = "disabled";
+	};
+
+	bmi088_accel: accelerometer@1 {
+		compatible = "bosch,bmi088-accel";
+		reg = <1>;
+		spi-max-frequency = <10000000>;
+		int-gpios = <&gpioi 6 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "yaw-180";
+		status = "disabled";
+	};
+};
+
+/* Parameter F-RAM on SPI5, CS PG7. */
+&spi5 {
+	status = "okay";
+	cs-gpios = <&gpiog 7 GPIO_ACTIVE_LOW>;
+
+	fram: fram@0 {
+		compatible = "infineon,fm25xxx";
+		reg = <0>;
+		spi-max-frequency = <20000000>;
+		size = <32768>;
+	};
+};
+
+/* External SPI connector: two chip selects and DRDY pins. */
+&spi6 {
+	status = "okay";
+	cs-gpios = <&gpioi 10 GPIO_ACTIVE_LOW>,
+		   <&gpioa 15 GPIO_ACTIVE_LOW>;
+	dmas = <&dmamux2 0 12 STM32_DMA_PERIPH_TX>,
+	       <&dmamux2 0 11 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
+
+/* External I2C1 simulates the standard GPS/compass puck. */
+&i2c1 {
+	status = "okay";
+
+	external_magnetometer: magnetometer@e {
+		compatible = "isentek,ist8310";
+		reg = <0x0e>;
+		athrill,mount-rotation = "roll-180-yaw-90";
+	};
+};
+&i2c2 { status = "okay"; };
+
+/* External I2C3 also carries the base-board EEPROM at 0x51. */
+&i2c3 {
+	status = "okay";
+
+	base_eeprom: eeprom@51 {
+		compatible = "microchip,24lc64";
+		reg = <0x51>;
+		status = "disabled";
+	};
+};
+
+/* Revision 0 internal I2C4: EEPROM, BMP388 and BMM150 (stage 2). */
+&i2c4 {
+	status = "okay";
+
+	imu_eeprom: eeprom@50 {
+		compatible = "microchip,24lc64";
+		reg = <0x50>;
+		status = "disabled";
+	};
+
+	barometer: pressure@77 {
+		compatible = "bosch,bmp388";
+		reg = <0x77>;
+		status = "disabled";
+	};
+
+	internal_magnetometer: magnetometer@10 {
+		compatible = "bosch,bmm150";
+		reg = <0x10>;
+		status = "disabled";
+	};
+};
+
+&usart1 {
+	status = "okay";
+	current-speed = <57600>;
+
+	gps1: gnss {
+		compatible = "u-blox,m8";
+		initial-baudrate = <9600>;
+		fix-rate = <200>;
+	};
+};
+&usart2 { status = "okay"; };
+&usart3 {
+	status = "okay";
+	dmas = <&dmamux1 0 46 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 45 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
+&uart4 { status = "okay"; };
+&uart5 {
+	status = "okay";
+	dmas = <&dmamux1 0 66 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 65 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
+&usart6 {
+	status = "okay";
+	dmas = <&dmamux1 0 72 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 71 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
+&uart7 {
+	status = "okay";
+	dmas = <&dmamux1 0 80 STM32_DMA_PERIPH_TX>,
+	       <&dmamux1 0 79 STM32_DMA_PERIPH_RX>;
+	dma-names = "tx", "rx";
+};
+&uart8 { status = "okay"; };
+
+&sdmmc2 {
+	status = "okay";
+	bus-width = <4>;
+	athrill,d0-gpios = <&gpiob 14 GPIO_ACTIVE_HIGH>;
+
+	sdcard: sd-card {
+		compatible = "zephyr,sdmmc-disk";
+		disk-name = "SD";
+		status = "okay";
+	};
+};
+
+/* TIM5/TIM4 update requests carry PX4 DShot bursts. */
+&timers5 {
+	status = "okay";
+	dmas = <&dmamux1 0 50 (STM32_DMA_PERIPH_TX | STM32_DMA_MEM_32BITS |
+			       STM32_DMA_PERIPH_32BITS | STM32_DMA_PRIORITY_HIGH)>;
+	dma-names = "up";
+	pwm5: pwm { status = "okay"; };
+};
+&timers4 {
+	status = "okay";
+	dmas = <&dmamux1 0 32 (STM32_DMA_PERIPH_TX | STM32_DMA_MEM_32BITS |
+			       STM32_DMA_PERIPH_32BITS | STM32_DMA_PRIORITY_HIGH)>;
+	dma-names = "up";
+	pwm4: pwm { status = "okay"; };
+};
+&timers12 {
+	status = "okay";
+	pwm12: pwm { status = "okay"; };
+};
+&timers1 { status = "okay"; };
+&timers2 { status = "okay"; };
+&timers8 { status = "okay"; };
+&timers14 { status = "okay"; };
+&timers15 { status = "okay"; };
+&timers16 { status = "okay"; };
+&timers17 { status = "okay"; };
+
+&pwm_actuators { value-source = <&bench_sensor>; };
+&icm42688p { value-source = <&bench_sensor>; };
+&external_magnetometer { value-source = <&bench_sensor>; };
+&gps1 { value-source = <&bench_sensor>; };
+
+/* ADC3 DR is forced low by stm32h7-athrill.dtsi. PX4 reads zero for both
+ * PH3 (version) and PH4 (revision), recognizes no resistor ladder, and
+ * selects V6X000: sensor-set revision 0 and base-board version 0. */

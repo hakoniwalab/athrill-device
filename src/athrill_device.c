@@ -424,7 +424,8 @@ static const AthrillDeviceModelOps test_peripheral_model = {
 
 
 static const char *const structural_compatibles[] = {
-	"holybro,pixhawk4", "holybro,pixhawk6c", "openhwgroup,erbium",
+	"holybro,pixhawk4", "holybro,pixhawk6c", "holybro,pixhawk6x",
+	"openhwgroup,erbium",
 	"simple-bus", "simple-mfd", "syscon", "fixed-clock",
 	"zephyr,memory-region", "zephyr,memory-attr", "mmio-sram",
 	"st,stm32f7-pinctrl", "st,stm32-pinctrl", "st,stm32-reset",
