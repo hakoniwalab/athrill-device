@@ -101,6 +101,7 @@ endif()
 # same model implementation with their respective link backends.
 add_library(athrill_hakoniwa_sensor MODULE
   board/common/src/hako_sensor_device_model.c
+  board/common/src/hako_sensor_history.c
   board/common/src/hako_sensor_registers_model.c
   board/common/src/hako_sensor_instance_model.c
   board/common/src/hako_sensor_device.c)
@@ -262,6 +263,13 @@ if(BUILD_TESTING)
   target_include_directories(test_hako_sensor_registers PRIVATE
     include board/common/src board/common/include tests)
   add_test(NAME hako-sensor-registers COMMAND test_hako_sensor_registers)
+  add_executable(test_hako_sensor_history tests/test_hako_sensor_history.c
+    board/common/src/hako_sensor_history.c)
+  target_compile_definitions(test_hako_sensor_history PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_hako_sensor_history PRIVATE
+    include board/common/src tests)
+  add_test(NAME hako-sensor-history COMMAND test_hako_sensor_history)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
@@ -316,6 +324,18 @@ if(BUILD_TESTING)
   target_include_directories(test_chip_rates PRIVATE src/models)
   target_link_libraries(test_chip_rates PRIVATE athrill_device)
   add_test(NAME chip-rates COMMAND test_chip_rates)
+  add_executable(test_imu_fifo_history tests/test_imu_fifo_history.c)
+  target_compile_definitions(test_imu_fifo_history PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_imu_fifo_history PRIVATE src/models)
+  target_link_libraries(test_imu_fifo_history PRIVATE athrill_device)
+  add_test(NAME imu-fifo-bmi055-accel
+    COMMAND test_imu_fifo_history bmi055-accel)
+  add_test(NAME imu-fifo-bmi055-gyro
+    COMMAND test_imu_fifo_history bmi055-gyro)
+  add_test(NAME imu-fifo-icm42688p
+    COMMAND test_imu_fifo_history icm42688p)
+  add_test(NAME imu-fifo-icm20689
+    COMMAND test_imu_fifo_history icm20689)
   add_executable(test_fm25v02 tests/test_fm25v02.c)
   target_compile_definitions(test_fm25v02 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_fm25v02 PRIVATE src/models)

@@ -105,7 +105,8 @@ static void to_chip_axes(const Bmi055 *chip, const float32 *frd,
 	output[2] = -frd[2];
 }
 
-static void raw_sample(const Bmi055 *chip, int16_t *raw)
+static void raw_from_sample(const Bmi055 *chip,
+	const AthrillDeviceSensorSample *sample, int16_t *raw)
 {
 	static const float32 acceleration_lsb_per_g[16] = {
 		0.0F, 0.0F, 0.0F, 1024.0F, 0.0F, 512.0F, 0.0F, 0.0F,
@@ -114,15 +115,11 @@ static void raw_sample(const Bmi055 *chip, int16_t *raw)
 	static const float32 gyro_lsb_per_dps[8] = {
 		16.384F, 32.768F, 65.536F, 0.0F, 131.072F, 262.144F, 0.0F, 0.0F
 	};
-	AthrillDeviceSensorSample sample = {0};
 	float32 value[3];
 	float32 scale;
 	uint32 i;
-	if (chip->source.ops != NULL) {
-		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
-	}
-	to_chip_axes(chip, chip->kind == BMI055_ACCEL ? sample.acceleration :
-		sample.angular_velocity, value);
+	to_chip_axes(chip, chip->kind == BMI055_ACCEL ? sample->acceleration :
+		sample->angular_velocity, value);
 	if (chip->kind == BMI055_ACCEL) {
 		scale = acceleration_lsb_per_g[chip->registers[REG_RANGE] & 0x0fU];
 		if (scale == 0.0F) {
@@ -142,6 +139,22 @@ static void raw_sample(const Bmi055 *chip, int16_t *raw)
 			raw[i] = saturate(value[i] * scale, -32768.0F, 32767.0F);
 		}
 	}
+}
+
+static void raw_sample(const Bmi055 *chip, int16_t *raw)
+{
+	AthrillDeviceSensorSample sample = {0};
+	if (chip->source.ops != NULL) {
+		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
+	}
+	raw_from_sample(chip, &sample, raw);
+}
+
+static void raw_sample_at(const Bmi055 *chip, uint64 time, int16_t *raw)
+{
+	AthrillDeviceSensorSample sample = {0};
+	(void)athrill_device_sensor_sample_at(&chip->source, time, &sample);
+	raw_from_sample(chip, &sample, raw);
 }
 
 static std_bool fifo_on(const Bmi055 *chip)
@@ -170,13 +183,18 @@ static void fifo_restart(Bmi055 *chip)
 static uint32 fifo_frames(const Bmi055 *chip)
 {
 	uint64 made;
+	uint64 read;
 	uint64 available;
 	if (!fifo_on(chip)) {
 		return 0U;
 	}
 	made = (time_now(chip) - chip->fifo_start) / chip->clocks_per_sample;
-	available = made > chip->fifo_read_frames ? made - chip->fifo_read_frames : 0U;
-	return available > fifo_capacity(chip) ? fifo_capacity(chip) : (uint32)available;
+	read = chip->fifo_read_frames;
+	if (made > fifo_capacity(chip) && read < made - fifo_capacity(chip)) {
+		read = made - fifo_capacity(chip);
+	}
+	available = made > read ? made - read : 0U;
+	return (uint32)available;
 }
 
 static uint8 fifo_status(const Bmi055 *chip)
@@ -189,11 +207,12 @@ static uint8 fifo_status(const Bmi055 *chip)
 	return overrun | (uint8)fifo_frames(chip);
 }
 
-static void make_record(Bmi055 *chip)
+/* [ADV-FIFO-001] [ADV-FIFO-003] [ADV-FIFO-004] frame at its own time. */
+static void make_record(Bmi055 *chip, uint64 time)
 {
 	int16_t raw[3];
 	uint32 i;
-	raw_sample(chip, raw);
+	raw_sample_at(chip, time, raw);
 	for (i = 0U; i < 3U; i++) {
 		uint16 value = chip->kind == BMI055_ACCEL ?
 			(uint16)((sint32)raw[i] * 16) : (uint16)raw[i];
@@ -210,7 +229,15 @@ static uint8 fifo_byte(Bmi055 *chip)
 	}
 	position = chip->registers[REG_FIFO_DATA] % 6U;
 	if (position == 0U) {
-		make_record(chip);
+		uint64 made = (time_now(chip) - chip->fifo_start) /
+			chip->clocks_per_sample;
+		uint64 capacity = fifo_capacity(chip);
+		/* [ADV-FIFO-002] discard the overwritten prefix before reading. */
+		if (made > capacity && chip->fifo_read_frames < made - capacity) {
+			chip->fifo_read_frames = made - capacity;
+		}
+		make_record(chip, chip->fifo_start +
+			(chip->fifo_read_frames + 1U) * chip->clocks_per_sample);
 	}
 	chip->registers[REG_FIFO_DATA] = (uint8)((position + 1U) % 6U);
 	if (position == 5U) {
@@ -293,8 +320,7 @@ static void apply_rate(Bmi055 *chip)
 		return;
 	}
 	if (fifo_on(chip)) {
-		uint64 made = (time_now(chip) - chip->fifo_start) / chip->clocks_per_sample;
-		uint64 available = made > chip->fifo_read_frames ? made - chip->fifo_read_frames : 0U;
+		uint64 available = fifo_frames(chip);
 		uint64 now = time_now(chip);
 		chip->fifo_start = now > available * clocks ? now - available * clocks : 0U;
 		chip->fifo_read_frames = 0U;

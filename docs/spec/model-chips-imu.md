@@ -48,6 +48,13 @@ Accelerometer and gyroscope chips on SPI as used by PX4 and ArduPilot (ICM-20689
 | ADV-IMU-B005 | fifo | With fifo_enable, each sample is appended to the FIFO in the datasheet's packet format; fifo_count counts what is stored; reading fifo_data returns packets in order; when full, new samples are dropped and fifo_overflow turns on (or the oldest are overwritten, as the datasheet states). |
 | ADV-IMU-B006 | base | Multi-byte register reads auto-increment the register address as the datasheet states, so a burst returns all axes of one sample (no tearing between axes). |
 | ADV-IMU-B007 | base | The SPI read protocol (read bit, dummy bytes where the datasheet requires them, e.g. none on BMI055) follows the datasheet. |
+| ADV-FIFO-001 | fifo | A FIFO frame uses the value-source sample latched at or before that frame's sample time, derived from fifo_start and the configured sample period. |
+| ADV-FIFO-002 | fifo | After FIFO overflow, the readable frames are the newest capacity frames and each uses its own sample time. |
+| ADV-FIFO-003 | fifo | If the value source has no time-resolved operation or no retained sample for a frame time, that frame uses the latest sample. |
+| ADV-FIFO-004 | fifo | With a constant value source, FIFO frames and direct data-register reads are bit-identical to the pre-ABI-1.24 behaviour. |
+| ADV-FIFO-005 | fifo | Sample history costs one fixed-size copy per latch and O(1) lookup for periodic latches, and chips do no FIFO sample work until a frame is read. |
+| ADV-FIFO-006 | fifo | Repeating a run with the same latches, times and register accesses returns the same FIFO frames. |
+| ADV-FIFO-007 | fifo | ABI 1.24 sensor_sample_at returns the newest sample latched at or before the requested target-clock time, or -1 if none is retained. |
 
 **Timing.** Samples are produced at output_rate in model time; the sensor source's sample at that time is used.
 

@@ -65,6 +65,13 @@ static sint32 sensor_sample(void *instance, AthrillDeviceSensorSample *sample)
 	return hako_sensor_device_instance_sample(((HakoSensorInstance *)instance)->index, sample);
 }
 
+static sint32 sensor_sample_at(void *instance, uint64 time,
+	AthrillDeviceSensorSample *sample)
+{
+	return hako_sensor_device_instance_sample_at(
+		((HakoSensorInstance *)instance)->index, time, sample);
+}
+
 static sint32 gps_sample(void *instance, AthrillDeviceGpsSample *sample)
 {
 	return hako_sensor_device_instance_gps_sample(((HakoSensorInstance *)instance)->index, sample);
@@ -110,7 +117,8 @@ static sint32 connect_model(void *instance, const AthrillDeviceConnectArgs *args
 
 static const AthrillDeviceValueProviderOps value_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
-	sizeof(AthrillDeviceValueProviderOps), sensor_sample, gps_sample, actuator_output
+	sizeof(AthrillDeviceValueProviderOps), sensor_sample, gps_sample,
+	actuator_output, sensor_sample_at
 };
 
 const AthrillDeviceModelOps hako_sensor_instance_model_ops = {

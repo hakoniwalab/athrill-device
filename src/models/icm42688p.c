@@ -115,9 +115,9 @@ static void to_chip_axes(const Icm42688p *chip, const float32 *frd, float32 *out
 	out[2] = -v[2];
 }
 
-static void raw_sample(const Icm42688p *chip, std_bool hires, Raw20 *raw)
+static void raw_from_sample(const Icm42688p *chip,
+	const AthrillDeviceSensorSample *sample, std_bool hires, Raw20 *raw)
 {
-	AthrillDeviceSensorSample sample = {0};
 	float32 acc[3];
 	float32 gyro[3];
 	/* [ADV-CHIP-ICM42688-003] 16-bit data at the configured full scales; the 20-bit
@@ -126,17 +126,31 @@ static void raw_sample(const Icm42688p *chip, std_bool hires, Raw20 *raw)
 	float32 gyro_scale = (hires ? 131.0F : chip_icm42688_gyro_counts_per_dps(chip->regs[0][REG_GYRO_CONFIG0])) * RAD_TO_DEG;
 	uint32 k;
 
-	if (chip->source.ops != NULL) {
-		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
-	}
-	to_chip_axes(chip, sample.acceleration, acc);
-	to_chip_axes(chip, sample.angular_velocity, gyro);
+	to_chip_axes(chip, sample->acceleration, acc);
+	to_chip_axes(chip, sample->angular_velocity, gyro);
 	for (k = 0U; k < 3U; k++) {
 		raw->acc[k] = saturate(acc[k] * acc_scale, hires ? -131072 : -32768, hires ? 131071 : 32767);
 		raw->gyro[k] = saturate(gyro[k] * gyro_scale, hires ? -262144 : -32768, hires ? 262143 : 32767);
 	}
-	raw->temp = (int16_t)saturate((sample.temperature_c - 25.0F) *
+	raw->temp = (int16_t)saturate((sample->temperature_c - 25.0F) *
 		(hires ? 132.48F : 2.0F), -32768, 32767);
+}
+
+static void raw_sample(const Icm42688p *chip, std_bool hires, Raw20 *raw)
+{
+	AthrillDeviceSensorSample sample = {0};
+	if (chip->source.ops != NULL) {
+		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
+	}
+	raw_from_sample(chip, &sample, hires, raw);
+}
+
+static void raw_sample_at(const Icm42688p *chip, uint64 time,
+	std_bool hires, Raw20 *raw)
+{
+	AthrillDeviceSensorSample sample = {0};
+	(void)athrill_device_sensor_sample_at(&chip->source, time, &sample);
+	raw_from_sample(chip, &sample, hires, raw);
 }
 
 static std_bool sampling(const Icm42688p *chip)
@@ -171,16 +185,28 @@ static void fifo_restart(Icm42688p *chip)
 
 static uint32 fifo_bytes(const Icm42688p *chip)
 {
-	uint64 made;
+	uint64 made_records;
+	uint64 oldest_record;
+	uint64 read_bytes;
 	uint64 available;
+	uint32 size;
+	uint64 capacity;
 
 	if (!fifo_on(chip)) {
 		return 0U;
 	}
-	made = ((time_now(chip) - chip->fifo_start) /
-		chip->clocks_per_sample) * record_bytes(chip);
-	available = (made > chip->fifo_read_bytes) ? (made - chip->fifo_read_bytes) : 0U;
-	return available > FIFO_BYTES ? FIFO_BYTES : (uint32)available;
+	size = record_bytes(chip);
+	capacity = FIFO_BYTES / size;
+	made_records = (time_now(chip) - chip->fifo_start) /
+		chip->clocks_per_sample;
+	oldest_record = made_records > capacity ? made_records - capacity : 0U;
+	read_bytes = chip->fifo_read_bytes;
+	if (read_bytes < oldest_record * size) {
+		read_bytes = oldest_record * size;
+	}
+	available = made_records * size > read_bytes ?
+		made_records * size - read_bytes : 0U;
+	return (uint32)available;
 }
 
 static uint16 fifo_count(const Icm42688p *chip)
@@ -199,14 +225,15 @@ static void put16(uint8 *out, uint32 offset, sint32 value, std_bool big_endian)
 	out[offset + (big_endian ? 1U : 0U)] = (uint8)v;
 }
 
-static void make_record(Icm42688p *chip)
+/* [ADV-FIFO-001] [ADV-FIFO-003] [ADV-FIFO-004] frame at its own time. */
+static void make_record(Icm42688p *chip, uint64 time)
 {
 	std_bool hires = (chip->regs[0][REG_FIFO_CONFIG1] & FIFO_HIRES_EN) != 0U;
 	std_bool big_endian = (chip->regs[0][REG_INTF_CONFIG0] & SENSOR_DATA_ENDIAN) != 0U;
 	Raw20 raw;
 	uint32 k;
 
-	raw_sample(chip, hires, &raw);
+	raw_sample_at(chip, time, hires, &raw);
 	if (hires) {
 		chip->record[0] = 0x78U; /* accel + gyro + 20-bit + ODR timestamp */
 		for (k = 0U; k < 3U; k++) {
@@ -251,9 +278,21 @@ static uint8 fifo_byte(Icm42688p *chip)
 	if (fifo_bytes(chip) == 0U) {
 		return 0U;
 	}
+	{
+		uint64 made = (time_now(chip) - chip->fifo_start) /
+			chip->clocks_per_sample;
+		uint64 capacity = FIFO_BYTES / size;
+		uint64 oldest = made > capacity ? made - capacity : 0U;
+		/* [ADV-FIFO-002] start with the newest capacity records. */
+		if (chip->fifo_read_bytes < oldest * size) {
+			chip->fifo_read_bytes = oldest * size;
+		}
+	}
 	pos = (uint32)(chip->fifo_read_bytes % size);
 	if (pos == 0U) {
-		make_record(chip);
+		uint64 record = chip->fifo_read_bytes / size;
+		make_record(chip, chip->fifo_start +
+			(record + 1U) * chip->clocks_per_sample);
 	}
 	chip->fifo_read_bytes++;
 	return chip->record[pos];
@@ -349,12 +388,11 @@ static void apply_rate(Icm42688p *chip)
 		return;
 	}
 	if (fifo_on(chip)) {
-		uint64 made = ((time_now(chip) - chip->fifo_start) / chip->clocks_per_sample) * record_bytes(chip);
-		uint64 available = made > chip->fifo_read_bytes ? made - chip->fifo_read_bytes : 0U;
+		uint64 available = fifo_bytes(chip);
 		uint64 records = available / record_bytes(chip);
 		uint64 now = time_now(chip);
 		chip->fifo_start = now > records * clocks ? now - records * clocks : 0U;
-		chip->fifo_read_bytes = available % record_bytes(chip);
+		chip->fifo_read_bytes = 0U;
 		chip->next_data_ready = 0U;
 	}
 	chip->clocks_per_sample = clocks;
