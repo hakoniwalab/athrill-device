@@ -265,6 +265,15 @@ static void ADV_BOARD_6X_004_revision_six_overlays(void)
 	expect_value_source(blob, "/soc/serial@40011000/gnss",
 		phandle(blob, "/sensor-device/gps1"));
 	free(blob);
+
+	/* light variant: the same board with the IIM-42652 and its source disabled */
+	blob = read_dtb(PIXHAWK6X_REV6_HAKONIWA_DSHOT_SENSORS_LITE_DTB, &size);
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	expect_status(blob, "/soc/spi@40003800/imu@0", "disabled");
+	expect_status(blob, "/sensor-device/iim42652", "disabled");
+	expect_value_source(blob, "/soc/spi@40003c00/imu@0",
+		phandle(blob, "/sensor-device/adis16470"));
+	free(blob);
 }
 
 int main(void)

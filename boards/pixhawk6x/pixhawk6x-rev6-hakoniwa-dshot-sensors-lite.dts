@@ -1,0 +1,23 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Revision-6 DShot board, light variant: the same as
+ * pixhawk6x-rev6-hakoniwa-dshot-sensors with the IIM-42652 disabled, so the
+ * ADIS16470 is the only IMU. PX4 then runs one EKF instead of two and the
+ * emulation runs faster; the full variant keeps the real IMU set for spectra
+ * and redundancy studies. PX4's iim42652 probe fails normally on this board.
+ */
+
+#include "pixhawk6x-rev6-hakoniwa-dshot-sensors.dts"
+
+/ {
+	model = "Holybro Pixhawk 6X (FMUv6X revision 6, light: ADIS16470 only) for Athrill";
+};
+
+&iim42652 {
+	status = "disabled";
+};
+
+&sensor_iim42652 {
+	status = "disabled";
+};
