@@ -139,17 +139,37 @@ static uint8 pop(H7SpiType *s)
 	return value;
 }
 
+/* [ADV-SPI-H7-016BIT] A data register access holds whole frames (CFG1 DSIZE);
+ * on the wire each frame goes most significant bit first (CFG2 LSBFRST = 0,
+ * the reset value, RM0433 50.4.7), so the bytes of a frame wider than eight
+ * bits leave high byte first, and the bytes received are put back into the
+ * frame the same way before they enter the RxFIFO in register (little-endian)
+ * order. Eight-bit frames are unchanged. */
 static uint32 exchange(H7SpiType *s, uint32 size, uint32 value, std_bool queue)
 {
+	uint32 dsize = s->regs[CFG1_OFFSET / 4U] & CFG1_DSIZE;
+	uint32 frame_bytes = (dsize + 8U) / 8U;
 	uint32 response = 0U;
-	uint32 i;
+	uint32 start;
 
-	for (i = 0U; i < size; i++) {
-		uint8 byte = stm32_spi_bus_exchange(&s->bus, (uint8)(value >> (8U * i)));
+	if (frame_bytes == 0U || frame_bytes > size || (size % frame_bytes) != 0U) {
+		frame_bytes = 1U;
+	}
+	for (start = 0U; start < size; start += frame_bytes) {
+		uint32 j = frame_bytes;
 
-		response |= (uint32)byte << (8U * i);
+		while (j > 0U) {
+			uint32 i = start + j - 1U;
+			uint8 byte = stm32_spi_bus_exchange(&s->bus,
+				(uint8)(value >> (8U * i)));
+
+			response |= (uint32)byte << (8U * i);
+			j--;
+		}
 		if (queue) {
-			push(s, byte);
+			for (j = 0U; j < frame_bytes; j++) {
+				push(s, (uint8)(response >> (8U * (start + j))));
+			}
 		}
 	}
 	return response;
