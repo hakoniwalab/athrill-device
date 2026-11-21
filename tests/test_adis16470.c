@@ -5,10 +5,16 @@
 #include "models.h"
 #include "test_check.h"
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define CPU_HZ 8000000ULL
+#define PI_D 3.14159265358979323846
+#define RESPONSE_SAMPLES 400U
+#define OUTPUT_PERIOD (CPU_HZ / 2000U)
+#define GRAVITY 9.80665F
+#define DEG_TO_RAD (1.0F / 57.29577951F)
 #define REG_DIAG_STAT 0x02U
 #define REG_FILT_CTRL 0x5cU
 #define REG_MSC_CTRL  0x60U
@@ -18,6 +24,8 @@
 typedef struct {
 	uint64 now;
 	uint64 sampled_at;
+	float32 frequency;
+	std_bool sine;
 	uint64 period[2];
 	uint32 period_calls;
 	std_bool gpio[16];
@@ -29,11 +37,17 @@ typedef struct {
 	void *chip;
 } Fixture;
 
-static void make_sample(AthrillDeviceSensorSample *sample)
+static void make_sample(const Harness *harness, uint64 time,
+	AthrillDeviceSensorSample *sample)
 {
+	float32 value = harness->sine ?
+		(float32)sin(2.0 * PI_D * (double)harness->frequency *
+		(double)time / (double)CPU_HZ) : 1.0F;
 	memset(sample, 0, sizeof(*sample));
-	sample->acceleration[0] = 9.80665F;
-	sample->angular_velocity[0] = 0.1F / 57.29577951F;
+	sample->acceleration[0] = GRAVITY * (harness->sine ? 10.0F : 1.0F) *
+		value;
+	sample->angular_velocity[0] = DEG_TO_RAD *
+		(harness->sine ? 1000.0F : 0.1F) * value;
 	sample->temperature_c = 25.0F;
 }
 
@@ -41,7 +55,7 @@ static sint32 latest_sample(void *instance, AthrillDeviceSensorSample *sample)
 {
 	Harness *harness = instance;
 	harness->sampled_at = harness->now;
-	make_sample(sample);
+	make_sample(harness, harness->now, sample);
 	return 0;
 }
 
@@ -50,7 +64,7 @@ static sint32 sample_at(void *instance, uint64 time,
 {
 	Harness *harness = instance;
 	harness->sampled_at = time;
-	make_sample(sample);
+	make_sample(harness, time, sample);
 	return 0;
 }
 
@@ -334,6 +348,55 @@ static void test_timing(void)
 	athrill_device_adis16470_model.destroy(fixture.chip);
 }
 
+static double response_gain(float32 frequency, std_bool accel)
+{
+	Fixture fixture;
+	double sine_sum = 0.0;
+	double cosine_sum = 0.0;
+	double amplitude = accel ? 8000.0 : 10000.0;
+	uint16 words[10];
+	uint32 index;
+	setup(&fixture);
+	fixture.harness.frequency = frequency;
+	fixture.harness.sine = TRUE;
+	for (index = 0U; index < RESPONSE_SAMPLES; index++) {
+		double phase;
+		double output;
+		fixture.harness.now = 2U * CPU_HZ + (uint64)index * OUTPUT_PERIOD;
+		read_burst(&fixture, words);
+		output = (int16_t)words[accel ? 4U : 1U];
+		phase = 2.0 * PI_D * (double)frequency *
+			(double)fixture.harness.now / (double)CPU_HZ;
+		sine_sum += output * sin(phase);
+		cosine_sum += output * cos(phase);
+	}
+	athrill_device_adis16470_model.destroy(fixture.chip);
+	return 2.0 * sqrt(sine_sum * sine_sum + cosine_sum * cosine_sum) /
+		((double)RESPONSE_SAMPLES * amplitude);
+}
+
+/* [ADV-CHIP-ADIS16470-007.T1] */
+static void test_bandwidth(void)
+{
+	Fixture fixture;
+	uint16 words[10];
+	double gain;
+	setup(&fixture);
+	fixture.harness.now = 3U * CPU_HZ;
+	read_burst(&fixture, words);
+	TEST_CHECK((int16_t)words[1] == 1);
+	TEST_CHECK((int16_t)words[4] == 800);
+	athrill_device_adis16470_model.destroy(fixture.chip);
+	gain = response_gain(550.0F, FALSE);
+	TEST_CHECK(fabs(gain - 0.70710678118) <= 0.015);
+	gain = response_gain(600.0F, TRUE);
+	TEST_CHECK(fabs(gain - 0.70710678118) <= 0.015);
+	gain = response_gain(10.0F, FALSE);
+	TEST_CHECK(fabs(gain - 1.0) <= 0.01);
+	gain = response_gain(10.0F, TRUE);
+	TEST_CHECK(fabs(gain - 1.0) <= 0.01);
+}
+
 int main(int argc, char **argv)
 {
 	TEST_CHECK(argc == 2);
@@ -348,6 +411,9 @@ int main(int argc, char **argv)
 	}
 	else if (strcmp(argv[1], "timing") == 0) {
 		test_timing();
+	}
+	else if (strcmp(argv[1], "bandwidth") == 0) {
+		test_bandwidth();
 	}
 	else {
 		return EXIT_FAILURE;

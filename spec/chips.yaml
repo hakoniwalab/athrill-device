@@ -250,7 +250,7 @@
     stimulus: Connect at the reset configuration, tick across one output boundary, then write DEC_RATE 1.
     expect: Gyro and acceleration report 500000 ns then 1000000 ns, and the default active-high data-ready pulse occurs at the 500 us boundary.
 - id: ADV-CHIP-ADIS16470-006
-  statement: The 16-bit burst outputs use 0.1 degree/s/LSB gyroscope, 1.25 mg/LSB acceleration and 0.1 degree C/LSB temperature scales. FILT_CTRL 0 and DEC_RATE 0, the values left by PX4 v1.17.0, are a bypass at 2 kHz; a lazy burst samples the value-source history at the latest ADIS output time not after the read.
+  statement: The 16-bit burst outputs use 0.1 degree/s/LSB gyroscope, 1.25 mg/LSB acceleration and 0.1 degree C/LSB temperature scales. FILT_CTRL 0 makes its two Bartlett averaging stages one tap each and DEC_RATE 0 selects 2 kHz; a lazy burst samples the value-source history at the latest ADIS output time not after the read.
   source:
     devicetree: adi,adis16470
     manual: ADIS16470 data sheet revision C, Table 1, Table 9, FILT_CTRL and DEC_RATE
@@ -260,4 +260,16 @@
   tests:
   - id: ADV-CHIP-ADIS16470-006.T1
     stimulus: Read at target clock 4100 with a 500 us output boundary at clock 4000 and known 1 g, 0.1 degree/s and 25 degree C source values.
-    expect: The history request is for clock 4000 and burst values are 800, 1 and 250 LSB with no filtering delay.
+    expect: The history request reaches clock 4000 and the constant-input burst values are 800, 1 and 250 LSB.
+- id: ADV-CHIP-ADIS16470-007
+  statement: At the 2000 SPS output cadence, fixed sensor-bandwidth stages always limit the gyroscope to its 550 Hz typical -3 dB bandwidth and the accelerometer to its 600 Hz typical -3 dB bandwidth, including when FILT_CTRL is zero. The data sheet does not state the fixed response's filter type or order, so the deterministic model assumes the simplest matching response, a separate first-order low-pass for each sensor, while FILT_CTRL's Bartlett averaging remains separate.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Table 1 and Figures 14 through 16; https://www.analog.com/media/en/technical-documentation/data-sheets/adis16470.pdf
+  scope: Gyroscope and accelerometer values in the PX4 16-bit burst path, before the reset-default 2 kHz output.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-007.T1
+    stimulus: With FILT_CTRL 0 and DEC_RATE 0, apply a constant, a 550 Hz gyro sine, a 600 Hz acceleration sine, and 10 Hz sines to both sensors through value-source history, then read bursts after settling.
+    expect: The constant is unchanged; gain is 0.70710678 +/- 0.015 at each sensor's stated -3 dB frequency, and each 10 Hz gain is within 1% of unity.

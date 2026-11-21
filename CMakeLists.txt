@@ -384,6 +384,8 @@ if(BUILD_TESTING)
     COMMAND test_adis16470 timing)
   add_test(NAME ADV-CHIP-ADIS16470-006.T1
     COMMAND test_adis16470 burst)
+  add_test(NAME ADV-CHIP-ADIS16470-007.T1
+    COMMAND test_adis16470 bandwidth)
   add_executable(test_imu_fifo_history tests/test_imu_fifo_history.c)
   target_compile_definitions(test_imu_fifo_history PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_imu_fifo_history PRIVATE src/models)

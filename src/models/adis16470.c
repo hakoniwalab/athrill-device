@@ -29,6 +29,8 @@
 #define BURST_WORDS         10U
 #define GRAVITY             9.80665F
 #define RAD_TO_DEG          57.29577951F
+#define GYRO_BANDWIDTH_HZ   550.0F
+#define ACCEL_BANDWIDTH_HZ  600.0F
 
 typedef struct {
 	int16_t gyro[3];
@@ -102,18 +104,17 @@ static uint64 current_sample_time(const Adis16470 *chip)
 
 static void configure_filters(Adis16470 *chip)
 {
-	/* PX4 v1.17.0 leaves FILT_CTRL and DEC_RATE at zero.  A zero-stage
-	 * lazy stream is the exact bypass and still reads the source at the
-	 * output register's sample time. */
-	uint8 order = 0U;
-	float32 bandwidth = 0.0F;
+	/* [ADV-CHIP-ADIS16470-007] The data sheet gives only the -3 dB points. */
+	uint8 order = 1U;
+	float32 accel_bandwidth = ACCEL_BANDWIDTH_HZ;
+	float32 gyro_bandwidth = GYRO_BANDWIDTH_HZ;
 	uint64 period = sample_clocks(chip);
 	float32 rate = (float32)rate_mhz(chip) / 1000.0F;
 	uint64 now = time_now(chip);
 	imu_filter_configure(&chip->accel_filter, now, period, rate,
-		&order, &bandwidth, 0U);
+		&order, &accel_bandwidth, 1U);
 	imu_filter_configure(&chip->gyro_filter, now, period, rate,
-		&order, &bandwidth, 0U);
+		&order, &gyro_bandwidth, 1U);
 }
 
 static void report_period(Adis16470 *chip)
@@ -131,7 +132,7 @@ static void report_period(Adis16470 *chip)
 
 static void raw_sample(Adis16470 *chip, uint64 time, RawSample *raw)
 {
-	/* [ADV-CHIP-ADIS16470-006] Convert one time-resolved 16-bit sample. */
+	/* [ADV-CHIP-ADIS16470-006] [ADV-CHIP-ADIS16470-007] */
 	AthrillDeviceSensorSample sample = {0};
 	float32 accel[3] = {0};
 	float32 gyro[3] = {0};
