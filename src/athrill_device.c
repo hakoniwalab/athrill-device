@@ -966,6 +966,13 @@ static int select_models(AthrillDeviceRuntime *runtime,
 			node->structural = TRUE;
 		}
 		if (node->model == NULL && !node->structural) {
+			if (strstr(list, "hakoniwa,sensor-instance") != NULL) {
+				fprintf(stderr, "ERROR: sensor-host path=%s missing plugin; add: "
+					"DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%%2Csensor-instance="
+					"<same library as DEVICE_CONFIG_DEVICE_PLUGIN_0>\n",
+					node->path);
+				return -1;
+			}
 			error_line("unmodelled", node->path, "compatible", "enabled-node");
 			return -1;
 		}
@@ -974,6 +981,90 @@ static int select_models(AthrillDeviceRuntime *runtime,
 			error_line("model-abi", node->path, "compatible", "invalid-model-ops");
 			return -1;
 		}
+	}
+	return 0;
+}
+
+static int sensor_host_configured(const AthrillDeviceBuildOptions *options)
+{
+	uint32 i;
+	for (i = 0U; i < options->host_value_count; i++) {
+		if (options->host_values[i].key != NULL &&
+		    options->host_values[i].value != NULL &&
+		    options->host_values[i].value[0] != 0 &&
+		    strcmp(options->host_values[i].key,
+		    "HAKO_SENSOR_DEVICE_SENSORS") == 0) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+static int sensor_chip_model(const AthrillDeviceModelOps *model)
+{
+	return model == &athrill_device_bmi055_model ||
+		model == &athrill_device_icm42688p_model ||
+		model == &athrill_device_icm20689_model ||
+		model == &athrill_device_ist8310_model ||
+		model == &athrill_device_ms5611_model ||
+		model == &athrill_device_ublox_m8_model;
+}
+
+static const NodeRecord *value_source_provider(const NodeRecord *node)
+{
+	const fdt32_t *cell;
+	int length;
+	int provider;
+	cell = fdt_getprop(node->runtime->dtb, node->offset,
+		"value-source", &length);
+	if (cell == NULL || length != (int)sizeof(*cell)) {
+		return NULL;
+	}
+	provider = node_index_by_phandle(node->runtime,
+		fdt32_to_cpu(*cell));
+	return provider >= 0 ? &node->runtime->nodes[provider] : NULL;
+}
+
+/* [ADV-SENSOR-HOST-001] [ADV-SENSOR-HOST-002] The sensor-host configuration
+ * and the board wiring must describe the same per-chip pipeline. */
+static int validate_sensor_host_wiring(AthrillDeviceRuntime *runtime,
+	const AthrillDeviceBuildOptions *options)
+{
+	uint32 i;
+	uint32 instance_count = 0U;
+	uint32 instance_sources = 0U;
+	for (i = 0U; i < runtime->node_count; i++) {
+		const NodeRecord *node = &runtime->nodes[i];
+		if (node->enabled && node->matched != NULL &&
+		    strcmp(node->matched, "hakoniwa,sensor-instance") == 0) {
+			instance_count++;
+		}
+	}
+	for (i = 0U; i < runtime->node_count; i++) {
+		const NodeRecord *node = &runtime->nodes[i];
+		const NodeRecord *provider;
+		if (!node->enabled || !sensor_chip_model(node->model)) {
+			continue;
+		}
+		provider = value_source_provider(node);
+		if (provider == NULL || provider->matched == NULL) {
+			continue;
+		}
+		if (strcmp(provider->matched, "hakoniwa,sensor-instance") == 0) {
+			instance_sources++;
+		}
+		else if (instance_count != 0U &&
+		         strcmp(provider->matched, "hakoniwa,sensor-device") == 0) {
+			fprintf(stderr, "ERROR: sensor-host chip %s value-source points to "
+				"hakoniwa,sensor-device while hakoniwa,sensor-instance nodes exist\n",
+				node->path);
+			return -1;
+		}
+	}
+	if (sensor_host_configured(options) && instance_sources == 0U) {
+		fprintf(stderr, "ERROR: sensor-host HAKO_SENSOR_DEVICE_SENSORS is set, "
+			"but no sensor chip value-source points to hakoniwa,sensor-instance\n");
+		return -1;
 	}
 	return 0;
 }
@@ -3128,7 +3219,9 @@ sint32 athrill_device_build(const AthrillDeviceBuildOptions *options,
 	}
 	runtime->hash[64] = 0;
 	if (load_plugins(runtime, options) != 0 || inventory_nodes(runtime, options) != 0 ||
-	    select_models(runtime, options) != 0 || build_dependencies(runtime) != 0 ||
+	    select_models(runtime, options) != 0 ||
+	    validate_sensor_host_wiring(runtime, options) != 0 ||
+	    build_dependencies(runtime) != 0 ||
 	    validate_common_properties(runtime) != 0 ||
 	    stable_topological_sort(runtime) != 0 || build_tick_order(runtime) != 0 ||
 	    validate_and_create(runtime) != 0 ||

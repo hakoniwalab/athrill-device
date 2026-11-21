@@ -334,6 +334,38 @@ def main() -> None:
         device("tick-contract@6000", 0x6000, 0x100,
                compatible="athrill,test-tick-contract"),
     ])
+    sensor_host_no_wiring = board([
+        node("sensor-device", [
+            ("compatible", strings("hakoniwa,sensor-device")),
+            ("phandle", be32(20)),
+        ], []),
+        node("gyroscope", [
+            ("compatible", strings("bosch,bmg160")),
+            ("value-source", be32(20)),
+        ], []),
+    ])
+    sensor_host_direct_wiring = board([
+        node("sensor-device", [
+            ("compatible", strings("hakoniwa,sensor-device")),
+            ("phandle", be32(20)),
+        ], [node("bmi055", [
+            ("compatible", strings("hakoniwa,sensor-instance")),
+            ("phandle", be32(21)),
+        ], [])]),
+        node("gyroscope", [
+            ("compatible", strings("bosch,bmg160")),
+            ("value-source", be32(20)),
+        ], []),
+    ])
+    sensor_host_missing_plugin = board([
+        node("sensor-device", [
+            ("compatible", strings("hakoniwa,sensor-device")),
+            ("phandle", be32(20)),
+        ], [node("bmi055", [
+            ("compatible", strings("hakoniwa,sensor-instance")),
+            ("phandle", be32(21)),
+        ], [])]),
+    ])
     overflow_reg = node("", [
         ("compatible", strings("athrill,test-board")),
         ("#address-cells", be32(2)), ("#size-cells", be32(2)),
@@ -375,6 +407,9 @@ def main() -> None:
         "timer-h7-pwm.dtb": timer_h7_pwm,
         "tick-skip-runtime.dtb": tick_skip_runtime,
         "tick-skip-contract.dtb": tick_skip_contract,
+        "sensor-host-no-wiring.dtb": sensor_host_no_wiring,
+        "sensor-host-direct-wiring.dtb": sensor_host_direct_wiring,
+        "sensor-host-missing-plugin.dtb": sensor_host_missing_plugin,
         "tick-skip-pwm.dtb": tick_skip_pwm,
         "tick-skip-dshot.dtb": tick_skip_dshot,
         "esc-fault-bypass.dtb": esc_fault_bypass,
