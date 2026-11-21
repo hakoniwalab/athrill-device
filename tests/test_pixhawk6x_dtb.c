@@ -200,7 +200,14 @@ static void ADV_BOARD_6X_002_revision_six(const void *blob)
 	TEST_CHECK(fdt32_to_cpu(cells[1]) == 0U);
 
 	expect_absent(blob, "/soc/spi@40013000/imu@0");
-	expect_absent(blob, "/soc/spi@40003800/imu@0");
+	/* SPI2: IIM-42652 on CS PH5, DRDY PA10, yaw 270 (PX4 -R 6) */
+	expect_compatible(blob, "/soc/spi@40003800/imu@0", "invensense,iim42652");
+	cells = fdt_getprop(blob, node(blob, "/soc/spi@40003800/imu@0"),
+		"int-gpios", &length);
+	TEST_CHECK(cells != NULL && length == 3 * (int)sizeof(*cells));
+	TEST_CHECK(fdt32_to_cpu(cells[1]) == 10U);
+	TEST_CHECK(strcmp(fdt_getprop(blob, node(blob, "/soc/spi@40003800/imu@0"),
+		"athrill,mount-rotation", NULL), "yaw-270") == 0);
 	expect_compatible(blob, "/soc/spi@40003c00/imu@0", "adi,adis16470");
 	cells = fdt_getprop(blob, node(blob, "/soc/spi@40003c00"),
 		"cs-gpios", &length);
@@ -229,6 +236,7 @@ static void ADV_BOARD_6X_004_revision_six_overlays(void)
 	source = phandle(blob, "/sensor-device");
 	expect_value_source(blob, "/pwm-actuator-map", source);
 	expect_value_source(blob, "/soc/spi@40003c00/imu@0", source);
+	expect_value_source(blob, "/soc/spi@40003800/imu@0", source);
 	expect_value_source(blob, "/soc/i2c@58001c00/pressure@64", source);
 	expect_value_source(blob, "/soc/i2c@58001c00/magnetometer@10", source);
 	expect_value_source(blob, "/soc/i2c@40005400/magnetometer@e", source);
@@ -246,6 +254,8 @@ static void ADV_BOARD_6X_004_revision_six_overlays(void)
 	TEST_CHECK(fdt_check_full(blob, size) == 0);
 	expect_value_source(blob, "/soc/spi@40003c00/imu@0",
 		phandle(blob, "/sensor-device/adis16470"));
+	expect_value_source(blob, "/soc/spi@40003800/imu@0",
+		phandle(blob, "/sensor-device/iim42652"));
 	expect_value_source(blob, "/soc/i2c@58001c00/pressure@64",
 		phandle(blob, "/sensor-device/icp201xx"));
 	expect_value_source(blob, "/soc/i2c@58001c00/magnetometer@10",

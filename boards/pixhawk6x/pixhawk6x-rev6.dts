@@ -2,8 +2,8 @@
 
 /*
  * Holybro Pixhawk 6X / FMUv6X sensor-set revision 6.
- * ICM-45686 on SPI1 and IIM-42652 on SPI2 have no model yet: their
- * chip-select lines remain on the buses, with no device attached.
+ * ICM-45686 on SPI1 has no model yet: its chip-select line remains on the
+ * bus, with no device attached.
  */
 
 #include "pixhawk6x.dts"
@@ -26,9 +26,18 @@
 	/delete-node/ imu@0;
 };
 
-/* Revision 6 SPI2 is IIM-42652 on PH5/PA10, not modeled yet. */
+/* Revision 6 SPI2 is IIM-42652 on CS PH5, DRDY PA10; PX4 starts it with
+ * -R 6 (yaw 270). */
 &spi2 {
 	/delete-node/ imu@0;
+
+	iim42652: imu@0 {
+		compatible = "invensense,iim42652";
+		reg = <0>;
+		spi-max-frequency = <24000000>;
+		int-gpios = <&gpioa 10 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "yaw-270";
+	};
 };
 
 /* Revision 6 SPI3 has one ADIS16470 on CS PI4, DRDY PI7, rotation 0. */

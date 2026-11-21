@@ -11,6 +11,10 @@
 	value-source = <&hakoniwa_sensor>;
 	athrill,tick-before-value-source;
 };
+&iim42652 {
+	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
+};
 &icp201xx {
 	value-source = <&hakoniwa_sensor>;
 	athrill,tick-before-value-source;

@@ -495,6 +495,7 @@ static const char *const bmi055_gyro_compatibles[] = { "bosch,bmg160" };
 static const char *const icm42688p_compatibles[] = {
 	"invensense,icm42688", "invensense,icm4268x"
 };
+static const char *const iim42652_compatibles[] = { "invensense,iim42652" };
 static const char *const test_compatibles[] = {
 	"athrill,test-mmio", "athrill,test-spi-controller",
 	"athrill,test-i2c-controller", "athrill,test-uart-controller"
@@ -539,6 +540,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
 	{ bmi055_gyro_compatibles, 1U, &athrill_device_bmi055_model },
 	{ icm42688p_compatibles, 2U, &athrill_device_icm42688p_model },
+	{ iim42652_compatibles, 1U, &athrill_device_iim42652_model },
 	{ test_compatibles, 4U, &test_mmio_model },
 	{ test_peripheral_compatibles, 1U, &test_peripheral_model }
 };

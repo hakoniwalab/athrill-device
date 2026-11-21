@@ -152,14 +152,16 @@ direct gyro/accel sample per burst and therefore does not publish a gyro FIFO
 topic. The ICM-45686 raw rate in the log is about 6402.32 Hz, consistent with
 its configured 6.4 kHz rate.
 
-The revision-6 DTBs now enable the modeled ADIS16470, ICP201xx and BMM150, plus
-the existing external IST8310 and GPS. ICM-45686 and IIM-42652 still have no
-models: SPI1 CS PI9 and SPI2 CS PH5 remain allocated but have no child device.
-PX4's probes therefore fail normally with
-`ERROR [icm45686] no instance started (no device on bus?)` and
-`ERROR [iim42652] no instance started (no device on bus?)`; ADIS16470 remains
-the primary IMU. The external BMP388 and the two redundant IMUs remain outside
-this board-model scope.
+The revision-6 DTBs now enable the modeled ADIS16470, IIM-42652, ICP201xx and
+BMM150, plus the existing external IST8310 and GPS. The IIM-42652 is the
+ICM-42688-P model with the IIM-42652 identity (WHO_AM_I `0x6f`, INTF_CONFIG0
+reset `0x30`; DS-000440 Rev 1.0); PX4 starts it as `iim42652 #0 on SPI bus 2
+rotation 6`, and the board gives it `athrill,mount-rotation = "yaw-270"`. Its
+flights need `CAL_ACC1_ID`/`CAL_GYRO1_ID` 2818066. ICM-45686 still has no
+model: SPI1 CS PI9 remains allocated with no child device, so PX4's probe fails
+normally with `ERROR [icm45686] no instance started (no device on bus?)`;
+ADIS16470 remains the primary IMU. The external BMP388 remains outside this
+board-model scope.
 
 ## Bus and pin allocation
 
@@ -262,8 +264,8 @@ Reviewed deterministic hashes:
 8b04dd0db993085cc478fedcb647f9343022c41259ee34571efafb9419875c9b  pixhawk6x-hakoniwa.dtb
 eab6fb1008a1d6af35b887296f53922d6ec9ba572b97deefb03d374ded59e3c2  pixhawk6x-hakoniwa-dshot.dtb
 99b650d34709646f168aff8fe3855fb81268a6dedcb27c32fee8372ff5b31083  pixhawk6x-hakoniwa-dshot-sensors.dtb
-edf6e46a3e7cd798db0d98937d5d99469d658f6b939f6afc8b257e211f9dcc67  pixhawk6x-rev6.dtb
-d0b0c5856c0a6132ab3d0be64c2861243e722073bc5a6fc0c1e2bcb0207b72c7  pixhawk6x-rev6-hakoniwa.dtb
-6ac28e4990b28b955f426e99748d5611fc2d2d3a4389eaddd1c172ebadfe27a3  pixhawk6x-rev6-hakoniwa-dshot.dtb
-bfd2cf93938bca3ab0293d302d4024018d75f1b0020624556702c6fff79052c0  pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb
+f88b7fd364d876cfb4c85f37672b739b69f6dd644445775059cb398db03860be  pixhawk6x-rev6.dtb
+b74c11a1be80729f52df1c43b23db4dd636e8a590e460ddb10083ff54189f6d4  pixhawk6x-rev6-hakoniwa.dtb
+a76104875cd1fa67e5f19b91ed4863fc8909989e7dd3c36bcd60dedea630687f  pixhawk6x-rev6-hakoniwa-dshot.dtb
+319f3612d1d28623d988f63b6cf3c6f16cf305294940a879d258c425ac93890e  pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb
 ```
