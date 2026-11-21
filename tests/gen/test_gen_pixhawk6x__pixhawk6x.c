@@ -2930,7 +2930,7 @@ static int case_pixhawk6x__pixhawk6x__soc__dmamux_40020800__ADV_DMA_005_T1(void)
 	{ static const uint32 wanted[] = {0U, 32U, 152640U};
 	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
 	                 0U, "up")); }
-	{ static const uint32 wanted[] = {0U, 50U, 152640U};
+	{ static const uint32 wanted[] = {0U, 59U, 152640U};
 	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
 	                 0U, "up")); }
 	{ static const uint32 wanted[] = {0U, 40U, 1088U};

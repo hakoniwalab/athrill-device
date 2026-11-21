@@ -135,7 +135,10 @@ static void ADV_BOARD_6X_003_wiring(const void *blob)
 	cells = fdt_getprop(blob, node(blob, "/soc/timers@40000c00"),
 		"dmas", &length);
 	TEST_CHECK(cells != NULL && length == 4 * (int)sizeof(*cells));
-	TEST_CHECK(fdt32_to_cpu(cells[2]) == 50U);
+	/* DMAMUX1 request numbers from the manual's table, not from the DTS:
+	 * TIM5_UP = 59, TIM4_UP = 32 (RM0433 DMAMUX1 request table; NuttX
+	 * stm32h7x3xx_dmamux.h DMAMUX1_TIM5_UP / DMAMUX1_TIM4_UP). 50 is TIM8_CH4. */
+	TEST_CHECK(fdt32_to_cpu(cells[2]) == 59U);
 	cells = fdt_getprop(blob, node(blob, "/soc/timers@40000800"),
 		"dmas", &length);
 	TEST_CHECK(cells != NULL && length == 4 * (int)sizeof(*cells));

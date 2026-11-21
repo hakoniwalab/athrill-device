@@ -37788,7 +37788,7 @@
             "provider": {
               "cells": [
                 0,
-                50,
+                59,
                 152640
               ],
               "provider_compatible": "st,stm32-dmamux",
@@ -41238,7 +41238,7 @@
             "provider": {
               "cells": [
                 0,
-                50,
+                59,
                 152640
               ],
               "provider_compatible": "st,stm32-dmamux",
@@ -44672,7 +44672,7 @@
             "provider": {
               "cells": [
                 0,
-                50,
+                59,
                 152640
               ],
               "provider_compatible": "st,stm32-dmamux",
@@ -48228,7 +48228,7 @@
             "provider": {
               "cells": [
                 0,
-                50,
+                59,
                 152640
               ],
               "provider_compatible": "st,stm32-dmamux",
@@ -51745,7 +51745,7 @@
             "provider": {
               "cells": [
                 0,
-                50,
+                59,
                 152640
               ],
               "provider_compatible": "st,stm32-dmamux",
@@ -55246,7 +55246,7 @@
             "provider": {
               "cells": [
                 0,
-                50,
+                59,
                 152640
               ],
               "provider_compatible": "st,stm32-dmamux",
@@ -58816,7 +58816,7 @@
             "provider": {
               "cells": [
                 0,
-                50,
+                59,
                 152640
               ],
               "provider_compatible": "st,stm32-dmamux",
@@ -62355,7 +62355,7 @@
             "provider": {
               "cells": [
                 0,
-                50,
+                59,
                 152640
               ],
               "provider_compatible": "st,stm32-dmamux",
