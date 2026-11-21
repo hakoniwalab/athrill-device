@@ -78,6 +78,9 @@ typedef struct {
 	uint64 fifo_start;
 	uint64 fifo_taken;
 	uint64 fifo_read_bytes;
+	uint8 *fifo_materialized;
+	uint32 fifo_materialized_bytes;
+	uint32 fifo_materialized_read;
 	std_bool fifo_overflow;
 	uint8 record[14];
 	int16_t acceleration_held[3];
@@ -252,17 +255,15 @@ static void fifo_restart(Icm20689 *chip)
 	chip->fifo_start = time_now(chip);
 	chip->fifo_taken = 0U;
 	chip->fifo_read_bytes = 0U;
+	chip->fifo_materialized_bytes = 0U;
+	chip->fifo_materialized_read = 0U;
 	chip->fifo_overflow = FALSE;
 }
 
-static uint32 fifo_count(Icm20689 *chip)
+static uint64 lazy_bytes(Icm20689 *chip)
 {
 	uint64 made;
-	uint64 oldest;
-	uint64 read_bytes;
-	uint64 bytes;
 	uint32 size = record_bytes(chip);
-	uint64 capacity;
 	if (size == 0U) {
 		return 0U;
 	}
@@ -274,62 +275,125 @@ static uint32 fifo_count(Icm20689 *chip)
 			sample_clocks(chip);
 		made = chip->fifo_taken;
 	}
-	capacity = FIFO_BYTES / size;
-	oldest = made > capacity ? made - capacity : 0U;
-	read_bytes = chip->fifo_read_bytes;
-	if (read_bytes < oldest * size) {
-		read_bytes = oldest * size;
+	return made * size > chip->fifo_read_bytes ?
+		made * size - chip->fifo_read_bytes : 0U;
+}
+
+/* CONFIG.FIFO_MODE=0 is the datasheet's overwrite mode: new records replace
+ * the oldest unread records, including materialized pre-change records. */
+static void discard_overflow(Icm20689 *chip)
+{
+	uint32 size = record_bytes(chip);
+	uint64 saved;
+	uint64 lazy;
+	uint64 capacity;
+	uint64 drop;
+	uint64 from_saved;
+	if (size == 0U) {
+		return;
 	}
-	bytes = made * size > read_bytes ? made * size - read_bytes : 0U;
-	if (made > capacity && chip->fifo_read_bytes < oldest * size) {
+	saved = chip->fifo_materialized_bytes -
+		chip->fifo_materialized_read;
+	lazy = lazy_bytes(chip);
+	capacity = (FIFO_BYTES / size) * size;
+	drop = saved + lazy > capacity ? saved + lazy - capacity : 0U;
+	if (drop != 0U) {
 		chip->fifo_overflow = TRUE;
 	}
+	from_saved = drop < saved ? drop : saved;
+	chip->fifo_materialized_read += (uint32)from_saved;
+	drop -= from_saved;
+	chip->fifo_read_bytes += drop;
+}
+
+static uint32 fifo_count(Icm20689 *chip)
+{
+	uint64 bytes;
+	if (record_bytes(chip) == 0U) {
+		return 0U;
+	}
+	discard_overflow(chip);
+	bytes = chip->fifo_materialized_bytes -
+		chip->fifo_materialized_read + lazy_bytes(chip);
 	return (uint32)bytes;
+}
+
+static void make_record(Icm20689 *chip, uint64 record)
+{
+	uint32 at = 0U;
+	uint32 i;
+	uint8 enabled = chip->registers[REG_FIFO_EN];
+	RawSample raw;
+	/* [ADV-FIFO-001] [ADV-FIFO-003] [ADV-FIFO-004] */
+	filtered_sample(chip, chip->fifo_start +
+		(record + 1U) * sample_clocks(chip), &raw);
+	if (record % 2U == 0U) {
+		memcpy(chip->acceleration_held, raw.acceleration,
+			sizeof(chip->acceleration_held));
+	}
+	if ((enabled & FIFO_EN_ACCEL) != 0U) {
+		for (i = 0U; i < 3U; i++) {
+			chip->record[at++] = (uint8)((uint16)chip->acceleration_held[i] >> 8);
+			chip->record[at++] = (uint8)chip->acceleration_held[i];
+		}
+	}
+	if ((enabled & FIFO_EN_TEMP) != 0U) {
+		chip->record[at++] = (uint8)((uint16)raw.temperature >> 8);
+		chip->record[at++] = (uint8)raw.temperature;
+	}
+	for (i = 0U; i < 3U; i++) {
+		if ((enabled & (FIFO_EN_XG >> i)) != 0U) {
+			chip->record[at++] = (uint8)((uint16)raw.angular_velocity[i] >> 8);
+			chip->record[at++] = (uint8)raw.angular_velocity[i];
+		}
+	}
+}
+
+/* [ADV-FIFO-008] Freeze every unread record before its filter or ODR changes. */
+static void materialize_fifo(Icm20689 *chip)
+{
+	uint32 size = record_bytes(chip);
+	uint32 saved;
+	uint64 lazy;
+	uint64 record;
+	uint32 i;
+	if (!fifo_on(chip) || fifo_count(chip) == 0U) {
+		return;
+	}
+	saved = chip->fifo_materialized_bytes -
+		chip->fifo_materialized_read;
+	if (saved != 0U && chip->fifo_materialized_read != 0U) {
+		memmove(chip->fifo_materialized,
+			&chip->fifo_materialized[chip->fifo_materialized_read], saved);
+	}
+	lazy = lazy_bytes(chip);
+	for (i = 0U; i < (uint32)(lazy / size); i++) {
+		record = chip->fifo_read_bytes / size + i;
+		make_record(chip, record);
+		memcpy(&chip->fifo_materialized[saved + i * size],
+			chip->record, size);
+	}
+	chip->fifo_materialized_bytes = saved + (uint32)lazy;
+	chip->fifo_materialized_read = 0U;
+	chip->fifo_start = time_now(chip);
+	chip->fifo_taken = 0U;
+	chip->fifo_read_bytes = 0U;
 }
 
 static uint8 fifo_byte(Icm20689 *chip)
 {
-	uint32 bytes = record_bytes(chip), position, at = 0U, i;
-	uint8 enabled = chip->registers[REG_FIFO_EN];
-	RawSample raw;
+	uint32 bytes = record_bytes(chip);
+	uint32 position;
 	if (bytes == 0U || fifo_count(chip) == 0U) {
 		return 0U;
 	}
-	{
-		uint64 capacity = FIFO_BYTES / bytes;
-		uint64 oldest = chip->fifo_taken > capacity ?
-			chip->fifo_taken - capacity : 0U;
-		/* [ADV-FIFO-002] start with the newest capacity records. */
-		if (chip->fifo_read_bytes < oldest * bytes) {
-			chip->fifo_read_bytes = oldest * bytes;
-		}
+	discard_overflow(chip);
+	if (chip->fifo_materialized_read < chip->fifo_materialized_bytes) {
+		return chip->fifo_materialized[chip->fifo_materialized_read++];
 	}
 	position = (uint32)(chip->fifo_read_bytes % bytes);
 	if (position == 0U) {
-		uint64 record = chip->fifo_read_bytes / bytes;
-		/* [ADV-FIFO-001] [ADV-FIFO-003] [ADV-FIFO-004] */
-		filtered_sample(chip, chip->fifo_start +
-			(record + 1U) * sample_clocks(chip), &raw);
-		if (record % 2U == 0U) {
-			memcpy(chip->acceleration_held, raw.acceleration,
-				sizeof(chip->acceleration_held));
-		}
-		if ((enabled & FIFO_EN_ACCEL) != 0U) {
-			for (i = 0U; i < 3U; i++) {
-				chip->record[at++] = (uint8)((uint16)chip->acceleration_held[i] >> 8);
-				chip->record[at++] = (uint8)chip->acceleration_held[i];
-			}
-		}
-		if ((enabled & FIFO_EN_TEMP) != 0U) {
-			chip->record[at++] = (uint8)((uint16)raw.temperature >> 8);
-			chip->record[at++] = (uint8)raw.temperature;
-		}
-		for (i = 0U; i < 3U; i++) {
-			if ((enabled & (FIFO_EN_XG >> i)) != 0U) {
-				chip->record[at++] = (uint8)((uint16)raw.angular_velocity[i] >> 8);
-				chip->record[at++] = (uint8)raw.angular_velocity[i];
-			}
-		}
+		make_record(chip, chip->fifo_read_bytes / bytes);
 	}
 	chip->fifo_read_bytes++;
 	return chip->record[position];
@@ -408,6 +472,11 @@ static void write_register(Icm20689 *chip, uint8 address, uint8 value)
 	default:
 		break;
 	}
+	if ((address == REG_SMPLRT_DIV || address == REG_CONFIG ||
+	     address == REG_GYRO_CONFIG || address == REG_ACCEL_CONFIG2) &&
+	    chip->registers[address & 0x7fU] != value) {
+		materialize_fifo(chip);
+	}
 	chip->registers[address & 0x7fU] = value;
 	if (address == REG_SMPLRT_DIV || address == REG_CONFIG ||
 	    address == REG_GYRO_CONFIG || address == REG_ACCEL_CONFIG2) {
@@ -460,6 +529,8 @@ static sint32 reset(void *instance)
 	chip->fifo_start = 0U;
 	chip->fifo_taken = 0U;
 	chip->fifo_read_bytes = 0U;
+	chip->fifo_materialized_bytes = 0U;
+	chip->fifo_materialized_read = 0U;
 	chip->fifo_overflow = FALSE;
 	chip->next_sample = 0U;
 	return 0;
@@ -467,7 +538,7 @@ static sint32 reset(void *instance)
 
 static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 {
-	Icm20689 *chip = calloc(1U, sizeof(*chip));
+	Icm20689 *chip = calloc(1U, sizeof(*chip) + FIFO_BYTES);
 	const void *alignment;
 	const void *ideal;
 	uint32 size;
@@ -481,6 +552,7 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	chip->target_ops = args->target_ops;
 	chip->target = args->target;
 	chip->node = args->node;
+	chip->fifo_materialized = (uint8 *)(chip + 1);
 	chip->frequency_hz = frequency;
 	chip->rotated = args->node->ops->get_property(args->node->context,
 		"axis-align-x", &alignment, &size) == 0;

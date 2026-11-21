@@ -73,6 +73,9 @@ behaviour:
   - id: ADV-FIFO-007
     feature: fifo
     rule: ABI 1.24 sensor_sample_at returns the newest sample latched at or before the requested target-clock time, or -1 if none is retained.
+  - id: ADV-FIFO-008
+    feature: fifo
+    rule: When output_rate or filter_config changes while the FIFO contains unread frames, those frames retain the values produced at their own sample times with the old sample period and filter settings, and later frames use the new configuration; an empty or disabled FIFO requires no materialization, and stream-mode overflow discards the oldest unread materialized frames before newer frames.
   - id: ADV-IMU-FILTER-001
     feature: base
     rule: With the boolean athrill,ideal-filters property on an IMU node, all modeled in-chip filters are bypassed and FIFO and direct data use the unfiltered time-resolved value-source sample; without it filters are enabled.

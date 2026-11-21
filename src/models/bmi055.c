@@ -64,6 +64,9 @@ typedef struct {
 	uint8 address;
 	uint64 fifo_start;
 	uint64 fifo_read_frames;
+	uint8 *fifo_materialized;
+	uint32 fifo_materialized_frames;
+	uint32 fifo_materialized_read;
 	uint8 record[6];
 	uint64 next_data_ready;
 	AthrillDeviceGpioLine data_ready;
@@ -171,6 +174,9 @@ static std_bool fifo_on(const Bmi055 *chip)
 
 static uint32 fifo_capacity(const Bmi055 *chip)
 {
+	if ((chip->registers[REG_FIFO_CONFIG_1] & FIFO_MODE_MASK) == 0x80U) {
+		return chip->kind == BMI055_ACCEL ? 31U : 99U;
+	}
 	return chip->kind == BMI055_ACCEL ? 32U : 100U;
 }
 
@@ -184,32 +190,52 @@ static void fifo_restart(Bmi055 *chip)
 {
 	chip->fifo_start = time_now(chip);
 	chip->fifo_read_frames = 0U;
+	chip->fifo_materialized_frames = 0U;
+	chip->fifo_materialized_read = 0U;
 	chip->next_data_ready = 0U;
 }
 
-static uint32 fifo_frames(const Bmi055 *chip)
+static uint64 lazy_frames(const Bmi055 *chip)
 {
 	uint64 made;
-	uint64 read;
-	uint64 available;
 	if (!fifo_on(chip)) {
 		return 0U;
 	}
 	made = (time_now(chip) - chip->fifo_start) / chip->clocks_per_sample;
-	read = chip->fifo_read_frames;
-	if (made > fifo_capacity(chip) && read < made - fifo_capacity(chip)) {
-		read = made - fifo_capacity(chip);
+	return made > chip->fifo_read_frames ? made - chip->fifo_read_frames : 0U;
+}
+
+/* The modeled FIFO paths use the datasheet stream behaviour: newest frames replace
+ * the oldest unread frames, including frames saved across a configuration change. */
+static void discard_overflow(Bmi055 *chip)
+{
+	uint64 saved = chip->fifo_materialized_frames -
+		chip->fifo_materialized_read;
+	uint64 lazy = lazy_frames(chip);
+	uint64 capacity = fifo_capacity(chip);
+	uint64 drop = saved + lazy > capacity ? saved + lazy - capacity : 0U;
+	uint64 from_saved = drop < saved ? drop : saved;
+	chip->fifo_materialized_read += (uint32)from_saved;
+	drop -= from_saved;
+	chip->fifo_read_frames += drop;
+}
+
+static uint32 fifo_frames(Bmi055 *chip)
+{
+	uint64 available;
+	if (!fifo_on(chip)) {
+		return 0U;
 	}
-	available = made > read ? made - read : 0U;
+	discard_overflow(chip);
+	available = chip->fifo_materialized_frames -
+		chip->fifo_materialized_read + lazy_frames(chip);
 	return (uint32)available;
 }
 
-static uint8 fifo_status(const Bmi055 *chip)
+static uint8 fifo_status(Bmi055 *chip)
 {
-	uint64 made = fifo_on(chip) ?
-		(time_now(chip) - chip->fifo_start) / chip->clocks_per_sample : 0U;
-	uint64 available = made > chip->fifo_read_frames ?
-		made - chip->fifo_read_frames : 0U;
+	uint64 available = chip->fifo_materialized_frames -
+		chip->fifo_materialized_read + lazy_frames(chip);
 	uint8 overrun = available > fifo_capacity(chip) ? 0x80U : 0U;
 	return overrun | (uint8)fifo_frames(chip);
 }
@@ -228,6 +254,38 @@ static void make_record(Bmi055 *chip, uint64 time)
 	}
 }
 
+/* [ADV-FIFO-008] Freeze unread frames before the filter or period changes. */
+static void materialize_fifo(Bmi055 *chip)
+{
+	uint32 saved;
+	uint64 lazy;
+	uint64 record;
+	uint32 i;
+	if (!fifo_on(chip) || fifo_frames(chip) == 0U) {
+		return;
+	}
+	saved = chip->fifo_materialized_frames -
+		chip->fifo_materialized_read;
+	if (saved != 0U && chip->fifo_materialized_read != 0U) {
+		memmove(chip->fifo_materialized,
+			&chip->fifo_materialized[chip->fifo_materialized_read * 6U],
+			saved * 6U);
+	}
+	lazy = lazy_frames(chip);
+	for (i = 0U; i < (uint32)lazy; i++) {
+		record = chip->fifo_read_frames + i;
+		make_record(chip, chip->fifo_start +
+			(record + 1U) * chip->clocks_per_sample);
+		memcpy(&chip->fifo_materialized[(saved + i) * 6U],
+			chip->record, 6U);
+	}
+	chip->fifo_materialized_frames = saved + (uint32)lazy;
+	chip->fifo_materialized_read = 0U;
+	chip->fifo_start = time_now(chip);
+	chip->fifo_read_frames = 0U;
+	chip->next_data_ready = 0U;
+}
+
 static uint8 fifo_byte(Bmi055 *chip)
 {
 	uint32 position;
@@ -236,19 +294,27 @@ static uint8 fifo_byte(Bmi055 *chip)
 	}
 	position = chip->registers[REG_FIFO_DATA] % 6U;
 	if (position == 0U) {
-		uint64 made = (time_now(chip) - chip->fifo_start) /
-			chip->clocks_per_sample;
-		uint64 capacity = fifo_capacity(chip);
-		/* [ADV-FIFO-002] discard the overwritten prefix before reading. */
-		if (made > capacity && chip->fifo_read_frames < made - capacity) {
-			chip->fifo_read_frames = made - capacity;
+		discard_overflow(chip);
+		if (chip->fifo_materialized_read <
+		    chip->fifo_materialized_frames) {
+			memcpy(chip->record, &chip->fifo_materialized[
+				chip->fifo_materialized_read * 6U], 6U);
 		}
-		make_record(chip, chip->fifo_start +
-			(chip->fifo_read_frames + 1U) * chip->clocks_per_sample);
+		else {
+			make_record(chip, chip->fifo_start +
+				(chip->fifo_read_frames + 1U) *
+				chip->clocks_per_sample);
+		}
 	}
 	chip->registers[REG_FIFO_DATA] = (uint8)((position + 1U) % 6U);
 	if (position == 5U) {
-		chip->fifo_read_frames++;
+		if (chip->fifo_materialized_read <
+		    chip->fifo_materialized_frames) {
+			chip->fifo_materialized_read++;
+		}
+		else {
+			chip->fifo_read_frames++;
+		}
 	}
 	return chip->record[position];
 }
@@ -361,9 +427,7 @@ static void apply_rate(Bmi055 *chip)
 		return;
 	}
 	if (fifo_on(chip)) {
-		uint64 available = fifo_frames(chip);
-		uint64 now = time_now(chip);
-		chip->fifo_start = now > available * clocks ? now - available * clocks : 0U;
+		chip->fifo_start = time_now(chip);
 		chip->fifo_read_frames = 0U;
 		chip->next_data_ready = 0U;
 	}
@@ -398,6 +462,10 @@ static void write_register(Bmi055 *chip, uint8 address, uint8 value)
 	if (address == REG_CHIP_ID || address == REG_FIFO_STATUS ||
 	    address == REG_FIFO_DATA) {
 		return;
+	}
+	if ((address == REG_BW || address == REG_HBW) &&
+	    chip->registers[address & 0x3fU] != value) {
+		materialize_fifo(chip);
 	}
 	chip->registers[address & 0x3fU] = value;
 	if (address == REG_BW || address == REG_HBW) {
@@ -474,7 +542,10 @@ static sint32 reset(void *instance)
 
 static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 {
-	Bmi055 *chip = calloc(1U, sizeof(*chip));
+	Bmi055Kind kind = strcmp(args->node->matched_compatible,
+		"bosch,bma280") == 0 ? BMI055_ACCEL : BMI055_GYRO;
+	uint32 capacity = kind == BMI055_ACCEL ? 32U : 100U;
+	Bmi055 *chip = calloc(1U, sizeof(*chip) + capacity * 6U);
 	const char *rotation;
 	const void *ideal;
 	uint32 ideal_size;
@@ -487,8 +558,8 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	chip->target_ops = args->target_ops;
 	chip->target = args->target;
 	chip->node = args->node;
-	chip->kind = strcmp(args->node->matched_compatible, "bosch,bma280") == 0 ?
-		BMI055_ACCEL : BMI055_GYRO;
+	chip->kind = kind;
+	chip->fifo_materialized = (uint8 *)(chip + 1);
 	chip->frequency_hz = frequency;
 	reset_registers(chip);
 	chip->clocks_per_sample = chip_rate_clocks(frequency, rate_mhz(chip));

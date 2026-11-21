@@ -370,6 +370,14 @@ if(BUILD_TESTING)
     COMMAND test_imu_fifo_history icm42688p)
   add_test(NAME ADV-SENSOR-HOST-003.T1-icm20689
     COMMAND test_imu_fifo_history icm20689)
+  add_test(NAME ADV-FIFO-008.T1-bmi055-accel
+    COMMAND test_imu_fifo_history bmi055-accel retime)
+  add_test(NAME ADV-FIFO-008.T1-bmi055-gyro
+    COMMAND test_imu_fifo_history bmi055-gyro retime)
+  add_test(NAME ADV-FIFO-008.T1-icm42688p
+    COMMAND test_imu_fifo_history icm42688p retime)
+  add_test(NAME ADV-FIFO-008.T1-icm20689
+    COMMAND test_imu_fifo_history icm20689 retime)
   add_executable(test_imu_filters tests/test_imu_filters.c)
   target_compile_definitions(test_imu_filters PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_imu_filters PRIVATE src/models)

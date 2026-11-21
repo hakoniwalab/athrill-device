@@ -37,6 +37,20 @@ Notch filters (`IMU_GYRO_DNF`, `INS_HNTCH`), FFT-based tuning and vibration stud
 | ADV-FIFO-005 | The history adds O(1) work per latched sample and per frame read, and no work while the FIFO is not read. |
 | ADV-FIFO-006 | Deterministic: the same run gives the same frames. |
 | ADV-FIFO-007 | `sensor_sample_at` (ABI 1.24) returns the sample latched at or before `time`, −1 when it has none. |
+| ADV-FIFO-008 | Frames unread when the ODR or filter changes retain their own values under the old period and filter; later frames use the new configuration. |
+
+## Configuration changes
+
+The lazy filter state cannot reconstruct a pre-change frame after it has been reset to a new ODR or bandwidth. On a
+rate or filter change, each chip therefore materialises its unread frames with the old configuration into a buffer
+allocated with the chip instance. The buffer is bounded by the chip FIFO capacity and is drained before frames made
+under the new configuration. An empty or disabled FIFO does no materialisation, so the normal lazy path remains the
+common case.
+
+The exercised overflow paths are the datasheet stream/overwrite modes: BMA280 and BMG160 `FIFO_CONFIG_1.mode=10`,
+ICM-42688-P `FIFO_CONFIG.FIFO_MODE=01`, and ICM-20689 `CONFIG.FIFO_MODE=0`. A new frame at capacity replaces the
+oldest unread frame. Materialised frames are the oldest frames, so they are discarded first while the snapshot is
+pending; newer lazy frames are discarded only after the snapshot has been exhausted.
 
 ## Acceptance
 
