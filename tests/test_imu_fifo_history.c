@@ -34,6 +34,7 @@ typedef struct {
 	uint64 now;
 	TestSource source;
 	const AthrillDeviceValueProviderOps *value_ops;
+	std_bool ideal_filters;
 	uint32 period_count;
 	uint32 period_kind[16];
 	uint64 period_ns[16];
@@ -164,9 +165,12 @@ static uint64 time_frequency(void *target)
 static sint32 get_property(void *context, const char *name,
 	const void **data, uint32 *size)
 {
+	Harness *harness = context;
 	static const uint32 phandle = 1U;
-	(void)context;
 	if (strcmp(name, "athrill,ideal-filters") == 0) {
+		if (!harness->ideal_filters) {
+			return -1;
+		}
 		*data = NULL;
 		*size = 0U;
 		return 0;
@@ -276,10 +280,10 @@ static const AthrillDeviceResourceOps resource_ops = {
 
 static const ChipSpec chips[] = {
 	{ CHIP_BMI_ACCEL, "bmi055-accel", "bosch,bma280",
-		&athrill_device_bmi055_model, 4000U, 6U, 32U, 0x3fU, 0x02U,
+		&athrill_device_bmi055_model, 4000U, 6U, 31U, 0x3fU, 0x02U,
 		0U, TRUE, 1024.0F / 9.80665F },
 	{ CHIP_BMI_GYRO, "bmi055-gyro", "bosch,bmg160",
-		&athrill_device_bmi055_model, 4000U, 6U, 100U, 0x3fU, 0x02U,
+		&athrill_device_bmi055_model, 4000U, 6U, 99U, 0x3fU, 0x02U,
 		0U, TRUE, 16.384F * RAD_TO_DEG },
 	{ CHIP_ICM42688, "icm42688p", "invensense,icm42688",
 		&athrill_device_icm42688p_model, 1000U, 16U, 128U, 0x30U, 0x25U,
@@ -315,7 +319,8 @@ static void spi_read(Fixture *fixture, uint8 address, uint8 *data,
 }
 
 static int setup_fixture(Fixture *fixture, const ChipSpec *spec,
-	const AthrillDeviceValueProviderOps *ops, std_bool constant)
+	const AthrillDeviceValueProviderOps *ops, std_bool constant,
+	std_bool ideal_filters)
 {
 	AthrillDeviceNode node;
 	AthrillDeviceCreateArgs create_args;
@@ -323,11 +328,13 @@ static int setup_fixture(Fixture *fixture, const ChipSpec *spec,
 	memset(fixture, 0, sizeof(*fixture));
 	fixture->spec = spec;
 	fixture->harness.value_ops = ops;
+	fixture->harness.ideal_filters = ideal_filters;
 	fill_source(&fixture->harness.source, constant);
 	memset(&node, 0, sizeof(node));
 	node.path = "/test/imu";
 	node.matched_compatible = spec->compatible;
 	node.ops = &node_ops;
+	node.context = &fixture->harness;
 	memset(&create_args, 0, sizeof(create_args));
 	create_args.target_ops = &target_ops;
 	create_args.target = &fixture->harness;
@@ -343,30 +350,52 @@ static int setup_fixture(Fixture *fixture, const ChipSpec *spec,
 	return 0;
 }
 
-static void configure_fifo(Fixture *fixture)
+static void configure_sensor(Fixture *fixture)
 {
 	switch (fixture->spec->kind) {
 	case CHIP_BMI_ACCEL:
 		spi_write(fixture, 0x13U, 0x80U);
-		spi_write(fixture, 0x3eU, 0x40U);
 		break;
 	case CHIP_BMI_GYRO:
 		spi_write(fixture, 0x10U, 0x00U);
-		spi_write(fixture, 0x3eU, 0x40U);
 		break;
 	case CHIP_ICM42688:
 		spi_write(fixture, 0x4fU, 0x03U);
 		spi_write(fixture, 0x50U, 0x03U);
 		spi_write(fixture, 0x4eU, 0x0fU);
-		spi_write(fixture, 0x5fU, 0x03U);
 		break;
 	case CHIP_ICM20689:
 		spi_write(fixture, 0x6bU, 0x00U);
 		spi_write(fixture, 0x1aU, 0x00U);
 		spi_write(fixture, 0x23U, 0x78U);
+		break;
+	}
+}
+
+static void enable_fifo(Fixture *fixture)
+{
+	switch (fixture->spec->kind) {
+	case CHIP_BMI_ACCEL:
+	case CHIP_BMI_GYRO:
+		/* Datasheet STREAM mode: new frames overwrite the oldest. */
+		spi_write(fixture, 0x3eU, 0x80U);
+		break;
+	case CHIP_ICM42688:
+		/* FIFO_CONFIG.STREAM-to-FIFO, then accel + gyro packets. */
+		spi_write(fixture, 0x16U, 0x40U);
+		spi_write(fixture, 0x5fU, 0x03U);
+		break;
+	case CHIP_ICM20689:
+		/* CONFIG.FIFO_MODE remains zero: overwrite oldest on overflow. */
 		spi_write(fixture, 0x6aU, 0x40U);
 		break;
 	}
+}
+
+static void configure_fifo(Fixture *fixture)
+{
+	configure_sensor(fixture);
+	enable_fifo(fixture);
 }
 
 static int16_t decode_value(const ChipSpec *spec, const uint8 *record)
@@ -417,7 +446,7 @@ static void test_bursts(const ChipSpec *spec)
 	uint64 frame = 1U;
 	uint32 b;
 	uint32 i;
-	if (setup_fixture(&fixture, spec, &history_ops, FALSE) != 0) {
+	if (setup_fixture(&fixture, spec, &history_ops, FALSE, TRUE) != 0) {
 		CHECK(spec->name, FALSE, "fixture setup");
 		return;
 	}
@@ -446,7 +475,7 @@ static void test_overflow(const ChipSpec *spec)
 	uint64 made = spec->capacity + 10U;
 	uint64 frame = made - spec->capacity + 1U;
 	uint32 i;
-	if (setup_fixture(&fixture, spec, &history_ops, FALSE) != 0) {
+	if (setup_fixture(&fixture, spec, &history_ops, FALSE, TRUE) != 0) {
 		CHECK(spec->name, FALSE, "overflow fixture setup");
 		return;
 	}
@@ -470,7 +499,7 @@ static void test_legacy_fallback(const ChipSpec *spec)
 	Fixture fixture;
 	uint64 latest = 8U;
 	uint32 i;
-	if (setup_fixture(&fixture, spec, &legacy_ops, FALSE) != 0) {
+	if (setup_fixture(&fixture, spec, &legacy_ops, FALSE, TRUE) != 0) {
 		CHECK(spec->name, FALSE, "fallback fixture setup");
 		return;
 	}
@@ -503,8 +532,8 @@ static void test_constant_equivalence(const ChipSpec *spec)
 	uint8 current_direct[2];
 	uint8 legacy_direct[2];
 	uint32 bytes = 4U * spec->record_size;
-	if (setup_fixture(&current, spec, &history_ops, TRUE) != 0 ||
-	    setup_fixture(&legacy, spec, &legacy_ops, TRUE) != 0) {
+	if (setup_fixture(&current, spec, &history_ops, TRUE, TRUE) != 0 ||
+	    setup_fixture(&legacy, spec, &legacy_ops, TRUE, TRUE) != 0) {
 		CHECK(spec->name, FALSE, "constant fixture setup");
 		return;
 	}
@@ -542,7 +571,7 @@ static void test_period_reports(const ChipSpec *spec)
 {
 	Fixture fixture;
 	uint32 initial_count;
-	if (setup_fixture(&fixture, spec, &history_ops, FALSE) != 0) {
+	if (setup_fixture(&fixture, spec, &history_ops, FALSE, TRUE) != 0) {
 		CHECK(spec->name, FALSE, "period-report fixture setup");
 		return;
 	}
@@ -596,6 +625,178 @@ static void test_period_reports(const ChipSpec *spec)
 	spec->model->destroy(fixture.chip);
 }
 
+static uint64 change_rate(Fixture *fixture)
+{
+	switch (fixture->spec->kind) {
+	case CHIP_BMI_ACCEL:
+		spi_write(fixture, 0x13U, 0x00U);
+		spi_write(fixture, 0x10U, 0x0eU);
+		return 8000U;
+	case CHIP_BMI_GYRO:
+		spi_write(fixture, 0x10U, 0x03U);
+		return 20000U;
+	case CHIP_ICM42688:
+		spi_write(fixture, 0x4fU, 0x06U);
+		return 8000U;
+	case CHIP_ICM20689:
+		spi_write(fixture, 0x1aU, 0x01U);
+		return 8000U;
+	}
+	return 0U;
+}
+
+static uint64 change_filter(Fixture *fixture)
+{
+	switch (fixture->spec->kind) {
+	case CHIP_BMI_ACCEL:
+		spi_write(fixture, 0x13U, 0x00U);
+		break;
+	case CHIP_BMI_GYRO:
+		spi_write(fixture, 0x10U, 0x01U);
+		break;
+	case CHIP_ICM42688:
+		spi_write(fixture, 0x52U, 0x17U);
+		break;
+	case CHIP_ICM20689:
+		spi_write(fixture, 0x1aU, 0x07U);
+		break;
+	}
+	return fixture->spec->period_clocks;
+}
+
+static uint64 apply_change(Fixture *fixture, std_bool filter)
+{
+	return filter ? change_filter(fixture) : change_rate(fixture);
+}
+
+static int setup_new_configuration(Fixture *fixture,
+	const ChipSpec *spec, uint64 anchor, std_bool filter,
+	std_bool constant)
+{
+	if (setup_fixture(fixture, spec, &history_ops, constant,
+		filter ? FALSE : TRUE) != 0) {
+		return -1;
+	}
+	fixture->harness.now = anchor;
+	configure_sensor(fixture);
+	(void)apply_change(fixture, filter);
+	enable_fifo(fixture);
+	return 0;
+}
+
+/* [ADV-FIFO-008.T1] Old packets retain the old period/filter and new packets use
+ * the new configuration. An empty FIFO change is byte-identical to configuring
+ * before the FIFO is enabled. */
+static void test_configuration_change(const ChipSpec *spec,
+	std_bool filter, std_bool constant)
+{
+	Fixture changed;
+	Fixture old_reference;
+	Fixture new_reference;
+	Fixture empty_changed;
+	uint8 old_bytes[4U * 20U];
+	uint8 changed_bytes[7U * 20U];
+	uint8 new_bytes[3U * 20U];
+	uint8 empty_bytes[3U * 20U];
+	uint64 change_time = 4U * spec->period_clocks;
+	uint64 new_period;
+	uint32 old_size = 4U * spec->record_size;
+	uint32 new_size = 3U * spec->record_size;
+	std_bool ideal = filter ? FALSE : TRUE;
+	const char *test = filter ? "ADV-FIFO-008-filter" :
+		"ADV-FIFO-008-rate";
+	if (setup_fixture(&changed, spec, &history_ops, constant, ideal) != 0 ||
+	    setup_fixture(&old_reference, spec, &history_ops, constant, ideal) != 0 ||
+	    setup_new_configuration(&new_reference, spec, change_time,
+		filter, constant) != 0 ||
+	    setup_fixture(&empty_changed, spec, &history_ops, constant,
+		ideal) != 0) {
+		CHECK(test, FALSE, "configuration-change fixture setup");
+		return;
+	}
+	configure_fifo(&changed);
+	configure_fifo(&old_reference);
+	changed.harness.now = change_time;
+	old_reference.harness.now = change_time;
+	spi_read(&old_reference, spec->fifo_data, old_bytes, old_size);
+	new_period = apply_change(&changed, filter);
+
+	empty_changed.harness.now = change_time;
+	configure_fifo(&empty_changed);
+	(void)apply_change(&empty_changed, filter);
+
+	changed.harness.now += 3U * new_period;
+	new_reference.harness.now += 3U * new_period;
+	empty_changed.harness.now += 3U * new_period;
+	spi_read(&changed, spec->fifo_data, changed_bytes,
+		old_size + new_size);
+	spi_read(&new_reference, spec->fifo_data, new_bytes, new_size);
+	spi_read(&empty_changed, spec->fifo_data, empty_bytes, new_size);
+	CHECK(test, memcmp(changed_bytes, old_bytes, old_size) == 0,
+		"pre-change FIFO records changed value");
+	CHECK(test, memcmp(&changed_bytes[old_size], new_bytes,
+		new_size) == 0,
+		"post-change FIFO records did not use the new configuration");
+	CHECK(test, memcmp(empty_bytes, new_bytes, new_size) == 0,
+		"empty-FIFO configuration change altered output bytes");
+	spec->model->destroy(changed.chip);
+	spec->model->destroy(old_reference.chip);
+	spec->model->destroy(new_reference.chip);
+	spec->model->destroy(empty_changed.chip);
+}
+
+/* [ADV-FIFO-008.T1] In each datasheet stream/overwrite path, new records
+ * displace the oldest materialized records first. */
+static void test_materialized_overflow(const ChipSpec *spec)
+{
+	Fixture changed;
+	Fixture old_reference;
+	Fixture new_reference;
+	uint8 old_bytes[4U * 20U];
+	uint8 new_bytes[20U];
+	uint8 got[3U * 20U];
+	uint64 change_time = 4U * spec->period_clocks;
+	uint64 new_period;
+	uint64 new_frames = spec->capacity - 2U;
+	uint32 size = spec->record_size;
+	if (setup_fixture(&changed, spec, &history_ops, FALSE, TRUE) != 0 ||
+	    setup_fixture(&old_reference, spec, &history_ops, FALSE, TRUE) != 0 ||
+	    setup_new_configuration(&new_reference, spec, change_time,
+		FALSE, FALSE) != 0) {
+		CHECK("ADV-FIFO-008-overflow", FALSE,
+			"overflow fixture setup");
+		return;
+	}
+	configure_fifo(&changed);
+	configure_fifo(&old_reference);
+	changed.harness.now = change_time;
+	old_reference.harness.now = change_time;
+	spi_read(&old_reference, spec->fifo_data, old_bytes, 4U * size);
+	new_period = change_rate(&changed);
+	changed.harness.now += new_frames * new_period;
+	new_reference.harness.now += new_frames * new_period;
+	spi_read(&changed, spec->fifo_data, got, 3U * size);
+	spi_read(&new_reference, spec->fifo_data, new_bytes, size);
+	CHECK("ADV-FIFO-008-overflow",
+		memcmp(got, &old_bytes[2U * size], 2U * size) == 0,
+		"overflow did not discard the oldest materialized records");
+	CHECK("ADV-FIFO-008-overflow",
+		memcmp(&got[2U * size], new_bytes, size) == 0,
+		"new record after materialized overflow is incorrect");
+	spec->model->destroy(changed.chip);
+	spec->model->destroy(old_reference.chip);
+	spec->model->destroy(new_reference.chip);
+}
+
+static int run_retime(const ChipSpec *spec)
+{
+	test_configuration_change(spec, FALSE, FALSE);
+	test_configuration_change(spec, TRUE, FALSE);
+	test_configuration_change(spec, FALSE, TRUE);
+	test_materialized_overflow(spec);
+	return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
 static int run_chip(const ChipSpec *spec)
 {
 	test_bursts(spec);
@@ -609,13 +810,14 @@ static int run_chip(const ChipSpec *spec)
 int main(int argc, char **argv)
 {
 	uint32 i;
-	if (argc != 2) {
-		fprintf(stderr, "usage: %s CHIP\n", argv[0]);
+	if (argc != 2 && argc != 3) {
+		fprintf(stderr, "usage: %s CHIP [retime]\n", argv[0]);
 		return 2;
 	}
 	for (i = 0U; i < sizeof(chips) / sizeof(chips[0]); i++) {
 		if (strcmp(argv[1], chips[i].name) == 0) {
-			int result = run_chip(&chips[i]);
+			int result = argc == 3 && strcmp(argv[2], "retime") == 0 ?
+				run_retime(&chips[i]) : run_chip(&chips[i]);
 			printf("%s: %d checks, %d failures\n",
 				chips[i].name, checks, failures);
 			return result;

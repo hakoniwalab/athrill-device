@@ -75,6 +75,9 @@ typedef struct {
 	uint8 address;
 	uint64 fifo_start;
 	uint64 fifo_read_bytes;
+	uint8 *fifo_materialized;
+	uint32 fifo_materialized_bytes;
+	uint32 fifo_materialized_read;
 	uint8 record[20];
 	uint64 next_data_ready;
 	AthrillDeviceGpioLine data_ready;
@@ -188,36 +191,55 @@ static void fifo_restart(Icm42688p *chip)
 {
 	chip->fifo_start = time_now(chip);
 	chip->fifo_read_bytes = 0U;
+	chip->fifo_materialized_bytes = 0U;
+	chip->fifo_materialized_read = 0U;
 	chip->next_data_ready = 0U;
 }
 
-static uint32 fifo_bytes(const Icm42688p *chip)
+static uint64 lazy_bytes(const Icm42688p *chip)
 {
 	uint64 made_records;
-	uint64 oldest_record;
-	uint64 read_bytes;
-	uint64 available;
 	uint32 size;
-	uint64 capacity;
 
 	if (!fifo_on(chip)) {
 		return 0U;
 	}
 	size = record_bytes(chip);
-	capacity = FIFO_BYTES / size;
 	made_records = (time_now(chip) - chip->fifo_start) /
 		chip->clocks_per_sample;
-	oldest_record = made_records > capacity ? made_records - capacity : 0U;
-	read_bytes = chip->fifo_read_bytes;
-	if (read_bytes < oldest_record * size) {
-		read_bytes = oldest_record * size;
+	return made_records * size > chip->fifo_read_bytes ?
+		made_records * size - chip->fifo_read_bytes : 0U;
+}
+
+/* Stream-to-FIFO mode overwrites the oldest packet first. Materialized bytes
+ * represent the oldest packets and are therefore discarded before lazy ones. */
+static void discard_overflow(Icm42688p *chip)
+{
+	uint32 size = record_bytes(chip);
+	uint64 saved = chip->fifo_materialized_bytes -
+		chip->fifo_materialized_read;
+	uint64 lazy = lazy_bytes(chip);
+	uint64 capacity = (FIFO_BYTES / size) * size;
+	uint64 drop = saved + lazy > capacity ? saved + lazy - capacity : 0U;
+	uint64 from_saved = drop < saved ? drop : saved;
+	chip->fifo_materialized_read += (uint32)from_saved;
+	drop -= from_saved;
+	chip->fifo_read_bytes += drop;
+}
+
+static uint32 fifo_bytes(Icm42688p *chip)
+{
+	uint64 available;
+	if (!fifo_on(chip)) {
+		return 0U;
 	}
-	available = made_records * size > read_bytes ?
-		made_records * size - read_bytes : 0U;
+	discard_overflow(chip);
+	available = chip->fifo_materialized_bytes -
+		chip->fifo_materialized_read + lazy_bytes(chip);
 	return (uint32)available;
 }
 
-static uint16 fifo_count(const Icm42688p *chip)
+static uint16 fifo_count(Icm42688p *chip)
 {
 	uint32 bytes = fifo_bytes(chip);
 
@@ -278,6 +300,38 @@ static void make_record(Icm42688p *chip, uint64 time)
 	}
 }
 
+/* [ADV-FIFO-008] Freeze every unread packet before its filter or ODR changes. */
+static void materialize_fifo(Icm42688p *chip)
+{
+	uint32 size = record_bytes(chip);
+	uint32 saved;
+	uint64 lazy;
+	uint64 record;
+	uint32 i;
+	if (!fifo_on(chip) || fifo_bytes(chip) == 0U) {
+		return;
+	}
+	saved = chip->fifo_materialized_bytes -
+		chip->fifo_materialized_read;
+	if (saved != 0U && chip->fifo_materialized_read != 0U) {
+		memmove(chip->fifo_materialized,
+			&chip->fifo_materialized[chip->fifo_materialized_read], saved);
+	}
+	lazy = lazy_bytes(chip);
+	for (i = 0U; i < (uint32)(lazy / size); i++) {
+		record = chip->fifo_read_bytes / size + i;
+		make_record(chip, chip->fifo_start +
+			(record + 1U) * chip->clocks_per_sample);
+		memcpy(&chip->fifo_materialized[saved + i * size],
+			chip->record, size);
+	}
+	chip->fifo_materialized_bytes = saved + (uint32)lazy;
+	chip->fifo_materialized_read = 0U;
+	chip->fifo_start = time_now(chip);
+	chip->fifo_read_bytes = 0U;
+	chip->next_data_ready = 0U;
+}
+
 static uint8 fifo_byte(Icm42688p *chip)
 {
 	uint32 size = record_bytes(chip);
@@ -286,15 +340,10 @@ static uint8 fifo_byte(Icm42688p *chip)
 	if (fifo_bytes(chip) == 0U) {
 		return 0U;
 	}
-	{
-		uint64 made = (time_now(chip) - chip->fifo_start) /
-			chip->clocks_per_sample;
-		uint64 capacity = FIFO_BYTES / size;
-		uint64 oldest = made > capacity ? made - capacity : 0U;
-		/* [ADV-FIFO-002] start with the newest capacity records. */
-		if (chip->fifo_read_bytes < oldest * size) {
-			chip->fifo_read_bytes = oldest * size;
-		}
+	discard_overflow(chip);
+	if (chip->fifo_materialized_read < chip->fifo_materialized_bytes) {
+		pos = chip->fifo_materialized_read % size;
+		return chip->fifo_materialized[chip->fifo_materialized_read++];
 	}
 	pos = (uint32)(chip->fifo_read_bytes % size);
 	if (pos == 0U) {
@@ -406,10 +455,7 @@ static void apply_rate(Icm42688p *chip)
 		return;
 	}
 	if (fifo_on(chip)) {
-		uint64 available = fifo_bytes(chip);
-		uint64 records = available / record_bytes(chip);
-		uint64 now = time_now(chip);
-		chip->fifo_start = now > records * clocks ? now - records * clocks : 0U;
+		chip->fifo_start = time_now(chip);
 		chip->fifo_read_bytes = 0U;
 		chip->next_data_ready = 0U;
 	}
@@ -555,6 +601,11 @@ static void write_register(Icm42688p *chip, uint8 address, uint8 value)
 		return;
 	}
 	if (chip->bank != 0U) {
+		if (((chip->bank == 1U && address >= 0x0BU && address <= 0x0EU) ||
+		     (chip->bank == 2U && address >= 0x03U && address <= 0x05U)) &&
+		    chip->regs[chip->bank][address] != value) {
+			materialize_fifo(chip);
+		}
 		chip->regs[chip->bank][address] = value;
 		if ((chip->bank == 1U && address >= 0x0BU && address <= 0x0EU) ||
 		    (chip->bank == 2U && address >= 0x03U && address <= 0x05U)) {
@@ -580,6 +631,13 @@ static void write_register(Icm42688p *chip, uint8 address, uint8 value)
 		|| (address == REG_FIFO_COUNTH) || (address == REG_FIFO_COUNTL)
 		|| (address == REG_FIFO_DATA)) {
 		return;
+	}
+	if ((address == REG_GYRO_CONFIG0 || address == REG_ACCEL_CONFIG0 ||
+	     address == REG_GYRO_CONFIG1 ||
+	     address == REG_GYRO_ACCEL_CONFIG0 ||
+	     address == REG_ACCEL_CONFIG1) &&
+	    chip->regs[0][address] != value) {
+		materialize_fifo(chip);
 	}
 	chip->regs[0][address] = value;
 	if (address == REG_GYRO_CONFIG0) {
@@ -651,7 +709,7 @@ static sint32 reset(void *instance)
 
 static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 {
-	Icm42688p *chip = calloc(1U, sizeof(*chip));
+	Icm42688p *chip = calloc(1U, sizeof(*chip) + FIFO_BYTES);
 	const char *rotation;
 	const void *ideal;
 	uint32 ideal_size;
@@ -664,6 +722,7 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	chip->target_ops = args->target_ops;
 	chip->target = args->target;
 	chip->node = args->node;
+	chip->fifo_materialized = (uint8 *)(chip + 1);
 	chip->frequency_hz = frequency;
 	reset_registers(chip);
 	chip->clocks_per_sample = chip_rate_clocks(frequency,
