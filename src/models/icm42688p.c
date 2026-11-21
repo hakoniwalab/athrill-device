@@ -61,6 +61,9 @@ typedef struct {
 	const AthrillDeviceNode *node;
 	AthrillDeviceValueSource source;
 	uint8 regs[5][128];
+	/* the variant: ICM-42688-P or IIM-42652 (same register map) */
+	uint8 who_am_i;
+	uint8 intf_config0_reset;
 	std_bool yaw_270;
 	uint64 clocks_per_sample;
 	uint64 frequency_hz;
@@ -391,7 +394,7 @@ static uint8 read_register(Icm42688p *chip, uint8 address)
 		return chip->regs[chip->bank][address];
 	}
 	if (address == REG_WHO_AM_I) {
-		return WHO_AM_I_VALUE;
+		return chip->who_am_i;
 	}
 	if ((address >= REG_TEMP_DATA1) && (address <= (REG_GYRO_DATA_X1 + 5U))) {
 		return direct_data(chip, address);
@@ -428,7 +431,9 @@ static void reset_registers(Icm42688p *chip)
 		}
 	}
 	chip->bank = 0U;
-	chip->regs[0][REG_WHO_AM_I] = WHO_AM_I_VALUE;
+	chip->regs[0][REG_WHO_AM_I] = chip->who_am_i;
+	/* [ADV-CHIP-IIM42652-002] IIM-42652 INTF_CONFIG0 resets to 0x30 (big-endian count and data) */
+	chip->regs[0][REG_INTF_CONFIG0] = chip->intf_config0_reset;
 	chip->regs[0][REG_INT_STATUS] = RESET_DONE_INT;
 	/* reset values: ±2000 dps and ±16 g at 1 kHz */
 	chip->regs[0][REG_GYRO_CONFIG0] = 0x06U;
@@ -707,7 +712,8 @@ static sint32 reset(void *instance)
 	return 0;
 }
 
-static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
+static sint32 create_variant(const AthrillDeviceCreateArgs *args, void **instance,
+	uint8 who_am_i, uint8 intf_config0_reset)
 {
 	Icm42688p *chip = calloc(1U, sizeof(*chip) + FIFO_BYTES);
 	const char *rotation;
@@ -724,6 +730,8 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	chip->node = args->node;
 	chip->fifo_materialized = (uint8 *)(chip + 1);
 	chip->frequency_hz = frequency;
+	chip->who_am_i = who_am_i;
+	chip->intf_config0_reset = intf_config0_reset;
 	reset_registers(chip);
 	chip->clocks_per_sample = chip_rate_clocks(frequency,
 		chip_icm42688_gyro_rate_mhz(chip->regs[0][REG_GYRO_CONFIG0]));
@@ -738,6 +746,18 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	}
 	*instance = chip;
 	return 0;
+}
+
+static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
+{
+	return create_variant(args, instance, WHO_AM_I_VALUE, 0x00U);
+}
+
+/* [ADV-CHIP-IIM42652-001] IIM-42652: the ICM-42688-P register map with WHO_AM_I 0x6F
+ * (DS-000440 Rev 1.0, WHO_AM_I and INTF_CONFIG0 register descriptions). */
+static sint32 create_iim42652(const AthrillDeviceCreateArgs *args, void **instance)
+{
+	return create_variant(args, instance, 0x6FU, 0x30U);
 }
 
 static sint32 connect_model(void *instance,
@@ -811,4 +831,10 @@ const AthrillDeviceModelOps athrill_device_icm42688p_model = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceModelOps), "icm42688p", "1", NULL,
 	create, free, NULL, &spi_ops, NULL, NULL, connect_model, reset, tick
+};
+
+const AthrillDeviceModelOps athrill_device_iim42652_model = {
+	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
+	sizeof(AthrillDeviceModelOps), "iim42652", "1", NULL,
+	create_iim42652, free, NULL, &spi_ops, NULL, NULL, connect_model, reset, tick
 };

@@ -11,6 +11,9 @@
 	sensor_adis16470: adis16470 {
 		compatible = "hakoniwa,sensor-instance";
 	};
+	sensor_iim42652: iim42652 {
+		compatible = "hakoniwa,sensor-instance";
+	};
 	sensor_icp201xx: icp201xx {
 		compatible = "hakoniwa,sensor-instance";
 	};
@@ -27,6 +30,10 @@
 
 &adis16470 {
 	value-source = <&sensor_adis16470>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&iim42652 {
+	value-source = <&sensor_iim42652>;
 	/delete-property/ athrill,tick-before-value-source;
 };
 &icp201xx {

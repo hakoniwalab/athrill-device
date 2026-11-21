@@ -443,6 +443,8 @@ if(BUILD_TESTING)
     COMMAND test_imu_fifo_history bmi055-gyro)
   add_test(NAME ADV-SENSOR-HOST-003.T1-icm42688p
     COMMAND test_imu_fifo_history icm42688p)
+  add_test(NAME ADV-CHIP-IIM42652-001.T1
+    COMMAND test_imu_fifo_history identity)
   add_test(NAME ADV-SENSOR-HOST-003.T1-icm20689
     COMMAND test_imu_fifo_history icm20689)
   add_test(NAME ADV-FIFO-008.T1-bmi055-accel

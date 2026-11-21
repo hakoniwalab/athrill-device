@@ -807,12 +807,45 @@ static int run_chip(const ChipSpec *spec)
 	return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
+/* ADV-CHIP-IIM42652-001/002: the IIM-42652 variant answers WHO_AM_I 0x6F and resets
+ * INTF_CONFIG0 to 0x30 (DS-000440 Rev 1.0); the ICM-42688-P keeps 0x47. */
+static int run_identity(void)
+{
+	static const ChipSpec iim = { CHIP_ICM42688, "iim42652", "invensense,iim42652",
+		&athrill_device_iim42652_model, 1000U, 16U, 128U, 0x30U, 0x25U,
+		7U, FALSE, 16.4F * RAD_TO_DEG };
+	Fixture fixture;
+	uint8 value;
+	if (setup_fixture(&fixture, &chips[2], &history_ops, TRUE, FALSE) != 0) {
+		check(0, "identity", __LINE__, "icm42688p setup");
+		return EXIT_FAILURE;
+	}
+	spi_read(&fixture, 0x75U, &value, 1U);
+	check(value == 0x47U, "identity", __LINE__, "ICM-42688-P WHO_AM_I 0x47");
+	fixture.spec->model->destroy(fixture.chip);
+	if (setup_fixture(&fixture, &iim, &history_ops, TRUE, FALSE) != 0) {
+		check(0, "identity", __LINE__, "iim42652 setup");
+		return EXIT_FAILURE;
+	}
+	spi_read(&fixture, 0x75U, &value, 1U);
+	check(value == 0x6FU, "identity", __LINE__, "IIM-42652 WHO_AM_I 0x6F");
+	spi_read(&fixture, 0x4CU, &value, 1U);
+	check(value == 0x30U, "identity", __LINE__, "IIM-42652 INTF_CONFIG0 reset 0x30");
+	fixture.spec->model->destroy(fixture.chip);
+	return failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+}
+
 int main(int argc, char **argv)
 {
 	uint32 i;
 	if (argc != 2 && argc != 3) {
 		fprintf(stderr, "usage: %s CHIP [retime]\n", argv[0]);
 		return 2;
+	}
+	if (strcmp(argv[1], "identity") == 0) {
+		int result = run_identity();
+		printf("identity: %d checks, %d failures\n", checks, failures);
+		return result;
 	}
 	for (i = 0U; i < sizeof(chips) / sizeof(chips[0]); i++) {
 		if (strcmp(argv[1], chips[i].name) == 0) {

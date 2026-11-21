@@ -398,9 +398,9 @@
       "dt_irq_nodes": 41,
       "dt_mmio_nodes": 61,
       "dt_negative_nodes": 1,
-      "dt_nodes": 96,
-      "gpio_chip_selects": 2,
-      "gpio_interrupt_consumers": 1,
+      "dt_nodes": 98,
+      "gpio_chip_selects": 3,
+      "gpio_interrupt_consumers": 2,
       "pwm_entries": 0,
       "pwm_maps": 0,
       "sd_cards": 1,
@@ -423,9 +423,9 @@
       "dt_irq_nodes": 41,
       "dt_mmio_nodes": 61,
       "dt_negative_nodes": 1,
-      "dt_nodes": 91,
-      "gpio_chip_selects": 2,
-      "gpio_interrupt_consumers": 1,
+      "dt_nodes": 92,
+      "gpio_chip_selects": 3,
+      "gpio_interrupt_consumers": 2,
       "pwm_entries": 0,
       "pwm_maps": 0,
       "sd_cards": 1,
@@ -448,9 +448,9 @@
       "dt_irq_nodes": 41,
       "dt_mmio_nodes": 61,
       "dt_negative_nodes": 1,
-      "dt_nodes": 90,
-      "gpio_chip_selects": 2,
-      "gpio_interrupt_consumers": 1,
+      "dt_nodes": 91,
+      "gpio_chip_selects": 3,
+      "gpio_interrupt_consumers": 2,
       "pwm_entries": 8,
       "pwm_maps": 1,
       "sd_cards": 1,
@@ -473,9 +473,9 @@
       "dt_irq_nodes": 41,
       "dt_mmio_nodes": 61,
       "dt_negative_nodes": 1,
-      "dt_nodes": 89,
-      "gpio_chip_selects": 2,
-      "gpio_interrupt_consumers": 1,
+      "dt_nodes": 90,
+      "gpio_chip_selects": 3,
+      "gpio_interrupt_consumers": 2,
       "pwm_entries": 8,
       "pwm_maps": 1,
       "sd_cards": 1,
@@ -45133,8 +45133,10 @@
     {
       "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb",
       "derived_properties": {
-        "child_count": 0,
-        "reg": []
+        "child_count": 1,
+        "reg": [
+          0
+        ]
       },
       "item_id": "ADV-SPI-002",
       "known_defect": null,
@@ -45142,6 +45144,27 @@
       "node_path": "/soc/spi@40003800",
       "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa_dshot_sensors.c",
       "test_spec_id": "ADV-SPI-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            5,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021c00"
+        },
+        "reg": 0
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6-hakoniwa-dshot-sensors__soc__spi@40003800__imu@0__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa_dshot_sensors.c",
+      "test_spec_id": "ADV-SPI-001.T1",
       "will_fail": false
     },
     {
@@ -45805,6 +45828,7 @@
           "/soc/timers@40001800/pwm",
           "/soc/timers@40002000",
           "/soc/spi@40003800",
+          "/soc/spi@40003800/imu@0",
           "/soc/spi@40003c00",
           "/soc/spi@40003c00/imu@0",
           "/soc/serial@40004400",
@@ -45885,6 +45909,7 @@
           "/bench-sensor-source",
           "/sensor-device",
           "/sensor-device/adis16470",
+          "/sensor-device/iim42652",
           "/sensor-device/icp201xx",
           "/sensor-device/bmm150",
           "/sensor-device/ist8310",
@@ -48167,7 +48192,7 @@
     {
       "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb",
       "derived_properties": {
-        "dtb_size": 32289
+        "dtb_size": 32505
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -48514,6 +48539,33 @@
       "derived_properties": {
         "int-gpios": {
           "cells": [
+            10,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020000"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6-hakoniwa-dshot-sensors__soc__spi@40003800__imu@0__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa_dshot_sensors.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
             7,
             0
           ],
@@ -48534,6 +48586,28 @@
       "node_path": "/soc/spi@40003c00/imu@0",
       "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa_dshot_sensors.c",
       "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb",
+      "derived_properties": {
+        "chip_select": 0,
+        "controller": "/soc/spi@40003800",
+        "cs_gpio": {
+          "cells": [
+            5,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021c00"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6-hakoniwa-dshot-sensors__soc__spi@40003800__imu@0__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa_dshot_sensors.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
       "will_fail": false
     },
     {
@@ -48655,8 +48729,10 @@
     {
       "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot.dtb",
       "derived_properties": {
-        "child_count": 0,
-        "reg": []
+        "child_count": 1,
+        "reg": [
+          0
+        ]
       },
       "item_id": "ADV-SPI-002",
       "known_defect": null,
@@ -48664,6 +48740,27 @@
       "node_path": "/soc/spi@40003800",
       "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa_dshot.c",
       "test_spec_id": "ADV-SPI-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            5,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021c00"
+        },
+        "reg": 0
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6-hakoniwa-dshot__soc__spi@40003800__imu@0__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-SPI-001.T1",
       "will_fail": false
     },
     {
@@ -49327,6 +49424,7 @@
           "/soc/timers@40001800/pwm",
           "/soc/timers@40002000",
           "/soc/spi@40003800",
+          "/soc/spi@40003800/imu@0",
           "/soc/spi@40003c00",
           "/soc/spi@40003c00/imu@0",
           "/soc/serial@40004400",
@@ -51684,7 +51782,7 @@
     {
       "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot.dtb",
       "derived_properties": {
-        "dtb_size": 31981
+        "dtb_size": 32133
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -52031,6 +52129,33 @@
       "derived_properties": {
         "int-gpios": {
           "cells": [
+            10,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020000"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6-hakoniwa-dshot__soc__spi@40003800__imu@0__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
             7,
             0
           ],
@@ -52051,6 +52176,28 @@
       "node_path": "/soc/spi@40003c00/imu@0",
       "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa_dshot.c",
       "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot.dtb",
+      "derived_properties": {
+        "chip_select": 0,
+        "controller": "/soc/spi@40003800",
+        "cs_gpio": {
+          "cells": [
+            5,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021c00"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6-hakoniwa-dshot__soc__spi@40003800__imu@0__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa_dshot.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
       "will_fail": false
     },
     {
@@ -52172,8 +52319,10 @@
     {
       "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa.dtb",
       "derived_properties": {
-        "child_count": 0,
-        "reg": []
+        "child_count": 1,
+        "reg": [
+          0
+        ]
       },
       "item_id": "ADV-SPI-002",
       "known_defect": null,
@@ -52181,6 +52330,27 @@
       "node_path": "/soc/spi@40003800",
       "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa.c",
       "test_spec_id": "ADV-SPI-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            5,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021c00"
+        },
+        "reg": 0
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6-hakoniwa__soc__spi@40003800__imu@0__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa.c",
+      "test_spec_id": "ADV-SPI-001.T1",
       "will_fail": false
     },
     {
@@ -52829,6 +52999,7 @@
           "/soc/timers@40001800/pwm",
           "/soc/timers@40002000",
           "/soc/spi@40003800",
+          "/soc/spi@40003800/imu@0",
           "/soc/spi@40003c00",
           "/soc/spi@40003c00/imu@0",
           "/soc/serial@40004400",
@@ -55185,7 +55356,7 @@
     {
       "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa.dtb",
       "derived_properties": {
-        "dtb_size": 31653
+        "dtb_size": 31805
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -55602,6 +55773,33 @@
       "derived_properties": {
         "int-gpios": {
           "cells": [
+            10,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020000"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6-hakoniwa__soc__spi@40003800__imu@0__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
             7,
             0
           ],
@@ -55622,6 +55820,28 @@
       "node_path": "/soc/spi@40003c00/imu@0",
       "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa.c",
       "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6-hakoniwa.dtb",
+      "derived_properties": {
+        "chip_select": 0,
+        "controller": "/soc/spi@40003800",
+        "cs_gpio": {
+          "cells": [
+            5,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021c00"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6-hakoniwa__soc__spi@40003800__imu@0__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6_hakoniwa.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
       "will_fail": false
     },
     {
@@ -55743,8 +55963,10 @@
     {
       "board": "pixhawk6x/pixhawk6x-rev6.dtb",
       "derived_properties": {
-        "child_count": 0,
-        "reg": []
+        "child_count": 1,
+        "reg": [
+          0
+        ]
       },
       "item_id": "ADV-SPI-002",
       "known_defect": null,
@@ -55752,6 +55974,27 @@
       "node_path": "/soc/spi@40003800",
       "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6.c",
       "test_spec_id": "ADV-SPI-002.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6.dtb",
+      "derived_properties": {
+        "cs_gpio": {
+          "cells": [
+            5,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021c00"
+        },
+        "reg": 0
+      },
+      "item_id": "ADV-SPI-001",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6__soc__spi@40003800__imu@0__ADV-SPI-001.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6.c",
+      "test_spec_id": "ADV-SPI-001.T1",
       "will_fail": false
     },
     {
@@ -56400,6 +56643,7 @@
           "/soc/timers@40001800/pwm",
           "/soc/timers@40002000",
           "/soc/spi@40003800",
+          "/soc/spi@40003800/imu@0",
           "/soc/spi@40003c00",
           "/soc/spi@40003c00/imu@0",
           "/soc/serial@40004400",
@@ -58755,7 +58999,7 @@
     {
       "board": "pixhawk6x/pixhawk6x-rev6.dtb",
       "derived_properties": {
-        "dtb_size": 31504
+        "dtb_size": 31628
       },
       "item_id": "ADV-DT-005",
       "known_defect": null,
@@ -59172,6 +59416,33 @@
       "derived_properties": {
         "int-gpios": {
           "cells": [
+            10,
+            0
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58020000"
+        },
+        "interrupt": {
+          "cells": [
+            40,
+            0
+          ],
+          "provider_path": "/soc/interrupt-controller@e000e100"
+        }
+      },
+      "item_id": "ADV-GPIO-001",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6__soc__spi@40003800__imu@0__ADV-GPIO-001.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6.c",
+      "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6.dtb",
+      "derived_properties": {
+        "int-gpios": {
+          "cells": [
             7,
             0
           ],
@@ -59192,6 +59463,28 @@
       "node_path": "/soc/spi@40003c00/imu@0",
       "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6.c",
       "test_spec_id": "ADV-GPIO-001.T1",
+      "will_fail": false
+    },
+    {
+      "board": "pixhawk6x/pixhawk6x-rev6.dtb",
+      "derived_properties": {
+        "chip_select": 0,
+        "controller": "/soc/spi@40003800",
+        "cs_gpio": {
+          "cells": [
+            5,
+            1
+          ],
+          "provider_compatible": "st,stm32-gpio",
+          "provider_path": "/soc/pin-controller@58020000/gpio@58021c00"
+        }
+      },
+      "item_id": "ADV-GPIO-002",
+      "known_defect": null,
+      "name": "pixhawk6x__pixhawk6x-rev6__soc__spi@40003800__imu@0__ADV-GPIO-002.T1",
+      "node_path": "/soc/spi@40003800/imu@0",
+      "source_file": "tests/gen/test_gen_pixhawk6x__pixhawk6x_rev6.c",
+      "test_spec_id": "ADV-GPIO-002.T1",
       "will_fail": false
     },
     {
