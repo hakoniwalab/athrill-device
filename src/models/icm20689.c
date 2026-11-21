@@ -112,7 +112,8 @@ static void to_chip_axes(const Icm20689 *chip, const float32 *frd,
 	output[2] = -value[2];
 }
 
-static void raw_sample(const Icm20689 *chip, RawSample *raw)
+static void raw_from_sample(const Icm20689 *chip,
+	const AthrillDeviceSensorSample *sample, RawSample *raw)
 {
 	static const float32 acceleration_scale[4] = {
 		16384.0F, 8192.0F, 4096.0F, 2048.0F
@@ -120,24 +121,36 @@ static void raw_sample(const Icm20689 *chip, RawSample *raw)
 	static const float32 gyro_scale[4] = {
 		131.0F, 65.5F, 32.8F, 16.4F
 	};
-	AthrillDeviceSensorSample sample = {0};
 	float32 acceleration[3], angular_velocity[3];
 	float32 acc_factor = acceleration_scale[
 		(chip->registers[REG_ACCEL_CONFIG] >> 3) & 3U] / GRAVITY;
 	float32 gyro_factor = gyro_scale[
 		(chip->registers[REG_GYRO_CONFIG] >> 3) & 3U] * RAD_TO_DEG;
 	uint32 i;
-	if (chip->source.ops != NULL) {
-		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
-	}
-	to_chip_axes(chip, sample.acceleration, acceleration);
-	to_chip_axes(chip, sample.angular_velocity, angular_velocity);
+	to_chip_axes(chip, sample->acceleration, acceleration);
+	to_chip_axes(chip, sample->angular_velocity, angular_velocity);
 	for (i = 0U; i < 3U; i++) {
 		raw->acceleration[i] = saturate(acceleration[i] * acc_factor);
 		raw->angular_velocity[i] = saturate(angular_velocity[i] * gyro_factor);
 	}
-	raw->temperature = saturate((sample.temperature_c - TEMP_OFFSET) *
+	raw->temperature = saturate((sample->temperature_c - TEMP_OFFSET) *
 		TEMP_SENSITIVITY);
+}
+
+static void raw_sample(const Icm20689 *chip, RawSample *raw)
+{
+	AthrillDeviceSensorSample sample = {0};
+	if (chip->source.ops != NULL) {
+		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
+	}
+	raw_from_sample(chip, &sample, raw);
+}
+
+static void raw_sample_at(const Icm20689 *chip, uint64 time, RawSample *raw)
+{
+	AthrillDeviceSensorSample sample = {0};
+	(void)athrill_device_sensor_sample_at(&chip->source, time, &sample);
+	raw_from_sample(chip, &sample, raw);
 }
 
 /* [ADV-CHIP-ICM20689-002] The sample rate (the FIFO's and data-ready's) the registers set. */
@@ -211,18 +224,32 @@ static void fifo_restart(Icm20689 *chip)
 
 static uint32 fifo_count(Icm20689 *chip)
 {
+	uint64 made;
+	uint64 oldest;
+	uint64 read_bytes;
 	uint64 bytes;
-	if (!fifo_on(chip)) {
-		bytes = chip->fifo_taken * record_bytes(chip);
-		return bytes > chip->fifo_read_bytes ?
-			(uint32)(bytes - chip->fifo_read_bytes) : 0U;
+	uint32 size = record_bytes(chip);
+	uint64 capacity;
+	if (size == 0U) {
+		return 0U;
 	}
-	chip->fifo_taken = (time_now(chip) - chip->fifo_start) /
-		sample_clocks(chip);
-	bytes = chip->fifo_taken * record_bytes(chip) - chip->fifo_read_bytes;
-	if (bytes > FIFO_BYTES) {
+	if (!fifo_on(chip)) {
+		made = chip->fifo_taken;
+	}
+	else {
+		chip->fifo_taken = (time_now(chip) - chip->fifo_start) /
+			sample_clocks(chip);
+		made = chip->fifo_taken;
+	}
+	capacity = FIFO_BYTES / size;
+	oldest = made > capacity ? made - capacity : 0U;
+	read_bytes = chip->fifo_read_bytes;
+	if (read_bytes < oldest * size) {
+		read_bytes = oldest * size;
+	}
+	bytes = made * size > read_bytes ? made * size - read_bytes : 0U;
+	if (made > capacity && chip->fifo_read_bytes < oldest * size) {
 		chip->fifo_overflow = TRUE;
-		bytes = FIFO_BYTES;
 	}
 	return (uint32)bytes;
 }
@@ -235,10 +262,21 @@ static uint8 fifo_byte(Icm20689 *chip)
 	if (bytes == 0U || fifo_count(chip) == 0U) {
 		return 0U;
 	}
+	{
+		uint64 capacity = FIFO_BYTES / bytes;
+		uint64 oldest = chip->fifo_taken > capacity ?
+			chip->fifo_taken - capacity : 0U;
+		/* [ADV-FIFO-002] start with the newest capacity records. */
+		if (chip->fifo_read_bytes < oldest * bytes) {
+			chip->fifo_read_bytes = oldest * bytes;
+		}
+	}
 	position = (uint32)(chip->fifo_read_bytes % bytes);
 	if (position == 0U) {
 		uint64 record = chip->fifo_read_bytes / bytes;
-		raw_sample(chip, &raw);
+		/* [ADV-FIFO-001] [ADV-FIFO-003] [ADV-FIFO-004] */
+		raw_sample_at(chip, chip->fifo_start +
+			(record + 1U) * sample_clocks(chip), &raw);
 		if (record % 2U == 0U) {
 			memcpy(chip->acceleration_held, raw.acceleration,
 				sizeof(chip->acceleration_held));

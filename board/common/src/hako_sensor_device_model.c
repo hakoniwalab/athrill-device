@@ -3,6 +3,7 @@
 #include "hako_sensor_device.h"
 #include "hako_sensor_registers_model.h"
 #include "hako_sensor_instance_model.h"
+#include "hako_sensor_history.h"
 
 #ifndef ATHRILL_HAKONIWA_PASSIVE
 #include "hako_sensor_device_link.h"
@@ -50,6 +51,8 @@ typedef struct {
 	std_bool bench;
 	uint64 noise_state;
 	uint64 clocks_per_usec;
+	HakoSensorHistory history;
+	HakoSensorHistory instance_history[HAKO_SENSOR_INSTANCE_MAX];
 #ifndef ATHRILL_HAKONIWA_PASSIVE
 	std_bool linked;
 	std_bool has_pending;
@@ -278,7 +281,20 @@ static void gps_from_hil(const HakoGpsSample *gps, AthrillDeviceGpsSample *out)
 	out->time_usec = gps->time_usec;
 }
 
-static void latch_sample(HakoSensorModel *model)
+static void sensor_from_hil(const HakoSensorSample *source,
+	AthrillDeviceSensorSample *sample)
+{
+	uint32 i;
+	for (i = 0U; i < 3U; i++) {
+		sample->acceleration[i] = source->acc[i];
+		sample->angular_velocity[i] = source->gyro[i];
+		sample->magnetic_field[i] = source->mag[i];
+	}
+	sample->pressure_hpa = source->abs_pressure;
+	sample->temperature_c = source->temperature;
+}
+
+static void latch_sample(HakoSensorModel *model, uint64 time)
 {
 	const HakoSensorSample *source = &model->pending_sensor;
 	uint32 i;
@@ -287,18 +303,17 @@ static void latch_sample(HakoSensorModel *model)
 	memcpy(model->instances, model->pending_instances, sizeof(model->instances));
 	model->instance_count = model->pending_instance_count;
 	for (i = 0U; i < model->instance_count; i++) {
+		AthrillDeviceSensorSample instance_sample;
+		sensor_from_hil(&model->instances[i].sensor, &instance_sample);
+		hako_sensor_history_latch(&model->instance_history[i], time,
+			&instance_sample);
 		if (model->instances[i].has_gps) {
 			gps_from_hil(&model->instances[i].gps, &model->instance_gps[i]);
 			model->instance_has_gps[i] = TRUE;
 		}
 	}
-	for (i = 0U; i < 3U; i++) {
-		model->sample.acceleration[i] = source->acc[i];
-		model->sample.angular_velocity[i] = source->gyro[i];
-		model->sample.magnetic_field[i] = source->mag[i];
-	}
-	model->sample.pressure_hpa = source->abs_pressure;
-	model->sample.temperature_c = source->temperature;
+	sensor_from_hil(source, &model->sample);
+	hako_sensor_history_latch(&model->history, time, &model->sample);
 	if (model->pending_has_gps) {
 		gps_from_hil(&model->pending_gps, &model->gps);
 		model->has_gps = TRUE;
@@ -370,7 +385,7 @@ static sint32 linked_tick(HakoSensorModel *model, uint64 now,
 			result->next_event_interval = next - now;
 			return 0;
 		}
-		latch_sample(model);
+		latch_sample(model, next);
 		trace_sensor(model, &model->pending_sensor,
 			model->pending_sensor.time_usec - model->time_offset_usec);
 		if (model->pending_has_gps) {
@@ -570,6 +585,8 @@ static sint32 reset(void *instance)
 	memset(&model->actuator, 0, sizeof(model->actuator));
 	model->has_gps = FALSE;
 	model->noise_state = 0x2545F4914F6CDD1DULL;
+	memset(&model->history, 0, sizeof(model->history));
+	memset(model->instance_history, 0, sizeof(model->instance_history));
 #ifndef ATHRILL_HAKONIWA_PASSIVE
 	model->has_pending = FALSE;
 	model->pending_has_gps = FALSE;
@@ -603,6 +620,8 @@ static sint32 tick(void *instance, uint64 now,
 }
 
 static sint32 sensor_sample(void *instance, AthrillDeviceSensorSample *sample);
+static sint32 sensor_sample_at(void *instance, uint64 time,
+	AthrillDeviceSensorSample *sample);
 static sint32 gps_sample(void *instance, AthrillDeviceGpsSample *sample);
 
 sint32 hako_sensor_device_sensor_sample(AthrillDeviceSensorSample *sample)
@@ -646,6 +665,29 @@ sint32 hako_sensor_device_instance_sample(uint32 index, AthrillDeviceSensorSampl
 #endif
 }
 
+/* [ADV-FIFO-007] The instance sample latched at or before target time. */
+sint32 hako_sensor_device_instance_sample_at(uint32 index, uint64 time,
+	AthrillDeviceSensorSample *sample)
+{
+#ifndef ATHRILL_HAKONIWA_PASSIVE
+	HakoSensorModel *model = the_device;
+	if (model == NULL || sample == NULL) {
+		return -1;
+	}
+	if (model->bench) {
+		return sensor_sample(model, sample);
+	}
+	if (index >= HAKO_SENSOR_INSTANCE_MAX) {
+		return -1;
+	}
+	return hako_sensor_history_sample_at(&model->instance_history[index],
+		time, sample);
+#else
+	(void)index;
+	return (the_device == NULL) ? -1 : sensor_sample_at(the_device, time, sample);
+#endif
+}
+
 sint32 hako_sensor_device_instance_gps_sample(uint32 index, AthrillDeviceGpsSample *sample)
 {
 #ifndef ATHRILL_HAKONIWA_PASSIVE
@@ -679,6 +721,16 @@ static sint32 sensor_sample(void *instance, AthrillDeviceSensorSample *sample)
 		*sample = model->sample;
 	}
 	return 0;
+}
+
+static sint32 sensor_sample_at(void *instance, uint64 time,
+	AthrillDeviceSensorSample *sample)
+{
+	HakoSensorModel *model = instance;
+	if (model->bench) {
+		return sensor_sample(model, sample);
+	}
+	return hako_sensor_history_sample_at(&model->history, time, sample);
 }
 
 static sint32 gps_sample(void *instance, AthrillDeviceGpsSample *sample)
@@ -726,7 +778,7 @@ static sint32 actuator_output(void *instance, const float32 *values,
 static const AthrillDeviceValueProviderOps value_ops = {
 	ATHRILL_DEVICE_ABI_MAJOR, ATHRILL_DEVICE_ABI_MINOR,
 	sizeof(AthrillDeviceValueProviderOps), sensor_sample, gps_sample,
-	actuator_output
+	actuator_output, sensor_sample_at
 };
 
 #if defined(HAKO_SENSOR_DEVICE_MOTOR_STATUS) && !defined(ATHRILL_HAKONIWA_PASSIVE)

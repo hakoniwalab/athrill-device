@@ -54,4 +54,25 @@ static inline sint32 athrill_device_connect_value_source(
 	return 0;
 }
 
+/* ABI 1.24: use a time-resolved sample when the source offers one, otherwise
+ * retain the pre-1.24 latest-sample behaviour. */
+static inline sint32 athrill_device_sensor_sample_at(
+	const AthrillDeviceValueSource *source, uint64 time,
+	AthrillDeviceSensorSample *sample)
+{
+	const AthrillDeviceValueProviderOps *ops = source->ops;
+	if (ops != NULL && ops->abi_major == ATHRILL_DEVICE_ABI_MAJOR &&
+	    ops->abi_minor >= 24U &&
+	    ops->struct_size >= offsetof(AthrillDeviceValueProviderOps,
+	    sensor_sample_at) + sizeof(ops->sensor_sample_at) &&
+	    ops->sensor_sample_at != NULL &&
+	    ops->sensor_sample_at(source->instance, time, sample) == 0) {
+		return 0;
+	}
+	if (ops != NULL && ops->sensor_sample != NULL) {
+		return ops->sensor_sample(source->instance, sample);
+	}
+	return -1;
+}
+
 #endif

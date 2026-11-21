@@ -29,7 +29,7 @@ typedef int std_bool; /* same size as Athrill std_types.h */
 #endif
 
 #define ATHRILL_DEVICE_ABI_MAJOR       1U
-#define ATHRILL_DEVICE_ABI_MINOR       23U
+#define ATHRILL_DEVICE_ABI_MINOR       24U
 #define ATHRILL_DEVICE_NO_EVENT        ((uint64)-1)
 #define ATHRILL_DEVICE_MAX_SPEC_CELLS  8U
 #define ATHRILL_DEVICE_PLUGIN_MAGIC    0x41544450U /* "ATDP" */
@@ -242,6 +242,11 @@ typedef struct AthrillDeviceValueProviderOps {
 	sint32 (*gps_sample)(void *instance, AthrillDeviceGpsSample *sample);
 	sint32 (*actuator_output)(void *instance, const float32 *values,
 	                         uint32 count);
+	/* Added in ABI 1.24: the sensor sample latched at or before time.
+	 * Returns -1 when no such sample is retained. Optional; consumers
+	 * check abi_minor and struct_size before calling. */
+	sint32 (*sensor_sample_at)(void *instance, uint64 time,
+	                          AthrillDeviceSensorSample *sample);
 } AthrillDeviceValueProviderOps;
 
 typedef struct {

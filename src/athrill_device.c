@@ -742,7 +742,9 @@ static int model_ops_valid(const AthrillDeviceModelOps *ops)
 	       ops->create != NULL && ops->destroy != NULL &&
 	       (ops->values == NULL ||
 	        (abi_header_ok(ops->values->abi_major, ops->values->abi_minor,
-	         ops->values->struct_size, sizeof(AthrillDeviceValueProviderOps)) &&
+	         ops->values->struct_size,
+	         offsetof(AthrillDeviceValueProviderOps, actuator_output) +
+	         sizeof(ops->values->actuator_output)) &&
 	         ops->values->sensor_sample != NULL &&
 	         ops->values->gps_sample != NULL &&
 	         ops->values->actuator_output != NULL));
