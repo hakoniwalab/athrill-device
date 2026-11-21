@@ -10,7 +10,7 @@ terms:
   - {name: accel_range,      kind: control, feature: accel, meaning: "Full scale of the accelerometer (e.g. ±2/4/8/16 g)."}
   - {name: gyro_range,       kind: control, feature: gyro,  meaning: "Full scale of the gyroscope (e.g. ±250..2000 dps)."}
   - {name: output_rate,      kind: control, feature: base, meaning: "Output data rate; samples are produced at this rate."}
-  - {name: filter_config,    kind: control, feature: base, meaning: "Digital low-pass/bandwidth settings: stored only."}
+  - {name: filter_config,    kind: control, feature: base, meaning: "Digital low-pass, anti-alias and bypass settings select the modeled in-chip filter response."}
   - {name: accel_sample,     kind: data,    feature: accel, meaning: "Three axes of acceleration as raw signed counts."}
   - {name: gyro_sample,      kind: data,    feature: gyro,  meaning: "Three axes of angular rate as raw signed counts."}
   - {name: temperature,      kind: data,    feature: base, meaning: "Die temperature as raw counts (datasheet formula)."}
@@ -73,6 +73,12 @@ behaviour:
   - id: ADV-FIFO-007
     feature: fifo
     rule: ABI 1.24 sensor_sample_at returns the newest sample latched at or before the requested target-clock time, or -1 if none is retained.
+  - id: ADV-IMU-FILTER-001
+    feature: base
+    rule: With the boolean athrill,ideal-filters property on an IMU node, all modeled in-chip filters are bypassed and FIFO and direct data use the unfiltered time-resolved value-source sample; without it filters are enabled.
+  - id: ADV-IMU-FILTER-002
+    feature: base
+    rule: Filter state advances only when FIFO or direct data is read, at the selected output data rate through value-source history; if the unread interval starts before retained history, state restarts at the oldest retained sample, so work is bounded by retained history.
 
 timing: Samples are produced at output_rate in model time; the sensor source's sample at that time is used.
 out_of_scope:

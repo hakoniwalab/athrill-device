@@ -20,6 +20,7 @@ add_library(athrill_device STATIC
   src/models/fm25v02.c
   src/models/icm20689.c
   src/models/icm42688p.c
+  src/models/imu_filter.c
   src/models/ist8310.c
   src/models/ms5611.c
   src/models/pwm_actuator.c
@@ -336,6 +337,30 @@ if(BUILD_TESTING)
     COMMAND test_imu_fifo_history icm42688p)
   add_test(NAME imu-fifo-icm20689
     COMMAND test_imu_fifo_history icm20689)
+  add_executable(test_imu_filters tests/test_imu_filters.c)
+  target_compile_definitions(test_imu_filters PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_imu_filters PRIVATE src/models)
+  target_link_libraries(test_imu_filters PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-BMI055A-003.T1
+    COMMAND test_imu_filters bmi055-accel-pmu-bw)
+  add_test(NAME ADV-CHIP-BMI055G-003.T1
+    COMMAND test_imu_filters bmi055-gyro-bw)
+  add_test(NAME ADV-CHIP-ICM42688-004.T1-gyro-ui
+    COMMAND test_imu_filters icm42688-gyro-ui)
+  add_test(NAME ADV-CHIP-ICM42688-004.T1-accel-ui
+    COMMAND test_imu_filters icm42688-accel-ui)
+  add_test(NAME ADV-CHIP-ICM42688-004.T1-gyro-aaf
+    COMMAND test_imu_filters icm42688-gyro-aaf)
+  add_test(NAME ADV-CHIP-ICM42688-004.T1-accel-aaf
+    COMMAND test_imu_filters icm42688-accel-aaf)
+  add_test(NAME ADV-CHIP-ICM20689-003.T1-gyro
+    COMMAND test_imu_filters icm20689-gyro-dlpf)
+  add_test(NAME ADV-CHIP-ICM20689-003.T1-accel
+    COMMAND test_imu_filters icm20689-accel-dlpf)
+  add_test(NAME ADV-IMU-FILTER-001.T1
+    COMMAND test_imu_filters icm42688-gyro-ui)
+  add_test(NAME ADV-IMU-FILTER-002.T1
+    COMMAND test_imu_filters icm42688-gyro-ui)
   add_executable(test_fm25v02 tests/test_fm25v02.c)
   target_compile_definitions(test_fm25v02 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_fm25v02 PRIVATE src/models)
