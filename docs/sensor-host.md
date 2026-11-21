@@ -145,7 +145,24 @@ accelerometer and gyro) has one instance. The motors stay on the sensor device.
 The run loads the plugin for the instances too: next to `DEVICE_CONFIG_DEVICE_PLUGIN_0` for
 `hakoniwa%2Csensor-device`, a `DEVICE_CONFIG_DEVICE_PLUGIN_1` for `hakoniwa%2Csensor-instance` with the same library.
 
-The ready-made DShot boards are:
+### Wiring consistency
+
+The runtime checks the sensor-host wiring before the firmware starts:
+
+- If `HAKO_SENSOR_DEVICE_SENSORS` is set but no enabled sensor chip's `value-source` points to a
+  `hakoniwa,sensor-instance`, construction stops. This normally means the board used the ordinary Hakoniwa DTB
+  instead of its `-sensors` DTB.
+- If any sensor-instance node exists, every enabled sensor chip must point to an instance. A chip still pointing to
+  `hakoniwa,sensor-device` stops construction with an error naming the chip and both compatibles. Actuator consumers
+  such as the DShot ESC continue to point to the sensor device.
+- If an instance node has no plugin mapping, the error names the line to add:
+  `DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance=<same library as DEVICE_CONFIG_DEVICE_PLUGIN_0>`.
+
+These are errors, not warnings: each setup would otherwise run while measuring a different signal from the one the
+sensor-instance configuration describes. The first programmed IMU FIFO period is checked before the next physics
+step. A slower adapter then follows the chip or produces an ERROR that names both periods.
+
+The ready-made DShot boards wired this way are:
 
 | Board | Devicetree | Instances |
 | --- | --- | --- |
@@ -172,25 +189,6 @@ The corresponding device configuration includes the sensor-instance plugin along
 DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa%2Csensor-device=/path/to/libhako_sensor_device.dylib
 DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance=/path/to/libhako_sensor_device.dylib
 ```
-### Wiring consistency
-
-The runtime checks the sensor-host wiring before the firmware starts:
-
-- If `HAKO_SENSOR_DEVICE_SENSORS` is set but no enabled sensor chip's `value-source` points to a
-  `hakoniwa,sensor-instance`, construction stops. This normally means the board used the ordinary Hakoniwa DTB
-  instead of its `-sensors` DTB.
-- If any sensor-instance node exists, every enabled sensor chip must point to an instance. A chip still pointing to
-  `hakoniwa,sensor-device` stops construction with an error naming the chip and both compatibles. Actuator consumers
-  such as the DShot ESC continue to point to the sensor device.
-- If an instance node has no plugin mapping, the error names the line to add:
-  `DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance=<same library as DEVICE_CONFIG_DEVICE_PLUGIN_0>`.
-
-These are errors, not warnings: each setup would otherwise run while measuring a different signal from the one the
-sensor-instance configuration describes. The first programmed IMU FIFO period is checked before the next physics
-step. A slower adapter then follows the chip or produces an ERROR that names both periods.
-
-`boards/pixhawk6c/pixhawk6c-hakoniwa-dshot-sensors.dts` is the Pixhawk 6C with DShot wired this way, with the
-instances `bmi055`, `icm42688p`, `barometer`, `magnetometer` and `gps1`.
 
 ### Adapter implementations
 
