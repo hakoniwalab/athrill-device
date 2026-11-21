@@ -29,7 +29,7 @@ static void periodic_ring(void)
 	uint32 i;
 	memset(&history, 0, sizeof(history));
 	CHECK(hako_sensor_history_sample_at(&history, 0U, &sample) == -1);
-	for (i = 0U; i < 520U; i++) {
+	for (i = 0U; i < HAKO_SENSOR_HISTORY_SIZE + 8U; i++) {
 		AthrillDeviceSensorSample value = numbered((float32)i);
 		hako_sensor_history_latch(&history, (uint64)i * 10U, &value);
 	}
@@ -39,8 +39,10 @@ static void periodic_ring(void)
 	CHECK(sample.temperature_c == 8.0F);
 	CHECK(hako_sensor_history_sample_at(&history, 123U, &sample) == 0);
 	CHECK(sample.temperature_c == 12.0F);
-	CHECK(hako_sensor_history_sample_at(&history, 9999U, &sample) == 0);
-	CHECK(sample.temperature_c == 519.0F);
+	CHECK(hako_sensor_history_sample_at(&history,
+		(uint64)(HAKO_SENSOR_HISTORY_SIZE + 8U) * 10U, &sample) == 0);
+	CHECK(sample.temperature_c ==
+		(float32)(HAKO_SENSOR_HISTORY_SIZE + 7U));
 }
 
 /* ADV-FIFO-007: irregular latches use the bounded backward lookup. */

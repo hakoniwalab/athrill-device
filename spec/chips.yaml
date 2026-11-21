@@ -273,3 +273,90 @@
   - id: ADV-CHIP-ADIS16470-007.T1
     stimulus: With FILT_CTRL 0 and DEC_RATE 0, apply a constant, a 550 Hz gyro sine, a 600 Hz acceleration sine, and 10 Hz sines to both sensors through value-source history, then read bursts after settling.
     expect: The constant is unchanged; gain is 0.70710678 +/- 0.015 at each sensor's stated -3 dB frequency, and each 10 Hz gain is within 1% of unity.
+- id: ADV-CHIP-ICP201XX-001
+  statement: DEVICE_ID (0x0C) reads 0x63 over I2C, and VERSION (0xD3) reads an ASIC revision accepted by PX4.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 sections 5.4, 12, and 13.31
+  scope: PX4 v1.17.0 icp201xx probe; the normal model is revision 0x00 and a test-only revision override covers 0xB2.
+  verification: generated
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-001.T1
+    stimulus: Read DEVICE_ID register 0x0C at the test node's I2C address.
+    expect: 0x63.
+- id: ADV-CHIP-ICP201XX-002
+  statement: The registers polled or changed by PX4 v1.17.0 implement the mode-synchronization handshake and the revision-0 OTP boot sequence; OTP addresses 0xF8, 0xF9, and 0xFA return offset, gain, and oscillator trim bytes, while VERSION 0xB2 skips OTP boot.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 sections 5.4, 6.5, 6.6, and 13.1-13.31; PX4 v1.17.0 ICP201XX.cpp
+  scope: DEVICE_STATUS, MODE_SELECT, trim, lock, OTP, interrupt-mask, FIFO configuration and dummy I2C accesses made during PX4 start-up.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-002.T1
+    stimulus: Replay explicit register transaction vectors transcribed in source order from PX4 v1.17.0 for VERSION 0x00 and VERSION 0xB2, including PX4's dummy read after every access.
+    expect: Every read has the expected value, the revision-0 path copies all three OTP values to trim registers, the B2 path leaves OTP disabled, and both reach continuous Mode2.
+- id: ADV-CHIP-ICP201XX-003
+  statement: MODE_SELECT MEAS_CONFIG codes 0 through 4 select 25, 120, 40, 2, and 25 Hz; codes 5 through 7 are reserved. PX4's continuous Mode2 value 0x48 reports a pressure period of 25000000 ns to the value source.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 Table 2 and sections 6.2.1 and 13.19
+  scope: Operation-mode rate table and sensor-host sample-period contract.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-003.T1
+    stimulus: Evaluate every three-bit MEAS_CONFIG code and configure continuous Mode2 in the model.
+    expect: The rate table is 25, 120, 40, 2, 25 Hz followed by three reserved entries, and Mode2 reports 25 ms.
+- id: ADV-CHIP-ICP201XX-004
+  statement: The FIFO holds 16 pressure/temperature pairs. Completing a six-byte pressure-first burst consumes the oldest pair; a partial burst does not. Flush empties it. When full, new pairs are ignored and the oldest 16 remain; empty reads return zeros and overflow/underflow status is latched.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 sections 6.7, 7.1-7.5, 13.20, 13.22, and 13.23
+  scope: Pressure-first FIFO mode used by PX4 v1.17.0, including FIFO_FILL and FIFO_CONFIG.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-004.T1
+    stimulus: Produce 20 distinguishable pairs without reading, inspect fill and overflow, then burst-read all 16 pairs.
+    expect: Fill reports full and the read contains pairs 1 through 16 in order; pairs 17 through 20 were ignored as sections 7.2-7.3 specify.
+  - id: ADV-CHIP-ICP201XX-004.T2
+    stimulus: Read only the first three bytes of one pair, start a new six-byte burst, fetch once more while empty, then fill three pairs and issue FIFO_FLUSH.
+    expect: The partial read does not consume the pair, the new burst repeats those pressure bytes and consumes on TEMP_DATA_2, the empty fetch is zero and latches underflow, and flush leaves FIFO empty as sections 6.7, 7.1-7.3, and 7.5 specify.
+- id: ADV-CHIP-ICP201XX-005
+  statement: Each FIFO pair uses the value-source pressure and temperature at that pair's own sample time. Raw pressure is round((P_Pa - 70000) * 2^17 / 40000) and raw temperature is round((T_C - 25) * 2^18 / 65), saturated to signed 20 bits and emitted least-significant byte first.
+  source:
+    devicetree: invensense,icp201xx; ABI 1.24 sensor_sample_at value-source history
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 sections 6.7.1, 6.7.2, and 13.32-13.37; PX4 v1.17.0 ICP201XX.cpp conversion
+  scope: Inverse conversion from sensor-host hPa and degrees C to the pressure-first 20-bit FIFO format PX4 consumes.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-005.T1
+    stimulus: Produce a pair from known pressure and temperature, decode its signed 20-bit words, and apply PX4's forward conversion.
+    expect: Pressure and temperature round-trip within one respective output LSB and the history request names the pair's exact sample time.
+- id: ADV-CHIP-ICP201XX-006
+  statement: Lazy FIFO generation at register access advances at 40 Hz without per-step work; draining it at PX4's 30 Hz schedule returns every produced pair once and PX4's average matches the input values for those pair times.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 Table 2 and sections 6.7 and 7; PX4 v1.17.0 ICP201XX.cpp 30 Hz schedule and FIFO averaging
+  scope: PX4 Mode2 run-time data path.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-006.T1
+    stimulus: Run one second of 40 Hz time-resolved ramp input and perform FIFO fill/read/average operations at 30 Hz as PX4 does.
+    expect: Each read returns one or two consecutive pairs, none are lost or duplicated, and each averaged pressure is within one pressure LSB of the matching input average.
+- id: ADV-CHIP-ICP201XX-007
+  statement: At unchanged virtual time, repeated reads of any non-FIFO register or FIFO_FILL return identical bytes; a partial FIFO read is repeatable, and only completion of the documented FIFO pair fetch consumes data.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 sections 6.7 and 7.1-7.3
+  scope: Deterministic register and FIFO observation.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-007.T1
+    stimulus: At one virtual time, repeat VERSION and FIFO_FILL reads and repeat a three-byte pressure read in separate I2C bursts.
+    expect: Both instances of every read are byte-identical and the partial FIFO access leaves the pair present.

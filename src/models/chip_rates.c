@@ -116,6 +116,15 @@ uint64 chip_adis16470_rate_mhz(uint16 dec_rate)
 	return 2000000U / divider;
 }
 
+/* [ADV-CHIP-ICP201XX-003] DS-000416 revision 1.1 Table 2 operation modes. */
+uint64 chip_icp201xx_rate_mhz(uint8 meas_config)
+{
+	static const uint64 rates[8] = {
+		25000U, 120000U, 40000U, 2000U, 25000U, 0U, 0U, 0U
+	};
+	return rates[meas_config & 7U];
+}
+
 uint64 chip_rate_clocks(uint64 frequency_hz, uint64 rate_mhz)
 {
 	return rate_mhz == 0U ? 0U : (frequency_hz * 1000U) / rate_mhz;

@@ -21,6 +21,7 @@ add_library(athrill_device STATIC
   src/models/fm25v02.c
   src/models/icm20689.c
   src/models/icm42688p.c
+  src/models/icp201xx.c
   src/models/imu_filter.c
   src/models/ist8310.c
   src/models/ms5611.c
@@ -127,6 +128,7 @@ if(BUILD_TESTING)
   file(GLOB_RECURSE TRACE_BOARD_DTBS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/boards/*.dtb")
   list(APPEND TRACE_BOARD_DTBS "${TEST_DTB_DIR}/adis16470.dtb")
+  list(APPEND TRACE_BOARD_DTBS "${TEST_DTB_DIR}/icp201xx.dtb")
   set(TRACE_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/traceability")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/spi.yaml"
@@ -176,6 +178,7 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/gps.dtb"
       "${TEST_DTB_DIR}/imu.dtb"
       "${TEST_DTB_DIR}/adis16470.dtb"
+      "${TEST_DTB_DIR}/icp201xx.dtb"
       "${TEST_DTB_DIR}/gpio.dtb"
       "${TEST_DTB_DIR}/exti.dtb"
       "${TEST_DTB_DIR}/timer-pwm.dtb"
@@ -370,6 +373,7 @@ if(BUILD_TESTING)
   target_link_libraries(test_chip_rates PRIVATE athrill_device)
   add_test(NAME chip-rates COMMAND test_chip_rates)
   add_test(NAME ADV-CHIP-ADIS16470-005.T1 COMMAND test_chip_rates)
+  add_test(NAME ADV-CHIP-ICP201XX-003.T1 COMMAND test_chip_rates)
   add_executable(test_adis16470 tests/test_adis16470.c)
   target_compile_definitions(test_adis16470 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_adis16470 PRIVATE src/models tests)
@@ -386,6 +390,22 @@ if(BUILD_TESTING)
     COMMAND test_adis16470 burst)
   add_test(NAME ADV-CHIP-ADIS16470-007.T1
     COMMAND test_adis16470 bandwidth)
+  add_executable(test_icp201xx tests/test_icp201xx.c)
+  target_compile_definitions(test_icp201xx PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_icp201xx PRIVATE src/models tests)
+  target_link_libraries(test_icp201xx PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-ICP201XX-002.T1
+    COMMAND test_icp201xx startup)
+  add_test(NAME ADV-CHIP-ICP201XX-004.T1
+    COMMAND test_icp201xx overflow)
+  add_test(NAME ADV-CHIP-ICP201XX-004.T2
+    COMMAND test_icp201xx partial-flush)
+  add_test(NAME ADV-CHIP-ICP201XX-005.T1
+    COMMAND test_icp201xx conversion)
+  add_test(NAME ADV-CHIP-ICP201XX-006.T1
+    COMMAND test_icp201xx px4-30hz)
+  add_test(NAME ADV-CHIP-ICP201XX-007.T1
+    COMMAND test_icp201xx determinism)
   add_executable(test_imu_fifo_history tests/test_imu_fifo_history.c)
   target_compile_definitions(test_imu_fifo_history PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_imu_fifo_history PRIVATE src/models)

@@ -456,8 +456,10 @@ def is_spi_controller(node: Node) -> bool:
 
 
 def is_i2c_controller(node: Node) -> bool:
-    return enabled(node) and any(
-        item.startswith("st,stm32") and "i2c" in item for item in compatible(node)
+    return enabled(node) and (
+        "athrill,test-i2c-controller" in compatible(node) or
+        any(item.startswith("st,stm32") and "i2c" in item
+            for item in compatible(node))
     )
 
 
@@ -670,6 +672,7 @@ CHIP_TESTS = {
     "bosch,bmg160": ("ADV-CHIP-BMI055G-001", "spi-register", 0x00, 0x0F),
     "isentek,ist8310": ("ADV-CHIP-IST8310-001", "i2c-register", 0x00, 0x10),
     "meas,ms5611": ("ADV-CHIP-MS5611-001", "ms5611-prom", None, None),
+    "invensense,icp201xx": ("ADV-CHIP-ICP201XX-001", "i2c-register", 0x0C, 0x63),
 }
 
 
@@ -737,6 +740,7 @@ def load_test_specs(paths: list[Path]) -> dict[str, str]:
         "ADV-CHIP-BMI055G-001.T1": "chip:bosch,bmg160",
         "ADV-CHIP-IST8310-001.T1": "chip:isentek,ist8310",
         "ADV-CHIP-MS5611-001.T1": "chip:meas,ms5611",
+        "ADV-CHIP-ICP201XX-001.T1": "chip:invensense,icp201xx",
     }
     for test_id, target in required.items():
         if result.get(test_id) != target:
