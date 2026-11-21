@@ -163,6 +163,11 @@ static sint32 get_property(void *context, const char *name,
 {
 	static const uint32 phandle = 1U;
 	(void)context;
+	if (strcmp(name, "athrill,ideal-filters") == 0) {
+		*data = NULL;
+		*size = 0U;
+		return 0;
+	}
 	if (strcmp(name, "value-source") != 0) {
 		return -1;
 	}

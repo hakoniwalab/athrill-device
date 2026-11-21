@@ -138,3 +138,51 @@
     stimulus: PX4's settings, every FCHOICE_B and DLPF_CFG code, and SMPLRT_DIV 0, 1, 4, 9; the accelerometer with and
       without ACCEL_FCHOICE_B.
     expect: 8 and 4 kHz for PX4; 32 kHz; 8 kHz; 1000, 500, 200, 100 Hz; 4 kHz or 1 kHz / (1 + SMPLRT_DIV).
+- id: ADV-CHIP-BMI055A-003
+  statement: The accelerometer PMU_BW codes select a second-order Butterworth IIR at 7.8125, 15.625, 31.25, 62.5, 125, 250, 500, or 1000 Hz, and ACCD_HBW bit 7 bypasses it.
+  source:
+    devicetree: bosch,bma280; athrill,ideal-filters optionally bypasses the modeled chip filter
+    manual: BMI055 BST-BMI055-DS000-06, accelerometer electrical characteristics (second-order filter) and ACC register 0x10 PMU_BW table; https://media.digikey.com/pdf/Data%20Sheets/Bosch/BMI055.pdf
+  scope: FIFO and direct acceleration data used by the firmware.
+  verification: unit
+  applies_to: chip:bosch,bma280
+  tests:
+  - id: ADV-CHIP-BMI055A-003.T1
+    stimulus: Apply constant input and four bin-centred sine frequencies with PMU_BW 0x0A at 62.5 Hz ODR, then repeat a sample with athrill,ideal-filters.
+    expect: DC gain is one; sine gains are within 0.035 of the prewarped second-order response; the DT bypass returns the unfiltered value.
+- id: ADV-CHIP-BMI055G-003
+  statement: The gyroscope BW codes 1..7 select IIR cutoffs 230, 116, 47, 23, 12, 64, and 32 Hz; BW 0 and RATE_HBW bit 7 bypass filtering; because the datasheet names an IIR but no order, the model uses a second-order Butterworth response.
+  source:
+    devicetree: bosch,bmg160; athrill,ideal-filters optionally bypasses the modeled chip filter
+    manual: BMI055 BST-BMI055-DS000-06, table 25 and section 7.3 (CIC/decimation followed by IIR); https://media.digikey.com/pdf/Data%20Sheets/Bosch/BMI055.pdf
+  scope: FIFO and direct angular-rate data used by the firmware.
+  verification: unit
+  applies_to: chip:bosch,bmg160
+  tests:
+  - id: ADV-CHIP-BMI055G-003.T1
+    stimulus: Apply constant input and four bin-centred sine frequencies with BW 3 (47 Hz at 400 Hz ODR), then repeat a sample with athrill,ideal-filters.
+    expect: DC gain is one; sine gains are within 0.035 of the prewarped second-order response; the DT bypass returns the unfiltered value.
+- id: ADV-CHIP-ICM42688-004
+  statement: The gyroscope and accelerometer each cascade their second-order AAF selected by AAF_DIS/AAF_DELT/AAF_DELTSQR/AAF_BITSHIFT with their UI Butterworth IIR selected by UI_FILT_ORD (orders 1..3) and UI_FILT_BW; reserved and low-latency UI codes bypass the UI stage.
+  source:
+    devicetree: invensense,icm42688; athrill,ideal-filters optionally bypasses the modeled chip filters
+    manual: ICM-42688-P DS-000347 revision 1.7 sections 5.3 (AAF 42..3979 Hz tuple table), 14.39-14.41 (UI order and BW=max(400 Hz, ODR)/{4,5,8,10,16,20,40}); https://invensense.tdk.com/wp-content/uploads/2022/12/DS-000347-ICM-42688-P-v1.7.pdf
+  scope: FIFO and direct accelerometer and gyroscope data used by PX4 and ArduPilot.
+  verification: unit
+  applies_to: chip:invensense,icm42688
+  tests:
+  - id: ADV-CHIP-ICM42688-004.T1
+    stimulus: Independently select gyro and accel third-order 100 Hz UI filters and valid 258 Hz gyro and 126 Hz accel AAF tuples at 1 kHz; for each, apply constant input and four bin-centred sine frequencies, plus athrill,ideal-filters.
+    expect: Each stage has DC gain one and sine gains within 0.035 of its prewarped response; the DT bypass returns unfiltered values.
+- id: ADV-CHIP-ICM20689-003
+  statement: DLPF_CFG selects gyroscope cutoffs 250, 176, 92, 41, 20, 10, 5, and 3281 Hz and A_DLPF_CFG selects accelerometer cutoffs 218.1, 218.1, 99, 44.8, 21.2, 10.2, 5.1, and 420 Hz; FCHOICE_B or ACCEL_FCHOICE_B bypasses its filter; because the datasheet gives bandwidth and group delay but no order, the model uses second-order Butterworth responses.
+  source:
+    devicetree: invensense,icm20689; athrill,ideal-filters optionally bypasses the modeled chip filters
+    manual: ICM-20689 DS-000143 register CONFIG and ACCEL_CONFIG2 filter tables; https://product.tdk.com/system/files/dam/doc/product/sensor/mortion-inertial/imu/data_sheet/ds-000143-icm-20689-datasheet.pdf
+  scope: FIFO and direct accelerometer and gyroscope data used by the firmware.
+  verification: unit
+  applies_to: chip:invensense,icm20689
+  tests:
+  - id: ADV-CHIP-ICM20689-003.T1
+    stimulus: Select gyroscope DLPF_CFG 3 (41 Hz) and accelerometer A_DLPF_CFG 3 (44.8 Hz) at 1 kHz; for each, apply constant input and four bin-centred sine frequencies, plus athrill,ideal-filters.
+    expect: DC gain is one; sine gains are within 0.035 of the prewarped second-order response; each register and DT bypass returns unfiltered values.

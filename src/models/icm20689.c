@@ -5,6 +5,7 @@
  */
 #include "models.h"
 #include "chip_rates.h"
+#include "imu_filter.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -83,7 +84,12 @@ typedef struct {
 	uint64 next_sample;
 	AthrillDeviceGpioLine data_ready;
 	std_bool data_ready_resolved;
+	std_bool ideal_filters;
+	ImuFilterStream accel_filter;
+	ImuFilterStream gyro_filter;
 } Icm20689;
+
+static uint64 time_now(const Icm20689 *chip);
 
 static int16_t saturate(float32 value)
 {
@@ -137,19 +143,20 @@ static void raw_from_sample(const Icm20689 *chip,
 		TEMP_SENSITIVITY);
 }
 
-static void raw_sample(const Icm20689 *chip, RawSample *raw)
+static void filtered_sample(Icm20689 *chip, uint64 time, RawSample *raw)
 {
+	/* [ADV-IMU-FILTER-001] The DT property bypasses every modeled stage. */
 	AthrillDeviceSensorSample sample = {0};
-	if (chip->source.ops != NULL) {
-		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
+	float32 value[3];
+	imu_filter_source_sample(&chip->source, time, &sample);
+	if (!chip->ideal_filters) {
+		(void)imu_filter_sample(&chip->accel_filter, &chip->source,
+			time, IMU_FILTER_ACCEL, value);
+		memcpy(sample.acceleration, value, sizeof(value));
+		(void)imu_filter_sample(&chip->gyro_filter, &chip->source,
+			time, IMU_FILTER_GYRO, value);
+		memcpy(sample.angular_velocity, value, sizeof(value));
 	}
-	raw_from_sample(chip, &sample, raw);
-}
-
-static void raw_sample_at(const Icm20689 *chip, uint64 time, RawSample *raw)
-{
-	AthrillDeviceSensorSample sample = {0};
-	(void)athrill_device_sensor_sample_at(&chip->source, time, &sample);
 	raw_from_sample(chip, &sample, raw);
 }
 
@@ -163,6 +170,32 @@ static uint64 gyro_rate_mhz(const Icm20689 *chip)
 static uint64 sample_clocks(const Icm20689 *chip)
 {
 	return chip_rate_clocks(chip->frequency_hz, gyro_rate_mhz(chip));
+}
+
+/* [ADV-CHIP-ICM20689-003] DLPF_CFG/A_DLPF_CFG bandwidths and bypass bits. */
+static void configure_filters(Icm20689 *chip)
+{
+	static const float32 gyro_bandwidth[8] = {
+		250.0F, 176.0F, 92.0F, 41.0F, 20.0F, 10.0F, 5.0F, 3281.0F
+	};
+	static const float32 accel_bandwidth[8] = {
+		218.1F, 218.1F, 99.0F, 44.8F, 21.2F, 10.2F, 5.1F, 420.0F
+	};
+	uint64 gyro_rate = gyro_rate_mhz(chip);
+	uint64 accel_rate = chip_icm20689_accel_rate_mhz(
+		chip->registers[REG_ACCEL_CONFIG2],
+		chip->registers[REG_SMPLRT_DIV]);
+	uint8 gyro_order = (chip->registers[REG_GYRO_CONFIG] & 3U) == 0U ? 2U : 0U;
+	uint8 accel_order = (chip->registers[REG_ACCEL_CONFIG2] & 0x08U) == 0U ? 2U : 0U;
+	float32 gyro_bw = gyro_bandwidth[chip->registers[REG_CONFIG] & 7U];
+	float32 accel_bw = accel_bandwidth[chip->registers[REG_ACCEL_CONFIG2] & 7U];
+	uint64 now = time_now(chip);
+	imu_filter_configure(&chip->gyro_filter, now,
+		chip_rate_clocks(chip->frequency_hz, gyro_rate),
+		(float32)gyro_rate / 1000.0F, &gyro_order, &gyro_bw, 1U);
+	imu_filter_configure(&chip->accel_filter, now,
+		chip_rate_clocks(chip->frequency_hz, accel_rate),
+		(float32)accel_rate / 1000.0F, &accel_order, &accel_bw, 1U);
 }
 
 /* The value source learns each part's period once the chip samples into its FIFO or raises
@@ -275,7 +308,7 @@ static uint8 fifo_byte(Icm20689 *chip)
 	if (position == 0U) {
 		uint64 record = chip->fifo_read_bytes / bytes;
 		/* [ADV-FIFO-001] [ADV-FIFO-003] [ADV-FIFO-004] */
-		raw_sample_at(chip, chip->fifo_start +
+		filtered_sample(chip, chip->fifo_start +
 			(record + 1U) * sample_clocks(chip), &raw);
 		if (record % 2U == 0U) {
 			memcpy(chip->acceleration_held, raw.acceleration,
@@ -302,11 +335,11 @@ static uint8 fifo_byte(Icm20689 *chip)
 	return chip->record[position];
 }
 
-static uint8 data_register(const Icm20689 *chip, uint8 address)
+static uint8 data_register(Icm20689 *chip, uint8 address)
 {
 	RawSample raw;
 	int16_t value;
-	raw_sample(chip, &raw);
+	filtered_sample(chip, time_now(chip), &raw);
 	if (address < REG_TEMP_OUT_H) {
 		value = raw.acceleration[(address - REG_ACCEL_XOUT_H) / 2U];
 	} else if (address < REG_GYRO_XOUT_H) {
@@ -354,6 +387,7 @@ static void write_register(Icm20689 *chip, uint8 address, uint8 value)
 	case REG_PWR_MGMT_1:
 		if ((value & PWR_MGMT_1_RESET_BIT) != 0U) {
 			reset_registers(chip);
+			configure_filters(chip);
 			fifo_restart(chip);
 			return;
 		}
@@ -375,6 +409,10 @@ static void write_register(Icm20689 *chip, uint8 address, uint8 value)
 		break;
 	}
 	chip->registers[address & 0x7fU] = value;
+	if (address == REG_SMPLRT_DIV || address == REG_CONFIG ||
+	    address == REG_GYRO_CONFIG || address == REG_ACCEL_CONFIG2) {
+		configure_filters(chip);
+	}
 	if (!was_on && fifo_on(chip)) {
 		fifo_restart(chip);
 	}
@@ -415,6 +453,7 @@ static sint32 reset(void *instance)
 {
 	Icm20689 *chip = instance;
 	reset_registers(chip);
+	configure_filters(chip);
 	chip->started = FALSE;
 	chip->reading = FALSE;
 	chip->address = 0U;
@@ -430,7 +469,9 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 {
 	Icm20689 *chip = calloc(1U, sizeof(*chip));
 	const void *alignment;
+	const void *ideal;
 	uint32 size;
+	uint32 ideal_size;
 	uint64 frequency;
 	if (chip == NULL || args->target_ops->time_frequency_hz == NULL ||
 	    (frequency = args->target_ops->time_frequency_hz(args->target)) == 0U) {
@@ -443,6 +484,11 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	chip->frequency_hz = frequency;
 	chip->rotated = args->node->ops->get_property(args->node->context,
 		"axis-align-x", &alignment, &size) == 0;
+	chip->ideal_filters = args->node->ops->get_property(
+		args->node->context, "athrill,ideal-filters", &ideal,
+		&ideal_size) == 0;
+	reset_registers(chip);
+	configure_filters(chip);
 	*instance = chip;
 	return 0;
 }

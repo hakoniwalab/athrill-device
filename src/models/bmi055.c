@@ -5,6 +5,7 @@
  */
 #include "models.h"
 #include "chip_rates.h"
+#include "imu_filter.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -67,6 +68,8 @@ typedef struct {
 	uint64 next_data_ready;
 	AthrillDeviceGpioLine data_ready;
 	std_bool data_ready_resolved;
+	std_bool ideal_filters;
+	ImuFilterStream filter;
 } Bmi055;
 
 static int16_t saturate(float32 value, float32 minimum, float32 maximum)
@@ -141,19 +144,23 @@ static void raw_from_sample(const Bmi055 *chip,
 	}
 }
 
-static void raw_sample(const Bmi055 *chip, int16_t *raw)
+static void filtered_sample(Bmi055 *chip, uint64 time, int16_t *raw)
 {
+	/* [ADV-IMU-FILTER-001] The DT property bypasses every modeled stage. */
 	AthrillDeviceSensorSample sample = {0};
-	if (chip->source.ops != NULL) {
-		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
+	float32 value[3];
+	imu_filter_source_sample(&chip->source, time, &sample);
+	if (!chip->ideal_filters) {
+		(void)imu_filter_sample(&chip->filter, &chip->source, time,
+			chip->kind == BMI055_ACCEL ? IMU_FILTER_ACCEL :
+			IMU_FILTER_GYRO, value);
+		if (chip->kind == BMI055_ACCEL) {
+			memcpy(sample.acceleration, value, sizeof(value));
+		}
+		else {
+			memcpy(sample.angular_velocity, value, sizeof(value));
+		}
 	}
-	raw_from_sample(chip, &sample, raw);
-}
-
-static void raw_sample_at(const Bmi055 *chip, uint64 time, int16_t *raw)
-{
-	AthrillDeviceSensorSample sample = {0};
-	(void)athrill_device_sensor_sample_at(&chip->source, time, &sample);
 	raw_from_sample(chip, &sample, raw);
 }
 
@@ -212,7 +219,7 @@ static void make_record(Bmi055 *chip, uint64 time)
 {
 	int16_t raw[3];
 	uint32 i;
-	raw_sample_at(chip, time, raw);
+	filtered_sample(chip, time, raw);
 	for (i = 0U; i < 3U; i++) {
 		uint16 value = chip->kind == BMI055_ACCEL ?
 			(uint16)((sint32)raw[i] * 16) : (uint16)raw[i];
@@ -251,7 +258,7 @@ static uint8 data_register(Bmi055 *chip, uint8 address)
 	int16_t raw[3];
 	uint32 offset = address - REG_DATA_X_L;
 	uint16 value;
-	raw_sample(chip, raw);
+	filtered_sample(chip, time_now(chip), raw);
 	value = chip->kind == BMI055_ACCEL ?
 		(uint16)((sint32)raw[offset / 2U] * 16) : (uint16)raw[offset / 2U];
 	return (offset & 1U) == 0U ? (uint8)value : (uint8)(value >> 8);
@@ -311,6 +318,40 @@ static uint64 rate_mhz(const Bmi055 *chip)
 		chip_bmi055_gyro_rate_mhz(chip->registers[REG_BW], chip->registers[REG_HBW]);
 }
 
+/* [ADV-CHIP-BMI055A-003] [ADV-CHIP-BMI055G-003] Datasheet bandwidth filters. */
+static void configure_filter(Bmi055 *chip)
+{
+	static const float32 gyro_bandwidth[8] = {
+		0.0F, 230.0F, 116.0F, 47.0F, 23.0F, 12.0F, 64.0F, 32.0F
+	};
+	uint8 order = 2U;
+	float32 bandwidth;
+	uint64 rate = rate_mhz(chip);
+	if ((chip->registers[REG_HBW] & 0x80U) != 0U) {
+		order = 0U;
+	}
+	if (chip->kind == BMI055_ACCEL) {
+		uint8 code = chip->registers[REG_BW] & 0x1FU;
+		if (code < 0x08U) {
+			code = 0x08U;
+		}
+		if (code > 0x0FU) {
+			code = 0x0FU;
+		}
+		bandwidth = 7.8125F * (float32)(1U << (code - 0x08U));
+	}
+	else {
+		uint8 code = chip->registers[REG_BW] & 7U;
+		bandwidth = gyro_bandwidth[code];
+		if (code == 0U) {
+			order = 0U;
+		}
+	}
+	imu_filter_configure(&chip->filter, time_now(chip),
+		chip_rate_clocks(chip->frequency_hz, rate),
+		(float32)rate / 1000.0F, &order, &bandwidth, 1U);
+}
+
 /* Samples come at the rate the registers set. With the FIFO running, the frames already
  * made stay; the next ones follow the new period. */
 static void apply_rate(Bmi055 *chip)
@@ -350,6 +391,7 @@ static void write_register(Bmi055 *chip, uint8 address, uint8 value)
 	if (address == REG_SOFTRESET && value == SOFTRESET_VALUE) {
 		reset_registers(chip);
 		apply_rate(chip);
+		configure_filter(chip);
 		fifo_restart(chip);
 		return;
 	}
@@ -360,6 +402,7 @@ static void write_register(Bmi055 *chip, uint8 address, uint8 value)
 	chip->registers[address & 0x3fU] = value;
 	if (address == REG_BW || address == REG_HBW) {
 		apply_rate(chip);
+		configure_filter(chip);
 	}
 	if (address == fifo_config_0 || address == REG_FIFO_CONFIG_1 ||
 	    (!was_on && fifo_on(chip))) {
@@ -418,6 +461,7 @@ static sint32 reset(void *instance)
 	Bmi055 *chip = instance;
 	reset_registers(chip);
 	apply_rate(chip);
+	configure_filter(chip);
 	chip->started = FALSE;
 	chip->reading = FALSE;
 	chip->address = 0U;
@@ -432,6 +476,8 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 {
 	Bmi055 *chip = calloc(1U, sizeof(*chip));
 	const char *rotation;
+	const void *ideal;
+	uint32 ideal_size;
 	uint64 frequency;
 	if (chip == NULL || args->target_ops->time_frequency_hz == NULL ||
 	    (frequency = args->target_ops->time_frequency_hz(args->target)) == 0U) {
@@ -446,6 +492,10 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	chip->frequency_hz = frequency;
 	reset_registers(chip);
 	chip->clocks_per_sample = chip_rate_clocks(frequency, rate_mhz(chip));
+	chip->ideal_filters = args->node->ops->get_property(
+		args->node->context, "athrill,ideal-filters", &ideal,
+		&ideal_size) == 0;
+	configure_filter(chip);
 	if (args->node->ops->get_string(args->node->context,
 		"athrill,mount-rotation", 0U, &rotation) == 0 &&
 	    rotation != NULL) {
