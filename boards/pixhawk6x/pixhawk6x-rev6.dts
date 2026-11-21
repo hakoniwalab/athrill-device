@@ -1,0 +1,63 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Holybro Pixhawk 6X / FMUv6X sensor-set revision 6.
+ * ICM-45686 on SPI1 and IIM-42652 on SPI2 have no model yet: their
+ * chip-select lines remain on the buses, with no device attached.
+ */
+
+#include "pixhawk6x.dts"
+
+/ {
+	model = "Holybro Pixhawk 6X (FMUv6X revision 6) for Athrill";
+};
+
+/* PX4 reads the PG0-high and PG0-low 16-bit ADC3 conversions. Channel 14
+ * uses the documented fallback base-board version 0; channel 15's 36800
+ * scales to 2300 in PX4's 12-bit ladder table, selecting ordinal 6. */
+&adc3_common {
+	athrill,adc-select-gpios = <&gpiog 0 GPIO_ACTIVE_HIGH>;
+	athrill,adc-channel-values = <14 65535 0>,
+				     <15 65535 36800>;
+};
+
+/* Revision 6 SPI1 is ICM-45686 on PI9/PF2, not modeled yet. */
+&spi1 {
+	/delete-node/ imu@0;
+};
+
+/* Revision 6 SPI2 is IIM-42652 on PH5/PA10, not modeled yet. */
+&spi2 {
+	/delete-node/ imu@0;
+};
+
+/* Revision 6 SPI3 has one ADIS16470 on CS PI4, DRDY PI7, rotation 0. */
+&spi3 {
+	cs-gpios = <&gpioi 4 GPIO_ACTIVE_LOW>;
+
+	/delete-node/ gyroscope@0;
+	/delete-node/ accelerometer@1;
+
+	adis16470: imu@0 {
+		compatible = "adi,adis16470";
+		reg = <0>;
+		spi-max-frequency = <2000000>;
+		int-gpios = <&gpioi 7 GPIO_ACTIVE_HIGH>;
+	};
+};
+
+/* Revision 6 internal I2C4: ICP-201xx and BMM150, both rotation 0. */
+&i2c4 {
+	/delete-node/ pressure@77;
+	/delete-node/ magnetometer@10;
+
+	icp201xx: pressure@64 {
+		compatible = "invensense,icp201xx";
+		reg = <0x64>;
+	};
+
+	bmm150: magnetometer@10 {
+		compatible = "bosch,bmm150";
+		reg = <0x10>;
+	};
+};

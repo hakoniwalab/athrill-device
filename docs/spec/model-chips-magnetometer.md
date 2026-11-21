@@ -3,13 +3,14 @@
 
 # Model specification: magnetometer 1.0.0
 
-Single-measurement 3-axis magnetometer on I2C (IST8310). Values come from the common sensor source.
+Three-axis I2C magnetometers (IST8310 and BMM150). Values come from the common sensor source.
 
 ## Features
 
 | Feature | Meaning |
 |---|---|
 | base | Identity, single measurement, data. |
+| bmm150 | Bosch compensated normal-mode data. |
 
 ## Terms
 
@@ -31,6 +32,8 @@ Single-measurement 3-axis magnetometer on I2C (IST8310). Values come from the co
 | ADV-MAG-B001 | base | A field B (gauss, sensor frame) from the source reads as raw = round(B x counts_per_gauss(resolution)) per axis, saturated, in the datasheet's byte order, after the board's mount rotation is undone. |
 | ADV-MAG-B002 | base | single_measure produces one sample after the datasheet's measurement time; data_ready turns on; reading the data turns it off; no further sample is produced until the next single_measure. |
 | ADV-MAG-B003 | base | Multi-byte reads auto-increment and return all axes of one sample. |
+| ADV-MAG-B004 | bmm150 | BMM150 normal mode samples the value-source history at its ODR boundary; fixed trim and inverse raw generation make the PX4 compensation result equal the source field within one raw LSB. |
+| ADV-MAG-B005 | bmm150 | Re-reading BMM150 data at the same virtual time returns the same coherent bytes; out-of-range axes use the datasheet overflow codes and status bit. |
 
 **Timing.** Measurement completes the datasheet's time after single_measure in model time.
 

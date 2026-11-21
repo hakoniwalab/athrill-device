@@ -22,9 +22,9 @@ Notch filters (`IMU_GYRO_DNF`, `INS_HNTCH`), FFT-based tuning and vibration stud
 - Chips: reading a FIFO frame asks for the sample at that frame's own time. The frame times follow from
   `fifo_start` and `clocks_per_sample`; when the FIFO has overflowed, the frames that exist are the newest
   `capacity`. Data-register reads (outside the FIFO) keep using the latest sample.
-- Ring size: covers the longest FIFO span of the chips (BMI055 gyro: 100 frames × 0.5 ms = 50 ms; ICM-42688-P and
-  ICM-20689 shorter). 512 entries at 125 µs = 64 ms; allocated once per sensor instance (and once for the single
-  sample of the non-instance mode).
+- Ring size: covers the longest FIFO span of the chips (ICP-201xx: 16 pairs × 25 ms = 400 ms; BMI055 gyro:
+  100 frames × 0.5 ms = 50 ms; ICM-42688-P and ICM-20689 shorter). 4096 entries at 125 µs = 512 ms; allocated once
+  per sensor instance (and once for the single sample of the non-instance mode).
 
 ## Requirements
 

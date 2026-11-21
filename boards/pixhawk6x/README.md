@@ -13,6 +13,7 @@ principally `spi.cpp`, `i2c.cpp`, `timer_config.cpp`, `board_config.h`,
 | ADV-BOARD-6X-002 | Select one real FMUv6X sensor revision through the same version/revision ADC result PX4 uses and expose only chips that have stage-1 models. |
 | ADV-BOARD-6X-003 | Preserve PX4 v1.17.0 bus, chip-select, interrupt, output, DMA and connector ordering in the board DTB. |
 | ADV-BOARD-6X-004 | Supply base, Hakoniwa, Hakoniwa DShot and per-sensor Hakoniwa DTBs, with every enabled functional node resolving to a model. |
+| ADV-BOARD-6X-005 | Supply a revision-6 DTB family that selects `V6X006` through PX4's ADC ladder and models ADIS16470, ICP201xx and BMM150 at their real buses and rotations. |
 
 ## MCU and memory map
 
@@ -53,10 +54,13 @@ is the currently declared EEPROM sensor set. The ordinal low-sample windows
 in 12-bit ADC counts are 0, 1-579, 580-967, 968-1356, 1357-1756,
 1757-2137, 2138-2519, 2520-2919, 2920-3308, 3309-3699 and 3700-4095.
 
-The inherited ADC3 register rule returns zero from `DR`. PX4 consequently
-detects no ladder for both PH3 and PH4 and prints version 0, revision 0,
-`V6X000`. This is intentional and tested; it selects the first real sensor
-set without adding a special ADC/GPIO coupling model.
+The unchanged revision-0 family inherits the ADC3 rule that returns zero from
+`DR`. PX4 consequently detects no ladder for both PH3 and PH4 and prints
+version 0, revision 0, `V6X000`. The revision-6 family adds the optional
+`athrill,adc-select-gpios` and `athrill,adc-channel-values` properties. The
+register-block model then returns the selected SQR1 channel's high or low
+conversion code from DR according to PG0. Boards without those properties
+keep the original zero behavior.
 
 PX4 v1.17.0 declares these revision-dependent internal sensors:
 
@@ -80,6 +84,82 @@ The optional GPS1 puck adds an already modeled IST8310, and the parameter
 F-RAM and u-blox M8 are also already modeled. Missing internal chips remain
 visible but disabled in `pixhawk6x.dts`, so probes fail normally instead of a
 different chip being impersonated.
+
+## Revision 6
+
+Issue #152 selected PX4 sensor-set revision 6, reported by PX4 as `V6X006`.
+The source below is PX4-Autopilot tag `v1.17.0`; the runtime comparison is the
+reference log `75ac4a47-a73a-44ea-8016-24d79a164147.ulg`, whose software hash
+is from that tag and whose `ver_hw` / subtype are `PX4_FMU_V6X` / `V6X006`.
+The ULog has no base-board version field or retained `[boot] Rev ... Ver ...`
+message, so the revision-6 DTBs use the requested fallback base-board ordinal
+0. ADC3 channel 14 therefore returns high `65535`, low `0`; channel 15 returns
+high `65535`, low `36800`. PX4 configures 16-bit right-aligned conversion and
+scales the latter by 16 to 2300 for its 12-bit ladder table.
+
+PX4 drives PG0 high, reads revision input PH4 as ADC3 channel 15, then drives
+PG0 low and reads it again. The high reading must exceed 97.5% of full scale
+to recognize the ladder. A low reading from 2138 through 2519 counts maps to
+ordinal 6 (the narrower nominal tolerance window in the board table is
+2161..2476). PH3 / ADC3 channel 14 selects the base-board version by the same
+method. The sensor-set ordinal selects the `V6X_6` SPI table and the `V6X006`
+subtype.
+
+`rc.board_sensors`, the revision-six SPI table and the individual drivers
+start the following devices. “Chip ODR” is the rate programmed in the part;
+FIFO batching explains why the two TDK devices publish more slowly.
+
+| Device | PX4 bus, address / CS and pins | PX4 configuration |
+| --- | --- | --- |
+| ICM-45686, rotation 10 | SPI1 CS0: CS PI9, DRDY PF2, bus reset PI11 | gyro and accel 6.4 kHz; batches about 8 samples and publishes about 800 Hz |
+| IIM-42652, rotation 6 | SPI2 CS0: CS PH5, DRDY PA10, bus reset PF4 | gyro and accel 8 kHz; batches 10 samples and publishes about 800 Hz |
+| ADIS16470, rotation 0 | SPI3 CS0: CS PI4, DRDY PI7, bus reset PE7 | fixed/default 2 kHz, one 176-bit burst per data-ready sample; PX4 clears MSC_CTRL bit 0 for falling-edge DRDY |
+| BMM150, rotation 0 | internal I2C4 address `0x10`; SCL PF14, SDA PF15 | 20 Hz |
+| ICP201xx | internal I2C4 address `0x64`; SCL PF14, SDA PF15 | mode 2, 40 Hz sensor ODR; the driver drains its FIFO on a 30 Hz schedule when `SENS_INT_BARO_EN=1` |
+| IST8310, rotation 10 | external GPS1 I2C1 address `0x0e`; SCL PB8, SDA PB9 | single-measurement loop every 20 ms (50 Hz), with 16 internal averages |
+| BMP388 | external I2C2 address `0x76` in the reference log; SCL PF1, SDA PF0, DRDY provision PG5 | PX4 writes the 50 Hz ODR code but uses forced mode, pressure x16 / temperature x2, with a 43.3 ms measurement interval (about 23.1 Hz); probed on external buses for every revision except V6X001 |
+
+The log's nonzero sensor device IDs decode with the PX4 `drv_sensor.h`
+layout as follows. SPI “address” is the chip-select index; the two UAVCAN
+IDs are included because they are sensor device IDs in the log even though
+they are not FMUv6X board chips.
+
+| ID (hex / decimal) | Device type | Bus |
+| --- | --- | --- |
+| `0x0058001a` / 5767194 | ADIS16470 (`0x58`), accel/gyro instance 0 | SPI3, address 0 |
+| `0x002b0012` / 2818066 | IIM-42652 (`0x2b`), accel/gyro instance 1 | SPI2, address 0 |
+| `0x0034000a` / 3407882 | ICM-45686 (`0x34`), accel/gyro instance 2 | SPI1, address 0 |
+| `0x00431021` / 4395041 | BMM150 (`0x43`) | I2C4, address `0x10` |
+| `0x00b86421` / 12084257 | ICP201xx (`0xb8`) | I2C4, address `0x64` |
+| `0x00677611` / 6780433 | BMP388 (`0x67`) | I2C2, address `0x76` |
+| `0x00847d03` / 8682755 | UAVCAN optical flow (`0x84`) | UAVCAN bus 0, node `0x7d` |
+| `0x00897d03` / 9010435 | UAVCAN distance sensor (`0x89`) | UAVCAN bus 0, node `0x7d` |
+
+Zero device IDs in estimator aid/status topics mean “no device”; they do not
+describe another sensor. `vehicle_imu_status` reports these rates in Hz
+(min / median / mean / max over the log):
+
+| IMU | gyro_rate_hz | accel_rate_hz |
+| --- | --- | --- |
+| ADIS16470 instance 0 | 2011.168823 / 2011.506470 / 2011.512695 / 2011.624634 | 2011.030884 / 2011.506714 / 2011.516113 / 2011.856567 |
+| IIM-42652 instance 1 | 810.667664 / 810.676636 / 810.682556 / 810.702881 | the same values |
+| ICM-45686 instance 2 | 799.974121 / 799.999939 / 799.999451 / 800.001343 | the same values |
+
+The logged `sensor_gyro_fifo` is the IIM-42652: every message contains 10
+samples at `dt=119.466675 us`, an implied FIFO sample rate of 8370.535 Hz.
+The ADIS is nevertheless the primary instance; its PX4 driver publishes one
+direct gyro/accel sample per burst and therefore does not publish a gyro FIFO
+topic. The ICM-45686 raw rate in the log is about 6402.32 Hz, consistent with
+its configured 6.4 kHz rate.
+
+The revision-6 DTBs now enable the modeled ADIS16470, ICP201xx and BMM150, plus
+the existing external IST8310 and GPS. ICM-45686 and IIM-42652 still have no
+models: SPI1 CS PI9 and SPI2 CS PH5 remain allocated but have no child device.
+PX4's probes therefore fail normally with
+`ERROR [icm45686] no instance started (no device on bus?)` and
+`ERROR [iim42652] no instance started (no device on bus?)`; ADIS16470 remains
+the primary IMU. The external BMP388 and the two redundant IMUs remain outside
+this board-model scope.
 
 ## Bus and pin allocation
 
@@ -143,17 +223,47 @@ interrupt status and time-resolved data/FIFO behavior where applicable:
 
 ## DTBs
 
-`pixhawk6x-hakoniwa.dts` redirects every modeled sensor and output to the
-Hakoniwa sensor device. `-hakoniwa-dshot` replaces PWM outputs 1-4 with the
-DShot ESC on USART2. `-hakoniwa-dshot-sensors` gives the modeled ICM-42688-P,
-external IST8310 and GPS their own sensor-host instances; stage 2 will add
-instances for newly modeled internal chips.
+The revision-0 family remains `pixhawk6x.dts`, `pixhawk6x-hakoniwa.dts`,
+`pixhawk6x-hakoniwa-dshot.dts` and
+`pixhawk6x-hakoniwa-dshot-sensors.dts`. The parallel revision-6 family is:
+
+| Use | Devicetree |
+| --- | --- |
+| bench / SIH | `pixhawk6x-rev6.dtb` |
+| common Hakoniwa value source | `pixhawk6x-rev6-hakoniwa.dtb` |
+| common source + DShot outputs 1-4 | `pixhawk6x-rev6-hakoniwa-dshot.dtb` |
+| DShot + one source per chip | `pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb` |
+
+The per-chip file uses these `HAKO_SENSOR_DEVICE_SENSORS` names:
+
+| Instance | Type | Chip sample-period reports |
+| --- | --- | --- |
+| `adis16470` | `imu` | ACCEL=0 and GYRO=1 |
+| `icp201xx` | `baro` | PRESSURE=2 |
+| `bmm150` | `mag` | MAG=3 |
+| `ist8310` | `mag` | none (magnetic samples only) |
+| `gps1` | `gps` | none |
+
+Only ACCEL and GYRO participate in the sensor host's adapter-period contract.
+PRESSURE, MAG and unknown future kinds are logged as informational and ignored,
+so ICP201xx and BMM150 cannot be mistaken for an accelerometer or fail a run.
+
+To run PX4, keep `DEVICE_CONFIG_STM32_BOARD fmu-v6c` and select one of the
+four revision-6 DTBs with `DEVICE_CONFIG_DEVICE_TREE`. For the Hakoniwa files,
+configure the `hakoniwa,sensor-device` plugin; for the `-sensors` file also
+configure the `hakoniwa,sensor-instance` plugin and the five instance names
+above, as described in `docs/sensor-host.md`. No different firmware ELF is
+needed to switch between revision 0 and revision 6.
 
 Reviewed deterministic hashes:
 
 ```text
-6e13ebd63ad071225abc8cfcafacf894bbf21606f2a9c112c5fdbf38d5dd4ac0  pixhawk6x.dtb
-87d549cad1d5b62b5ee880975347d23e5c74899266a1870a0cfec2bd83f948c9  pixhawk6x-hakoniwa.dtb
-0aedb053157ed6b2d6a79b005931414fbbd5a9d10312129d2ba5ecd477b1414e  pixhawk6x-hakoniwa-dshot.dtb
-8297a58eea209cb390f672c3cab59742d836dc76a478cade0c6ace36834363aa  pixhawk6x-hakoniwa-dshot-sensors.dtb
+0fbde063d0a8740bbb00ce944233bfc93249033832712edc23134ec372898b0f  pixhawk6x.dtb
+8b04dd0db993085cc478fedcb647f9343022c41259ee34571efafb9419875c9b  pixhawk6x-hakoniwa.dtb
+eab6fb1008a1d6af35b887296f53922d6ec9ba572b97deefb03d374ded59e3c2  pixhawk6x-hakoniwa-dshot.dtb
+99b650d34709646f168aff8fe3855fb81268a6dedcb27c32fee8372ff5b31083  pixhawk6x-hakoniwa-dshot-sensors.dtb
+edf6e46a3e7cd798db0d98937d5d99469d658f6b939f6afc8b257e211f9dcc67  pixhawk6x-rev6.dtb
+d0b0c5856c0a6132ab3d0be64c2861243e722073bc5a6fc0c1e2bcb0207b72c7  pixhawk6x-rev6-hakoniwa.dtb
+6ac28e4990b28b955f426e99748d5611fc2d2d3a4389eaddd1c172ebadfe27a3  pixhawk6x-rev6-hakoniwa-dshot.dtb
+bfd2cf93938bca3ab0293d302d4024018d75f1b0020624556702c6fff79052c0  pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb
 ```

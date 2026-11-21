@@ -28,6 +28,7 @@ PROPERTY_NAMES = [
     "int-gpios", "axis-align-x", "pwms", "pwm-names",
     "athrill,stm32h7-timer", "dma-channels", "dma-masters", "dma-requests",
     "value-source", "fault-model",
+    "athrill,test-chip-only",
 ]
 STRING_BLOCK = strings(*PROPERTY_NAMES)
 STRING_OFFSETS: dict[str, int] = {}
@@ -161,6 +162,22 @@ def main() -> None:
             ("value-source", be32(9)),
         ], [])]),
     ])
+    bmm150 = node("", [
+        ("compatible", strings("athrill,test-board")),
+        ("#address-cells", be32(1)),
+        ("#size-cells", be32(1)),
+        ("athrill,test-chip-only", b""),
+    ], [
+        node("bench-sensor-source", [
+            ("compatible", strings("athrill,bench-sensor-source")),
+            ("phandle", be32(9)),
+        ], []),
+        bus_controller("i2c", 0x3000, [node("magnetometer@10", [
+            ("compatible", strings("bosch,bmm150")),
+            ("reg", be32(0x10)),
+            ("value-source", be32(9)),
+        ], [])]),
+    ])
     gps = board([
         bus_controller("uart", 0x4000, [node("gnss", [
             ("compatible", strings("u-blox,m8")),
@@ -176,6 +193,45 @@ def main() -> None:
             ("axis-align-x", be32(2)),
         ], [])]),
     ])
+    adis16470_children = [
+        provider("intc", 2, "#interrupt-cells", 1),
+        node("gpio@40020000", [
+            ("compatible", strings("st,stm32-gpio")),
+            ("reg", be32(0x40020000, 0x400)),
+            ("#gpio-cells", be32(2)),
+            ("phandle", be32(3)),
+        ], []),
+        node("interrupt-controller@40013c00", [
+            ("compatible", strings("st,stm32-exti")),
+            ("reg", be32(0x40013c00, 0x400)),
+            ("interrupt-parent", be32(2)),
+            ("interrupts", be32(6, 7, 8, 9, 10, 23, 40)),
+            ("interrupt-names", strings("line0", "line1", "line2",
+                                        "line3", "line4", "line5-9",
+                                        "line10-15")),
+        ], []),
+        bus_controller("spi", 0x2000, [node("imu@0", [
+            ("compatible", strings("adi,adis16470")),
+            ("reg", be32(0)),
+            ("spi-max-frequency", be32(1_000_000)),
+            ("int-gpios", be32(3, 4, 0)),
+        ], [])], "athrill,test-spi-child", 0),
+    ]
+    adis16470 = node("", [
+        ("compatible", strings("athrill,test-board")),
+        ("#address-cells", be32(1)),
+        ("#size-cells", be32(1)),
+        ("athrill,test-chip-only", b""),
+    ], adis16470_children)
+    icp201xx = node("", [
+        ("compatible", strings("athrill,test-board")),
+        ("#address-cells", be32(1)),
+        ("#size-cells", be32(1)),
+        ("athrill,test-chip-only", b""),
+    ], [bus_controller("i2c", 0x3000, [node("pressure@64", [
+        ("compatible", strings("invensense,icp201xx")),
+        ("reg", be32(0x64)),
+    ], [])], "athrill,test-i2c-child", 0x64)])
     gpio = board([node("gpio@40020000", [
         ("compatible", strings("st,stm32-gpio")),
         ("reg", be32(0x40020000, 0x400)),
@@ -399,8 +455,11 @@ def main() -> None:
         "fram.dtb": fram,
         "barometer.dtb": barometer,
         "magnetometer.dtb": magnetometer,
+        "bmm150.dtb": bmm150,
         "gps.dtb": gps,
         "imu.dtb": imu,
+        "adis16470.dtb": adis16470,
+        "icp201xx.dtb": icp201xx,
         "gpio.dtb": gpio,
         "exti.dtb": exti,
         "timer-pwm.dtb": timer_pwm,

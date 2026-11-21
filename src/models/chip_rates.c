@@ -109,6 +109,32 @@ uint64 chip_icm20689_accel_rate_mhz(uint8 accel_config2, uint8 smplrt_div)
 	return 1000000U / (1U + (uint64)smplrt_div);
 }
 
+/* [ADV-CHIP-ADIS16470-005] The internal 2 kHz clock is divided by DEC_RATE + 1. */
+uint64 chip_adis16470_rate_mhz(uint16 dec_rate)
+{
+	uint64 divider = ((uint64)dec_rate & 0x7ffU) + 1U;
+	return 2000000U / divider;
+}
+
+/* [ADV-CHIP-ICP201XX-003] DS-000416 revision 1.1 Table 2 operation modes. */
+uint64 chip_icp201xx_rate_mhz(uint8 meas_config)
+{
+	static const uint64 rates[8] = {
+		25000U, 120000U, 40000U, 2000U, 25000U, 0U, 0U, 0U
+	};
+	return rates[meas_config & 7U];
+}
+
+/* [ADV-CHIP-BMM150-003] OP_MODE ODR bits 5:3 select 10, 2, 6, 8, 15, 20,
+ * 25 and 30 Hz. */
+uint64 chip_bmm150_rate_mhz(uint8 op_mode)
+{
+	static const uint64 rate_hz[8] = {
+		10U, 2U, 6U, 8U, 15U, 20U, 25U, 30U
+	};
+	return rate_hz[(op_mode >> 3) & 7U] * 1000U;
+}
+
 uint64 chip_rate_clocks(uint64 frequency_hz, uint64 rate_mhz)
 {
 	return rate_mhz == 0U ? 0U : (frequency_hz * 1000U) / rate_mhz;

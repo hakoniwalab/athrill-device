@@ -158,6 +158,11 @@ The runtime checks the sensor-host wiring before the firmware starts:
 - If an instance node has no plugin mapping, the error names the line to add:
   `DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance=<same library as DEVICE_CONFIG_DEVICE_PLUGIN_0>`.
 
+The chip-period contract currently changes IMU accelerometer (kind 0) and
+gyro (kind 1) adapter periods only. Pressure (kind 2), magnetometer (kind 3)
+and unknown future non-IMU kinds are logged as informational and ignored;
+they do not change an IMU period or fail the run.
+
 These are errors, not warnings: each setup would otherwise run while measuring a different signal from the one the
 sensor-instance configuration describes. The first programmed IMU FIFO period is checked before the next physics
 step. A slower adapter then follows the chip or produces an ERROR that names both periods.
@@ -168,6 +173,7 @@ The ready-made DShot boards wired this way are:
 | --- | --- | --- |
 | Pixhawk 4 / FMUv5 | `boards/pixhawk4/pixhawk4-hakoniwa-dshot-sensors.dtb` | `icm20689`, `bmi055`, `barometer`, `magnetometer`, `gps1` |
 | Pixhawk 6C / FMUv6C | `boards/pixhawk6c/pixhawk6c-hakoniwa-dshot-sensors.dtb` | `bmi055`, `icm42688p`, `barometer`, `magnetometer`, `gps1` |
+| Pixhawk 6X revision 6 / FMUv6X | `boards/pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb` | `adis16470`, `icp201xx`, `bmm150`, `ist8310`, `gps1` |
 
 For Pixhawk 4, a `sensors.json` suitable for `HAKO_SENSOR_DEVICE_SENSORS` is, with the named AirSim adapter
 configuration files beside it:
@@ -259,3 +265,4 @@ the chip.
 | ADV-SENSOR-HOST-002 | When instance nodes exist, no enabled sensor chip remains wired to `hakoniwa,sensor-device`; an error names the chip and both compatibles. |
 | ADV-SENSOR-HOST-003 | An operating IMU FIFO reports each part's initial and changed programmed period; the host makes the adapter follow before the next physics step or reports an ERROR naming the instance, part and both periods. |
 | ADV-SENSOR-HOST-004 | A sensor-instance node without its plugin mapping stops with a message naming the `DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance` line. |
+| ADV-SENSOR-HOST-005 | Pressure, magnetometer and unknown future non-IMU sample-period reports are informational and harmless; they are not treated as accelerometer periods. |

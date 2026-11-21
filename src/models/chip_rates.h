@@ -28,6 +28,14 @@ float32 chip_icm42688_accel_counts_per_g(uint8 accel_config0);
 uint64 chip_icm20689_gyro_rate_mhz(uint8 config, uint8 gyro_config, uint8 smplrt_div);
 uint64 chip_icm20689_accel_rate_mhz(uint8 accel_config2, uint8 smplrt_div);
 
+/* ADIS16470: DEC_RATE (0x64), internal clock mode. */
+uint64 chip_adis16470_rate_mhz(uint16 dec_rate);
+
+/* ICP-201xx: MODE_SELECT MEAS_CONFIG (bits 7:5). */
+uint64 chip_icp201xx_rate_mhz(uint8 meas_config);
+/* BMM150: OP_MODE (0x4C), ODR bits 5:3. */
+uint64 chip_bmm150_rate_mhz(uint8 op_mode);
+
 /* The period of a rate in target clocks (frequency_hz: the target's time base) and in ns. */
 uint64 chip_rate_clocks(uint64 frequency_hz, uint64 rate_mhz);
 uint64 chip_rate_period_ns(uint64 rate_mhz);

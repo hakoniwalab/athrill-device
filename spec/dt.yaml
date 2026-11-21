@@ -60,3 +60,18 @@
   - id: ADV-DT-005.T1
     stimulus: Build the board twice from the same DTB.
     expect: Instance list, order and recorded DTB hash are identical.
+- id: ADV-DT-006
+  statement: An STM32H7 ADC register block with athrill,adc-channel-values returns the selected channel's Devicetree conversion code for the level of athrill,adc-select-gpios; without those properties DR keeps its existing zero behavior.
+  source:
+    devicetree: Devicetree Specification v0.4 2.2.4.2 (phandle and specifier), 2.3.8 (#gpio-cells)
+    manual: RM0433 revision 8 sections 25.4.19 (CFGR), 25.4.20 (CFGR2), 25.4.30 (SQR1), 25.4.35 (DR)
+  scope: Boards can model resistor-ladder hardware identity without changing ADC behavior on other boards.
+  verification: test
+  applies_to: stm32h7-adc-register-block
+  tests:
+  - id: ADV-DT-006.T1
+    stimulus: Run PX4's single-channel sequence at 16-bit right alignment for channels 14 and 15 with the selector GPIO high and low.
+    expect: EOC is observable and DR returns each channel's configured high or low conversion code.
+  - id: ADV-DT-006.T2
+    stimulus: Run the same register sequence on a register block without ADC channel properties.
+    expect: DR remains zero, preserving existing boards unchanged.

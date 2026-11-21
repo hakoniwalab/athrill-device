@@ -1,6 +1,6 @@
 model: barometer
-version: 1.0.0
-summary: Command-based pressure sensor with calibration PROM (MS5611 on SPI or I2C). Values come from the common sensor source.
+version: 1.1.0
+summary: "Pressure sensors backed by the common sensor source: command-based MS5611 and FIFO-based ICP-201xx."
 
 terms:
   - {name: reset,          kind: control, feature: base, meaning: "Reset command; reloads the PROM."}
@@ -9,9 +9,13 @@ terms:
   - {name: convert_temperature, kind: control, feature: base, meaning: "Starts a D2 conversion at an oversampling ratio."}
   - {name: adc_read,       kind: data,    feature: base, meaning: "24-bit result of the last completed conversion (0 if none)."}
   - {name: conversion_time, kind: status, feature: base, meaning: "Datasheet conversion time per oversampling ratio."}
+  - {name: mode_select,     kind: control, feature: icp201xx, meaning: "ICP-201xx measurement configuration, continuous/standby state and FIFO readout order."}
+  - {name: fifo_pair,       kind: data,    feature: icp201xx, meaning: "One signed 20-bit pressure and temperature pair at its own 40 Hz sample time."}
+  - {name: fifo_fill,       kind: status,  feature: icp201xx, meaning: "ICP-201xx empty/full flags and fill level from zero through 16 pairs."}
 
 features:
   base: PROM, conversions, ADC read.
+  icp201xx: Identity, OTP boot, operation modes and the 16-pair pressure/temperature FIFO.
 
 behaviour:
   - id: ADV-BARO-B001
@@ -26,7 +30,22 @@ behaviour:
   - id: ADV-BARO-B004
     feature: base
     rule: The same commands work on SPI and on I2C (bus binding from the Devicetree).
+  - id: ADV-BARO-B005
+    feature: icp201xx
+    rule: ICP-201xx identity, revision-dependent OTP boot and Mode2 configuration follow ADV-CHIP-ICP201XX-001 through -003.
+  - id: ADV-BARO-B006
+    feature: icp201xx
+    rule: The 16-pair FIFO keeps its oldest pairs when full, advances after a complete pair burst, and implements partial reads and flush as ADV-CHIP-ICP201XX-004 specifies.
+  - id: ADV-BARO-B007
+    feature: icp201xx
+    rule: Each pair inverts the datasheet pressure and temperature conversions from the value source at the pair's sample time as ADV-CHIP-ICP201XX-005 specifies.
+  - id: ADV-BARO-B008
+    feature: icp201xx
+    rule: FIFO production is lazy at register access and a 30 Hz PX4 drain observes the complete 40 Hz input sequence as ADV-CHIP-ICP201XX-006 specifies.
+  - id: ADV-BARO-B009
+    feature: icp201xx
+    rule: Register observations are deterministic except for the documented completion of a FIFO fetch (ADV-CHIP-ICP201XX-007).
 
-timing: Conversions complete conversion_time after the command in model time.
+timing: MS5611 conversions complete conversion_time after the command. ICP-201xx Mode2 pairs occur every 25 ms and are materialized lazily when the FIFO is observed.
 out_of_scope:
   - second-order temperature compensation effects, noise (from the source values)

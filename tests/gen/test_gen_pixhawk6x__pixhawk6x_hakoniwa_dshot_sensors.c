@@ -926,6 +926,51 @@ static sint32 spi_register_read(uint32 index, uint8 address, uint32 dummy_count,
 	return 0;
 }
 
+static sint32 spi_word_register_read(uint32 index, uint8 address, uint16 *value)
+{
+	SpiConnection connection;
+	Binding *binding;
+	uint8 discarded;
+	uint8 high;
+	uint8 low;
+
+	if (index >= target.binding_count) return -1;
+	binding = &target.bindings[index];
+	if (binding->native_base != 0U) {
+		if (native_spi_select(binding, FALSE) != 0 ||
+		    native_spi_select(binding, TRUE) != 0 ||
+		    native_spi_byte(binding, address, &discarded) != 0 ||
+		    native_spi_byte(binding, 0U, &discarded) != 0 ||
+		    native_spi_select(binding, FALSE) != 0 ||
+		    native_spi_select(binding, TRUE) != 0 ||
+		    native_spi_byte(binding, 0U, &high) != 0 ||
+		    native_spi_byte(binding, 0U, &low) != 0 ||
+		    native_spi_select(binding, FALSE) != 0) return -1;
+	} else {
+		if (spi_connection_open(index, &connection) != 0) return -1;
+		if (athrill_spi_select(connection.protocol, binding->chip_select,
+		    connection.time++) != 1 ||
+		    athrill_spi_exchange(connection.protocol, address, &discarded,
+		    connection.time++) != 0 ||
+		    athrill_spi_exchange(connection.protocol, 0U, &discarded,
+		    connection.time++) != 0 ||
+		    athrill_spi_deselect(connection.protocol, connection.time++) != 0 ||
+		    athrill_spi_select(connection.protocol, binding->chip_select,
+		    connection.time++) != 1 ||
+		    athrill_spi_exchange(connection.protocol, 0U, &high,
+		    connection.time++) != 0 ||
+		    athrill_spi_exchange(connection.protocol, 0U, &low,
+		    connection.time++) != 0 ||
+		    athrill_spi_deselect(connection.protocol, connection.time++) != 0) {
+			spi_connection_close(&connection);
+			return -1;
+		}
+		spi_connection_close(&connection);
+	}
+	*value = (uint16)(((uint16)high << 8) | low);
+	return 0;
+}
+
 static std_bool i2c_child_start(void *context, std_bool read,
 	std_bool repeated, uint64 time)
 {
@@ -997,6 +1042,41 @@ static sint32 i2c_write_byte(I2cConnection *connection, uint8 data)
 	std_bool ack;
 	return athrill_i2c_write(connection->protocol, data, &ack,
 	    connection->time++) == 0 && ack ? 0 : -1;
+}
+
+static sint32 i2c_register_write(uint32 index, uint8 address, uint8 value)
+{
+	I2cBinding *binding;
+	I2cConnection connection;
+	uint32 isr;
+	uint32 sadd;
+
+	if (index >= target.i2c_binding_count) return -1;
+	binding = &target.i2c_bindings[index];
+	if (binding->native_base != 0U) {
+		sadd = (uint32)binding->address << 1;
+		if (mmio_write32(binding->native_base + NI2C_CR2,
+		    sadd | (2U << 16) | (1U << 25) | (1U << 13)) != 0 ||
+		    mmio_read32(binding->native_base + NI2C_ISR, &isr) != 0 ||
+		    (isr & (1U << 1)) == 0U ||
+		    mmio_write32(binding->native_base + NI2C_TXDR, address) != 0 ||
+		    mmio_read32(binding->native_base + NI2C_ISR, &isr) != 0 ||
+		    (isr & (1U << 1)) == 0U ||
+		    mmio_write32(binding->native_base + NI2C_TXDR, value) != 0 ||
+		    mmio_read32(binding->native_base + NI2C_ISR, &isr) != 0 ||
+		    (isr & (1U << 5)) == 0U) return -1;
+		return mmio_write32(binding->native_base + NI2C_ICR, 1U << 5);
+	}
+	if (i2c_connection_open(index, &connection) != 0) return -1;
+	if (athrill_i2c_start(connection.protocol, binding->address, FALSE,
+	    connection.time++) != 1 || i2c_write_byte(&connection, address) != 0 ||
+	    i2c_write_byte(&connection, value) != 0 ||
+	    athrill_i2c_stop(connection.protocol, connection.time++) != 0) {
+		i2c_connection_close(&connection);
+		return -1;
+	}
+	i2c_connection_close(&connection);
+	return 0;
 }
 
 static sint32 i2c_command_read(uint32 index, uint8 command, uint8 *data, uint32 count)
@@ -2882,7 +2962,7 @@ static int case_pixhawk6x__pixhawk6x_hakoniwa_dshot_sensors__soc__dmamux_4002080
 	{ static const uint32 wanted[] = {0U, 32U, 152640U};
 	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
 	                 0U, "up")); }
-	{ static const uint32 wanted[] = {0U, 50U, 152640U};
+	{ static const uint32 wanted[] = {0U, 59U, 152640U};
 	  CHECK(find_dma("/soc/dmamux@40020800", wanted, 3U,
 	                 0U, "up")); }
 	{ static const uint32 wanted[] = {0U, 40U, 1088U};

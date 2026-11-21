@@ -6,7 +6,13 @@
 
 static const char *part_name(uint32_t kind)
 {
-	return kind == HAKO_SENSOR_PERIOD_GYRO ? "gyro" : "accelerometer";
+	switch (kind) {
+	case HAKO_SENSOR_PERIOD_ACCEL: return "accelerometer";
+	case HAKO_SENSOR_PERIOD_GYRO: return "gyro";
+	case HAKO_SENSOR_PERIOD_PRESSURE: return "pressure";
+	case HAKO_SENSOR_PERIOD_MAG: return "magnetometer";
+	default: return "unknown";
+	}
 }
 
 static double usec(uint64_t ns)
@@ -47,6 +53,17 @@ void hako_sensor_period_check(HakoSensorPeriodState *state,
 	char shared_error[160] = "changing the shared period is not supported";
 	const char *part = part_name(check->kind);
 	memset(result, 0, sizeof(*result));
+	/* [ADV-SENSOR-HOST-005] The adapter-period contract currently applies
+	 * only to the independently configurable parts of an IMU. Pressure and
+	 * magnetic reports remain useful diagnostics, but must not be mistaken
+	 * for accelerometer reports or stop a run. */
+	if (check->kind != HAKO_SENSOR_PERIOD_ACCEL &&
+	    check->kind != HAKO_SENSOR_PERIOD_GYRO) {
+		(void)snprintf(result->message, sizeof(result->message),
+			"sensor %s %s: chip every %g us; non-IMU period is informational and ignored",
+			check->sensor_name, part, usec(check->chip_period_ns));
+		return;
+	}
 	if (check->chip_period_ns == 0U) {
 		result->error = true;
 		(void)snprintf(result->message, sizeof(result->message),

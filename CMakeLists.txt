@@ -15,11 +15,14 @@ add_library(athrill_device STATIC
   src/protocol_spi.c
   src/protocol_uart.c
   src/athrill_device.c
+  src/models/adis16470.c
   src/models/bmi055.c
+  src/models/bmm150.c
   src/models/chip_rates.c
   src/models/fm25v02.c
   src/models/icm20689.c
   src/models/icm42688p.c
+  src/models/icp201xx.c
   src/models/imu_filter.c
   src/models/ist8310.c
   src/models/ms5611.c
@@ -115,8 +118,19 @@ set_target_properties(athrill_hakoniwa_sensor PROPERTIES
 
 if(BUILD_TESTING)
   find_package(Python3 REQUIRED COMPONENTS Interpreter)
+  set(TEST_DTB_DIR "${CMAKE_CURRENT_BINARY_DIR}/tests/dtb")
+  execute_process(
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/make_test_dtbs.py"
+            "${TEST_DTB_DIR}"
+    RESULT_VARIABLE TEST_DTB_RESULT)
+  if(NOT TEST_DTB_RESULT EQUAL 0)
+    message(FATAL_ERROR "test DTB generation failed")
+  endif()
   file(GLOB_RECURSE TRACE_BOARD_DTBS CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/boards/*.dtb")
+  list(APPEND TRACE_BOARD_DTBS "${TEST_DTB_DIR}/adis16470.dtb")
+  list(APPEND TRACE_BOARD_DTBS "${TEST_DTB_DIR}/icp201xx.dtb")
+  list(APPEND TRACE_BOARD_DTBS "${TEST_DTB_DIR}/bmm150.dtb")
   set(TRACE_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/traceability")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/spi.yaml"
@@ -129,6 +143,7 @@ if(BUILD_TESTING)
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/gpio.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/chips.yaml"
     "${CMAKE_CURRENT_SOURCE_DIR}/tools/dt_testgen.py"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/make_test_dtbs.py"
     # The tests are generated at configure time: a changed board DTB must
     # re-run it (the glob above only sees DTBs added or removed, #59).
     ${TRACE_BOARD_DTBS})
@@ -151,7 +166,6 @@ if(BUILD_TESTING)
   endif()
   include("${TRACE_GENERATED_DIR}/trace-tests.cmake")
 
-  set(TEST_DTB_DIR "${CMAKE_CURRENT_BINARY_DIR}/tests/dtb")
   add_custom_target(generate-test-dtbs
     COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/make_test_dtbs.py"
             "${TEST_DTB_DIR}"
@@ -163,8 +177,11 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/fram.dtb"
       "${TEST_DTB_DIR}/barometer.dtb"
       "${TEST_DTB_DIR}/magnetometer.dtb"
+      "${TEST_DTB_DIR}/bmm150.dtb"
       "${TEST_DTB_DIR}/gps.dtb"
       "${TEST_DTB_DIR}/imu.dtb"
+      "${TEST_DTB_DIR}/adis16470.dtb"
+      "${TEST_DTB_DIR}/icp201xx.dtb"
       "${TEST_DTB_DIR}/gpio.dtb"
       "${TEST_DTB_DIR}/exti.dtb"
       "${TEST_DTB_DIR}/timer-pwm.dtb"
@@ -266,6 +283,8 @@ if(BUILD_TESTING)
   target_include_directories(test_register_block PRIVATE src/models)
   target_link_libraries(test_register_block PRIVATE athrill_device)
   add_test(NAME register-block COMMAND test_register_block)
+  add_test(NAME ADV-DT-006.T1 COMMAND test_register_block)
+  add_test(NAME ADV-DT-006.T2 COMMAND test_register_block)
   add_executable(test_riscv_mtimer tests/test_riscv_mtimer.c)
   target_compile_definitions(test_riscv_mtimer PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_riscv_mtimer PRIVATE src/models)
@@ -304,6 +323,7 @@ if(BUILD_TESTING)
     board/common/src/hako_sensor_period_check.c)
   target_include_directories(test_sensor_period_check PRIVATE board/common/src)
   add_test(NAME ADV-SENSOR-HOST-003.T2 COMMAND test_sensor_period_check)
+  add_test(NAME ADV-SENSOR-HOST-005.T1 COMMAND test_sensor_period_check)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
@@ -338,6 +358,11 @@ if(BUILD_TESTING)
   target_include_directories(test_h7_spi_eot PRIVATE src/models)
   target_link_libraries(test_h7_spi_eot PRIVATE athrill_device)
   add_test(NAME h7-spi-eot COMMAND test_h7_spi_eot)
+  add_executable(test_h7_spi_frames tests/test_h7_spi_frames.c)
+  target_compile_definitions(test_h7_spi_frames PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_h7_spi_frames PRIVATE src/models)
+  target_link_libraries(test_h7_spi_frames PRIVATE athrill_device)
+  add_test(NAME ADV-SPI-H7-016BIT.T1 COMMAND test_h7_spi_frames)
   # H7 SPI behaviour the model does not implement yet (RM0433 TSIZE, CFG
   # write protection, FIFO threshold, DMA requests): documented, WILL_FAIL.
   add_test(NAME stm32h7-spi-spec-gaps COMMAND test_stm32_spi spec-gaps)
@@ -358,6 +383,56 @@ if(BUILD_TESTING)
   target_include_directories(test_chip_rates PRIVATE src/models)
   target_link_libraries(test_chip_rates PRIVATE athrill_device)
   add_test(NAME chip-rates COMMAND test_chip_rates)
+  add_test(NAME ADV-CHIP-ADIS16470-005.T1 COMMAND test_chip_rates)
+  add_test(NAME ADV-CHIP-ICP201XX-003.T1 COMMAND test_chip_rates)
+  add_executable(test_adis16470 tests/test_adis16470.c)
+  target_compile_definitions(test_adis16470 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_adis16470 PRIVATE src/models tests)
+  target_link_libraries(test_adis16470 PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-ADIS16470-002.T1
+    COMMAND test_adis16470 protocol)
+  add_test(NAME ADV-CHIP-ADIS16470-003.T1
+    COMMAND test_adis16470 reset)
+  add_test(NAME ADV-CHIP-ADIS16470-004.T1
+    COMMAND test_adis16470 burst)
+  add_test(NAME ADV-CHIP-ADIS16470-005.T2
+    COMMAND test_adis16470 timing)
+  add_test(NAME ADV-CHIP-ADIS16470-006.T1
+    COMMAND test_adis16470 burst)
+  add_test(NAME ADV-CHIP-ADIS16470-007.T1
+    COMMAND test_adis16470 bandwidth)
+  add_executable(test_icp201xx tests/test_icp201xx.c)
+  target_compile_definitions(test_icp201xx PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_icp201xx PRIVATE src/models tests)
+  target_link_libraries(test_icp201xx PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-ICP201XX-002.T1
+    COMMAND test_icp201xx startup)
+  add_test(NAME ADV-CHIP-ICP201XX-004.T1
+    COMMAND test_icp201xx overflow)
+  add_test(NAME ADV-CHIP-ICP201XX-004.T2
+    COMMAND test_icp201xx partial-flush)
+  add_test(NAME ADV-CHIP-ICP201XX-005.T1
+    COMMAND test_icp201xx conversion)
+  add_test(NAME ADV-CHIP-ICP201XX-006.T1
+    COMMAND test_icp201xx px4-30hz)
+  add_test(NAME ADV-CHIP-ICP201XX-007.T1
+    COMMAND test_icp201xx determinism)
+  add_executable(test_bmm150 tests/test_bmm150.c)
+  target_compile_definitions(test_bmm150 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_bmm150 PRIVATE src/models tests)
+  target_link_libraries(test_bmm150 PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-BMM150-001.T1
+    COMMAND test_bmm150 startup)
+  add_test(NAME ADV-CHIP-BMM150-002.T1
+    COMMAND test_bmm150 startup)
+  add_test(NAME ADV-CHIP-BMM150-003.T1
+    COMMAND test_bmm150 rates)
+  add_test(NAME ADV-CHIP-BMM150-004.T1
+    COMMAND test_bmm150 round-trip)
+  add_test(NAME ADV-CHIP-BMM150-005.T1
+    COMMAND test_bmm150 round-trip)
+  add_test(NAME ADV-CHIP-BMM150-006.T1
+    COMMAND test_bmm150 overflow)
   add_executable(test_imu_fifo_history tests/test_imu_fifo_history.c)
   target_compile_definitions(test_imu_fifo_history PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_imu_fifo_history PRIVATE src/models)
@@ -517,7 +592,11 @@ if(BUILD_TESTING)
     PIXHAWK6X_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x.dtb"
     PIXHAWK6X_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa.dtb"
     PIXHAWK6X_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa-dshot.dtb"
-    PIXHAWK6X_HAKONIWA_DSHOT_SENSORS_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa-dshot-sensors.dtb")
+    PIXHAWK6X_HAKONIWA_DSHOT_SENSORS_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa-dshot-sensors.dtb"
+    PIXHAWK6X_REV6_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6.dtb"
+    PIXHAWK6X_REV6_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa.dtb"
+    PIXHAWK6X_REV6_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot.dtb"
+    PIXHAWK6X_REV6_HAKONIWA_DSHOT_SENSORS_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb")
 
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

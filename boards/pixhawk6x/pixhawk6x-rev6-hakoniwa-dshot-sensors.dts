@@ -1,0 +1,47 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Revision-6 DShot board with one sensor-host value source per modeled chip.
+ * The names below are the names required in HAKO_SENSOR_DEVICE_SENSORS.
+ */
+
+#include "pixhawk6x-rev6-hakoniwa-dshot.dts"
+
+&hakoniwa_sensor {
+	sensor_adis16470: adis16470 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_icp201xx: icp201xx {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_bmm150: bmm150 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_ist8310: ist8310 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_gps1: gps1 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+};
+
+&adis16470 {
+	value-source = <&sensor_adis16470>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&icp201xx {
+	value-source = <&sensor_icp201xx>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&bmm150 {
+	value-source = <&sensor_bmm150>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&external_magnetometer {
+	value-source = <&sensor_ist8310>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&gps1 {
+	value-source = <&sensor_gps1>;
+	/delete-property/ athrill,tick-before-value-source;
+};

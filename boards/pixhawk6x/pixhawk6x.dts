@@ -272,10 +272,11 @@
 	};
 };
 
-/* TIM5/TIM4 update requests carry PX4 DShot bursts. */
+/* TIM5/TIM4 update requests carry PX4 DShot bursts: DMAMUX1 requests TIM5_UP = 59 and
+ * TIM4_UP = 32 (RM0433 Table 121; NuttX stm32h7x3xx_dmamux.h). */
 &timers5 {
 	status = "okay";
-	dmas = <&dmamux1 0 50 (STM32_DMA_PERIPH_TX | STM32_DMA_MEM_32BITS |
+	dmas = <&dmamux1 0 59 (STM32_DMA_PERIPH_TX | STM32_DMA_MEM_32BITS |
 			       STM32_DMA_PERIPH_32BITS | STM32_DMA_PRIORITY_HIGH)>;
 	dma-names = "up";
 	pwm5: pwm { status = "okay"; };

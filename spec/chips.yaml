@@ -186,3 +186,249 @@
   - id: ADV-CHIP-ICM20689-003.T1
     stimulus: Select gyroscope DLPF_CFG 3 (41 Hz) and accelerometer A_DLPF_CFG 3 (44.8 Hz) at 1 kHz; for each, apply constant input and four bin-centred sine frequencies, plus athrill,ideal-filters.
     expect: DC gain is one; sine gains are within 0.035 of the prewarped second-order response; each register and DT bypass returns unfiltered values.
+- id: ADV-CHIP-ADIS16470-001
+  statement: PROD_ID (0x72) reads 0x4056 through the ADIS one-word-pipelined 16-bit SPI register protocol.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Table 9 and Table 11 (PROD_ID)
+  scope: PX4 v1.17.0 adis16470 driver probe.
+  verification: generated
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-001.T1
+    stimulus: Send the 16-bit read command for 0x72, then clock one further 16-bit word at the test node's chip select.
+    expect: The second word is 0x4056.
+- id: ADV-CHIP-ADIS16470-002
+  statement: Normal SPI accesses are MSB-first 16-bit words; a read result is returned in the next word, and writes update the addressed low or high byte. Ending chip select after one byte sets sticky DIAG_STAT SPI communication error bit 3; reading DIAG_STAT clears it.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Figure 29, Figure 30, Table 9, and DIAG_STAT
+  scope: Register traffic used by PX4 v1.17.0; the controller supplies SPI mode 3, at most 2 MHz and the normal-access 16 us stall and 24 us read-rate timing.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-002.T1
+    stimulus: Read MSC_CTRL through the pipeline, write its low and high bytes, then end a transaction after one byte and read DIAG_STAT twice.
+    expect: The initial default and written 16-bit values are returned; bit 3 is set on the first DIAG_STAT read and clear on the second.
+- id: ADV-CHIP-ADIS16470-003
+  statement: Software reset through GLOB_CMD bit 7 restores PROD_ID 0x4056, MSC_CTRL 0x00C1, FILT_CTRL 0, DEC_RATE 0 and clears diagnostics; GLOB_CMD bit 2 runs the modeled successful self-test without setting DIAG_STAT sensor-failure bit 5.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Table 9, GLOB_CMD, MSC_CTRL, FILT_CTRL and DEC_RATE
+  scope: Reset and self-test sequence used by PX4 v1.17.0.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-003.T1
+    stimulus: Change MSC_CTRL, issue software reset, read the default registers, issue self-test and read DIAG_STAT.
+    expect: Reset defaults are restored and the successful self-test leaves bit 5 clear.
+- id: ADV-CHIP-ADIS16470-004
+  statement: The 0x6800 burst command returns DIAG_STAT, three 16-bit gyro outputs, three 16-bit acceleration outputs, temperature, DATA_CNTR and the unsigned byte sum of those nine response words, all from one coherent output sample. The modeled PX4 path is the 176-bit burst; PX4 v1.17.0 does not request 32-bit output data.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Burst Read Function and Figure 31
+  scope: PX4 v1.17.0 22-byte burst transfer at at most 1 MHz.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-004.T1
+    stimulus: Clock a complete burst with known acceleration, angular velocity and temperature.
+    expect: Word order, counter and checksum match the data sheet and all values belong to the same sample.
+- id: ADV-CHIP-ADIS16470-005
+  statement: In internal-clock mode the output data rate is 2000 / (DEC_RATE + 1) samples/s; PX4 leaves DEC_RATE zero, so gyro and acceleration periods are reported as 500000 ns and data ready pulses every 500 us with polarity from MSC_CTRL bit 0.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, DEC_RATE, MSC_CTRL and Data Ready Indicator
+  scope: PX4 v1.17.0 internal-clock configuration and the sensor-host period contract.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-005.T1
+    stimulus: Evaluate representative DEC_RATE values including 0, 1, 3, 1999 and the masked maximum.
+    expect: Rates follow 2000 / (DEC_RATE + 1), including 2 kHz at reset.
+  - id: ADV-CHIP-ADIS16470-005.T2
+    stimulus: Connect at the reset configuration, tick across one output boundary, then write DEC_RATE 1.
+    expect: Gyro and acceleration report 500000 ns then 1000000 ns, and the default active-high data-ready pulse occurs at the 500 us boundary.
+- id: ADV-CHIP-ADIS16470-006
+  statement: The 16-bit burst outputs use 0.1 degree/s/LSB gyroscope, 1.25 mg/LSB acceleration and 0.1 degree C/LSB temperature scales. FILT_CTRL 0 makes its two Bartlett averaging stages one tap each and DEC_RATE 0 selects 2 kHz; a lazy burst samples the value-source history at the latest ADIS output time not after the read.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Table 1, Table 9, FILT_CTRL and DEC_RATE
+  scope: The 16-bit burst path PX4 uses; the data sheet's 32-bit gyro scale is 0.1 / 65536 degree/s/LSB but that path is outside this PX4-scoped model.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-006.T1
+    stimulus: Read at target clock 4100 with a 500 us output boundary at clock 4000 and known 1 g, 0.1 degree/s and 25 degree C source values.
+    expect: The history request reaches clock 4000 and the constant-input burst values are 800, 1 and 250 LSB.
+- id: ADV-CHIP-ADIS16470-007
+  statement: At the 2000 SPS output cadence, fixed sensor-bandwidth stages always limit the gyroscope to its 550 Hz typical -3 dB bandwidth and the accelerometer to its 600 Hz typical -3 dB bandwidth, including when FILT_CTRL is zero. The data sheet does not state the fixed response's filter type or order, so the deterministic model assumes the simplest matching response, a separate first-order low-pass for each sensor, while FILT_CTRL's Bartlett averaging remains separate.
+  source:
+    devicetree: adi,adis16470
+    manual: ADIS16470 data sheet revision C, Table 1 and Figures 14 through 16; https://www.analog.com/media/en/technical-documentation/data-sheets/adis16470.pdf
+  scope: Gyroscope and accelerometer values in the PX4 16-bit burst path, before the reset-default 2 kHz output.
+  verification: unit
+  applies_to: chip:adi,adis16470
+  tests:
+  - id: ADV-CHIP-ADIS16470-007.T1
+    stimulus: With FILT_CTRL 0 and DEC_RATE 0, apply a constant, a 550 Hz gyro sine, a 600 Hz acceleration sine, and 10 Hz sines to both sensors through value-source history, then read bursts after settling.
+    expect: The constant is unchanged; gain is 0.70710678 +/- 0.015 at each sensor's stated -3 dB frequency, and each 10 Hz gain is within 1% of unity.
+- id: ADV-CHIP-ICP201XX-001
+  statement: DEVICE_ID (0x0C) reads 0x63 over I2C, and VERSION (0xD3) reads an ASIC revision accepted by PX4.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 sections 5.4, 12, and 13.31
+  scope: PX4 v1.17.0 icp201xx probe; the normal model is revision 0x00 and a test-only revision override covers 0xB2.
+  verification: generated
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-001.T1
+    stimulus: Read DEVICE_ID register 0x0C at the test node's I2C address.
+    expect: 0x63.
+- id: ADV-CHIP-ICP201XX-002
+  statement: The registers polled or changed by PX4 v1.17.0 implement the mode-synchronization handshake and the revision-0 OTP boot sequence; OTP addresses 0xF8, 0xF9, and 0xFA return offset, gain, and oscillator trim bytes, while VERSION 0xB2 skips OTP boot.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 sections 5.4, 6.5, 6.6, and 13.1-13.31; PX4 v1.17.0 ICP201XX.cpp
+  scope: DEVICE_STATUS, MODE_SELECT, trim, lock, OTP, interrupt-mask, FIFO configuration and dummy I2C accesses made during PX4 start-up.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-002.T1
+    stimulus: Replay explicit register transaction vectors transcribed in source order from PX4 v1.17.0 for VERSION 0x00 and VERSION 0xB2, including PX4's dummy read after every access.
+    expect: Every read has the expected value, the revision-0 path copies all three OTP values to trim registers, the B2 path leaves OTP disabled, and both reach continuous Mode2.
+- id: ADV-CHIP-ICP201XX-003
+  statement: MODE_SELECT MEAS_CONFIG codes 0 through 4 select 25, 120, 40, 2, and 25 Hz; codes 5 through 7 are reserved. PX4's continuous Mode2 value 0x48 reports a pressure period of 25000000 ns to the value source.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 Table 2 and sections 6.2.1 and 13.19
+  scope: Operation-mode rate table and sensor-host sample-period contract.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-003.T1
+    stimulus: Evaluate every three-bit MEAS_CONFIG code and configure continuous Mode2 in the model.
+    expect: The rate table is 25, 120, 40, 2, 25 Hz followed by three reserved entries, and Mode2 reports 25 ms.
+- id: ADV-CHIP-ICP201XX-004
+  statement: The FIFO holds 16 pressure/temperature pairs. Completing a six-byte pressure-first burst consumes the oldest pair; a partial burst does not. Flush empties it. When full, new pairs are ignored and the oldest 16 remain; empty reads return zeros and overflow/underflow status is latched.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 sections 6.7, 7.1-7.5, 13.20, 13.22, and 13.23
+  scope: Pressure-first FIFO mode used by PX4 v1.17.0, including FIFO_FILL and FIFO_CONFIG.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-004.T1
+    stimulus: Produce 20 distinguishable pairs without reading, inspect fill and overflow, then burst-read all 16 pairs.
+    expect: Fill reports full and the read contains pairs 1 through 16 in order; pairs 17 through 20 were ignored as sections 7.2-7.3 specify.
+  - id: ADV-CHIP-ICP201XX-004.T2
+    stimulus: Read only the first three bytes of one pair, start a new six-byte burst, fetch once more while empty, then fill three pairs and issue FIFO_FLUSH.
+    expect: The partial read does not consume the pair, the new burst repeats those pressure bytes and consumes on TEMP_DATA_2, the empty fetch is zero and latches underflow, and flush leaves FIFO empty as sections 6.7, 7.1-7.3, and 7.5 specify.
+- id: ADV-CHIP-ICP201XX-005
+  statement: Each FIFO pair uses the value-source pressure and temperature at that pair's own sample time. Raw pressure is round((P_Pa - 70000) * 2^17 / 40000) and raw temperature is round((T_C - 25) * 2^18 / 65), saturated to signed 20 bits and emitted least-significant byte first.
+  source:
+    devicetree: invensense,icp201xx; ABI 1.24 sensor_sample_at value-source history
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 sections 6.7.1, 6.7.2, and 13.32-13.37; PX4 v1.17.0 ICP201XX.cpp conversion
+  scope: Inverse conversion from sensor-host hPa and degrees C to the pressure-first 20-bit FIFO format PX4 consumes.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-005.T1
+    stimulus: Produce a pair from known pressure and temperature, decode its signed 20-bit words, and apply PX4's forward conversion.
+    expect: Pressure and temperature round-trip within one respective output LSB and the history request names the pair's exact sample time.
+- id: ADV-CHIP-ICP201XX-006
+  statement: Lazy FIFO generation at register access advances at 40 Hz without per-step work; draining it at PX4's 30 Hz schedule returns every produced pair once and PX4's average matches the input values for those pair times.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 Table 2 and sections 6.7 and 7; PX4 v1.17.0 ICP201XX.cpp 30 Hz schedule and FIFO averaging
+  scope: PX4 Mode2 run-time data path.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-006.T1
+    stimulus: Run one second of 40 Hz time-resolved ramp input and perform FIFO fill/read/average operations at 30 Hz as PX4 does.
+    expect: Each read returns one or two consecutive pairs, none are lost or duplicated, and each averaged pressure is within one pressure LSB of the matching input average.
+- id: ADV-CHIP-ICP201XX-007
+  statement: At unchanged virtual time, repeated reads of any non-FIFO register or FIFO_FILL return identical bytes; a partial FIFO read is repeatable, and only completion of the documented FIFO pair fetch consumes data.
+  source:
+    devicetree: invensense,icp201xx
+    manual: TDK InvenSense ICP-20100 DS-000416 revision 1.1 sections 6.7 and 7.1-7.3
+  scope: Deterministic register and FIFO observation.
+  verification: unit
+  applies_to: chip:invensense,icp201xx
+  tests:
+  - id: ADV-CHIP-ICP201XX-007.T1
+    stimulus: At one virtual time, repeat VERSION and FIFO_FILL reads and repeat a three-byte pressure read in separate I2C bursts.
+    expect: Both instances of every read are byte-identical and the partial FIFO access leaves the pair present.
+- id: ADV-CHIP-BMM150-001
+  statement: In suspend, CHIP_ID (0x40) reads 0x00; after POWER_CONTROL bit 0 is set it reads 0x32. A soft reset requested with 0x4B bits 7 and 1 set restores sleep mode (OP_MODE 0x06), clears those request bits, and preserves power.
+  source:
+    devicetree: bosch,bmm150
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4, sections 4.2.2, 5.3 and 5.6
+  scope: PX4 v1.17.0 probe and reset sequence.
+  verification: generated
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-001.T1
+    stimulus: On a generated I2C fixture at address 0x10, set POWER_CONTROL bit 0 and read CHIP_ID 0x40; the behaviour test also checks suspend and PX4's soft-reset sequence.
+    expect: CHIP_ID is 0x32 while powered; suspend returned 0x00, and soft reset produced powered sleep defaults.
+- id: ADV-CHIP-BMM150-002
+  statement: The normal self-test completes successfully by clearing OP_MODE bit 0 and setting the X, Y and Z result bits. The PX4-read trim blocks 0x5D..0x5E, 0x62..0x65 and 0x68..0x71 contain dig_x1=0, dig_y1=0, dig_x2=-128, dig_y2=-128, dig_z1=32768, dig_z2=24576, dig_z3=0, dig_z4=0, dig_xy1=0, dig_xy2=0 and dig_xyz1=8192.
+  source:
+    devicetree: bosch,bmm150
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4 section 4.4.1; PX4-Autopilot v1.17.0 BMM150.cpp READ_TRIM state
+  scope: Successful PX4 v1.17.0 self-test and the trim values chosen for deterministic inverse compensation.
+  verification: unit
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-002.T1
+    stimulus: Replay PX4's reset and self-test writes and its three trim-block reads in driver order.
+    expect: Self-test clears and succeeds on all axes; every signed and unsigned trim field decodes to the stated fixed value.
+- id: ADV-CHIP-BMM150-003
+  statement: OP_MODE ODR codes 0..7 select 10, 2, 6, 8, 15, 20, 25 and 30 Hz. REPXY and REPZ store the programmed repetition controls; the PX4 high-accuracy values 0x17 and 0x52 mean 47 XY and 83 Z repetitions. Entering powered normal mode reports its magnetic-sample period, 50000000 ns for PX4's 20 Hz setting.
+  source:
+    devicetree: bosch,bmm150
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4, sections 5.6 and 5.8, Tables 17, 24 and 26
+  scope: Normal-mode settings used by PX4 v1.17.0 and the sensor-host period contract.
+  verification: unit
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-003.T1
+    stimulus: Evaluate all eight ODR codes, then run PX4 configuration (20 Hz, REPXY 0x17, REPZ 0x52).
+    expect: All rates equal Table 17, repetition registers read back, and one 50000000 ns magnetic period is reported.
+- id: ADV-CHIP-BMM150-004
+  statement: In normal mode each data burst is a coherent sample from sensor_sample_at at the latest BMM150 output boundary not after the read. Revision-6 rotation 0 is identity. Two reads at the same virtual time return identical bytes and do not resample.
+  source:
+    devicetree: bosch,bmm150; Pixhawk 6X revision 6 rotation 0
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4 sections 4.2.4 and 5.4; athrill-device ABI 1.24 sensor_sample_at
+  scope: Lazy 20 Hz normal-mode sampling; no mount-rotation feature.
+  verification: unit
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-004.T1
+    stimulus: Advance a 1 MHz target in 50000-clock periods with negative and positive fields, read 0x42..0x4A, then repeat a read without advancing time.
+    expect: History is requested at each measurement's own boundary, axes retain identity, and the repeated burst is byte-identical.
+- id: ADV-CHIP-BMM150-005
+  statement: Data registers encode signed 13-bit X/Y, signed 15-bit Z, 14-bit RHALL=8192 and DRDY in RHALL_LSB bit 0. With the fixed trims, PX4 v1.17.0 compensation returns raw/16 microtesla, so raw=round(field_gauss*1600) inversely represents the source field to within one 0.0625 microtesla raw LSB.
+  source:
+    devicetree: bosch,bmm150
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4 section 5.4 Tables 6-13; PX4-Autopilot v1.17.0 BMM150.cpp compensate_x/y/z
+  scope: Valid X/Y range -4095..4095 and Z range -16383..16383, including negative fields.
+  verification: unit
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-005.T1
+    stimulus: Replay PX4 startup, read trim, sweep signed raw values across the valid X/Y and Z ranges, decode the register fields, and apply the PX4 compensation equations independently.
+    expect: Compensated values differ from the input field converted to microtesla by no more than 0.0625 microtesla.
+- id: ADV-CHIP-BMM150-006
+  statement: A field outside an axis's encodable range produces the datasheet overflow code -4096 for X/Y or -16384 for Z and sets STATUS (0x4A) Overflow bit 6.
+  source:
+    devicetree: bosch,bmm150
+    manual: Bosch BMM150 datasheet BST-BMM150-DS001-05 revision 1.4 section 4.6.6 and section 5.5 Table 14
+  scope: Overflow result consumed by PX4 v1.17.0.
+  verification: unit
+  applies_to: chip:bosch,bmm150
+  tests:
+  - id: ADV-CHIP-BMM150-006.T1
+    stimulus: Supply X=2.56 G, Y=-2.56 G and Z=10.24 G, one count outside the selected inverse ranges.
+    expect: X and Y decode as -4096, Z as -16384, and STATUS bit 6 is set.
