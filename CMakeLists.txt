@@ -20,6 +20,7 @@ add_library(athrill_device STATIC
   src/models/fm25v02.c
   src/models/icm20689.c
   src/models/icm42688p.c
+  src/models/imu_filter.c
   src/models/ist8310.c
   src/models/ms5611.c
   src/models/pwm_actuator.c
@@ -170,6 +171,9 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/timer-h7-pwm.dtb"
       "${TEST_DTB_DIR}/tick-skip-runtime.dtb"
       "${TEST_DTB_DIR}/tick-skip-contract.dtb"
+      "${TEST_DTB_DIR}/sensor-host-no-wiring.dtb"
+      "${TEST_DTB_DIR}/sensor-host-direct-wiring.dtb"
+      "${TEST_DTB_DIR}/sensor-host-missing-plugin.dtb"
       "${TEST_DTB_DIR}/tick-skip-pwm.dtb"
       "${TEST_DTB_DIR}/tick-skip-dshot.dtb"
       "${TEST_DTB_DIR}/esc-fault-bypass.dtb"
@@ -192,6 +196,32 @@ if(BUILD_TESTING)
     ATHRILL_DEVICE_STANDALONE_TYPES TEST_DTB_DIR="${TEST_DTB_DIR}")
   target_link_libraries(test_device_tree PRIVATE athrill_device)
   add_dependencies(test_device_tree generate-test-dtbs)
+  add_executable(test_sensor_host_config tests/test_sensor_host_config.c)
+  target_compile_definitions(test_sensor_host_config PRIVATE
+    ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_link_libraries(test_sensor_host_config PRIVATE athrill_device)
+  add_dependencies(test_sensor_host_config generate-test-dtbs)
+  add_test(NAME ADV-SENSOR-HOST-001.T1
+    COMMAND test_sensor_host_config no-wiring
+      "${TEST_DTB_DIR}/sensor-host-no-wiring.dtb"
+      $<TARGET_FILE:athrill_hakoniwa_sensor>)
+  set_tests_properties(ADV-SENSOR-HOST-001.T1 PROPERTIES
+    PASS_REGULAR_EXPRESSION
+      "HAKO_SENSOR_DEVICE_SENSORS is set, but no sensor chip value-source points to hakoniwa,sensor-instance")
+  add_test(NAME ADV-SENSOR-HOST-002.T1
+    COMMAND test_sensor_host_config direct-wiring
+      "${TEST_DTB_DIR}/sensor-host-direct-wiring.dtb"
+      $<TARGET_FILE:athrill_hakoniwa_sensor>)
+  set_tests_properties(ADV-SENSOR-HOST-002.T1 PROPERTIES
+    PASS_REGULAR_EXPRESSION
+      "chip /gyroscope value-source points to hakoniwa,sensor-device while hakoniwa,sensor-instance nodes exist")
+  add_test(NAME ADV-SENSOR-HOST-004.T1
+    COMMAND test_sensor_host_config missing-plugin
+      "${TEST_DTB_DIR}/sensor-host-missing-plugin.dtb"
+      $<TARGET_FILE:athrill_hakoniwa_sensor>)
+  set_tests_properties(ADV-SENSOR-HOST-004.T1 PROPERTIES
+    PASS_REGULAR_EXPRESSION
+      "DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance=<same library as DEVICE_CONFIG_DEVICE_PLUGIN_0>")
 
   add_executable(test_bindings tests/test_bindings.c)
   target_compile_definitions(test_bindings PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
@@ -270,6 +300,10 @@ if(BUILD_TESTING)
   target_include_directories(test_hako_sensor_history PRIVATE
     include board/common/src tests)
   add_test(NAME hako-sensor-history COMMAND test_hako_sensor_history)
+  add_executable(test_sensor_period_check tests/test_sensor_period_check.c
+    board/common/src/hako_sensor_period_check.c)
+  target_include_directories(test_sensor_period_check PRIVATE board/common/src)
+  add_test(NAME ADV-SENSOR-HOST-003.T2 COMMAND test_sensor_period_check)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
     PIXHAWK4_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk4/pixhawk4.dtb"
@@ -328,14 +362,38 @@ if(BUILD_TESTING)
   target_compile_definitions(test_imu_fifo_history PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_imu_fifo_history PRIVATE src/models)
   target_link_libraries(test_imu_fifo_history PRIVATE athrill_device)
-  add_test(NAME imu-fifo-bmi055-accel
+  add_test(NAME ADV-SENSOR-HOST-003.T1-bmi055-accel
     COMMAND test_imu_fifo_history bmi055-accel)
-  add_test(NAME imu-fifo-bmi055-gyro
+  add_test(NAME ADV-SENSOR-HOST-003.T1-bmi055-gyro
     COMMAND test_imu_fifo_history bmi055-gyro)
-  add_test(NAME imu-fifo-icm42688p
+  add_test(NAME ADV-SENSOR-HOST-003.T1-icm42688p
     COMMAND test_imu_fifo_history icm42688p)
-  add_test(NAME imu-fifo-icm20689
+  add_test(NAME ADV-SENSOR-HOST-003.T1-icm20689
     COMMAND test_imu_fifo_history icm20689)
+  add_executable(test_imu_filters tests/test_imu_filters.c)
+  target_compile_definitions(test_imu_filters PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_imu_filters PRIVATE src/models)
+  target_link_libraries(test_imu_filters PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-BMI055A-003.T1
+    COMMAND test_imu_filters bmi055-accel-pmu-bw)
+  add_test(NAME ADV-CHIP-BMI055G-003.T1
+    COMMAND test_imu_filters bmi055-gyro-bw)
+  add_test(NAME ADV-CHIP-ICM42688-004.T1-gyro-ui
+    COMMAND test_imu_filters icm42688-gyro-ui)
+  add_test(NAME ADV-CHIP-ICM42688-004.T1-accel-ui
+    COMMAND test_imu_filters icm42688-accel-ui)
+  add_test(NAME ADV-CHIP-ICM42688-004.T1-gyro-aaf
+    COMMAND test_imu_filters icm42688-gyro-aaf)
+  add_test(NAME ADV-CHIP-ICM42688-004.T1-accel-aaf
+    COMMAND test_imu_filters icm42688-accel-aaf)
+  add_test(NAME ADV-CHIP-ICM20689-003.T1-gyro
+    COMMAND test_imu_filters icm20689-gyro-dlpf)
+  add_test(NAME ADV-CHIP-ICM20689-003.T1-accel
+    COMMAND test_imu_filters icm20689-accel-dlpf)
+  add_test(NAME ADV-IMU-FILTER-001.T1
+    COMMAND test_imu_filters icm42688-gyro-ui)
+  add_test(NAME ADV-IMU-FILTER-002.T1
+    COMMAND test_imu_filters icm42688-gyro-ui)
   add_executable(test_fm25v02 tests/test_fm25v02.c)
   target_compile_definitions(test_fm25v02 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_fm25v02 PRIVATE src/models)
@@ -444,6 +502,15 @@ if(BUILD_TESTING)
     PIXHAWK6C_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6c/pixhawk6c-hakoniwa.dtb"
     PIXHAWK6C_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6c/pixhawk6c-hakoniwa-dshot.dtb")
 
+  add_executable(test_pixhawk6x_dtb tests/test_pixhawk6x_dtb.c
+    third_party/libfdt/libfdt.c)
+  target_include_directories(test_pixhawk6x_dtb PRIVATE third_party/libfdt)
+  target_compile_definitions(test_pixhawk6x_dtb PRIVATE
+    PIXHAWK6X_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x.dtb"
+    PIXHAWK6X_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa.dtb"
+    PIXHAWK6X_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa-dshot.dtb"
+    PIXHAWK6X_HAKONIWA_DSHOT_SENSORS_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-hakoniwa-dshot-sensors.dtb")
+
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_plugin_good PRIVATE include)
@@ -484,6 +551,7 @@ if(BUILD_TESTING)
   add_test(NAME protocol-sd COMMAND test_sd_protocol)
   add_test(NAME pixhawk4-dtb COMMAND test_pixhawk4_dtb)
   add_test(NAME pixhawk6c-dtb COMMAND test_pixhawk6c_dtb)
+  add_test(NAME pixhawk6x-dtb COMMAND test_pixhawk6x_dtb)
 endif()
 
 install(TARGETS athrill_device EXPORT athrill-device-targets

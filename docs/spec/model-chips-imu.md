@@ -24,7 +24,7 @@ Accelerometer and gyroscope chips on SPI as used by PX4 and ArduPilot (ICM-20689
 | accel_range | control | accel | Full scale of the accelerometer (e.g. ±2/4/8/16 g). |
 | gyro_range | control | gyro | Full scale of the gyroscope (e.g. ±250..2000 dps). |
 | output_rate | control | base | Output data rate; samples are produced at this rate. |
-| filter_config | control | base | Digital low-pass/bandwidth settings: stored only. |
+| filter_config | control | base | Digital low-pass, anti-alias and bypass settings select the modeled in-chip filter response. |
 | accel_sample | data | accel | Three axes of acceleration as raw signed counts. |
 | gyro_sample | data | gyro | Three axes of angular rate as raw signed counts. |
 | temperature | data | base | Die temperature as raw counts (datasheet formula). |
@@ -55,6 +55,8 @@ Accelerometer and gyroscope chips on SPI as used by PX4 and ArduPilot (ICM-20689
 | ADV-FIFO-005 | fifo | Sample history costs one fixed-size copy per latch and O(1) lookup for periodic latches, and chips do no FIFO sample work until a frame is read. |
 | ADV-FIFO-006 | fifo | Repeating a run with the same latches, times and register accesses returns the same FIFO frames. |
 | ADV-FIFO-007 | fifo | ABI 1.24 sensor_sample_at returns the newest sample latched at or before the requested target-clock time, or -1 if none is retained. |
+| ADV-IMU-FILTER-001 | base | With the boolean athrill,ideal-filters property on an IMU node, all modeled in-chip filters are bypassed and FIFO and direct data use the unfiltered time-resolved value-source sample; without it filters are enabled. |
+| ADV-IMU-FILTER-002 | base | Filter state advances only when FIFO or direct data is read, at the selected output data rate through value-source history; if the unread interval starts before retained history, state restarts at the oldest retained sample, so work is bounded by retained history. |
 
 **Timing.** Samples are produced at output_rate in model time; the sensor source's sample at that time is used.
 

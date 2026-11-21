@@ -13,6 +13,7 @@
 - [i2c](items-i2c.md)
 - [pwm](items-pwm.md)
 - [sd](items-sd.md)
+- [sensor-host](items-sensor-host.md)
 - [spi](items-spi.md)
 - [uart](items-uart.md)
 
