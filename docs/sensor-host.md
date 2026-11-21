@@ -52,8 +52,9 @@ instance's mount by the same rules as for SITL.
   instance's adapter once. Each adapter measures at its own `updatePeriodMsec` boundaries and holds the value in
   between. The chip model reads the latest value at the rate the firmware programs.
 - **The physics step must not be longer than any sensor's period, and should divide it.** A sensor cannot be measured
-  more often than the physics steps. In practice the fastest IMU sets the physics step: the Pixhawk 6C's BMI055 runs
-  at 2 kHz under PX4, so the 6C needs a physics step of 0.5 ms or less.
+  more often than the physics steps. In practice the fastest IMU sets the physics step: PX4 runs the Pixhawk 4's
+  ICM-20689 gyro at 8 kHz, so that board needs a physics step of 125 us or less. The Pixhawk 6C's ICM-42688-P also
+  runs at 8 kHz under PX4. See Chip rates.
   - At start-up, an adapter whose `updatePeriodMsec` is shorter than the physics step is an error.
   - A period that is not a multiple of the physics step is rounded to the nearest multiple with a warning, as in
     Hakoniwa Drone.
@@ -89,12 +90,16 @@ adapter.** The firmware decides; the host checks and, where it can, makes the ad
 | a reserved register setting | nothing | ERROR |
 
 So the physics step is chosen at start-up for the finest rate the firmware will program, and the adapters' periods
-need not be written for each firmware: they follow the chips. What the firmwares program on the Pixhawk 6C:
+need not be written for each firmware: they follow the chips. What the firmwares program on the supported boards:
 
-| Chip | PX4 v1.17.0 | ArduPilot |
+| Board / chip | PX4 v1.17.0 | ArduPilot |
 | --- | --- | --- |
-| BMI055 accelerometer and gyro | 2 kHz each (unfiltered data) | 2 kHz each |
-| ICM-42688-P | 8 kHz, ±16 g, ±2000 dps | 1 kHz, or 2, 4 or 8 kHz with fast sampling (2 kHz observed with ArduCopter on the 6C at its 400 Hz loop); ±16 g, ±2000 dps |
+| Pixhawk 4 ICM-20689 | 8 kHz gyro, 4 kHz accelerometer; ±2000 dps, ±16 g | firmware-dependent |
+| Pixhawk 4 and 6C BMI055 accelerometer and gyro | 2 kHz each (unfiltered data) | 2 kHz each |
+| Pixhawk 6C ICM-42688-P | 8 kHz, ±16 g, ±2000 dps | 1 kHz, or 2, 4 or 8 kHz with fast sampling (2 kHz observed with ArduCopter on the 6C at its 400 Hz loop); ±16 g, ±2000 dps |
+
+Thus PX4 on FMUv5 needs `HAKO_AIRCRAFT_PHYSICS_STEP_USEC=125`: the 125 us step equals the ICM-20689 gyro period,
+divides its 250 us accelerometer period and the BMI055's 500 us period, and lets the adapters follow all three rates.
 
 An implementation linked into the plugin (`HAKO_SENSOR_DEVICE_IMPLEMENTATIONS`) is built against the same
 hakoniwa-sensor-adapter interface as the plugin, and built again whenever that interface changes: the interface is C++,
@@ -129,8 +134,33 @@ accelerometer and gyro) has one instance. The motors stay on the sensor device.
 The run loads the plugin for the instances too: next to `DEVICE_CONFIG_DEVICE_PLUGIN_0` for
 `hakoniwa%2Csensor-device`, a `DEVICE_CONFIG_DEVICE_PLUGIN_1` for `hakoniwa%2Csensor-instance` with the same library.
 
-`boards/pixhawk6c/pixhawk6c-hakoniwa-dshot-sensors.dts` is the Pixhawk 6C with DShot wired this way, with the
-instances `bmi055`, `icm42688p`, `barometer`, `magnetometer` and `gps1`.
+The ready-made DShot boards are:
+
+| Board | Devicetree | Instances |
+| --- | --- | --- |
+| Pixhawk 4 / FMUv5 | `boards/pixhawk4/pixhawk4-hakoniwa-dshot-sensors.dtb` | `icm20689`, `bmi055`, `barometer`, `magnetometer`, `gps1` |
+| Pixhawk 6C / FMUv6C | `boards/pixhawk6c/pixhawk6c-hakoniwa-dshot-sensors.dtb` | `bmi055`, `icm42688p`, `barometer`, `magnetometer`, `gps1` |
+
+For Pixhawk 4, a `sensors.json` suitable for `HAKO_SENSOR_DEVICE_SENSORS` is, with the named AirSim adapter
+configuration files beside it:
+
+```json
+{"sensors": [
+  {"name": "icm20689",    "type": "imu",  "implementation": "airsim", "config": "imu-ideal.json"},
+  {"name": "bmi055",      "type": "imu",  "implementation": "airsim", "config": "imu-ideal.json"},
+  {"name": "barometer",    "type": "baro", "implementation": "airsim", "config": "baro-ideal.json"},
+  {"name": "magnetometer", "type": "mag",  "implementation": "airsim", "config": "mag-ideal.json"},
+  {"name": "gps1",         "type": "gps",  "implementation": "airsim", "config": "gps-default.json"}
+]}
+```
+
+The corresponding device configuration includes the sensor-instance plugin alongside the sensor-device plugin
+(replace the library path with the run's plugin):
+
+```text
+DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa%2Csensor-device=/path/to/libhako_sensor_device.dylib
+DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance=/path/to/libhako_sensor_device.dylib
+```
 
 ### Adapter implementations
 

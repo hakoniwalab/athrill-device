@@ -78,6 +78,21 @@ static void expect_boolean(const void *blob, const char *path,
 	}
 }
 
+static uint32_t expect_sensor_instance(const void *blob, const char *path)
+{
+	int length;
+	int instance = fdt_path_offset(blob, path);
+	const char *compatible;
+	uint32_t phandle;
+	TEST_CHECK(instance >= 0);
+	compatible = fdt_getprop(blob, instance, "compatible", &length);
+	TEST_CHECK(compatible != NULL &&
+		strcmp(compatible, "hakoniwa,sensor-instance") == 0);
+	phandle = fdt_get_phandle(blob, instance);
+	TEST_CHECK(phandle != 0U);
+	return phandle;
+}
+
 static int sensor_node(const void *blob, const char *status)
 {
 	int length;
@@ -209,6 +224,49 @@ int main(void)
 	dma2_phandle = fdt_get_phandle(blob, fdt_path_offset(blob, "/soc/dma@40026400"));
 	expect_dmas(blob, "/soc/timers@40010000", dma2_phandle, tim1_dmas, 1U,
 		tim1_names, sizeof(tim1_names));
+	free(blob);
+
+	/* Sensor host: every physical chip has its own instance; the BMI055's
+	 * accelerometer and gyro share one. Motors remain on the sensor device. */
+	blob = read_dtb(PIXHAWK4_HAKONIWA_DSHOT_SENSORS_DTB, &size);
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	sensor = sensor_node(blob, "okay");
+	sensor_phandle = fdt_get_phandle(blob, sensor);
+	{
+		static const char *const instance_paths[] = {
+			"/sensor-device/icm20689",
+			"/sensor-device/bmi055",
+			"/sensor-device/barometer",
+			"/sensor-device/magnetometer",
+			"/sensor-device/gps1"
+		};
+		static const char *const chip_paths[] = {
+			"/soc/spi@40013000/imu@0",
+			"/soc/spi@40013000/accelerometer@2",
+			"/soc/spi@40013000/gyroscope@1",
+			"/soc/spi@40013400/pressure@0",
+			"/soc/i2c@40005c00/magnetometer@e",
+			"/soc/serial@40011000/gnss"
+		};
+		uint32_t instances[5];
+		uint32_t i;
+		for (i = 0U; i < 5U; i++) {
+			instances[i] = expect_sensor_instance(blob, instance_paths[i]);
+		}
+		expect_value_source(blob, chip_paths[0], instances[0]);
+		expect_value_source(blob, chip_paths[1], instances[1]);
+		expect_value_source(blob, chip_paths[2], instances[1]);
+		expect_value_source(blob, chip_paths[3], instances[2]);
+		expect_value_source(blob, chip_paths[4], instances[3]);
+		expect_value_source(blob, chip_paths[5], instances[4]);
+		for (i = 0U; i < 6U; i++) {
+			expect_boolean(blob, chip_paths[i],
+				"athrill,tick-before-value-source", 0);
+		}
+	}
+	expect_value_source(blob, "/soc/serial@40004c00/dshot-esc", sensor_phandle);
+	expect_boolean(blob, "/soc/serial@40004c00/dshot-esc",
+		"athrill,tick-before-value-source", 1);
 	free(blob);
 	puts("Pixhawk 4 base and Hakoniwa DT wiring is valid");
 	return 0;
