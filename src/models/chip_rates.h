@@ -31,6 +31,9 @@ uint64 chip_icm20689_accel_rate_mhz(uint8 accel_config2, uint8 smplrt_div);
 /* ADIS16470: DEC_RATE (0x64), internal clock mode. */
 uint64 chip_adis16470_rate_mhz(uint16 dec_rate);
 
+/* ICP-201xx: MODE_SELECT MEAS_CONFIG (bits 7:5). */
+uint64 chip_icp201xx_rate_mhz(uint8 meas_config);
+
 /* The period of a rate in target clocks (frequency_hz: the target's time base) and in ns. */
 uint64 chip_rate_clocks(uint64 frequency_hz, uint64 rate_mhz);
 uint64 chip_rate_period_ns(uint64 rate_mhz);

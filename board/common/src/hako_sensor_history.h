@@ -4,7 +4,7 @@
 
 #include "athrill_device_if.h"
 
-#define HAKO_SENSOR_HISTORY_SIZE 512U
+#define HAKO_SENSOR_HISTORY_SIZE 4096U
 
 typedef struct {
 	uint64 time;

@@ -207,6 +207,15 @@ def main() -> None:
         ("#size-cells", be32(1)),
         ("athrill,test-chip-only", b""),
     ], adis16470_children)
+    icp201xx = node("", [
+        ("compatible", strings("athrill,test-board")),
+        ("#address-cells", be32(1)),
+        ("#size-cells", be32(1)),
+        ("athrill,test-chip-only", b""),
+    ], [bus_controller("i2c", 0x3000, [node("pressure@64", [
+        ("compatible", strings("invensense,icp201xx")),
+        ("reg", be32(0x64)),
+    ], [])], "athrill,test-i2c-child", 0x64)])
     gpio = board([node("gpio@40020000", [
         ("compatible", strings("st,stm32-gpio")),
         ("reg", be32(0x40020000, 0x400)),
@@ -433,6 +442,7 @@ def main() -> None:
         "gps.dtb": gps,
         "imu.dtb": imu,
         "adis16470.dtb": adis16470,
+        "icp201xx.dtb": icp201xx,
         "gpio.dtb": gpio,
         "exti.dtb": exti,
         "timer-pwm.dtb": timer_pwm,

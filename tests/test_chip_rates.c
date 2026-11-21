@@ -102,5 +102,17 @@ int main(void)
 	TEST_CHECK(chip_rate_period_ns(2000000U) == 500000U);
 	TEST_CHECK(chip_rate_period_ns(15625U) == 64000000U);
 	TEST_CHECK(chip_rate_clocks(400000000U, 0U) == 0U && chip_rate_period_ns(0U) == 0U);
+
+	/* [ADV-CHIP-ICP201XX-003.T1] DS-000416 revision 1.1 Table 2. */
+	{
+		static const uint64 expected[8] = {
+			25000U, 120000U, 40000U, 2000U, 25000U, 0U, 0U, 0U
+		};
+		for (i = 0U; i < 8U; i++) {
+			TEST_CHECK(chip_icp201xx_rate_mhz((uint8)i) == expected[i]);
+		}
+		TEST_CHECK(chip_rate_period_ns(chip_icp201xx_rate_mhz(2U)) ==
+			25000000U);
+	}
 	return EXIT_SUCCESS;
 }

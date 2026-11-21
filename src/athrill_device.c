@@ -479,6 +479,7 @@ static const char *const adis16470_compatibles[] = { "adi,adis16470" };
 static const char *const fm25v02_compatibles[] = { "infineon,fm25xxx", "ramtron,fm25v02a" };
 static const char *const ist8310_compatibles[] = { "isentek,ist8310" };
 static const char *const ms5611_compatibles[] = { "meas,ms5611" };
+static const char *const icp201xx_compatibles[] = { "invensense,icp201xx" };
 static const char *const ublox_m8_compatibles[] = { "u-blox,m8" };
 static const char *const sdcard_compatibles[] = { "zephyr,sdmmc-disk" };
 static const char *const pwm_actuator_compatibles[] = { "athrill,pwm-actuator-map" };
@@ -523,6 +524,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ fm25v02_compatibles, 2U, &athrill_device_fm25v02_model },
 	{ ist8310_compatibles, 1U, &athrill_device_ist8310_model },
 	{ ms5611_compatibles, 1U, &athrill_device_ms5611_model },
+	{ icp201xx_compatibles, 1U, &athrill_device_icp201xx_model },
 	{ ublox_m8_compatibles, 1U, &athrill_device_ublox_m8_model },
 	{ sdcard_compatibles, 1U, &athrill_device_sdcard_model },
 	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
@@ -1011,6 +1013,7 @@ static int sensor_chip_model(const AthrillDeviceModelOps *model)
 		model == &athrill_device_icm20689_model ||
 		model == &athrill_device_ist8310_model ||
 		model == &athrill_device_ms5611_model ||
+		model == &athrill_device_icp201xx_model ||
 		model == &athrill_device_ublox_m8_model;
 }
 
