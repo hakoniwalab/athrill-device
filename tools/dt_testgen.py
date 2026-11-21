@@ -671,6 +671,7 @@ CHIP_TESTS = {
     "bosch,bma280": ("ADV-CHIP-BMI055A-001", "spi-register", 0x00, 0xFA),
     "bosch,bmg160": ("ADV-CHIP-BMI055G-001", "spi-register", 0x00, 0x0F),
     "isentek,ist8310": ("ADV-CHIP-IST8310-001", "i2c-register", 0x00, 0x10),
+    "bosch,bmm150": ("ADV-CHIP-BMM150-001", "bmm150-id", 0x40, 0x32),
     "meas,ms5611": ("ADV-CHIP-MS5611-001", "ms5611-prom", None, None),
     "invensense,icp201xx": ("ADV-CHIP-ICP201XX-001", "i2c-register", 0x0C, 0x63),
 }
@@ -739,6 +740,7 @@ def load_test_specs(paths: list[Path]) -> dict[str, str]:
         "ADV-CHIP-BMI055A-001.T1": "chip:bosch,bma280",
         "ADV-CHIP-BMI055G-001.T1": "chip:bosch,bmg160",
         "ADV-CHIP-IST8310-001.T1": "chip:isentek,ist8310",
+        "ADV-CHIP-BMM150-001.T1": "chip:bosch,bmm150",
         "ADV-CHIP-MS5611-001.T1": "chip:meas,ms5611",
         "ADV-CHIP-ICP201XX-001.T1": "chip:invensense,icp201xx",
     }
@@ -1344,6 +1346,8 @@ def render_case(case: dict[str, object]) -> str:
             ])
         else:
             lines.append("\tuint8 value;")
+            if chip.operation == "bmm150-id":
+                lines.append("\tI2cConnection write_connection;")
         if chip.bus == "spi":
             lines.extend([
                 f"\tindex = find_binding({c_string(chip.controller_path)}, {chip.selector}U);",
@@ -1388,6 +1392,19 @@ def render_case(case: dict[str, object]) -> str:
         elif chip.operation == "i2c-register":
             assert chip.register is not None and chip.expected is not None
             lines.extend([
+                f"\tCHECK(i2c_register_read(index, {chip.register}U, &value) == 0);",
+                f"\tCHECK(value == {chip.expected}U);",
+            ])
+        elif chip.operation == "bmm150-id":
+            assert chip.register is not None and chip.expected is not None
+            lines.extend([
+                "\tCHECK(i2c_connection_open(index, &write_connection) == 0);",
+                "\tCHECK(athrill_i2c_start(write_connection.protocol,",
+                "\t    write_connection.binding->address, FALSE, write_connection.time++) == 1);",
+                "\tCHECK(i2c_write_byte(&write_connection, 0x4bU) == 0);",
+                "\tCHECK(i2c_write_byte(&write_connection, 1U) == 0);",
+                "\tCHECK(athrill_i2c_stop(write_connection.protocol, write_connection.time++) == 0);",
+                "\ti2c_connection_close(&write_connection);",
                 f"\tCHECK(i2c_register_read(index, {chip.register}U, &value) == 0);",
                 f"\tCHECK(value == {chip.expected}U);",
             ])

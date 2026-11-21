@@ -17,6 +17,7 @@ add_library(athrill_device STATIC
   src/athrill_device.c
   src/models/adis16470.c
   src/models/bmi055.c
+  src/models/bmm150.c
   src/models/chip_rates.c
   src/models/fm25v02.c
   src/models/icm20689.c
@@ -129,6 +130,7 @@ if(BUILD_TESTING)
     "${CMAKE_CURRENT_SOURCE_DIR}/boards/*.dtb")
   list(APPEND TRACE_BOARD_DTBS "${TEST_DTB_DIR}/adis16470.dtb")
   list(APPEND TRACE_BOARD_DTBS "${TEST_DTB_DIR}/icp201xx.dtb")
+  list(APPEND TRACE_BOARD_DTBS "${TEST_DTB_DIR}/bmm150.dtb")
   set(TRACE_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/traceability")
   set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/spec/spi.yaml"
@@ -175,6 +177,7 @@ if(BUILD_TESTING)
       "${TEST_DTB_DIR}/fram.dtb"
       "${TEST_DTB_DIR}/barometer.dtb"
       "${TEST_DTB_DIR}/magnetometer.dtb"
+      "${TEST_DTB_DIR}/bmm150.dtb"
       "${TEST_DTB_DIR}/gps.dtb"
       "${TEST_DTB_DIR}/imu.dtb"
       "${TEST_DTB_DIR}/adis16470.dtb"
@@ -406,6 +409,22 @@ if(BUILD_TESTING)
     COMMAND test_icp201xx px4-30hz)
   add_test(NAME ADV-CHIP-ICP201XX-007.T1
     COMMAND test_icp201xx determinism)
+  add_executable(test_bmm150 tests/test_bmm150.c)
+  target_compile_definitions(test_bmm150 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_bmm150 PRIVATE src/models tests)
+  target_link_libraries(test_bmm150 PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-BMM150-001.T1
+    COMMAND test_bmm150 startup)
+  add_test(NAME ADV-CHIP-BMM150-002.T1
+    COMMAND test_bmm150 startup)
+  add_test(NAME ADV-CHIP-BMM150-003.T1
+    COMMAND test_bmm150 rates)
+  add_test(NAME ADV-CHIP-BMM150-004.T1
+    COMMAND test_bmm150 round-trip)
+  add_test(NAME ADV-CHIP-BMM150-005.T1
+    COMMAND test_bmm150 round-trip)
+  add_test(NAME ADV-CHIP-BMM150-006.T1
+    COMMAND test_bmm150 overflow)
   add_executable(test_imu_fifo_history tests/test_imu_fifo_history.c)
   target_compile_definitions(test_imu_fifo_history PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_imu_fifo_history PRIVATE src/models)

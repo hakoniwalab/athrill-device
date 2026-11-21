@@ -12,6 +12,7 @@ extern const AthrillDeviceModelOps athrill_device_adis16470_model;
 extern const AthrillDeviceModelOps athrill_device_icp201xx_model;
 extern const AthrillDeviceModelOps athrill_device_ms5611_model;
 extern const AthrillDeviceModelOps athrill_device_ist8310_model;
+extern const AthrillDeviceModelOps athrill_device_bmm150_model;
 extern const AthrillDeviceModelOps athrill_device_ublox_m8_model;
 extern const AthrillDeviceModelOps athrill_device_icm20689_model;
 extern const AthrillDeviceModelOps athrill_device_icm42688p_model;
