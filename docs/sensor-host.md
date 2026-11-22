@@ -50,28 +50,34 @@ instance's mount by the same rules as for SITL.
 
 - **One rhythm: the physics step.** On every physics step the sensor host reads the truth once and calls every
   instance's adapter once. Each adapter measures at its own `updatePeriodMsec` boundaries and holds the value in
-  between. The chip model reads the latest value at the rate the firmware programs.
-- **The physics step must not be longer than any sensor's period, and should divide it.** A sensor cannot be measured
+  between. The chip model reads the value at the exact time the firmware-programmed rate requires, interpolating
+  between retained physics-step values when that time lies between them.
+- **The physics step must not be longer than any sensor's period.** A sensor cannot be measured
   more often than the physics steps. In practice the fastest IMU sets the physics step: PX4 runs the Pixhawk 4's
   ICM-20689 gyro at 8 kHz, so that board needs a physics step of 125 us or less. The Pixhawk 6C's ICM-42688-P also
   runs at 8 kHz under PX4. See Chip rates.
   - At start-up, an adapter whose `updatePeriodMsec` is shorter than the physics step is an error.
-  - A period that is not a multiple of the physics step is rounded to the nearest multiple with a warning, as in
-    Hakoniwa Drone.
+  - A configured adapter period that is not a multiple of the physics step is rounded to the nearest multiple with a
+    warning, as in Hakoniwa Drone.
+  - If the chip period itself is not a whole number of physics steps, the adapter continues once per physics step and
+    the chip values at its exact sample times are interpolated from the retained adapter values.
   - When the firmware programs a chip's output data rate faster than the physics rate, the chip model reports it.
 - **The chip comes first.** What the firmware sets in the chip's registers (range, output data rate, resolution) is
-  applied by the chip model, and the adapter's period follows the chip's output data rate (Chip rates). Settings that
+  applied by the chip model. For whole physics-step multiples the adapter's period follows the chip's output data
+  rate; otherwise the adapter stays at the physics step and the chip interpolates (Chip rates). Settings that
   the chip model does not have come from the adapter's configuration, which the user fills from the chip's datasheet;
   a range or resolution written there as well is applied twice, so it is left to the chip.
-- **Δt is the output data rate.** With a noise density, σ = noiseDensity / √Δt, where Δt is the period at which the
-  autopilot reads the sensor: the chip's output data rate. The adapter's `updatePeriodMsec` is written as that period.
+- **Δt is the adapter cadence.** With a noise density, σ = noiseDensity / √Δt, where Δt is the adapter's
+  `updatePeriodMsec`. That period follows a whole-multiple chip period; for a chip period between physics steps it is
+  the physics step, and the chip reads the resulting values by interpolation at its exact cadence.
 - Hakoniwa Drone's `softDelayMsec` (the autopilot's handling delay) is not used: the real firmware's own handling is
   that delay.
 
 ## Chip rates
 
-The rule: **the period at which the firmware programs a chip to produce samples is the period of the chip's sensor
-adapter.** The firmware decides; the host checks and, where it can, makes the adapter follow.
+The rule: **the firmware-programmed chip period is exact.** When it is a whole number of physics steps, the host makes
+the sensor adapter follow. When it falls between physics steps, the adapter remains at one sample per physics step and
+the chip uses interpolated values at its exact sample times.
 
 - The chip models take the output data rate and the full scale from the registers the firmware writes, with the
   datasheets' tables (`spec/chips.yaml` ADV-CHIP-BMI055A-002, ADV-CHIP-BMI055G-002, ADV-CHIP-ICM42688-002 and -003).
@@ -86,22 +92,25 @@ adapter.** The firmware decides; the host checks and, where it can, makes the ad
 | equal to the adapter's | nothing | INFO |
 | a whole number of physics steps, different from the adapter's | asks the adapter to measure at the chip's period from its next multiple | INFO when it follows; ERROR with the adapter's reason when it can not (an adapter without the call can not) |
 | finer than the physics step | nothing: the physics step is fixed for the run, so the chip repeats values | ERROR, with the physics step to use (`HAKO_AIRCRAFT_PHYSICS_STEP_USEC`) |
-| not a whole number of physics steps | the adapter refuses it | ERROR |
+| at least one physics step but not a whole number of steps | keeps the adapter at one sample per physics step; the chip reads interpolated values at its exact sample times | INFO naming both periods and interpolation |
 | a reserved register setting | nothing | ERROR |
 
 For an IMU adapter with one shared accelerometer/gyro period, the host first asks to change the reported part. If
 that is not supported, it changes the shared period when the other part is not known yet or has reported the same
 period. This is how the AirSim adapter follows a BMI055 whose two parts are both at 2 kHz, or an ICM-42688-P whose
 two parts are both at 8 kHz. If the two chip parts differ, the host does not change the shared period back and forth:
-it reports an ERROR naming the instance, part, chip period, adapter period and the adapter's reason.
+it reports an ERROR naming the instance, part, chip period, adapter period and the adapter's reason. A fractional
+chip period is the exception: its shared target is always the physics step, so a rate change restores that cadence
+before interpolation even while the other part's new report is pending.
 
 The reference AirSim IMU adapter implements `part_update_period_ns`, `set_part_update_period_ns` and the shared
 `set_update_period_ns`. Its part setter deliberately refuses an independent change because its two parts share one
 period; the shared fallback above is therefore required. A plugin built from an older AirSim tree without the
 update-period implementation cannot follow and is reported as an ERROR.
 
-So the physics step is chosen at start-up for the finest rate the firmware will program, and the adapters' periods
-need not be written for each firmware: they follow the chips. What the firmwares program on the supported boards:
+So the physics step is chosen at start-up for the finest rate the firmware will program. Adapters follow whole-step
+chip periods; for periods between steps they remain at the physics rate. What the firmwares program on the supported
+boards:
 
 | Board / chip | PX4 v1.17.0 | ArduPilot |
 | --- | --- | --- |
@@ -165,7 +174,8 @@ they do not change an IMU period or fail the run.
 
 These are errors, not warnings: each setup would otherwise run while measuring a different signal from the one the
 sensor-instance configuration describes. The first programmed IMU FIFO period is checked before the next physics
-step. A slower adapter then follows the chip or produces an ERROR that names both periods.
+step. For a whole-multiple chip period, a slower adapter follows the chip or produces an ERROR that names both
+periods; for a fractional chip period, it returns to the physics cadence for interpolation.
 
 The ready-made DShot boards wired this way are:
 
@@ -263,6 +273,6 @@ the chip.
 |---|---|
 | ADV-SENSOR-HOST-001 | With `HAKO_SENSOR_DEVICE_SENSORS`, at least one enabled sensor chip is wired by `value-source` to a `hakoniwa,sensor-instance`; otherwise construction stops with an actionable error. |
 | ADV-SENSOR-HOST-002 | When instance nodes exist, no enabled sensor chip remains wired to `hakoniwa,sensor-device`; an error names the chip and both compatibles. |
-| ADV-SENSOR-HOST-003 | An operating IMU FIFO reports each part's initial and changed programmed period; the host makes the adapter follow before the next physics step or reports an ERROR naming the instance, part and both periods. |
+| ADV-SENSOR-HOST-003 | An operating IMU FIFO reports each part's programmed period; whole-step periods make the adapter follow, fractional periods use a physics-step adapter with interpolated chip values, and finer-than-physics periods are errors. |
 | ADV-SENSOR-HOST-004 | A sensor-instance node without its plugin mapping stops with a message naming the `DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance` line. |
 | ADV-SENSOR-HOST-005 | Pressure, magnetometer and unknown future non-IMU sample-period reports are informational and harmless; they are not treated as accelerometer periods. |

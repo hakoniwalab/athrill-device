@@ -1,5 +1,5 @@
 model: sensor-source
-version: 1.0.0
+version: 2.0.0
 summary: The value source chips read from (hakoniwa,sensor-device with the Hakoniwa Drone aircraft, or the bench source), and the actuator sink the PWM map writes to.
 
 terms:
@@ -15,7 +15,7 @@ features:
 behaviour:
   - id: ADV-SRC-B001
     feature: base
-    rule: Every chip reading the source at model time t gets the sample whose time is the latest at or before t; all chips see the same sample for the same t.
+    rule: Every chip querying the retained source at model time t gets an exact sample unchanged or, strictly between two samples, every float field linearly interpolated by time; before the oldest sample no historical value is available, at or after the newest its value is unchanged, and all chips see the same value for the same t.
   - id: ADV-SRC-B002
     feature: base
     rule: At the same clock, chip consumers read the value latched before the source advances (tick_order), so the C-built and Devicetree-built boards see identical values.

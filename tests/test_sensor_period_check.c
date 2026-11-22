@@ -71,6 +71,64 @@ static void test_shared_period_follows(void)
 	hako_sensor_period_check(&state, &check, &adapter, &result);
 	CHECK(!result.error);
 	CHECK(strstr(result.message, "chip and adapter every 500 us") != NULL);
+	fake.period_ns = 125000U;
+	check.kind = HAKO_SENSOR_PERIOD_GYRO;
+	check.chip_period_ns = 125000U;
+	hako_sensor_period_check(&state, &check, &adapter, &result);
+	CHECK(!result.error);
+	CHECK(fake.period_ns == 125000U);
+	CHECK(strcmp(result.message,
+		"sensor bmi055 gyro: chip and adapter every 125 us") == 0);
+}
+
+/* [ADV-SENSOR-HOST-003.T3] A fractional chip period uses interpolated values. */
+static void test_fractional_period_interpolates(void)
+{
+	FakeAdapter fake = {125000U, true};
+	HakoSensorPeriodState state = {0};
+	HakoSensorPeriodAdapterOps adapter = {
+		get_part, refuse_part, set_shared, &fake
+	};
+	HakoSensorPeriodCheck check = {
+		"icm45686", 125000U, HAKO_SENSOR_PERIOD_GYRO, 156250U
+	};
+	HakoSensorPeriodResult result;
+	hako_sensor_period_check(&state, &check, &adapter, &result);
+	CHECK(!result.error);
+	CHECK(fake.period_ns == 125000U);
+	CHECK(strcmp(result.message,
+		"sensor icm45686 gyro: chip every 156.25 us between physics steps of 125 us; "
+		"adapter every 125 us, chip values interpolated") == 0);
+	check.chip_period_ns = 500000U;
+	hako_sensor_period_check(&state, &check, &adapter, &result);
+	CHECK(!result.error);
+	CHECK(fake.period_ns == 500000U);
+	check.chip_period_ns = 156250U;
+	hako_sensor_period_check(&state, &check, &adapter, &result);
+	CHECK(!result.error);
+	CHECK(fake.period_ns == 125000U);
+	CHECK(strcmp(result.message,
+		"sensor icm45686 gyro: chip every 156.25 us between physics steps of 125 us; "
+		"adapter every 125 us, chip values interpolated") == 0);
+}
+
+/* [ADV-SENSOR-HOST-003.T4] A chip finer than the physics step remains an error. */
+static void test_finer_period_errors(void)
+{
+	FakeAdapter fake = {125000U, true};
+	HakoSensorPeriodState state = {0};
+	HakoSensorPeriodAdapterOps adapter = {
+		get_part, refuse_part, set_shared, &fake
+	};
+	HakoSensorPeriodCheck check = {
+		"icm45686", 125000U, HAKO_SENSOR_PERIOD_GYRO, 100000U
+	};
+	HakoSensorPeriodResult result;
+	hako_sensor_period_check(&state, &check, &adapter, &result);
+	CHECK(result.error);
+	CHECK(fake.period_ns == 125000U);
+	CHECK(strstr(result.message,
+		"chip every 100 us is finer than physics step 125 us") != NULL);
 }
 
 /* [ADV-SENSOR-HOST-003.T2] Refusal is an ERROR naming both periods and reason. */
@@ -126,8 +184,10 @@ static void test_non_imu_periods_are_informational(void)
 int main(void)
 {
 	test_shared_period_follows();
+	test_fractional_period_interpolates();
+	test_finer_period_errors();
 	test_long_adapter_error();
 	test_non_imu_periods_are_informational();
-	printf("ADV-SENSOR-HOST-003.T2: %d failures\n", failures);
+	printf("ADV-SENSOR-HOST-003: %d failures\n", failures);
 	return failures == 0 ? 0 : 1;
 }

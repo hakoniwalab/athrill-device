@@ -1,0 +1,37 @@
+/* SPDX-License-Identifier: MIT */
+
+#include "pixhawk6x-rev8.dts"
+
+&hakoniwa_sensor { status = "okay"; };
+&pwm_actuators {
+	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
+};
+&icm45686_spi1 {
+	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
+};
+&icm45686_spi2 {
+	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
+};
+&icm45686_spi3 {
+	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
+};
+&icp201xx {
+	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
+};
+&bmm150 {
+	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
+};
+&external_magnetometer {
+	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
+};
+&gps1 {
+	value-source = <&hakoniwa_sensor>;
+	athrill,tick-before-value-source;
+};

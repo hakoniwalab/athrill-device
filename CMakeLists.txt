@@ -22,9 +22,11 @@ add_library(athrill_device STATIC
   src/models/fm25v02.c
   src/models/icm20689.c
   src/models/icm42688p.c
+  src/models/icm45686.c
   src/models/icp201xx.c
   src/models/imu_filter.c
   src/models/ist8310.c
+  src/models/mount_rotation.c
   src/models/ms5611.c
   src/models/pwm_actuator.c
   src/bindings.c
@@ -56,6 +58,8 @@ add_library(athrill_device STATIC
   src/models/stm32_uart_tcp.c
   src/models/stm32_tim.c
   src/models/ublox_m8.c
+  src/models/crsf_receiver.c
+  src/models/scenario.c
   src/sha256.c
   third_party/libfdt/libfdt.c)
 add_library(athrill-device::athrill-device ALIAS athrill_device)
@@ -323,6 +327,8 @@ if(BUILD_TESTING)
     board/common/src/hako_sensor_period_check.c)
   target_include_directories(test_sensor_period_check PRIVATE board/common/src)
   add_test(NAME ADV-SENSOR-HOST-003.T2 COMMAND test_sensor_period_check)
+  add_test(NAME ADV-SENSOR-HOST-003.T3 COMMAND test_sensor_period_check)
+  add_test(NAME ADV-SENSOR-HOST-003.T4 COMMAND test_sensor_period_check)
   add_test(NAME ADV-SENSOR-HOST-005.T1 COMMAND test_sensor_period_check)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
@@ -401,6 +407,39 @@ if(BUILD_TESTING)
     COMMAND test_adis16470 burst)
   add_test(NAME ADV-CHIP-ADIS16470-007.T1
     COMMAND test_adis16470 bandwidth)
+  add_executable(test_icm45686 tests/test_icm45686.c
+    board/common/src/hako_sensor_history.c)
+  target_compile_definitions(test_icm45686 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_icm45686 PRIVATE src/models board/common/src tests)
+  target_link_libraries(test_icm45686 PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-ICM45686-001.T1
+    COMMAND test_icm45686 reset)
+  add_test(NAME ADV-CHIP-ICM45686-002.T1
+    COMMAND test_icm45686 configure)
+  add_test(NAME ADV-CHIP-ICM45686-003.T1
+    COMMAND test_icm45686 timing)
+  add_test(NAME ADV-CHIP-ICM45686-003.T2
+    COMMAND test_icm45686 history-interpolation)
+  add_test(NAME ADV-CHIP-ICM45686-004.T1
+    COMMAND test_icm45686 packet)
+  add_test(NAME ADV-CHIP-ICM45686-005.T1
+    COMMAND test_icm45686 flush)
+  add_test(NAME ADV-CHIP-ICM45686-006.T1
+    COMMAND test_icm45686 overflow)
+  add_test(NAME ADV-CHIP-ICM45686-007.T1
+    COMMAND test_icm45686 interrupt)
+  add_test(NAME ADV-CHIP-ICM45686-008.T1
+    COMMAND test_icm45686 rotation-filter)
+  add_executable(test_mount_rotation tests/test_mount_rotation.c)
+  target_compile_definitions(test_mount_rotation PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_mount_rotation PRIVATE src/models tests)
+  target_link_libraries(test_mount_rotation PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-MOUNT-ROTATION-001.T1
+    COMMAND test_mount_rotation imu)
+  add_test(NAME ADV-CHIP-MOUNT-ROTATION-001.T2
+    COMMAND test_mount_rotation magnetometer)
+  add_test(NAME ADV-CHIP-MOUNT-ROTATION-001.T3
+    COMMAND test_mount_rotation invalid)
   add_executable(test_icp201xx tests/test_icp201xx.c)
   target_compile_definitions(test_icp201xx PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_icp201xx PRIVATE src/models tests)
@@ -489,6 +528,18 @@ if(BUILD_TESTING)
   target_include_directories(test_ublox PRIVATE src/models)
   target_link_libraries(test_ublox PRIVATE athrill_device)
   add_test(NAME ublox COMMAND test_ublox)
+
+  add_executable(test_scenario tests/test_scenario.c)
+  target_compile_definitions(test_scenario PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_scenario PRIVATE src/models)
+  target_link_libraries(test_scenario PRIVATE athrill_device)
+  add_test(NAME scenario COMMAND test_scenario WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+  add_executable(test_crsf_receiver tests/test_crsf_receiver.c)
+  target_compile_definitions(test_crsf_receiver PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_crsf_receiver PRIVATE src/models)
+  target_link_libraries(test_crsf_receiver PRIVATE athrill_device)
+  add_test(NAME crsf-receiver COMMAND test_crsf_receiver WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   add_executable(test_dshot_esc tests/test_dshot_esc.c)
   target_compile_definitions(test_dshot_esc PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_dshot_esc PRIVATE src/models tests)
@@ -599,7 +650,11 @@ if(BUILD_TESTING)
     PIXHAWK6X_REV6_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa.dtb"
     PIXHAWK6X_REV6_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot.dtb"
     PIXHAWK6X_REV6_HAKONIWA_DSHOT_SENSORS_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb"
-    PIXHAWK6X_REV6_HAKONIWA_DSHOT_SENSORS_LITE_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors-lite.dtb")
+    PIXHAWK6X_REV6_HAKONIWA_DSHOT_SENSORS_LITE_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev6-hakoniwa-dshot-sensors-lite.dtb"
+    PIXHAWK6X_REV8_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev8.dtb"
+    PIXHAWK6X_REV8_HAKONIWA_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev8-hakoniwa.dtb"
+    PIXHAWK6X_REV8_HAKONIWA_DSHOT_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev8-hakoniwa-dshot.dtb"
+    PIXHAWK6X_REV8_HAKONIWA_DSHOT_SENSORS_DTB="${CMAKE_CURRENT_SOURCE_DIR}/boards/pixhawk6x/pixhawk6x-rev8-hakoniwa-dshot-sensors.dtb")
 
   add_library(test_plugin_good MODULE tests/test_plugin.c)
   target_compile_definitions(test_plugin_good PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)

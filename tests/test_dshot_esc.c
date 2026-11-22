@@ -16,7 +16,9 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #define TIM1_BASE	0x40010000U
 #define DMA2_BASE	0x40026400U
@@ -79,6 +81,10 @@ static const AthrillDeviceEscFaultOps *schedule_ops;
 static uint32 schedule_stops[4];	/* athrill,motor-stop cells */
 static uint32 schedule_cells;
 static const char *motor_stop_host;	/* DEVICE_CONFIG_ESC_MOTOR_STOP */
+
+/* the pole count from DT and the external device configuration */
+static uint32 motor_poles;
+static const char *motor_poles_host;
 
 /* the value-source's motor state (ABI 1.21), when offered */
 static std_bool use_motor_state;
@@ -149,6 +155,10 @@ static sint32 get_u32(void *c, const char *name, uint32 index, uint32 *value)
 	if (c == &esc) {
 		if (strcmp(name, "athrill,signal-timeout-us") == 0 && timeout_us != 0U) {
 			*value = timeout_us;
+			return 0;
+		}
+		if (strcmp(name, "athrill,motor-poles") == 0 && motor_poles != 0U) {
+			*value = motor_poles;
 			return 0;
 		}
 		return -1;
@@ -316,6 +326,10 @@ static sint32 host_value(void *t, const char *key, const char **value)
 		*value = motor_stop_host;
 		return 0;
 	}
+	if (strcmp(key, "DEVICE_CONFIG_ESC_MOTOR_POLES") == 0 && motor_poles_host != NULL) {
+		*value = motor_poles_host;
+		return 0;
+	}
 	return -1;
 }
 static sint32 get_esc_fault(void *c, const char *property, const AthrillDeviceEscFaultOps **ops,
@@ -356,6 +370,35 @@ static void *create(const AthrillDeviceModelOps *m, AthrillDeviceNode *node,
 	TEST_CHECK(m->connect(instance, &connect) == 0);
 	TEST_CHECK(m->reset(instance) == 0);
 	return instance;
+}
+
+/* Create only the ESC and capture its construction diagnostic. */
+static sint32 create_esc_capturing_error(void **instance, char *error, size_t error_size)
+{
+	AthrillDeviceCreateArgs args;
+	FILE *capture = tmpfile();
+	int saved_stderr;
+	sint32 result;
+	size_t length;
+
+	TEST_CHECK(capture != NULL && error_size > 0U);
+	fflush(stderr);
+	saved_stderr = dup(STDERR_FILENO);
+	TEST_CHECK(saved_stderr >= 0);
+	TEST_CHECK(dup2(fileno(capture), STDERR_FILENO) >= 0);
+	memset(&args, 0, sizeof(args));
+	args.target_ops = &target_ops;
+	args.node = &esc_node;
+	result = esc_model->create(&args, instance);
+	fflush(stderr);
+	TEST_CHECK(dup2(saved_stderr, STDERR_FILENO) >= 0);
+	(void)close(saved_stderr);
+	rewind(capture);
+	length = fread(error, 1U, error_size - 1U, capture);
+	TEST_CHECK(!ferror(capture));
+	error[length] = '\0';
+	fclose(capture);
+	return result;
 }
 
 /* every model new (the ESC watches the timer from its connect) */
@@ -978,6 +1021,71 @@ static void test_telemetry_motor_state(void)
 	motor_state_result = 0;
 }
 
+/* [ADV-ESC-008.T1][ADV-ESC-008.T2] DEVICE_CONFIG_ESC_MOTOR_POLES "12"
+ * applies to every motor and overrides 16 from DT: eRPM = rpm x 6. Without
+ * it, the DT count applies, then the default 14 when both are absent. */
+static void test_motor_poles_precedence(void)
+{
+	static const uint16 v[4] = { 1048U, 1048U, 1048U, 1048U };
+	Kiss first, last;
+
+	use_motor_state = TRUE;
+	motor_state_result = 0;
+	memset(&motor_state, 0, sizeof(motor_state));
+	motor_state.rpm = 5000.0F;
+	motor_poles = 16U;
+	motor_poles_host = "12";
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	first = telemetry_of(0U, v);
+	last = telemetry_of(3U, v);
+	TEST_CHECK(first.erpm == 300U && last.erpm == 300U);	/* 5000 rpm x 6 / 100 */
+
+	motor_poles_host = NULL;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	first = telemetry_of(0U, v);
+	TEST_CHECK(first.erpm == 400U);		/* 5000 rpm x 16 / 2 / 100 */
+
+	motor_poles = 0U;
+	setup();
+	timer_dshot_mode();
+	(void)tick_at(1000U);
+	(void)frame(v, FALSE);
+	first = telemetry_of(0U, v);
+	TEST_CHECK(first.erpm == 350U);		/* 5000 rpm x 14 / 2 / 100 */
+	use_motor_state = FALSE;
+	motor_state_result = 0;
+}
+
+/* [ADV-ESC-008.T3] a present but invalid host pole count is a construction
+ * error with a diagnostic; it never silently falls back to the valid DT. */
+static void test_motor_poles_invalid(void)
+{
+	static const char *const invalid[] = { "0", "3", "66", "12x" };
+	uint32 i;
+
+	motor_poles_host = NULL;
+	motor_poles = 16U;
+	setup();
+	for (i = 0U; i < sizeof(invalid) / sizeof(invalid[0]); i++) {
+		char error[256];
+		void *instance = NULL;
+
+		motor_poles_host = invalid[i];
+		TEST_CHECK(create_esc_capturing_error(&instance, error, sizeof(error)) != 0);
+		TEST_CHECK(instance == NULL);
+		TEST_CHECK(strstr(error, "DEVICE_CONFIG_ESC_MOTOR_POLES") != NULL);
+		TEST_CHECK(strstr(error, "positive even integer from 2 to 64") != NULL);
+	}
+	motor_poles_host = NULL;
+	motor_poles = 0U;
+}
+
 int main(void)
 {
 	test_frame_values();
@@ -994,6 +1102,8 @@ int main(void)
 	test_schedule_stop();
 	test_schedule_host_value();
 	test_telemetry_motor_state();
+	test_motor_poles_precedence();
+	test_motor_poles_invalid();
 	printf("dshot esc: all checks passed\n");
 	return 0;
 }

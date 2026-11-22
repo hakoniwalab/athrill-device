@@ -12,6 +12,7 @@
 - [gpio](items-gpio.md)
 - [i2c](items-i2c.md)
 - [pwm](items-pwm.md)
+- [scenario](items-scenario.md)
 - [sd](items-sd.md)
 - [sensor-host](items-sensor-host.md)
 - [spi](items-spi.md)

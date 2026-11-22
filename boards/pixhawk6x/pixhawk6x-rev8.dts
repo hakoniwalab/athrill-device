@@ -1,0 +1,82 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Holybro Pixhawk 6X / FMUv6X sensor-set revision 8: three ICM-45686, one on
+ * each internal SPI bus. PX4 (rc.board_sensors, V6X008) starts them as
+ * icm45686 -b 3 -R 0 (SPI3, primary), -b 2 -R 0 (SPI2) and -b 1 -R 10 (SPI1,
+ * roll 180 yaw 90); baro and magnetometer are as revision 6.
+ */
+
+#include "pixhawk6x.dts"
+
+/ {
+	model = "Holybro Pixhawk 6X (FMUv6X revision 8) for Athrill";
+};
+
+/* PX4 reads the PG0-high and PG0-low 16-bit ADC3 conversions. Channel 14
+ * uses the documented fallback base-board version 0; channel 15's 49760
+ * scales to 3110 in PX4's 12-bit ladder table (ordinal 8: 2920..3308, nominal
+ * 2996..3230), selecting ordinal 8. */
+&adc3_common {
+	athrill,adc-select-gpios = <&gpiog 0 GPIO_ACTIVE_HIGH>;
+	athrill,adc-channel-values = <14 65535 0>,
+				     <15 65535 49760>;
+};
+
+/* Revision 8 SPI1: ICM-45686 on CS PI9, DRDY PF2, PX4 -R 10. */
+&spi1 {
+	/delete-node/ imu@0;
+
+	icm45686_spi1: imu@0 {
+		compatible = "invensense,icm45686";
+		reg = <0>;
+		spi-max-frequency = <24000000>;
+		int-gpios = <&gpiof 2 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "roll-180-yaw-90";
+	};
+};
+
+/* Revision 8 SPI2: ICM-45686 on CS PH5, DRDY PA10, PX4 -R 0. */
+&spi2 {
+	/delete-node/ imu@0;
+
+	icm45686_spi2: imu@0 {
+		compatible = "invensense,icm45686";
+		reg = <0>;
+		spi-max-frequency = <24000000>;
+		int-gpios = <&gpioa 10 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "none";
+	};
+};
+
+/* Revision 8 SPI3: one ICM-45686 on CS PI4, DRDY PI7, PX4 -R 0 (primary). */
+&spi3 {
+	cs-gpios = <&gpioi 4 GPIO_ACTIVE_LOW>;
+
+	/delete-node/ gyroscope@0;
+	/delete-node/ accelerometer@1;
+
+	icm45686_spi3: imu@0 {
+		compatible = "invensense,icm45686";
+		reg = <0>;
+		spi-max-frequency = <24000000>;
+		int-gpios = <&gpioi 7 GPIO_ACTIVE_HIGH>;
+		athrill,mount-rotation = "none";
+	};
+};
+
+/* Internal I2C4: ICP-201xx and BMM150, both rotation 0 (as revision 6). */
+&i2c4 {
+	/delete-node/ pressure@77;
+	/delete-node/ magnetometer@10;
+
+	icp201xx: pressure@64 {
+		compatible = "invensense,icp201xx";
+		reg = <0x64>;
+	};
+
+	bmm150: magnetometer@10 {
+		compatible = "bosch,bmm150";
+		reg = <0x10>;
+	};
+};

@@ -34,10 +34,15 @@
  *
  * [ADV-ESC-007] When the value-source offers its motors' state (ABI 1.21
  * motor_status, e.g. an aircraft in process), the answer takes that
- * motor's speed, current and voltage from it instead: eRPM = rpm x
- * athrill,motor-poles / 2 (default 14, PX4's MOT_POLE_COUNT default), the
- * current only when the physics has a current model; the motor model fills
- * what the source does not give.
+ * motor's speed, current and voltage from it instead: eRPM = rpm x pole
+ * count / 2, the current only when the physics has a current model; the
+ * motor model fills what the source does not give.
+ *
+ * [ADV-ESC-008] Every instance takes that pole count for all its motors
+ * from DEVICE_CONFIG_ESC_MOTOR_POLES when present, then
+ * athrill,motor-poles, then 14 (PX4's MOT_POLE_COUNT default). The host
+ * value is a decimal positive even integer no greater than 64; an invalid
+ * value refuses construction.
  *
  * Trace: host value DEVICE_CONFIG_DSHOT_ESC_FILE, one line per frame.
  *
@@ -55,6 +60,8 @@
 #define THROTTLE_MIN 48U
 #define THROTTLE_MAX 2047U
 #define DEFAULT_TIMEOUT_US 100000U
+#define DEFAULT_MOTOR_POLES 14U
+#define MAX_MOTOR_POLES 64U
 
 struct DshotEsc;
 
@@ -231,6 +238,32 @@ static uint16 clamp16(float32 value)
 		return 0U;
 	}
 	return (value >= 65535.0F) ? 65535U : (uint16)(value + 0.5F);
+}
+
+/* [ADV-ESC-008] a decimal positive even pole count no greater than 64 */
+static sint32 parse_motor_poles(const char *text, uint32 *poles)
+{
+	uint32 value = 0U;
+	const unsigned char *p = (const unsigned char *)text;
+
+	if ((text == NULL) || (*text == '\0')) {
+		return -1;
+	}
+	while (*p != '\0') {
+		if ((*p < (unsigned char)'0') || (*p > (unsigned char)'9')) {
+			return -1;
+		}
+		value = value * 10U + (uint32)(*p - (unsigned char)'0');
+		if (value > MAX_MOTOR_POLES) {
+			return -1;
+		}
+		p++;
+	}
+	if ((value == 0U) || ((value & 1U) != 0U)) {
+		return -1;
+	}
+	*poles = value;
+	return 0;
 }
 
 /* [ADV-ESC-005] one 10-byte KISS frame */
@@ -417,9 +450,22 @@ static sint32 esc_create(const AthrillDeviceCreateArgs *args, void **instance)
 		esc->temperature_c = (float32)temperature;
 	}
 	{
-		uint32 poles = 14U;
+		const char *text = NULL;
+		uint32 poles = DEFAULT_MOTOR_POLES;
 
 		(void)args->node->ops->get_u32(args->node->context, "athrill,motor-poles", 0U, &poles);
+		if ((args->target_ops->host_value != NULL) &&
+		    (args->target_ops->host_value(args->target, "DEVICE_CONFIG_ESC_MOTOR_POLES",
+			&text) == 0)) {
+			if (parse_motor_poles(text, &poles) != 0) {
+				fprintf(stderr, "DShot ESC %s: DEVICE_CONFIG_ESC_MOTOR_POLES must be "
+					"a positive even integer from 2 to 64 (got \"%s\")\n",
+					(args->node->path != NULL) ? args->node->path : "-",
+					(text != NULL) ? text : "(null)");
+				free(esc);
+				return -1;
+			}
+		}
 		esc->pole_pairs = (float32)poles / 2.0F;
 	}
 	esc->timeout_clocks = (uint64)timeout_us * (esc->frequency / 1000000U);

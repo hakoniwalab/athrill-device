@@ -23,7 +23,7 @@
     stimulus: Build a board with a hakoniwa,sensor-instance and a sensor chip whose value-source is hakoniwa,sensor-device.
     expect: Construction fails and the error names the chip path, hakoniwa,sensor-device and hakoniwa,sensor-instance.
 - id: ADV-SENSOR-HOST-003
-  statement: In FIFO operation an IMU chip reports each part's programmed sample period initially and after a rate change; before the next physics step the sensor host either makes the adapter follow or emits an ERROR naming the instance, part, chip period and adapter period.
+  statement: In FIFO operation an IMU chip reports each part's programmed sample period initially and after a rate change. A chip period finer than the physics step is an ERROR; a whole multiple makes the adapter follow or reports an ERROR if it cannot; a non-whole period at least as long as the physics step keeps or restores the adapter at one sample per physics step and reports that chip values are interpolated.
   source:
     devicetree: sensor-chip value-source to hakoniwa,sensor-instance
     manual: docs/sensor-host.md, Chip rates; AthrillDeviceSamplePeriodOps ABI 1.22
@@ -37,6 +37,12 @@
   - id: ADV-SENSOR-HOST-003.T2
     stimulus: Compare a 4 ms adapter with a 0.5 ms chip at a 0.125 ms physics step, using an adapter that supports only a shared IMU period.
     expect: The shared adapter is changed to 0.5 ms and the INFO names the instance, part and both periods; if both setters refuse, an ERROR names the same values and the adapter reason.
+  - id: ADV-SENSOR-HOST-003.T3
+    stimulus: Compare a 0.125 ms adapter with a 0.15625 ms chip at a 0.125 ms physics step, then transition the adapter through the existing 0.5 ms whole-period case back to the fractional period, alongside the 0.125/0.125 ms whole-period case.
+    expect: The fractional case is accepted initially and after the rate change, the adapter remains or returns to 0.125 ms, and the INFO says chip values are interpolated; both whole-period cases retain their existing behaviour.
+  - id: ADV-SENSOR-HOST-003.T4
+    stimulus: Compare a 0.1 ms chip period with a 0.125 ms physics step.
+    expect: The result remains an ERROR that names both periods and the physics step to use.
 - id: ADV-SENSOR-HOST-004
   statement: An enabled hakoniwa,sensor-instance without a configured plugin mapping stops board construction with an error that names the DEVICE_CONFIG_DEVICE_PLUGIN_1 hakoniwa%2Csensor-instance line to add.
   source:

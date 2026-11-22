@@ -108,9 +108,8 @@
     expect: Motors 1 and 3 stop at 5 ms, motor 0 runs; "1:5" is refused.
 - id: ADV-ESC-007
   statement: When its value-source offers the motors' state (ABI 1.21 motor_status), the ESC's telemetry answer takes
-    that motor's speed (eRPM = rpm x athrill,motor-poles / 2, default 14), its current when the source has a current
-    model, and its voltage; the ESC's motor model gives the rest, and everything when the source has no state for the
-    motor.
+    that motor's speed (eRPM = rpm x the configured motor pole count / 2), its current when the source has a current
+    model, and its voltage; the ESC's motor model gives the rest, and everything when the source has no state for the motor.
   source:
     devicetree: athrill,dshot-esc value-source, athrill,motor-poles
     manual: PX4 v1.17.0 DShot (esc_rpm = eRPM x 100 / (MOT_POLE_COUNT / 2))
@@ -121,3 +120,24 @@
   - id: ADV-ESC-007.T1
     stimulus: A source giving 5000 rpm, 4.2 A, 15.1 V; then without a current model; then no state for the motor.
     expect: eRPM/100 350, 4.20 A, 15.10 V; then the model's current with the source's speed and voltage; then the model's.
+- id: ADV-ESC-008
+  statement: When the host value DEVICE_CONFIG_ESC_MOTOR_POLES is present, it is the motor pole count for every motor
+    of every DShot ESC instance; otherwise each instance uses its athrill,motor-poles property, or 14 when the property
+    is absent. The host value must be a positive even integer no greater than 64; an invalid value is a construction
+    error with a diagnostic that names the key and the constraint.
+  source:
+    devicetree: athrill,dshot-esc athrill,motor-poles
+    manual: docs/configuration.md, DShot ESC host values
+  scope: A flight selects its ESC/motor pole count without changing the board DTB.
+  verification: unit
+  applies_to: esc
+  tests:
+  - id: ADV-ESC-008.T1
+    stimulus: A motor-state source at 5000 rpm, athrill,motor-poles 16, and DEVICE_CONFIG_ESC_MOTOR_POLES "12".
+    expect: Telemetry reports 30000 eRPM (eRPM/100 300), so the host value overrides the property and eRPM = rpm x 6.
+  - id: ADV-ESC-008.T2
+    stimulus: The host value absent, first with athrill,motor-poles 16 and then with the property absent.
+    expect: A 5000 rpm source gives 40000 eRPM (eRPM/100 400) and then 35000 eRPM (eRPM/100 350).
+  - id: ADV-ESC-008.T3
+    stimulus: A valid property with host values "0", "3", "66", and "12x" in turn.
+    expect: Each construction is refused with a diagnostic naming DEVICE_CONFIG_ESC_MOTOR_POLES and positive even 2..64.

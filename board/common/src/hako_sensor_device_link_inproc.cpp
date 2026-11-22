@@ -366,8 +366,9 @@ bool setAdapterSharedPeriod(void *context, uint64_t period_ns,
 
 /* [ADV-SENSOR-HOST-003] A chip's output data rate as its firmware programmed it, against the
  * instance's adapter (docs/sensor-host.md). The physics step is fixed for the run: a
- * chip faster than it is an error. Otherwise the adapter follows the chip where it can
- * (hakoniwa-sensor-adapter update-period); where it can not, that is an error. */
+ * chip faster than it is an error. A whole-step chip period makes the adapter follow;
+ * a period between steps keeps the adapter on the physics cadence and interpolates the
+ * chip values. */
 void checkChipPeriods(InProcessLink& state)
 {
 	std::vector<InProcessLink::PeriodReport> reports;

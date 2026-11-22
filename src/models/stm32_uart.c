@@ -62,10 +62,13 @@
 #define CR1_RXNEIE	(1U << 5)
 #define CR1_TCIE	(1U << 6)
 #define CR1_TXEIE	(1U << 7)
+#define CR1_PS		(1U << 9)
+#define CR1_PCE		(1U << 10)
 #define CR1_M0		(1U << 12)
 #define CR1_OVER8	(1U << 15)
 #define CR1_M1		(1U << 28)
 #define CR2_STOP_SHIFT	12U
+#define CR2_RXINV	(1U << 16)
 
 #define ISR_RXNE	(1U << 5)
 #define ISR_TC		(1U << 6)
@@ -131,6 +134,13 @@ struct Uart {
 	std_bool tx_request;	/* the levels last told to the DMA */
 	std_bool rx_request;
 	std_bool advancing;	/* in advance_to: a DMA access does not advance again */
+	/* athrill,peer-line: the chip's line settings; its bytes arrive only while the UART matches */
+	std_bool peer_line;
+	uint32 peer_baud;
+	uint32 peer_data_bits;
+	uint32 peer_parity;	/* 0 none, 1 odd, 2 even */
+	uint32 peer_stop_bits;	/* 1 or 2 */
+	uint32 peer_inverted;	/* 0 or 1 */
 };
 
 /* USART1..UART8 by base; the kernel clock divider is the clock tree PX4 and
@@ -602,11 +612,54 @@ static sint32 console_receive(void *instance, uint8 data)
 	return push_input(instance, data);
 }
 
+/*
+ * [ADV-UART-007] With athrill,peer-line, a byte from the chip decodes only
+ * while the UART is set as the chip sends: baud within 3 %, the same data
+ * bits, parity and stop bits, and RXINV equal to the chip's inversion.
+ * Otherwise it is lost (a real receiver would see framing or parity errors
+ * and garbage); a protocol scanner then never locks onto a foreign stream.
+ */
+static std_bool peer_line_matches(const Uart *u)
+{
+	uint32 cr1 = reg(u, USART_CR1);
+	uint32 cr2 = reg(u, USART_CR2);
+	uint32 brr = reg(u, USART_BRR) & 0xFFFFU;
+	uint64 cpu_hz;
+	uint64 bit2;	/* kernel clocks of two bits */
+	uint64 want2;	/* CPU clocks of two bits at the peer's baud, x divider */
+	uint64 got2;
+	uint32 word, data, parity, stop;
+
+	if (!u->peer_line) {
+		return TRUE;
+	}
+	if (u->target_ops->time_frequency_hz == NULL ||
+	    (cpu_hz = u->target_ops->time_frequency_hz(u->target)) == 0U || brr == 0U) {
+		return FALSE;
+	}
+	bit2 = ((cr1 & CR1_OVER8) != 0U) ? (uint64)((brr & 0xFFF0U) | ((brr & 7U) << 1)) : 2U * (uint64)brr;
+	got2 = bit2 * u->divider;
+	want2 = (2U * cpu_hz) / u->peer_baud;
+	if (got2 * 100U < want2 * 97U || got2 * 100U > want2 * 103U) {
+		return FALSE;
+	}
+	word = ((cr1 & CR1_M1) != 0U) ? 7U : (((cr1 & CR1_M0) != 0U) ? 9U : 8U);
+	parity = ((cr1 & CR1_PCE) == 0U) ? 0U : (((cr1 & CR1_PS) != 0U) ? 1U : 2U);
+	data = word - ((parity != 0U) ? 1U : 0U);
+	stop = (cr2 >> CR2_STOP_SHIFT) & 3U;
+	stop = (stop == 0U) ? 1U : ((stop == 2U) ? 2U : 0U);	/* 0.5 and 1.5 match nothing */
+	return (data == u->peer_data_bits && parity == u->peer_parity && stop == u->peer_stop_bits &&
+		(((cr2 & CR2_RXINV) != 0U) ? 1U : 0U) == u->peer_inverted) ? TRUE : FALSE;
+}
+
 /* A byte from the chip (the child's uart_send, or the TCP client) onto the line. */
 static sint32 chip_send(void *instance, uint8 data)
 {
 	Uart *u = instance;
 	uint64 completion;
+	if (!peer_line_matches(u)) {
+		return 0;	/* sent, but not decodable at the UART's settings */
+	}
 	if (!channel_connect(u) ||
 	    athrill_uart_send_from_child(u->protocol, data, host_clock(u), &completion) != 0) {
 		return -1;
@@ -678,6 +731,20 @@ static sint32 uart_create(const AthrillDeviceCreateArgs *args, void **instance)
 		&data, &size) == 0) ? TRUE : FALSE;
 	u->number = i + 1U;
 	u->divider = h7 ? h7_dividers[i] : f7_dividers[i];
+	if (args->node->ops->get_u32(args->node->context, "athrill,peer-line", 0U, &u->peer_baud) == 0) {
+		if (args->node->ops->get_u32(args->node->context, "athrill,peer-line", 1U, &u->peer_data_bits) != 0 ||
+		    args->node->ops->get_u32(args->node->context, "athrill,peer-line", 2U, &u->peer_parity) != 0 ||
+		    args->node->ops->get_u32(args->node->context, "athrill,peer-line", 3U, &u->peer_stop_bits) != 0 ||
+		    args->node->ops->get_u32(args->node->context, "athrill,peer-line", 4U, &u->peer_inverted) != 0 ||
+		    u->peer_baud == 0U || u->peer_data_bits < 7U || u->peer_data_bits > 8U || u->peer_parity > 2U ||
+		    (u->peer_stop_bits != 1U && u->peer_stop_bits != 2U) || u->peer_inverted > 1U) {
+			fprintf(stderr, "USART%u: athrill,peer-line must be <baud data-bits(7|8) parity(0 none|1 odd|2 even) "
+				"stop-bits(1|2) inverted(0|1)>\n", u->number);
+			free(u);
+			return -1;
+		}
+		u->peer_line = TRUE;
+	}
 	u->target_ops = args->target_ops;
 	u->target = args->target;
 	*instance = u;

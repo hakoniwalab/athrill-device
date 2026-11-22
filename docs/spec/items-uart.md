@@ -11,6 +11,7 @@
 | ADV-UART-004 | Characters sent toward the child arrive once each, in order, and each starts no earlier than the end of the previous one. | unit | uart-protocol | none; RM0410 section 34.5.2 (transmitter, TDR to shift register); RM0433 section 48.5.3 |
 | ADV-UART-005 | The receive and transmit directions are independent; traffic in one direction does not delay or reorder the other. | unit | uart-protocol | none; RM0410 section 34.5 (full-duplex USART); RM0433 section 48.5 |
 | ADV-UART-006 | A UART controller with dmas resolves each tuple as one DMA request resource in dmas order and keeps the matching dma-names direction. | generated | uart-controller-with-dmas | Devicetree Specification v0.4 DMA binding (dmas, dma-names); Zephyr STM32 UART binding; RM0410 section 8.3.4 (DMA request mapping); RM0433 sections 15.3.5 and 17.3 (DMAMUX request lines) |
+| ADV-UART-007 | A UART with athrill,peer-line = <baud data-bits parity stop-bits inverted> (data bits 7 or 8, parity 0 none 1 odd 2 even, stop bits 1 or 2, inverted 0 or 1) delivers a byte from its chip only while it is set the same way (baud from BRR, OVER8 and the kernel clock within 3 %, data bits, parity and stop bits from CR1 and CR2, RXINV equal to inverted); otherwise the byte is lost. Half-duplex (HDSEL) and pin swap (SWAP) do not stop reception. Without the property every byte is delivered as before. A malformed property is a construction error. | unit | uart-controller | athrill,peer-line on an STM32 USART node with a chip child; RM0433 section 48 (USART word length, parity, stop bits, RXINV, SWAP, HDSEL) |
 
 ## Test specifications
 
@@ -22,3 +23,5 @@
 | ADV-UART-004.T1 | Send two characters toward the child, the second requested before the first completes. | The child receives both in order; the second completes one character time after the first. |
 | ADV-UART-005.T1 | Send characters toward the child and from the child over the same interval. | Each direction completes at its own character times and in its own order. |
 | ADV-UART-006.T1 | Build the board and observe the public DMA resolution for this controller. | One resolution per dmas tuple, in dmas order, each paired with the dma-names entry at the same index. |
+| ADV-UART-007.T1 | H7 USART6 with peer-line <420000 8 0 1 0> set to 420000 8N1, with HDSEL and SWAP, at 100000 baud, with even parity, with 2 stop bits, with RXINV, and at 420000 8N1 again; then peer-line <100000 8 2 2 1> at 100000 8E2 inverted and at 420000 8N1. | Arrives, arrives, lost, lost, lost, lost, arrives; arrives, lost. |
+| ADV-UART-007.T2 | peer-line with baud 0, 9 data bits, parity 3, 3 stop bits, inverted 2, and only four cells. | Each construction is refused. |

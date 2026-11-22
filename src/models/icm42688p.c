@@ -6,6 +6,7 @@
 #include "models.h"
 #include "chip_rates.h"
 #include "imu_filter.h"
+#include "mount_rotation.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -64,7 +65,7 @@ typedef struct {
 	/* the variant: ICM-42688-P or IIM-42652 (same register map) */
 	uint8 who_am_i;
 	uint8 intf_config0_reset;
-	std_bool yaw_270;
+	AthrillMountRotation mount_rotation;
 	uint64 clocks_per_sample;
 	uint64 frequency_hz;
 	/* the sample periods the value source was told last (ABI 1.22), 0: none yet */
@@ -107,22 +108,12 @@ static sint32 saturate(float32 v, sint32 minimum, sint32 maximum)
 	return (sint32)((v < 0.0F) ? (v - 0.5F) : (v + 0.5F));
 }
 
-/* Firmware flips sensor y/z; undo that and the board's mounting rotation. */
+/* Firmware flips sensor y/z; undo that after the board's mounting rotation. */
 static void to_chip_axes(const Icm42688p *chip, const float32 *frd, float32 *out)
 {
 	float32 v[3];
 
-	if (chip->yaw_270) {
-		/* yaw 270: body = (v_y, -v_x, v_z) */
-		v[0] = -frd[1];
-		v[1] = frd[0];
-		v[2] = frd[2];
-	}
-	else {
-		v[0] = frd[0];
-		v[1] = frd[1];
-		v[2] = frd[2];
-	}
+	athrill_mount_rotation_to_sensor(&chip->mount_rotation, frd, v);
 	out[0] = v[0];
 	out[1] = -v[1];
 	out[2] = -v[2];
@@ -716,7 +707,6 @@ static sint32 create_variant(const AthrillDeviceCreateArgs *args, void **instanc
 	uint8 who_am_i, uint8 intf_config0_reset)
 {
 	Icm42688p *chip = calloc(1U, sizeof(*chip) + FIFO_BYTES);
-	const char *rotation;
 	const void *ideal;
 	uint32 ideal_size;
 	uint64 frequency;
@@ -739,10 +729,10 @@ static sint32 create_variant(const AthrillDeviceCreateArgs *args, void **instanc
 		args->node->context, "athrill,ideal-filters", &ideal,
 		&ideal_size) == 0;
 	configure_filters(chip);
-	if (args->node->ops->get_string(args->node->context,
-		"athrill,mount-rotation", 0U, &rotation) == 0 &&
-	    strcmp(rotation, "yaw-270") == 0) {
-		chip->yaw_270 = TRUE;
+	if (athrill_mount_rotation_parse(args->node,
+		&chip->mount_rotation) != 0) {
+		free(chip);
+		return -1;
 	}
 	*instance = chip;
 	return 0;

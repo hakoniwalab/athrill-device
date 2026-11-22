@@ -482,6 +482,7 @@ static const char *const bmm150_compatibles[] = { "bosch,bmm150" };
 static const char *const ms5611_compatibles[] = { "meas,ms5611" };
 static const char *const icp201xx_compatibles[] = { "invensense,icp201xx" };
 static const char *const ublox_m8_compatibles[] = { "u-blox,m8" };
+static const char *const crsf_receiver_compatibles[] = { "athrill,crsf-receiver" };
 static const char *const sdcard_compatibles[] = { "zephyr,sdmmc-disk" };
 static const char *const pwm_actuator_compatibles[] = { "athrill,pwm-actuator-map" };
 static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-source" };
@@ -494,6 +495,9 @@ static const char *const bmi055_accel_compatibles[] = { "bosch,bma280" };
 static const char *const bmi055_gyro_compatibles[] = { "bosch,bmg160" };
 static const char *const icm42688p_compatibles[] = {
 	"invensense,icm42688", "invensense,icm4268x"
+};
+static const char *const icm45686_compatibles[] = {
+	"invensense,icm45686"
 };
 static const char *const iim42652_compatibles[] = { "invensense,iim42652" };
 static const char *const test_compatibles[] = {
@@ -529,6 +533,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ ms5611_compatibles, 1U, &athrill_device_ms5611_model },
 	{ icp201xx_compatibles, 1U, &athrill_device_icp201xx_model },
 	{ ublox_m8_compatibles, 1U, &athrill_device_ublox_m8_model },
+	{ crsf_receiver_compatibles, 1U, &athrill_device_crsf_receiver_model },
 	{ sdcard_compatibles, 1U, &athrill_device_sdcard_model },
 	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
 	{ bench_sensor_compatibles, 1U, &athrill_device_bench_sensor_model },
@@ -540,6 +545,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
 	{ bmi055_gyro_compatibles, 1U, &athrill_device_bmi055_model },
 	{ icm42688p_compatibles, 2U, &athrill_device_icm42688p_model },
+	{ icm45686_compatibles, 1U, &athrill_device_icm45686_model },
 	{ iim42652_compatibles, 1U, &athrill_device_iim42652_model },
 	{ test_compatibles, 4U, &test_mmio_model },
 	{ test_peripheral_compatibles, 1U, &test_peripheral_model }
@@ -1014,6 +1020,7 @@ static int sensor_chip_model(const AthrillDeviceModelOps *model)
 	return model == &athrill_device_adis16470_model ||
 		model == &athrill_device_bmi055_model ||
 		model == &athrill_device_icm42688p_model ||
+		model == &athrill_device_icm45686_model ||
 		model == &athrill_device_icm20689_model ||
 		model == &athrill_device_ist8310_model ||
 		model == &athrill_device_bmm150_model ||

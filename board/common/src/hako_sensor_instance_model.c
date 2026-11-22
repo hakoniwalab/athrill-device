@@ -4,10 +4,11 @@
  * sensor host's configuration (HAKO_SENSOR_DEVICE_SENSORS), which gives its type, its
  * adapter and its mount; a node without an entry there is an error.
  *
- * It hands the chip the instance's own value with the sample the sensor device latched
- * last: what the instance's adapter measured at its mount. In a build without the sensor
- * host (the passive reference plugin) it hands the sensor device's own values, so that a
- * board wired to instances can still be built and checked.
+ * Its ordinary sample is the instance value the sensor device latched last. Its
+ * time-resolved sample is unchanged at a latch time and interpolated between retained
+ * latches: what the instance's adapter measured at its mount. In a build without the
+ * sensor host (the passive reference plugin) it hands the sensor device's own values, so
+ * that a board wired to instances can still be built and checked.
  *
  * Copyright 2026 Hakoniwa Laboratory
  * SPDX-License-Identifier: MIT

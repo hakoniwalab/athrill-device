@@ -6,6 +6,7 @@
 #include "models.h"
 #include "chip_rates.h"
 #include "imu_filter.h"
+#include "mount_rotation.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -52,7 +53,7 @@ typedef struct {
 	AthrillDeviceValueSource source;
 	uint8 registers[64];
 	Bmi055Kind kind;
-	uint32 yaw_quarter_turns; /* athrill,mount-rotation yaw-90/180/270 = 1/2/3 */
+	AthrillMountRotation mount_rotation;
 	uint64 clocks_per_sample;
 	uint64 frequency_hz;
 	/* the sample period the value source was told last (ABI 1.22), 0: none yet */
@@ -89,26 +90,12 @@ static int16_t saturate(float32 value, float32 minimum, float32 maximum)
 static void to_chip_axes(const Bmi055 *chip, const float32 *frd,
 	float32 *output)
 {
-	float32 x = frd[0];
-	float32 y = frd[1];
-	/* Undo the board's yaw mount into the chip frame (PX4 rotation convention). */
-	if (chip->yaw_quarter_turns == 1U) {
-		/* yaw 90: board = (-chip_y, chip_x) */
-		x = frd[1];
-		y = -frd[0];
-	}
-	else if (chip->yaw_quarter_turns == 2U) {
-		x = -frd[0];
-		y = -frd[1];
-	}
-	else if (chip->yaw_quarter_turns == 3U) {
-		/* yaw 270: board = (chip_y, -chip_x) */
-		x = -frd[1];
-		y = frd[0];
-	}
-	output[0] = x;
-	output[1] = -y;
-	output[2] = -frd[2];
+	float32 mounted[3];
+
+	athrill_mount_rotation_to_sensor(&chip->mount_rotation, frd, mounted);
+	output[0] = mounted[0];
+	output[1] = -mounted[1];
+	output[2] = -mounted[2];
 }
 
 static void raw_from_sample(const Bmi055 *chip,
@@ -546,7 +533,6 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 		"bosch,bma280") == 0 ? BMI055_ACCEL : BMI055_GYRO;
 	uint32 capacity = kind == BMI055_ACCEL ? 32U : 100U;
 	Bmi055 *chip = calloc(1U, sizeof(*chip) + capacity * 6U);
-	const char *rotation;
 	const void *ideal;
 	uint32 ideal_size;
 	uint64 frequency;
@@ -567,22 +553,10 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 		args->node->context, "athrill,ideal-filters", &ideal,
 		&ideal_size) == 0;
 	configure_filter(chip);
-	if (args->node->ops->get_string(args->node->context,
-		"athrill,mount-rotation", 0U, &rotation) == 0 &&
-	    rotation != NULL) {
-		if (strcmp(rotation, "yaw-90") == 0) {
-			chip->yaw_quarter_turns = 1U;
-		}
-		else if (strcmp(rotation, "yaw-180") == 0) {
-			chip->yaw_quarter_turns = 2U;
-		}
-		else if (strcmp(rotation, "yaw-270") == 0) {
-			chip->yaw_quarter_turns = 3U;
-		}
-		else {
-			free(chip);
-			return -1;
-		}
+	if (athrill_mount_rotation_parse(args->node,
+		&chip->mount_rotation) != 0) {
+		free(chip);
+		return -1;
 	}
 	*instance = chip;
 	return 0;

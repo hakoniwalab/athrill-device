@@ -28,6 +28,47 @@ advance at that virtual clock. The base `pixhawk4.dtb` keeps the node disabled a
 such edges, so SIH and bench runs need no plugin. Host-only link, channel,
 airframe, and trace settings remain in `device_config.txt`.
 
+## DShot ESC host values
+
+The DShot ESC and its schedule fault model read these flight-specific values
+from `device_config.txt`:
+
+| Key | Meaning |
+| --- | --- |
+| `DEVICE_CONFIG_ESC_MOTOR_POLES` | Positive even motor pole count from 2 through 64 for every motor of every DShot ESC instance. It overrides each instance's `athrill,motor-poles`; without either value, the default is 14. An invalid host value is a construction error. |
+| `DEVICE_CONFIG_DSHOT_ESC_FILE` | Optional path for a one-line trace of every DShot frame. |
+| `DEVICE_CONFIG_ESC_MOTOR_STOP` | Schedule fault-model stops in `motor@time-ms[+...]` form. It overrides the model's `athrill,motor-stop` pairs. |
+
+## Scenario files and the CRSF receiver
+
+A scenario feeds time-tagged values to a model on the target clock, so inputs
+such as a pilot's sticks are replayed in lockstep with the physics (inputs sent
+from the host over MAVLink follow the host's clock instead). The format and the
+hold rule are ADV-SCENARIO-001/002:
+
+```text
+# comments start with '#'
+time_ms,roll,pitch,throttle,yaw,arm,mode
+0,1500,1500,1500,1500,1102,1102
+40000,1520,1490,1510,1500,1102,1500
+```
+
+`time_ms` is the target clock in milliseconds; a channel has no value before
+the first row, holds each row's value until the next row, and keeps the last
+row's value afterwards.
+
+The first reader is `athrill,crsf-receiver`, a child of a UART node
+(ADV-CHIP-CRSF-001..003). Its `athrill,channel-names` maps CRSF channels 1..16
+to scenario channels whose values are RC pulse widths in microseconds. Put
+`athrill,peer-line = <420000 8 0 1 0>` on the UART so the receiver's bytes
+decode only at the CRSF line settings (ADV-UART-007); PX4's `rc_input` then
+locks onto CRSF and not onto another protocol while it scans.
+
+| Key | Meaning |
+| --- | --- |
+| `DEVICE_CONFIG_RC_SCENARIO_FILE` | Scenario file of every CRSF receiver; replaces `athrill,scenario-file`. Give an absolute path: the simulator's working directory is not the run directory. |
+| `DEVICE_CONFIG_RC_SCENARIO_OFFSET_MS` | Milliseconds added to every row time (a number, fractions allowed); replaces `athrill,scenario-offset-ms`. |
+
 ## Shared-memory Hakoniwa link
 
 These keys apply to `libhako_sensor_device`:

@@ -75,3 +75,25 @@
     - id: ADV-UART-006.T1
       stimulus: Build the board and observe the public DMA resolution for this controller.
       expect: One resolution per dmas tuple, in dmas order, each paired with the dma-names entry at the same index.
+- id: ADV-UART-007
+  statement: A UART with athrill,peer-line = <baud data-bits parity stop-bits inverted> (data bits 7 or 8, parity 0 none
+    1 odd 2 even, stop bits 1 or 2, inverted 0 or 1) delivers a byte from its chip only while it is set the same way
+    (baud from BRR, OVER8 and the kernel clock within 3 %, data bits, parity and stop bits from CR1 and CR2, RXINV equal
+    to inverted); otherwise the byte is lost. Half-duplex (HDSEL) and pin swap (SWAP) do not stop reception. Without
+    the property every byte is delivered as before. A malformed property is a construction error.
+  source:
+    devicetree: athrill,peer-line on an STM32 USART node with a chip child
+    manual: RM0433 section 48 (USART word length, parity, stop bits, RXINV, SWAP, HDSEL)
+  scope: A flight controller that scans receiver protocols by changing its UART settings (PX4 rc_input) locks only
+    onto the protocol the chip really sends.
+  verification: unit
+  applies_to: uart-controller
+  tests:
+  - id: ADV-UART-007.T1
+    stimulus: H7 USART6 with peer-line <420000 8 0 1 0> set to 420000 8N1, with HDSEL and SWAP, at 100000 baud, with
+      even parity, with 2 stop bits, with RXINV, and at 420000 8N1 again; then peer-line <100000 8 2 2 1> at 100000 8E2
+      inverted and at 420000 8N1.
+    expect: Arrives, arrives, lost, lost, lost, lost, arrives; arrives, lost.
+  - id: ADV-UART-007.T2
+    stimulus: peer-line with baud 0, 9 data bits, parity 3, 3 stop bits, inverted 2, and only four cells.
+    expect: Each construction is refused.
