@@ -242,9 +242,12 @@ typedef struct AthrillDeviceValueProviderOps {
 	sint32 (*gps_sample)(void *instance, AthrillDeviceGpsSample *sample);
 	sint32 (*actuator_output)(void *instance, const float32 *values,
 	                         uint32 count);
-	/* Added in ABI 1.24: the sensor sample latched at or before time.
-	 * Returns -1 when no such sample is retained. Optional; consumers
-	 * check abi_minor and struct_size before calling. */
+	/* Added in ABI 1.24: the time-resolved sensor sample. A sample retained
+	 * exactly at time is returned unchanged; strictly between two retained
+	 * samples, every float field is linearly interpolated by time. Before
+	 * the oldest retained sample returns -1, and at or after the newest
+	 * returns that newest sample unchanged. Optional; consumers check
+	 * abi_minor and struct_size before calling. */
 	sint32 (*sensor_sample_at)(void *instance, uint64 time,
 	                          AthrillDeviceSensorSample *sample);
 } AthrillDeviceValueProviderOps;

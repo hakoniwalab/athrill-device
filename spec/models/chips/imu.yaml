@@ -1,5 +1,5 @@
 model: imu
-version: 1.0.0
+version: 2.0.0
 summary: Accelerometer and gyroscope chips on SPI as used by PX4 and ArduPilot (ICM-20689, ICM-42688-P, IIM-42652, ICM-45686, and BMI055 accelerometer and gyroscope dies). Values come from the common sensor source (Hakoniwa sensor device or bench source).
 
 terms:
@@ -54,7 +54,7 @@ behaviour:
     rule: The SPI read protocol (read bit, dummy bytes where the datasheet requires them, e.g. none on BMI055) follows the datasheet.
   - id: ADV-FIFO-001
     feature: fifo
-    rule: A FIFO frame uses the value-source sample latched at or before that frame's sample time, derived from fifo_start and the configured sample period.
+    rule: A FIFO frame requests the value source at its exact sample time, derived from the FIFO anchor plus k times the configured sample period; an exact retained sample is unchanged and a time strictly between retained samples linearly interpolates every sensor-sample float field.
   - id: ADV-FIFO-002
     feature: fifo
     rule: After FIFO overflow, the readable frames are the newest capacity frames and each uses its own sample time.
@@ -72,7 +72,7 @@ behaviour:
     rule: Repeating a run with the same latches, times and register accesses returns the same FIFO frames.
   - id: ADV-FIFO-007
     feature: fifo
-    rule: ABI 1.24 sensor_sample_at returns the newest sample latched at or before the requested target-clock time, or -1 if none is retained.
+    rule: ABI 1.24 sensor_sample_at returns an exact retained sample unchanged, linearly interpolates every float field by time when the request is strictly between two retained samples, returns -1 before the oldest retained sample, and returns the newest sample at or after its time.
   - id: ADV-FIFO-008
     feature: fifo
     rule: When output_rate or filter_config changes while the FIFO contains unread frames, those frames retain the values produced at their own sample times with the old sample period and filter settings, and later frames use the new configuration; an empty or disabled FIFO requires no materialization, and stream-mode overflow discards the oldest unread materialized frames before newer frames.

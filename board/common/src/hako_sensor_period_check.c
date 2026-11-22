@@ -42,7 +42,7 @@ static bool shared_period_allowed(const HakoSensorPeriodState *state,
 	return !state->has_gyro || state->gyro_ns == period_ns;
 }
 
-/* [ADV-SENSOR-HOST-003] Compare and, where possible, follow the chip rate. */
+/* [ADV-SENSOR-HOST-003] Follow whole chip periods; interpolate fractional ones. */
 void hako_sensor_period_check(HakoSensorPeriodState *state,
 	const HakoSensorPeriodCheck *check,
 	const HakoSensorPeriodAdapterOps *adapter,
@@ -82,11 +82,42 @@ void hako_sensor_period_check(HakoSensorPeriodState *state,
 		return;
 	}
 	if (check->chip_period_ns % check->physics_step_ns != 0U) {
-		result->error = true;
+		if (adapter->get_part == NULL ||
+		    !adapter->get_part(adapter->context, check->kind, &adapter_ns)) {
+			result->error = true;
+			(void)snprintf(result->message, sizeof(result->message),
+				"sensor %s %s: chip every %g us; the adapter does not say its period",
+				check->sensor_name, part, usec(check->chip_period_ns));
+			return;
+		}
+		if (adapter_ns != check->physics_step_ns) {
+			if (adapter->set_part != NULL &&
+			    adapter->set_part(adapter->context, check->kind,
+			    check->physics_step_ns, part_error, sizeof(part_error))) {
+				adapter_ns = check->physics_step_ns;
+			}
+			else if (adapter->set_all != NULL &&
+			    adapter->set_all(adapter->context, check->physics_step_ns,
+			    shared_error, sizeof(shared_error))) {
+				adapter_ns = check->physics_step_ns;
+			}
+			else {
+				result->error = true;
+				(void)snprintf(result->message, sizeof(result->message),
+					"sensor %s %s: chip every %g us needs adapter every %g us "
+					"for interpolation, adapter every %g us, and it can not follow: "
+					"%s; shared period: %s",
+					check->sensor_name, part, usec(check->chip_period_ns),
+					usec(check->physics_step_ns), usec(adapter_ns),
+					part_error, shared_error);
+				return;
+			}
+		}
 		(void)snprintf(result->message, sizeof(result->message),
-			"sensor %s %s: chip every %g us is not a whole number of the %g us physics steps",
+			"sensor %s %s: chip every %g us between physics steps of %g us; "
+			"adapter every %g us, chip values interpolated",
 			check->sensor_name, part, usec(check->chip_period_ns),
-			usec(check->physics_step_ns));
+			usec(check->physics_step_ns), usec(check->physics_step_ns));
 		return;
 	}
 	if (adapter->get_part == NULL ||

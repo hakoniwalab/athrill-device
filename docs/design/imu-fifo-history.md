@@ -13,12 +13,13 @@ Notch filters (`IMU_GYRO_DNF`, `INS_HNTCH`), FFT-based tuning and vibration stud
 - The value source keeps a ring of its recent samples, one per latched sample (one per physics step with sensor
   instances), each with its virtual time in target clocks. It is filled where the sample is latched; no other work.
 - ABI 1.24 adds one optional operation to `AthrillDeviceValueProviderOps` (at the end, `struct_size` checked):
-  `sint32 (*sensor_sample_at)(void *instance, uint64 time, AthrillDeviceSensorSample *sample)` — the latched sample
-  in force at `time` (the newest one latched at or before `time`). Returns −1 when the source has none, or `time` is
-  older than its ring; the chip then uses `sensor_sample` as before.
-- Lookup is O(1): the ring is indexed by the latch count, and the latches come at a fixed period (the physics step),
-  so the index follows from `time`. A latch period that is not fixed falls back to a short backward scan from the
-  newest entry (bounded by the ring length).
+  `sint32 (*sensor_sample_at)(void *instance, uint64 time, AthrillDeviceSensorSample *sample)`. An exact retained
+  sample is returned unchanged. Strictly between two retained samples, every float field is linearly interpolated
+  by time. A request before the oldest retained sample returns −1; a request at or after the newest returns the
+  newest unchanged. On −1 the chip uses `sensor_sample` as before.
+- Lookup and interpolation are O(1): the ring is indexed by the latch count, and the latches come at a fixed period
+  (the physics step), so the bracketing entries follow from `time`. A latch period that is not fixed falls back to
+  a short backward scan from the newest entry (bounded by the ring length).
 - Chips: reading a FIFO frame asks for the sample at that frame's own time. The frame times follow from
   `fifo_start` and `clocks_per_sample`; when the FIFO has overflowed, the frames that exist are the newest
   `capacity`. Data-register reads (outside the FIFO) keep using the latest sample.
@@ -30,13 +31,13 @@ Notch filters (`IMU_GYRO_DNF`, `INS_HNTCH`), FFT-based tuning and vibration stud
 
 | ID | Requirement |
 |---|---|
-| ADV-FIFO-001 | A FIFO frame holds the value source's sample in force at that frame's sample time (`fifo_start + k × sample period`). |
+| ADV-FIFO-001 | A FIFO frame requests the value source at its exact sample time (`anchor + k × sample period`); retained values are unchanged at latch times and linearly interpolated between latches. |
 | ADV-FIFO-002 | After an overflow, the frames read are the newest `capacity` frames, each at its own time. |
 | ADV-FIFO-003 | With a value source without `sensor_sample_at`, or a time older than its history, the frame holds the latest sample (behaviour before ABI 1.24). |
 | ADV-FIFO-004 | With a constant input, FIFO and data-register reads are bit-identical to the behaviour before ABI 1.24. |
 | ADV-FIFO-005 | The history adds O(1) work per latched sample and per frame read, and no work while the FIFO is not read. |
 | ADV-FIFO-006 | Deterministic: the same run gives the same frames. |
-| ADV-FIFO-007 | `sensor_sample_at` (ABI 1.24) returns the sample latched at or before `time`, −1 when it has none. |
+| ADV-FIFO-007 | `sensor_sample_at` (ABI 1.24) preserves exact retained samples, interpolates every float field strictly between retained samples, returns −1 before the oldest, and holds the newest at and after its time. |
 | ADV-FIFO-008 | Frames unread when the ODR or filter changes retain their own values under the old period and filter; later frames use the new configuration. |
 
 ## Configuration changes
@@ -58,6 +59,11 @@ pending; newer lazy frames are discarded only after the snapshot has been exhaus
   with a known sine (e.g. 186 Hz, latched every 125 µs), the chip's FIFO at its ODR, read in bursts of 1, 4, 8 and
   16 frames: the frames reproduce the sine at the frame times (no repeated values while the input changes);
   overflow keeps the newest frames at their own times; a source without the operation gives the old frames.
+- ICM-45686: an affine source latched every 125 µs is read on the exact 156.25 µs chip grid from a nonzero anchor;
+  history requests remain on that chip grid and the FIFO values equal the time-interpolated ramp.
 - Flight: 6C DShot + sensor instances, physics 125 µs, propeller vibration: PX4 `sensor_gyro_fifo` 1/rev and 2/rev
   within 10 % of the sensor host's adapter output.
 - Performance: RTF of that hover within 3 % of before (0.77–0.80 on the same Mac).
+
+This refines the operation's semantics without changing its ABI layout. The repository's ABI minor versions append
+fields; because no field was added, the ABI remains 1.24.

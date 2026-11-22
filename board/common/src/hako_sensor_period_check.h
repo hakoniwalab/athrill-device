@@ -44,9 +44,12 @@ typedef struct {
 extern "C" {
 #endif
 
-/* Compare one IMU part's newly reported chip period with its adapter. The state
- * remembers the other part, so a shared-period fallback is used only while it
- * is compatible. Non-IMU kinds are informational and return without an error. */
+/* Compare one IMU part's newly reported chip period with its adapter. Whole
+ * physics-step multiples make the adapter follow; a period between steps keeps
+ * or restores the physics-step adapter and uses interpolated chip values. The
+ * state remembers the other part, so a shared-period fallback for a whole
+ * multiple is used only while it is compatible. Non-IMU kinds are informational
+ * and return without an error. */
 void hako_sensor_period_check(HakoSensorPeriodState *state,
 	const HakoSensorPeriodCheck *check,
 	const HakoSensorPeriodAdapterOps *adapter,

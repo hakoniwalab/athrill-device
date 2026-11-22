@@ -665,7 +665,7 @@ sint32 hako_sensor_device_instance_sample(uint32 index, AthrillDeviceSensorSampl
 #endif
 }
 
-/* [ADV-FIFO-007] The instance sample latched at or before target time. */
+/* [ADV-FIFO-007] The instance sample at target time, interpolated between latches. */
 sint32 hako_sensor_device_instance_sample_at(uint32 index, uint64 time,
 	AthrillDeviceSensorSample *sample)
 {

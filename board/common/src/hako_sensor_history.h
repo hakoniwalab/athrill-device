@@ -20,6 +20,9 @@ typedef struct {
 
 void hako_sensor_history_latch(HakoSensorHistory *history, uint64 time,
 	const AthrillDeviceSensorSample *sample);
+/* Exact retained samples are copied unchanged. Strictly between adjacent
+ * entries, every sample field is linearly interpolated by time. Before the
+ * oldest entry returns -1; at or after the newest returns the newest. */
 sint32 hako_sensor_history_sample_at(const HakoSensorHistory *history,
 	uint64 time, AthrillDeviceSensorSample *sample);
 

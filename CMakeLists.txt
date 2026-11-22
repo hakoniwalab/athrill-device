@@ -325,6 +325,8 @@ if(BUILD_TESTING)
     board/common/src/hako_sensor_period_check.c)
   target_include_directories(test_sensor_period_check PRIVATE board/common/src)
   add_test(NAME ADV-SENSOR-HOST-003.T2 COMMAND test_sensor_period_check)
+  add_test(NAME ADV-SENSOR-HOST-003.T3 COMMAND test_sensor_period_check)
+  add_test(NAME ADV-SENSOR-HOST-003.T4 COMMAND test_sensor_period_check)
   add_test(NAME ADV-SENSOR-HOST-005.T1 COMMAND test_sensor_period_check)
   add_executable(test_board_register_blocks tests/test_board_register_blocks.c)
   target_compile_definitions(test_board_register_blocks PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES
@@ -403,9 +405,10 @@ if(BUILD_TESTING)
     COMMAND test_adis16470 burst)
   add_test(NAME ADV-CHIP-ADIS16470-007.T1
     COMMAND test_adis16470 bandwidth)
-  add_executable(test_icm45686 tests/test_icm45686.c)
+  add_executable(test_icm45686 tests/test_icm45686.c
+    board/common/src/hako_sensor_history.c)
   target_compile_definitions(test_icm45686 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
-  target_include_directories(test_icm45686 PRIVATE src/models tests)
+  target_include_directories(test_icm45686 PRIVATE src/models board/common/src tests)
   target_link_libraries(test_icm45686 PRIVATE athrill_device)
   add_test(NAME ADV-CHIP-ICM45686-001.T1
     COMMAND test_icm45686 reset)
@@ -413,6 +416,8 @@ if(BUILD_TESTING)
     COMMAND test_icm45686 configure)
   add_test(NAME ADV-CHIP-ICM45686-003.T1
     COMMAND test_icm45686 timing)
+  add_test(NAME ADV-CHIP-ICM45686-003.T2
+    COMMAND test_icm45686 history-interpolation)
   add_test(NAME ADV-CHIP-ICM45686-004.T1
     COMMAND test_icm45686 packet)
   add_test(NAME ADV-CHIP-ICM45686-005.T1

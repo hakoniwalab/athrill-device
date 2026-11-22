@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include "models.h"
+#include "hako_sensor_history.h"
 #include "test_check.h"
 
 #include <math.h>
@@ -15,6 +16,10 @@
 #define CPU_HZ                 6400000ULL
 #define SAMPLE_CLOCKS          1000ULL
 #define SAMPLE_PERIOD_NS       156250ULL
+#define PHYSICS_STEP_CLOCKS    800ULL
+#define HISTORY_FIFO_ANCHOR    100ULL
+#define HISTORY_PACKET_COUNT   5U
+#define HISTORY_END_CLOCKS     (7U * PHYSICS_STEP_CLOCKS)
 #define FIFO_PACKET_BYTES      20U
 #define FIFO_PACKET_CAPACITY   409U
 #define GRAVITY                9.80665F
@@ -56,6 +61,7 @@
 typedef enum {
 	SOURCE_CONSTANT,
 	SOURCE_RAMP,
+	SOURCE_HISTORY_RAMP,
 	SOURCE_ROTATED_STEP
 } SourceMode;
 
@@ -63,6 +69,7 @@ typedef struct {
 	uint64 now;
 	SourceMode source_mode;
 	AthrillDeviceSensorSample sample;
+	HakoSensorHistory history;
 	const char *rotation;
 	uint64 sampled_at[512];
 	uint32 sample_calls;
@@ -77,6 +84,17 @@ typedef struct {
 	void *chip;
 } Fixture;
 
+static AthrillDeviceSensorSample history_ramp_sample(uint64 time)
+{
+	AthrillDeviceSensorSample sample;
+	float32 clocks = (float32)time;
+	memset(&sample, 0, sizeof(sample));
+	sample.acceleration[0] = GRAVITY * (clocks + 1600.0F) / 12800.0F;
+	sample.angular_velocity[0] = (5.0F + clocks / 400.0F) * DEG_TO_RAD;
+	sample.temperature_c = 25.0F + clocks / 6400.0F;
+	return sample;
+}
+
 static void sample_for_time(const Harness *harness, uint64 time,
 	AthrillDeviceSensorSample *sample)
 {
@@ -85,6 +103,7 @@ static void sample_for_time(const Harness *harness, uint64 time,
 		*sample = harness->sample;
 		return;
 	}
+	TEST_CHECK(harness->source_mode != SOURCE_HISTORY_RAMP);
 	memset(sample, 0, sizeof(*sample));
 	index = time / SAMPLE_CLOCKS;
 	sample->temperature_c = 25.0F;
@@ -105,6 +124,10 @@ static void sample_for_time(const Harness *harness, uint64 time,
 static sint32 latest_sample(void *instance, AthrillDeviceSensorSample *sample)
 {
 	Harness *harness = instance;
+	if (harness->source_mode == SOURCE_HISTORY_RAMP) {
+		return hako_sensor_history_sample_at(&harness->history, harness->now,
+			sample);
+	}
 	sample_for_time(harness, harness->now, sample);
 	return 0;
 }
@@ -116,6 +139,9 @@ static sint32 sample_at(void *instance, uint64 time,
 	TEST_CHECK(harness->sample_calls <
 		sizeof(harness->sampled_at) / sizeof(harness->sampled_at[0]));
 	harness->sampled_at[harness->sample_calls++] = time;
+	if (harness->source_mode == SOURCE_HISTORY_RAMP) {
+		return hako_sensor_history_sample_at(&harness->history, time, sample);
+	}
 	sample_for_time(harness, time, sample);
 	return 0;
 }
@@ -521,6 +547,49 @@ static void test_fifo_timing(void)
 	athrill_device_icm45686_model.destroy(fixture.chip);
 }
 
+/* [ADV-CHIP-ICM45686-003.T2] A 6.4 kHz packet asks the real sensor
+ * history for its exact sample time, between 8 kHz physics latches. */
+static void test_fifo_history_interpolation(void)
+{
+	Fixture fixture;
+	uint8 packets[HISTORY_PACKET_COUNT * FIFO_PACKET_BYTES];
+	uint64 time;
+	uint32 index;
+	setup(&fixture, SOURCE_HISTORY_RAMP, NULL);
+	for (time = 0U; time <= HISTORY_END_CLOCKS;
+	    time += PHYSICS_STEP_CLOCKS) {
+		AthrillDeviceSensorSample sample = history_ramp_sample(time);
+		hako_sensor_history_latch(&fixture.harness.history, time, &sample);
+	}
+	fixture.harness.now = HISTORY_FIFO_ANCHOR;
+	px4_start(&fixture);
+	fixture.harness.now = HISTORY_END_CLOCKS;
+	TEST_CHECK(fifo_count(&fixture) == HISTORY_PACKET_COUNT);
+	TEST_CHECK(fixture.harness.sample_calls == HISTORY_PACKET_COUNT);
+	read_registers(&fixture, REG_FIFO_DATA, packets, sizeof(packets));
+	for (index = 0U; index < HISTORY_PACKET_COUNT; index++) {
+		const uint8 *packet = &packets[index * FIFO_PACKET_BYTES];
+		uint64 sample_time = HISTORY_FIFO_ANCHOR +
+			(uint64)(index + 1U) * SAMPLE_CLOCKS;
+		AthrillDeviceSensorSample expected = history_ramp_sample(sample_time);
+		sint32 expected_accel = 2 * rounded(expected.acceleration[0] *
+			8192.0F / GRAVITY);
+		sint32 expected_gyro = rounded(expected.angular_velocity[0] *
+			RAD_TO_DEG * 131.1F);
+		sint32 expected_temperature = rounded((expected.temperature_c -
+			25.0F) * 132.48F);
+		TEST_CHECK(fixture.harness.sampled_at[index] == sample_time);
+		TEST_CHECK(sample_time % PHYSICS_STEP_CLOCKS != 0U);
+		TEST_CHECK(packet[0] == FIFO_HEADER);
+		TEST_CHECK(abs(accel20(packet, 0U) - expected_accel) <= 1);
+		TEST_CHECK(abs(gyro20(packet, 0U) - expected_gyro) <= 1);
+		TEST_CHECK(abs((int)temperature16(packet) -
+			(int)expected_temperature) <= 1);
+	}
+	TEST_CHECK(fixture.harness.sample_calls == HISTORY_PACKET_COUNT);
+	athrill_device_icm45686_model.destroy(fixture.chip);
+}
+
 /* [ADV-CHIP-ICM45686-004.T1] DS-000577 Rev 1.0 sections 6.1, 6.2
  * and 15. */
 static void test_fifo_packet(void)
@@ -679,6 +748,9 @@ int main(int argc, char **argv)
 	}
 	else if (strcmp(argv[1], "timing") == 0) {
 		test_fifo_timing();
+	}
+	else if (strcmp(argv[1], "history-interpolation") == 0) {
+		test_fifo_history_interpolation();
 	}
 	else if (strcmp(argv[1], "packet") == 0) {
 		test_fifo_packet();
