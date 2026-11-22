@@ -276,6 +276,69 @@ static void ADV_BOARD_6X_004_revision_six_overlays(void)
 	free(blob);
 }
 
+/* ADV-BOARD-6X-002: revision 8 has three ICM-45686 and the ordinal-8 ADC ladder. */
+static void ADV_BOARD_6X_002_revision_eight(const void *blob)
+{
+	const fdt32_t *cells;
+	int length;
+	static const struct { const char *path; uint32_t drdy; const char *rotation; } imu[] = {
+		{ "/soc/spi@40013000/imu@0", 2U, "roll-180-yaw-90" },	/* SPI1, PF2, PX4 -R 10 */
+		{ "/soc/spi@40003800/imu@0", 10U, "none" },		/* SPI2, PA10 */
+		{ "/soc/spi@40003c00/imu@0", 7U, "none" },		/* SPI3, PI7, primary */
+	};
+	size_t i;
+
+	cells = fdt_getprop(blob, node(blob, "/soc/adc@58026000"),
+		"athrill,adc-channel-values", &length);
+	TEST_CHECK(cells != NULL && length == 6 * (int)sizeof(*cells));
+	TEST_CHECK(fdt32_to_cpu(cells[3]) == 15U);
+	TEST_CHECK(fdt32_to_cpu(cells[5]) == 49760U);
+	TEST_CHECK(fdt32_to_cpu(cells[5]) / 16U >= 2920U && fdt32_to_cpu(cells[5]) / 16U <= 3308U);
+	for (i = 0U; i < sizeof(imu) / sizeof(imu[0]); i++) {
+		expect_compatible(blob, imu[i].path, "invensense,icm45686");
+		cells = fdt_getprop(blob, node(blob, imu[i].path), "int-gpios", &length);
+		TEST_CHECK(cells != NULL && length == 3 * (int)sizeof(*cells));
+		TEST_CHECK(fdt32_to_cpu(cells[1]) == imu[i].drdy);
+		TEST_CHECK(strcmp(fdt_getprop(blob, node(blob, imu[i].path),
+			"athrill,mount-rotation", NULL), imu[i].rotation) == 0);
+	}
+	cells = fdt_getprop(blob, node(blob, "/soc/spi@40003c00"), "cs-gpios", &length);
+	TEST_CHECK(cells != NULL && length == 3 * (int)sizeof(*cells));
+	TEST_CHECK(fdt32_to_cpu(cells[1]) == 4U);
+	expect_absent(blob, "/soc/spi@40003c00/gyroscope@0");
+	expect_absent(blob, "/soc/spi@40003c00/accelerometer@1");
+	expect_compatible(blob, "/soc/i2c@58001c00/pressure@64", "invensense,icp201xx");
+	expect_compatible(blob, "/soc/i2c@58001c00/magnetometer@10", "bosch,bmm150");
+}
+
+/* ADV-BOARD-6X-004: the revision-8 overlay layers wire every modeled chip. */
+static void ADV_BOARD_6X_004_revision_eight_overlays(void)
+{
+	size_t size;
+	void *blob = read_dtb(PIXHAWK6X_REV8_HAKONIWA_DTB, &size);
+	uint32_t source;
+
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	source = phandle(blob, "/sensor-device");
+	expect_value_source(blob, "/soc/spi@40013000/imu@0", source);
+	expect_value_source(blob, "/soc/spi@40003800/imu@0", source);
+	expect_value_source(blob, "/soc/spi@40003c00/imu@0", source);
+	free(blob);
+
+	blob = read_dtb(PIXHAWK6X_REV8_HAKONIWA_DSHOT_DTB, &size);
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	expect_compatible(blob, "/soc/serial@40004400/dshot-esc", "athrill,dshot-esc");
+	free(blob);
+
+	blob = read_dtb(PIXHAWK6X_REV8_HAKONIWA_DSHOT_SENSORS_DTB, &size);
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	expect_value_source(blob, "/soc/spi@40003c00/imu@0", phandle(blob, "/sensor-device/icm45686-spi3"));
+	expect_value_source(blob, "/soc/spi@40003800/imu@0", phandle(blob, "/sensor-device/icm45686-spi2"));
+	expect_value_source(blob, "/soc/spi@40013000/imu@0", phandle(blob, "/sensor-device/icm45686-spi1"));
+	expect_value_source(blob, "/soc/i2c@58001c00/pressure@64", phandle(blob, "/sensor-device/icp201xx"));
+	free(blob);
+}
+
 int main(void)
 {
 	size_t size;
@@ -293,6 +356,12 @@ int main(void)
 	ADV_BOARD_6X_002_revision_six(blob);
 	free(blob);
 	ADV_BOARD_6X_004_revision_six_overlays();
-	puts("Pixhawk 6X revision 0 and revision 6 DT allocations are valid");
+	blob = read_dtb(PIXHAWK6X_REV8_DTB, &size);
+	TEST_CHECK(fdt_check_full(blob, size) == 0);
+	ADV_BOARD_6X_001_memory_map(blob);
+	ADV_BOARD_6X_002_revision_eight(blob);
+	free(blob);
+	ADV_BOARD_6X_004_revision_eight_overlays();
+	puts("Pixhawk 6X revision 0, 6 and 8 DT allocations are valid");
 	return 0;
 }

@@ -237,6 +237,21 @@ The revision-0 family remains `pixhawk6x.dts`, `pixhawk6x-hakoniwa.dts`,
 | DShot + one source per chip | `pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb` |
 | the same, light: IIM-42652 disabled (ADIS16470 only; one EKF, faster) | `pixhawk6x-rev6-hakoniwa-dshot-sensors-lite.dtb` |
 
+The revision-8 family (`V6X008`, three ICM-45686) is:
+
+| Use | Devicetree |
+| --- | --- |
+| bench / SIH | `pixhawk6x-rev8.dtb` |
+| common Hakoniwa value source | `pixhawk6x-rev8-hakoniwa.dtb` |
+| common source + DShot outputs 1-4 | `pixhawk6x-rev8-hakoniwa-dshot.dtb` |
+| DShot + one source per chip (`icm45686-spi3`, `icm45686-spi2`, `icm45686-spi1`, `icp201xx`, `bmm150`, `ist8310`, `gps1`) | `pixhawk6x-rev8-hakoniwa-dshot-sensors.dtb` |
+
+Revision 8 places an ICM-45686 on each internal SPI bus: SPI3 (CS PI4, DRDY PI7, PX4 `-R 0`, the primary), SPI2
+(CS PH5, DRDY PA10, `-R 0`) and SPI1 (CS PI9, DRDY PF2, `-R 10` = `roll-180-yaw-90`). Baro and magnetometer are as
+revision 6. ADC3 channel 15's 49760 scales to 3110 in PX4's 12-bit ladder table (ordinal 8: 2920..3308).
+Flights set the motor pole count with `DEVICE_CONFIG_ESC_MOTOR_POLES` (it is a property of the motors, not of the
+board).
+
 The per-chip file uses these `HAKO_SENSOR_DEVICE_SENSORS` names:
 
 | Instance | Type | Chip sample-period reports |
@@ -270,4 +285,8 @@ b74c11a1be80729f52df1c43b23db4dd636e8a590e460ddb10083ff54189f6d4  pixhawk6x-rev6
 a76104875cd1fa67e5f19b91ed4863fc8909989e7dd3c36bcd60dedea630687f  pixhawk6x-rev6-hakoniwa-dshot.dtb
 319f3612d1d28623d988f63b6cf3c6f16cf305294940a879d258c425ac93890e  pixhawk6x-rev6-hakoniwa-dshot-sensors.dtb
 7f5fca0855fb2458ba2cf40a3b376187c1d6b8e4504e4484e6b6e9aee96bbaec  pixhawk6x-rev6-hakoniwa-dshot-sensors-lite.dtb
+ff95effcfaf5a1f3e9f852d6af3d1f00e4d405d32c593ee7f10deccdf0895d93  pixhawk6x-rev8-hakoniwa-dshot-sensors.dtb
+b548cb381d8370488c9b1a04b31ed2ba13f1802b0bac84db895cd1a8a74f3bc4  pixhawk6x-rev8-hakoniwa-dshot.dtb
+f9c8e53b2947983bcb62671ddeff72d047176e8e6a1b4a707ee2e08257dd0727  pixhawk6x-rev8-hakoniwa.dtb
+ed30dceb2d18a587eaccf70ed101aeebfb4e448b9718dc1982cdebd41e7a6605  pixhawk6x-rev8.dtb
 ```

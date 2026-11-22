@@ -1,0 +1,25 @@
+/* SPDX-License-Identifier: MIT */
+
+#include "pixhawk6x-rev8-hakoniwa.dts"
+
+&pwm_actuators { status = "disabled"; };
+
+/ {
+	esc_fault: esc-fault {
+		compatible = "athrill,esc-fault-schedule";
+	};
+};
+
+&usart2 {
+	dshot_esc: dshot-esc {
+		compatible = "athrill,dshot-esc";
+		pwms = <&pwm5 4 20000000 0>,
+		       <&pwm5 3 20000000 0>,
+		       <&pwm5 2 20000000 0>,
+		       <&pwm5 1 20000000 0>;
+		pwm-names = "FMU_CH1", "FMU_CH2", "FMU_CH3", "FMU_CH4";
+		value-source = <&hakoniwa_sensor>;
+		athrill,tick-before-value-source;
+		fault-model = <&esc_fault>;
+	};
+};

@@ -554,3 +554,15 @@
   - id: ADV-CHIP-MOUNT-ROTATION-001.T3
     stimulus: Construct every consuming model (both BMI055 dies, ICM-42688-P, IIM-42652, ICM-45686, and IST8310) with an unknown mount-rotation name.
     expect: Every construction is refused; no model silently substitutes identity.
+- id: ADV-CHIP-IIM42652-001
+  statement: The IIM-42652 variant of the ICM-42688-P model answers WHO_AM_I (0x75) with 0x6F (the ICM-42688-P keeps 0x47) and resets INTF_CONFIG0 (0x4C) to 0x30 (big-endian FIFO count and sensor data), which PX4's iim42652 driver relies on without writing it.
+  source:
+    devicetree: invensense,iim42652
+    manual: TDK InvenSense IIM-42652 data sheet DS-000440 Rev 1.0, WHO_AM_I and INTF_CONFIG0 register descriptions
+  scope: PX4 iim42652 driver probe and FIFO parsing.
+  verification: test
+  applies_to: chip:invensense,iim42652
+  tests:
+  - id: ADV-CHIP-IIM42652-001.T1
+    stimulus: Read register 0x75 of an IIM-42652 and of an ICM-42688-P model instance; read INTF_CONFIG0 (0x4C) of the IIM-42652 after reset.
+    expect: 0x6F and 0x47; INTF_CONFIG0 0x30.

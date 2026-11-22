@@ -1,0 +1,61 @@
+/* SPDX-License-Identifier: MIT */
+
+/*
+ * Revision-8 DShot board with one sensor-host value source per modeled chip.
+ * The names below are the names required in HAKO_SENSOR_DEVICE_SENSORS.
+ */
+
+#include "pixhawk6x-rev8-hakoniwa-dshot.dts"
+
+&hakoniwa_sensor {
+	sensor_icm45686_spi3: icm45686-spi3 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_icm45686_spi2: icm45686-spi2 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_icm45686_spi1: icm45686-spi1 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_icp201xx: icp201xx {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_bmm150: bmm150 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_ist8310: ist8310 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+	sensor_gps1: gps1 {
+		compatible = "hakoniwa,sensor-instance";
+	};
+};
+
+&icm45686_spi3 {
+	value-source = <&sensor_icm45686_spi3>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&icm45686_spi2 {
+	value-source = <&sensor_icm45686_spi2>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&icm45686_spi1 {
+	value-source = <&sensor_icm45686_spi1>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&icp201xx {
+	value-source = <&sensor_icp201xx>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&bmm150 {
+	value-source = <&sensor_bmm150>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&external_magnetometer {
+	value-source = <&sensor_ist8310>;
+	/delete-property/ athrill,tick-before-value-source;
+};
+&gps1 {
+	value-source = <&sensor_gps1>;
+	/delete-property/ athrill,tick-before-value-source;
+};
