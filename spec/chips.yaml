@@ -569,3 +569,59 @@
   - id: ADV-CHIP-IIM42652-001.T1
     stimulus: Read register 0x75 of an IIM-42652 and of an ICM-42688-P model instance; read INTF_CONFIG0 (0x4C) of the IIM-42652 after reset.
     expect: 0x6F and 0x47; INTF_CONFIG0 0x30.
+- id: ADV-CHIP-CRSF-001
+  statement: The CRSF receiver sends RC_CHANNELS_PACKED frames of 26 bytes (0xC8, length 24, type 0x16, 16 channels
+    of 11 bits packed least significant bit first, CRC-8 polynomial 0xD5 over the type and the payload). A channel's
+    pulse width in microseconds becomes the CRSF value in 172..1811 whose conversion by PX4 (us = scale x value +
+    offset, 172 -> 988 us, 1811 -> 2012 us, truncated) is nearest; widths outside are clamped.
+  source:
+    devicetree: athrill,crsf-receiver as the child of a UART
+    manual: PX4-Autopilot v1.16.0 src/lib/rc/crsf.cpp and crsf.h (frame, CRC, channel conversion)
+  scope: PX4's rc_input decodes the receiver's frames as from a real CRSF receiver.
+  verification: unit
+  applies_to: chip:athrill,crsf-receiver
+  tests:
+  - id: ADV-CHIP-CRSF-001.T1
+    stimulus: Frames for all channels 992, and for 172, 1811, 992, 1000, 1811 and then 172.
+    expect: Byte for byte the frames computed independently, CRC included.
+  - id: ADV-CHIP-CRSF-001.T2
+    stimulus: Every whole microsecond from 988 to 2012, and 900 and 2100.
+    expect: 988 -> 172, 2012 -> 1811, 1500 reads back 1500; every width reads back within 1 us; 900 -> 172, 2100 -> 1811.
+- id: ADV-CHIP-CRSF-002
+  statement: Once its scenario has started, the receiver sends one frame at the first tick at or after each
+    athrill,frame-period-us (default 4000, positive) of the target clock, channel n being the scenario channel named
+    by the n-th entry of athrill,channel-names and 1500 us when that entry is empty, "-" or missing. Before the first
+    row it is silent and reports the first row's time as its next event; after the last row it sends the last values
+    on. Bytes from the flight controller are accepted and not answered.
+  source:
+    devicetree: athrill,crsf-receiver athrill,channel-names, athrill,frame-period-us
+    manual: PX4-Autopilot v1.16.0 src/drivers/rc_input/RCInput.cpp (no signal loss while frames come)
+  scope: The flight controller sees the receiver from the scenario's start on and never loses it afterwards.
+  verification: unit
+  applies_to: chip:athrill,crsf-receiver
+  tests:
+  - id: ADV-CHIP-CRSF-002.T1
+    stimulus: Rows at 100 ms and 110 ms; names roll, pitch, empty, "-", arm; ticks at 0, 99.999, 100, 102, 104..112 ms
+      every 4 ms, 1 s, and a byte from the flight controller.
+    expect: Silent with the next event at 100 ms; frames at 100, 104, 108, 112 ms, none at 102 ms, the next event 4 ms
+      on; channels 1100, 1900, 1500, 1500, 2000, ... 1500 us; 1100 us at 108 ms and 1200 us at 112 ms; one frame at
+      1 s with the last values; the byte gets no answer.
+  - id: ADV-CHIP-CRSF-002.T2
+    stimulus: athrill,frame-period-us 20000, then 0.
+    expect: The next frame 20 ms after a frame; 0 is refused.
+- id: ADV-CHIP-CRSF-003
+  statement: The receiver's scenario is athrill,scenario-file with athrill,scenario-offset-ms; the host values
+    DEVICE_CONFIG_RC_SCENARIO_FILE and DEVICE_CONFIG_RC_SCENARIO_OFFSET_MS (a number of ms) replace them. No file, a
+    scenario refused by ADV-SCENARIO-001, a channel name the scenario does not have, and a malformed offset are
+    construction errors with a message naming the node.
+  source:
+    devicetree: athrill,crsf-receiver athrill,scenario-file, athrill,scenario-offset-ms
+    manual: docs/configuration.md, Scenario files
+  scope: A run chooses its inputs without a new DTB.
+  verification: unit
+  applies_to: chip:athrill,crsf-receiver
+  tests:
+  - id: ADV-CHIP-CRSF-003.T1
+    stimulus: A property file with a host file starting at 0 ms and a host offset 50.5; then an unknown channel name, a
+      missing file, no file, and the host offset "12x".
+    expect: Silent with the next event at 50.5 ms, then the host file's 1300 us; each of the four is refused.

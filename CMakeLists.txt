@@ -58,6 +58,8 @@ add_library(athrill_device STATIC
   src/models/stm32_uart_tcp.c
   src/models/stm32_tim.c
   src/models/ublox_m8.c
+  src/models/crsf_receiver.c
+  src/models/scenario.c
   src/sha256.c
   third_party/libfdt/libfdt.c)
 add_library(athrill-device::athrill-device ALIAS athrill_device)
@@ -526,6 +528,18 @@ if(BUILD_TESTING)
   target_include_directories(test_ublox PRIVATE src/models)
   target_link_libraries(test_ublox PRIVATE athrill_device)
   add_test(NAME ublox COMMAND test_ublox)
+
+  add_executable(test_scenario tests/test_scenario.c)
+  target_compile_definitions(test_scenario PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_scenario PRIVATE src/models)
+  target_link_libraries(test_scenario PRIVATE athrill_device)
+  add_test(NAME scenario COMMAND test_scenario WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+  add_executable(test_crsf_receiver tests/test_crsf_receiver.c)
+  target_compile_definitions(test_crsf_receiver PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_crsf_receiver PRIVATE src/models)
+  target_link_libraries(test_crsf_receiver PRIVATE athrill_device)
+  add_test(NAME crsf-receiver COMMAND test_crsf_receiver WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
   add_executable(test_dshot_esc tests/test_dshot_esc.c)
   target_compile_definitions(test_dshot_esc PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_dshot_esc PRIVATE src/models tests)

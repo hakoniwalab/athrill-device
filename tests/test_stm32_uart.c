@@ -144,9 +144,20 @@ static sint32 host_value(void *t, const char *key, const char **value)
 	*value = text;
 	return 0;
 }
+/* athrill,peer-line of the USART being created (shim_peer_uart, 0 = none) */
+static uint32 shim_peer_uart;
+static uint32 shim_peer[5];
+static uint32 shim_peer_cells = 5U;
 static sint32 get_u32(void *c, const char *name, uint32 index, uint32 *value)
 {
 	(void)c;
+	if (strcmp(name, "athrill,peer-line") == 0) {
+		if (shim_peer_uart != creating + 1U || index >= shim_peer_cells) {
+			return -1;
+		}
+		*value = shim_peer[index];
+		return 0;
+	}
 	if (strcmp(name, "reg") != 0 || index > 1U) {
 		return -1;
 	}
@@ -190,11 +201,19 @@ static sint32 get_uart_peripheral(void *c, uint32 index, const AthrillDeviceUart
 	*instance = (void *)shim_chip[u];
 	return 0;
 }
+/* the chip side of each UART (uart_listen), to send as its chip */
+static sint32 (*listen_receive[8])(void *, uint8);
+static void *listen_instance[8];
 static sint32 uart_listen(void *c, sint32 (*receive)(void *, uint8), void *instance)
 {
-	(void)c; (void)receive; (void)instance;
+	uint32 u = (uint32)(uintptr_t)c;
+	if (u < 8U) {
+		listen_receive[u] = receive;
+		listen_instance[u] = instance;
+	}
 	return 0;
 }
+static uint64 time_frequency_hz(void *t) { (void)t; return 480000000U; }
 
 static void shim_create(uint32 u)
 {
@@ -213,6 +232,7 @@ static void shim_create(uint32 u)
 	target_ops.end_batch = end_batch;
 	target_ops.console_write = console_write;
 	target_ops.host_value = host_value;
+	target_ops.time_frequency_hz = time_frequency_hz;
 	memset(&node_ops, 0, sizeof(node_ops));
 	node_ops.get_u32 = get_u32;
 	node_ops.get_property = get_property;
@@ -990,6 +1010,119 @@ static void test_console_attachment(void)
 	CHECK_STR("TCP-style attachment mirrors console", chip_out, "AB");
 }
 
+#define USART6	0x40011400U
+#define CR1_PCE	(1U << 10)
+#define CR1_M0	(1U << 12)
+#define CR2_RXINV	(1U << 16)
+#define CR2_SWAP	(1U << 15)
+#define CR3_HDSEL	(1U << 3)
+/* H7 USART6: 120 MHz kernel clock; 420000 baud is BRR 286 (0.1 % off), 100000 baud BRR 1200 */
+#define BRR_420K	286U
+#define BRR_100K	1200U
+
+/* A byte from USART6's chip; TRUE when it reached RDR. */
+static std_bool peer_byte(uint8 data)
+{
+	uint32 rdr;
+
+	(void)listen_receive[5](listen_instance[5], data);
+	now += 100000U;
+	(void)tick();
+	if ((rd(USART6, ISR) & RXNE) == 0U) {
+		return FALSE;
+	}
+	rdr = rd(USART6, RDR);
+	return (rdr == data) ? TRUE : FALSE;
+}
+
+static void peer_setup(uint32 brr, uint32 cr1, uint32 cr2, uint32 cr3)
+{
+	wr(USART6, CR1, 0U);
+	wr(USART6, BRR, brr);
+	wr(USART6, CR2, cr2);
+	wr(USART6, CR3, cr3);
+	wr(USART6, CR1, UE | RE | TE | cr1);
+}
+
+/* [ADV-UART-007.T1] with athrill,peer-line <420000 8 0 1 0>, the chip's bytes arrive only at 420000 8N1 not inverted */
+static void test_peer_line(void)
+{
+	static const uint8 nothing = 0U;
+
+	shim_peer_uart = 6U;
+	shim_peer[0] = 420000U;
+	shim_peer[1] = 8U;
+	shim_peer[2] = 0U;
+	shim_peer[3] = 1U;
+	shim_peer[4] = 0U;
+	setup_family(NULL, TRUE, 0U);
+	stm32_uart_attach(6U, &chip_ops, (void *)&nothing);
+	peer_setup(BRR_420K, 0U, 0U, 0U);
+	CHECK_EQ("420000 8N1: the byte arrives", peer_byte(0xC8U), TRUE);
+	peer_setup(BRR_420K, 0U, CR2_SWAP, CR3_HDSEL);
+	CHECK_EQ("single wire and swapped pins: still arrives", peer_byte(0x16U), TRUE);
+	peer_setup(BRR_100K, 0U, 0U, 0U);
+	CHECK_EQ("100000 baud: lost", peer_byte(0x5AU), FALSE);
+	peer_setup(BRR_420K, CR1_PCE | CR1_M0, 0U, 0U);
+	CHECK_EQ("even parity: lost", peer_byte(0x5AU), FALSE);
+	peer_setup(BRR_420K, 0U, 2U << 12, 0U);
+	CHECK_EQ("2 stop bits: lost", peer_byte(0x5AU), FALSE);
+	peer_setup(BRR_420K, 0U, CR2_RXINV, 0U);
+	CHECK_EQ("RX inverted: lost", peer_byte(0x5AU), FALSE);
+	peer_setup(BRR_420K, 0U, 0U, 0U);
+	CHECK_EQ("back at 420000 8N1: arrives again", peer_byte(0xA5U), TRUE);
+	/* SBUS, as rc_input scans it: 100000 baud, 8 data + even parity, 2 stop bits, inverted */
+	shim_peer[0] = 100000U;
+	shim_peer[2] = 2U;
+	shim_peer[3] = 2U;
+	shim_peer[4] = 1U;
+	setup_family(NULL, TRUE, 0U);
+	stm32_uart_attach(6U, &chip_ops, (void *)&nothing);
+	peer_setup(BRR_100K, CR1_PCE | CR1_M0, (2U << 12) | CR2_RXINV, 0U);
+	CHECK_EQ("SBUS line 100000 8E2 inverted: arrives", peer_byte(0x0FU), TRUE);
+	peer_setup(BRR_420K, 0U, 0U, 0U);
+	CHECK_EQ("SBUS peer at 420000 8N1: lost", peer_byte(0x0FU), FALSE);
+	shim_peer_uart = 0U;
+}
+
+/* [ADV-UART-007.T2] a malformed athrill,peer-line refuses construction */
+static void test_peer_line_invalid(void)
+{
+	static AthrillDeviceTargetOps target_ops;
+	static AthrillDeviceNodeOps node_ops;
+	static AthrillDeviceNode node;
+	AthrillDeviceCreateArgs args;
+	void *instance = NULL;
+	static const uint32 bad[][5] = {
+		{ 0U, 8U, 0U, 1U, 0U }, { 420000U, 9U, 0U, 1U, 0U }, { 420000U, 8U, 3U, 1U, 0U },
+		{ 420000U, 8U, 0U, 3U, 0U }, { 420000U, 8U, 0U, 1U, 2U } };
+	uint32 i;
+
+	memset(&target_ops, 0, sizeof(target_ops));
+	target_ops.host_value = host_value;
+	target_ops.time_frequency_hz = time_frequency_hz;
+	memset(&node_ops, 0, sizeof(node_ops));
+	node_ops.get_u32 = get_u32;
+	node_ops.get_property = get_property;
+	node.ops = &node_ops;
+	node.path = "/soc/serial";
+	args.target_ops = &target_ops;
+	args.target = NULL;
+	args.node = &node;
+	creating = 5U;
+	shim_peer_uart = 6U;
+	for (i = 0U; i < sizeof(bad) / sizeof(bad[0]); i++) {
+		memcpy(shim_peer, bad[i], sizeof(shim_peer));
+		CHECK_EQ("malformed peer-line refused", m->create(&args, &instance), (unsigned long long)-1);
+	}
+	memcpy(shim_peer, bad[0], sizeof(shim_peer));
+	shim_peer[0] = 420000U;
+	shim_peer_cells = 4U;
+	CHECK_EQ("four cells refused", m->create(&args, &instance), (unsigned long long)-1);
+	shim_peer_cells = 5U;
+	shim_peer_uart = 0U;
+}
+
 int main(int argc, char **argv)
 {
 	if ((argc == 2) && (strcmp(argv[1], "spec-gaps") == 0)) {
@@ -1009,6 +1142,8 @@ int main(int argc, char **argv)
 	test_h7_clock_table();
 	test_f7_h7_front_ends();
 	test_delayed_rx_file();
+	test_peer_line();
+	test_peer_line_invalid();
 	printf("%d checks, %d failures\n", checks, failures);
 	return (failures == 0) ? 0 : 1;
 }

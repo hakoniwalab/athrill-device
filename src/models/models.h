@@ -14,6 +14,11 @@ extern const AthrillDeviceModelOps athrill_device_ms5611_model;
 extern const AthrillDeviceModelOps athrill_device_ist8310_model;
 extern const AthrillDeviceModelOps athrill_device_bmm150_model;
 extern const AthrillDeviceModelOps athrill_device_ublox_m8_model;
+extern const AthrillDeviceModelOps athrill_device_crsf_receiver_model;
+/* CRSF helpers (crsf_receiver.c), exposed for tests */
+uint8 athrill_crsf_crc8(uint8 crc, uint8 data);
+uint32 athrill_crsf_value(double us);
+void athrill_crsf_frame(const uint32 values[16], uint8 *frame);
 extern const AthrillDeviceModelOps athrill_device_icm20689_model;
 extern const AthrillDeviceModelOps athrill_device_icm42688p_model;
 extern const AthrillDeviceModelOps athrill_device_icm45686_model;
