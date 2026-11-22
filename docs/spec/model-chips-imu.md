@@ -3,7 +3,7 @@
 
 # Model specification: imu 1.0.0
 
-Accelerometer and gyroscope chips on SPI as used by PX4 and ArduPilot (ICM-20689, ICM-42688-P, BMI055 accelerometer and gyroscope dies). Values come from the common sensor source (Hakoniwa sensor device or bench source).
+Accelerometer and gyroscope chips on SPI as used by PX4 and ArduPilot (ICM-20689, ICM-42688-P, IIM-42652, ICM-45686, and BMI055 accelerometer and gyroscope dies). Values come from the common sensor source (Hakoniwa sensor device or bench source).
 
 ## Features
 
@@ -42,8 +42,8 @@ Accelerometer and gyroscope chips on SPI as used by PX4 and ArduPilot (ICM-20689
 | Rule | Feature | Rule text |
 |---|---|---|
 | ADV-IMU-B001 | base | identity reads the datasheet chip ID at any time after power-up and after reset. |
-| ADV-IMU-B002 | accel | An acceleration a (m/s², sensor frame) from the sensor source reads as raw = round(a / g0 x counts_per_g(accel_range)) per axis, saturated to the signed register width, in the datasheet's byte order, after the board's mount rotation (athrill,mount-rotation) is undone into the chip frame. |
-| ADV-IMU-B003 | gyro | An angular rate w (rad/s) reads as raw = round(w x 180/pi x counts_per_dps(gyro_range)) per axis, saturated, byte order and axes as for ADV-IMU-B002. |
+| ADV-IMU-B002 | accel | An acceleration a (m/s², body FRD) from the sensor source first has the board's PX4 mount rotation (athrill,mount-rotation) undone as sensor = transpose(R) x body, then the driver's fixed chip-axis conversion is undone; the result reads as raw = round(sensor / g0 x counts_per_g(accel_range)) per axis, saturated to the signed register width, in the datasheet's byte order. |
+| ADV-IMU-B003 | gyro | An angular rate w (rad/s, body FRD) reads as raw = round(w x 180/pi x counts_per_dps(gyro_range)) per axis, saturated, with mount rotation, fixed chip axes, and byte order as for ADV-IMU-B002. |
 | ADV-IMU-B004 | base | A new sample is produced every 1 / output_rate of model time; data_ready turns on and data_ready_line follows int_config; reading the data (or the status, as the datasheet states) turns data_ready off. |
 | ADV-IMU-B005 | fifo | With fifo_enable, each sample is appended to the FIFO in the datasheet's packet format; fifo_count counts what is stored; reading fifo_data returns packets in order; when full, new samples are dropped and fifo_overflow turns on (or the oldest are overwritten, as the datasheet states). |
 | ADV-IMU-B006 | base | Multi-byte register reads auto-increment the register address as the datasheet states, so a burst returns all axes of one sample (no tearing between axes). |

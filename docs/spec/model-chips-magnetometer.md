@@ -29,7 +29,7 @@ Three-axis I2C magnetometers (IST8310 and BMM150). Values come from the common s
 
 | Rule | Feature | Rule text |
 |---|---|---|
-| ADV-MAG-B001 | base | A field B (gauss, sensor frame) from the source reads as raw = round(B x counts_per_gauss(resolution)) per axis, saturated, in the datasheet's byte order, after the board's mount rotation is undone. |
+| ADV-MAG-B001 | base | A field B (gauss, body FRD) from the source first has the board's PX4 mount rotation undone as sensor = transpose(R) x body, then the driver's fixed chip-axis conversion is undone; it reads as raw = round(sensor x counts_per_gauss(resolution)) per axis, saturated, in the datasheet's byte order. |
 | ADV-MAG-B002 | base | single_measure produces one sample after the datasheet's measurement time; data_ready turns on; reading the data turns it off; no further sample is produced until the next single_measure. |
 | ADV-MAG-B003 | base | Multi-byte reads auto-increment and return all axes of one sample. |
 | ADV-MAG-B004 | bmm150 | BMM150 normal mode samples the value-source history at its ODR boundary; fixed trim and inverse raw generation make the PX4 compensation result equal the source field within one raw LSB. |

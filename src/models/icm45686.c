@@ -7,6 +7,7 @@
 
 #include "chip_rates.h"
 #include "imu_filter.h"
+#include "mount_rotation.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -93,7 +94,7 @@ typedef struct {
 	uint16 fifo_count;
 	uint8 fifo_offset;
 	uint8 interrupt_pending;
-	std_bool yaw_270;
+	AthrillMountRotation mount_rotation;
 	std_bool ideal_filters;
 	ImuFilterStream accel_filter;
 	ImuFilterStream gyro_filter;
@@ -136,22 +137,12 @@ static sint32 saturate(float32 value, sint32 minimum, sint32 maximum)
 }
 
 /* [ADV-CHIP-ICM45686-008] Firmware converts the chip's FLU axes to FRD;
- * undo that conversion and the one mount rotation currently supported by
- * the ICM-42688-P model. */
+ * undo that conversion after undoing the board's mount rotation. */
 static void to_chip_axes(const Icm45686 *chip, const float32 *frd,
 	float32 *out)
 {
 	float32 mounted[3];
-	if (chip->yaw_270) {
-		mounted[0] = -frd[1];
-		mounted[1] = frd[0];
-		mounted[2] = frd[2];
-	}
-	else {
-		mounted[0] = frd[0];
-		mounted[1] = frd[1];
-		mounted[2] = frd[2];
-	}
+	athrill_mount_rotation_to_sensor(&chip->mount_rotation, frd, mounted);
 	out[0] = mounted[0];
 	out[1] = -mounted[1];
 	out[2] = -mounted[2];
@@ -679,7 +670,6 @@ static sint32 reset(void *instance)
 static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 {
 	Icm45686 *chip;
-	const char *rotation;
 	const void *ideal;
 	uint32 ideal_size;
 	uint64 frequency;
@@ -701,11 +691,10 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 	chip->ideal_filters = args->node->ops->get_property(
 		args->node->context, "athrill,ideal-filters", &ideal,
 		&ideal_size) == 0;
-	if (args->node->ops->get_string != NULL &&
-	    args->node->ops->get_string(args->node->context,
-		"athrill,mount-rotation", 0U, &rotation) == 0 &&
-	    strcmp(rotation, "yaw-270") == 0) {
-		chip->yaw_270 = TRUE;
+	if (athrill_mount_rotation_parse(args->node,
+		&chip->mount_rotation) != 0) {
+		free(chip);
+		return -1;
 	}
 	reset_registers(chip);
 	*instance = chip;

@@ -26,6 +26,7 @@ add_library(athrill_device STATIC
   src/models/icp201xx.c
   src/models/imu_filter.c
   src/models/ist8310.c
+  src/models/mount_rotation.c
   src/models/ms5611.c
   src/models/pwm_actuator.c
   src/bindings.c
@@ -422,6 +423,16 @@ if(BUILD_TESTING)
     COMMAND test_icm45686 interrupt)
   add_test(NAME ADV-CHIP-ICM45686-008.T1
     COMMAND test_icm45686 rotation-filter)
+  add_executable(test_mount_rotation tests/test_mount_rotation.c)
+  target_compile_definitions(test_mount_rotation PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_mount_rotation PRIVATE src/models tests)
+  target_link_libraries(test_mount_rotation PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-MOUNT-ROTATION-001.T1
+    COMMAND test_mount_rotation imu)
+  add_test(NAME ADV-CHIP-MOUNT-ROTATION-001.T2
+    COMMAND test_mount_rotation magnetometer)
+  add_test(NAME ADV-CHIP-MOUNT-ROTATION-001.T3
+    COMMAND test_mount_rotation invalid)
   add_executable(test_icp201xx tests/test_icp201xx.c)
   target_compile_definitions(test_icp201xx PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_icp201xx PRIVATE src/models tests)

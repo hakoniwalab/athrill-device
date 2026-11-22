@@ -19,7 +19,7 @@ features:
 behaviour:
   - id: ADV-MAG-B001
     feature: base
-    rule: A field B (gauss, sensor frame) from the source reads as raw = round(B x counts_per_gauss(resolution)) per axis, saturated, in the datasheet's byte order, after the board's mount rotation is undone.
+    rule: A field B (gauss, body FRD) from the source first has the board's PX4 mount rotation undone as sensor = transpose(R) x body, then the driver's fixed chip-axis conversion is undone; it reads as raw = round(sensor x counts_per_gauss(resolution)) per axis, saturated, in the datasheet's byte order.
   - id: ADV-MAG-B002
     feature: base
     rule: single_measure produces one sample after the datasheet's measurement time; data_ready turns on; reading the data turns it off; no further sample is produced until the next single_measure.

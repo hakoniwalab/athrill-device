@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: MIT
  */
 #include "models.h"
+#include "mount_rotation.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -32,7 +33,7 @@ typedef struct {
 	uint8 registers[256];
 	uint8 pointer;
 	std_bool address_next;
-	std_bool rotated;
+	AthrillMountRotation mount_rotation;
 } Ist8310;
 
 static int16_t saturate(float32 value)
@@ -64,20 +65,17 @@ static sint32 reset(void *instance)
 static void measure(Ist8310 *chip)
 {
 	AthrillDeviceSensorSample sample = {0};
+	float32 mounted[3];
 	float32 raw[3];
 	uint32 i;
 	if (chip->source.ops != NULL) {
 		(void)chip->source.ops->sensor_sample(chip->source.instance, &sample);
 	}
-	if (chip->rotated) {
-		raw[0] = sample.magnetic_field[1];
-		raw[1] = sample.magnetic_field[0];
-		raw[2] = sample.magnetic_field[2];
-	} else {
-		raw[0] = sample.magnetic_field[0];
-		raw[1] = sample.magnetic_field[1];
-		raw[2] = -sample.magnetic_field[2];
-	}
+	athrill_mount_rotation_to_sensor(&chip->mount_rotation,
+		sample.magnetic_field, mounted);
+	raw[0] = mounted[0];
+	raw[1] = mounted[1];
+	raw[2] = -mounted[2];
 	for (i = 0U; i < 3U; i++) {
 		float32 scale =
 			(chip->registers[REG_CNTL3] & (CNTL3_16BIT_X << i)) != 0U ?
@@ -194,17 +192,16 @@ static sint32 transfer(void *instance, AthrillDeviceI2cMessage *messages,
 static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 {
 	Ist8310 *chip = calloc(1U, sizeof(*chip));
-	const char *rotation;
 	if (chip == NULL) {
 		return -1;
 	}
 	chip->target_ops = args->target_ops;
 	chip->target = args->target;
 	chip->node = args->node;
-	if (args->node->ops->get_string(args->node->context,
-		"athrill,mount-rotation", 0U, &rotation) == 0 &&
-	    strcmp(rotation, "roll-180-yaw-90") == 0) {
-		chip->rotated = TRUE;
+	if (athrill_mount_rotation_parse(args->node,
+		&chip->mount_rotation) != 0) {
+		free(chip);
+		return -1;
 	}
 	*instance = chip;
 	return 0;

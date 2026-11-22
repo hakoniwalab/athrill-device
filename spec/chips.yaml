@@ -528,3 +528,29 @@
   - id: ADV-CHIP-ICM45686-008.T1
     stimulus: Configure a yaw-270 fixture, step all accel and gyro axes between consecutive 6.4 kHz sample times, and decode both FIFO records without enabling the ideal-filter override.
     expect: The first record is zero and the next record immediately has the unsmoothed (-y, -x, -z) values at the fixed high-resolution scales.
+- id: ADV-CHIP-MOUNT-ROTATION-001
+  statement: >-
+    Every IMU or magnetometer model with athrill,mount-rotation uses one shared parser. An absent property and "none"
+    are identity. It accepts all fixed PX4 Rotation names from ROTATION_NONE through ROTATION_ROLL_90_PITCH_315,
+    spelled in lower-case with dashes: none; yaw-{45,90,135,180,225,270,315}; roll-180 and
+    roll-180-yaw-{45,90,135,225,270,315}; pitch-{90,180,270,315}; pitch-180-yaw-{90,270}; roll-{90,270} and
+    roll-{90,270}-yaw-{45,90,135}; roll-{90,180,270}-pitch-{90,270}; roll-{90,270}-pitch-180;
+    roll-90-pitch-180-yaw-90; roll-90-yaw-270; roll-90-pitch-68-yaw-293; and roll-90-pitch-315. If R is PX4's
+    sensor-to-body matrix, the model applies transpose(R) to its body-frame input before its fixed chip-axis
+    conversion, so PX4 applying -R recovers that input. Any other present name is a construction error.
+  source:
+    devicetree: athrill,mount-rotation on supported IMU and magnetometer nodes
+    manual: PX4-Autopilot v1.16.0 and v1.17.0 src/lib/conversion/rotation.h and rotation.cpp
+  scope: BMI055 accelerometer and gyroscope, ICM-42688-P, IIM-42652, ICM-45686, and IST8310 mount handling.
+  verification: unit
+  applies_to: chip:mount-rotation
+  tests:
+  - id: ADV-CHIP-MOUNT-ROTATION-001.T1
+    stimulus: Feed one known, distinct body-frame acceleration and angular-rate vector through ICM-45686 for every supported name and decode the raw axes independently.
+    expect: Each raw vector is the independently calculated transpose(R) result followed by the InvenSense fixed axis conversion; applying PX4's R recovers the body vector within register quantization.
+  - id: ADV-CHIP-MOUNT-ROTATION-001.T2
+    stimulus: Feed one known, distinct body-frame magnetic-field vector through IST8310 for every supported name and decode the raw axes independently.
+    expect: Each raw vector is the independently calculated transpose(R) result followed by the IST8310 fixed axis conversion; applying PX4's R recovers the body vector within register quantization.
+  - id: ADV-CHIP-MOUNT-ROTATION-001.T3
+    stimulus: Construct every consuming model (both BMI055 dies, ICM-42688-P, IIM-42652, ICM-45686, and IST8310) with an unknown mount-rotation name.
+    expect: Every construction is refused; no model silently substitutes identity.
