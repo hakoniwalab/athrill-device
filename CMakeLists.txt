@@ -22,6 +22,7 @@ add_library(athrill_device STATIC
   src/models/fm25v02.c
   src/models/icm20689.c
   src/models/icm42688p.c
+  src/models/icm45686.c
   src/models/icp201xx.c
   src/models/imu_filter.c
   src/models/ist8310.c
@@ -401,6 +402,26 @@ if(BUILD_TESTING)
     COMMAND test_adis16470 burst)
   add_test(NAME ADV-CHIP-ADIS16470-007.T1
     COMMAND test_adis16470 bandwidth)
+  add_executable(test_icm45686 tests/test_icm45686.c)
+  target_compile_definitions(test_icm45686 PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
+  target_include_directories(test_icm45686 PRIVATE src/models tests)
+  target_link_libraries(test_icm45686 PRIVATE athrill_device)
+  add_test(NAME ADV-CHIP-ICM45686-001.T1
+    COMMAND test_icm45686 reset)
+  add_test(NAME ADV-CHIP-ICM45686-002.T1
+    COMMAND test_icm45686 configure)
+  add_test(NAME ADV-CHIP-ICM45686-003.T1
+    COMMAND test_icm45686 timing)
+  add_test(NAME ADV-CHIP-ICM45686-004.T1
+    COMMAND test_icm45686 packet)
+  add_test(NAME ADV-CHIP-ICM45686-005.T1
+    COMMAND test_icm45686 flush)
+  add_test(NAME ADV-CHIP-ICM45686-006.T1
+    COMMAND test_icm45686 overflow)
+  add_test(NAME ADV-CHIP-ICM45686-007.T1
+    COMMAND test_icm45686 interrupt)
+  add_test(NAME ADV-CHIP-ICM45686-008.T1
+    COMMAND test_icm45686 rotation-filter)
   add_executable(test_icp201xx tests/test_icp201xx.c)
   target_compile_definitions(test_icp201xx PRIVATE ATHRILL_DEVICE_STANDALONE_TYPES)
   target_include_directories(test_icp201xx PRIVATE src/models tests)

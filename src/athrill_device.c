@@ -495,6 +495,9 @@ static const char *const bmi055_gyro_compatibles[] = { "bosch,bmg160" };
 static const char *const icm42688p_compatibles[] = {
 	"invensense,icm42688", "invensense,icm4268x"
 };
+static const char *const icm45686_compatibles[] = {
+	"invensense,icm45686"
+};
 static const char *const iim42652_compatibles[] = { "invensense,iim42652" };
 static const char *const test_compatibles[] = {
 	"athrill,test-mmio", "athrill,test-spi-controller",
@@ -540,6 +543,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ bmi055_accel_compatibles, 1U, &athrill_device_bmi055_model },
 	{ bmi055_gyro_compatibles, 1U, &athrill_device_bmi055_model },
 	{ icm42688p_compatibles, 2U, &athrill_device_icm42688p_model },
+	{ icm45686_compatibles, 1U, &athrill_device_icm45686_model },
 	{ iim42652_compatibles, 1U, &athrill_device_iim42652_model },
 	{ test_compatibles, 4U, &test_mmio_model },
 	{ test_peripheral_compatibles, 1U, &test_peripheral_model }
@@ -1014,6 +1018,7 @@ static int sensor_chip_model(const AthrillDeviceModelOps *model)
 	return model == &athrill_device_adis16470_model ||
 		model == &athrill_device_bmi055_model ||
 		model == &athrill_device_icm42688p_model ||
+		model == &athrill_device_icm45686_model ||
 		model == &athrill_device_icm20689_model ||
 		model == &athrill_device_ist8310_model ||
 		model == &athrill_device_bmm150_model ||

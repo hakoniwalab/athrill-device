@@ -432,3 +432,99 @@
   - id: ADV-CHIP-BMM150-006.T1
     stimulus: Supply X=2.56 G, Y=-2.56 G and Z=10.24 G, one count outside the selected inverse ranges.
     expect: X and Y decode as -4096, Z as -16384, and STATUS bit 6 is set.
+- id: ADV-CHIP-ICM45686-001
+  statement: SPI register addresses use bit 7 as the read flag. In user bank 0, WHO_AM_I (0x72) reads 0xE9; writing REG_MISC2.SOFT_RST (0x7F bit 1) performs a soft reset, self-clears the command, and restores PWR_MGMT0 to 0x00 and ACCEL_CONFIG0 and GYRO_CONFIG0 to 0x06.
+  source:
+    devicetree: invensense,icm45686
+    manual: TDK InvenSense ICM-45686 DS-000577 revision 1.0 sections 10.5, 16.1, 17.17, 17.26, 17.27, 17.79, and 17.84
+  scope: PX4 v1.16.0 and v1.17.0 SPI probe and software-reset sequence.
+  verification: unit
+  applies_to: chip:invensense,icm45686
+  tests:
+  - id: ADV-CHIP-ICM45686-001.T1
+    stimulus: Read WHO_AM_I through an SPI transaction with address bit 7 set, change PWR_MGMT0, then write REG_MISC2.SOFT_RST and read the identity, command, power, accel, and gyro registers.
+    expect: Identity is 0xE9 before and after reset, SOFT_RST reads clear, PWR_MGMT0 is 0x00, and both sensor configuration registers are 0x06.
+- id: ADV-CHIP-ICM45686-002
+  statement: The byte-identical PX4 v1.16.0 and v1.17.0 configuration sequences are accepted. They select low-noise accel and gyro power (PWR_MGMT0 0x0F), 6.4 kHz at maximum full scale (ACCEL_CONFIG0 and GYRO_CONFIG0 0x03), compression off, stop-on-full with 8 KiB depth (FIFO_CONFIG0 0x9F), and high-resolution accel, gyro, and FIFO interface enable (FIFO_CONFIG3 0x0F). RTC_CONFIG is stored; undocumented address 0x31 is stored as IOC_PAD_SCENARIO_OVRD solely for PX4 CLKIN compatibility.
+  source:
+    devicetree: invensense,icm45686
+    manual: TDK InvenSense ICM-45686 DS-000577 revision 1.0 sections 16.1, 17.17, 17.26-17.33, and 17.37; PX4-Autopilot v1.16.0 and v1.17.0 ICM45686.hpp and ICM45686.cpp
+  scope: Register set-and-clear configuration, FIFOReset, and optional CLKIN writes used by the two target PX4 releases; no other undocumented registers are modeled.
+  verification: unit
+  applies_to: chip:invensense,icm45686
+  tests:
+  - id: ADV-CHIP-ICM45686-002.T1
+    stimulus: Replay the PX4 probe, soft reset, power-up, configuration table, and FIFOReset operations in driver order, then exercise the optional RTC_CONFIG and IOC_PAD_SCENARIO_OVRD CLKIN bits.
+    expect: Every PX4-read register has the configured value, compression is clear, FIFO_CONFIG0 is 0x9F, FIFO_CONFIG3 is 0x0F, and the two CLKIN-related writes read back.
+- id: ADV-CHIP-ICM45686-003
+  statement: With both sensors in low-noise mode at ODR code 0x03, one FIFO packet is produced every 156250 ns (6.4 kHz). The FIFO overview's generic byte-count wording conflicts with the FIFO_COUNT register definitions; the model follows the register-specific packet unit used by PX4, so FIFO_COUNT reports complete packets and its two-byte burst is least-significant byte first at the device's reset-default little-endian setting. The value source is told the same accel and gyro sample period through the sensor-host sample-period contract.
+  source:
+    devicetree: invensense,icm45686; athrill-device ABI 1.22 sample-period contract
+    manual: TDK InvenSense ICM-45686 DS-000577 revision 1.0 sections 6, 15, 17.18-17.20, 17.26, and 17.27
+  scope: Lazy FIFO generation and count format at the PX4-selected 6.4 kHz configuration.
+  verification: unit
+  applies_to: chip:invensense,icm45686
+  tests:
+  - id: ADV-CHIP-ICM45686-003.T1
+    stimulus: Complete the PX4 configuration, advance virtual time by five 6.4 kHz periods, burst-read FIFO_COUNT, and inspect the periods reported to the value source.
+    expect: FIFO_COUNT grows from zero to five packets and both accel and gyro periods are 156250 ns.
+- id: ADV-CHIP-ICM45686-004
+  statement: A high-resolution accel-plus-gyro FIFO record is 20 bytes with header 0x78, followed by signed 20-bit accel and gyro fields, signed 16-bit temperature, a 16-bit timestamp, and three accel/gyro extension bytes in the section 6.1 order. At reset-default little endian, each 16-bit portion is low byte first. High-resolution accel always uses 16384 counts/g with its least-significant bit zero and gyro uses 131.1 counts/(degree/s). DS-000577 defines a two-byte FIFO temperature field but gives no conversion for it, so 132.48 counts/degree C relative to 25 C is an explicit compatibility assumption taken from both target PX4 register headers. Timestamp is zero while timestamp/FSYNC insertion is disabled. Both PX4 releases also share an accel-extension operator-precedence defect that substitutes the gyro nibble; the model emits the datasheet layout and the consumer check allows the resulting error of at most 15 raw accel counts.
+  source:
+    devicetree: invensense,icm45686
+    manual: TDK InvenSense ICM-45686 DS-000577 revision 1.0 sections 6, 6.1, 6.2, 15, and 17.33; PX4-Autopilot v1.16.0 and v1.17.0 InvenSense_ICM45686_registers.hpp and ICM45686.cpp
+  scope: The exact uncompressed 20-byte packet parsed by the PX4 v1.16.0 and v1.17.0 ICM-45686 drivers.
+  verification: unit
+  applies_to: chip:invensense,icm45686
+  tests:
+  - id: ADV-CHIP-ICM45686-004.T1
+    stimulus: Supply distinct signed accel, gyro, and temperature values, generate one record, decode the datasheet fields independently, then apply the shared PX4 parser semantics including its accel-nibble precedence behavior, accel division by two, gyro scale, and Y/Z frame flips.
+    expect: The datasheet decode matches header, field order, signs, scales, assumed temperature, zero timestamp, and all axes within one output count; the PX4 semantic decode recovers source-frame accel within 15 raw high-resolution counts and gyro within the scale quantization tolerance.
+- id: ADV-CHIP-ICM45686-005
+  statement: Writing FIFO_CONFIG2.FIFO_FLUSH empties all queued data and resets FIFO read state without changing FIFO_CONFIG0 or FIFO_CONFIG3. Section 17.31 specifies the flush action but not the subsequent readable bit value, so treating FIFO_FLUSH as a self-clearing command is an explicit model assumption.
+  source:
+    devicetree: invensense,icm45686
+    manual: TDK InvenSense ICM-45686 DS-000577 revision 1.0 section 17.31
+  scope: Explicit FIFO flush while the PX4-selected FIFO configuration remains active.
+  verification: unit
+  applies_to: chip:invensense,icm45686
+  tests:
+  - id: ADV-CHIP-ICM45686-005.T1
+    stimulus: Queue three records, save the mode and sensor-enable registers, issue FIFO_FLUSH, and read count and configuration back.
+    expect: Count is zero, FIFO_FLUSH reads clear, and FIFO_CONFIG0 and FIFO_CONFIG3 are unchanged.
+- id: ADV-CHIP-ICM45686-006
+  statement: An 8 KiB FIFO contains 409 complete 20-byte records. In stop-on-full mode, records due after those 409 are not stored, the original oldest record remains first, and INT1_STATUS0.FIFO_FULL latches when capacity is reached.
+  source:
+    devicetree: invensense,icm45686
+    manual: TDK InvenSense ICM-45686 DS-000577 revision 1.0 sections 5, 6, 17.24, 17.28, and 17.32
+  scope: PX4's stop-on-full, 8 KiB, high-resolution accel-plus-gyro FIFO configuration.
+  verification: unit
+  applies_to: chip:invensense,icm45686
+  tests:
+  - id: ADV-CHIP-ICM45686-006.T1
+    stimulus: Advance a distinguishable per-sample ramp through 420 output periods without reading, then inspect count and full status and decode the first record.
+    expect: Count stops at 409, FIFO_FULL is set, and the first record is still the sample from the first output period.
+- id: ADV-CHIP-ICM45686-007
+  statement: In the target FIFO acquisition flow, INT1_CONFIG0 gates data-ready, FIFO-threshold, and FIFO-full causes by their individual enable bits. DS-000577 names FIFO_WM_TH but does not define its unit consistently enough to choose bytes or packets; the model explicitly assumes bytes for compatibility with both PX4 releases, whose ConfigureFIFOWatermark writes samples multiplied by the 20-byte record size. With INT1_CONFIG2 selecting active-high pulse mode, each enabled pending cause drives int-gpios high then inactive; INT1_STATUS0 reports the cause and is read-to-clear.
+  source:
+    devicetree: invensense,icm45686; int-gpios
+    manual: TDK InvenSense ICM-45686 DS-000577 revision 1.0 sections 6, 17.21, 17.23, 17.24, and 17.29-17.31; PX4-Autopilot v1.16.0 and v1.17.0 ICM45686.cpp ConfigureFIFOWatermark
+  scope: Data-ready and FIFO interrupt behavior required by a PX4-compatible integration.
+  verification: unit
+  applies_to: chip:invensense,icm45686
+  tests:
+  - id: ADV-CHIP-ICM45686-007.T1
+    stimulus: Configure a 20-byte watermark and active-high pulse INT1 with data-ready, threshold, and full enabled, tick immediately before and at the first output boundary, then read status twice.
+    expect: The pre-boundary tick schedules the boundary, the boundary emits a high-to-low pulse, DRDY and FIFO_THS are set on the first status read, and the second status read is zero.
+- id: ADV-CHIP-ICM45686-008
+  statement: The value source supplies body-frame FRD angular rate and specific force. The default chip conversion is (x, -y, -z); athrill,mount-rotation yaw-270 changes it to (-y, -x, -z), matching the existing ICM-42688-P convention. At reset GYRO_SRC_CTRL and ACCEL_SRC_CTRL are zero and both GYRO_UI_LPFBW_SEL and ACCEL_UI_LPFBW_SEL are 000, so the modeled 6.4 kHz path has no AAF/FIR or UI low-pass smoothing.
+  source:
+    devicetree: invensense,icm45686; athrill,mount-rotation compatible with the athrill-device ICM-42688-P model
+    manual: TDK InvenSense ICM-45686 DS-000577 revision 1.0 sections 5, 11.1, 21.7, 21.11, 22.7, and 22.10; PX4-Autopilot v1.16.0 and v1.17.0 ICM45686.cpp ProcessAccel and ProcessGyro
+  scope: Value-source axes, Pixhawk mount handling, and the reset-default signal path left unchanged by PX4 v1.16.0 and v1.17.0.
+  verification: unit
+  applies_to: chip:invensense,icm45686
+  tests:
+  - id: ADV-CHIP-ICM45686-008.T1
+    stimulus: Configure a yaw-270 fixture, step all accel and gyro axes between consecutive 6.4 kHz sample times, and decode both FIFO records without enabling the ideal-filter override.
+    expect: The first record is zero and the next record immediately has the unsmoothed (-y, -x, -z) values at the fixed high-resolution scales.
