@@ -28,6 +28,17 @@ advance at that virtual clock. The base `pixhawk4.dtb` keeps the node disabled a
 such edges, so SIH and bench runs need no plugin. Host-only link, channel,
 airframe, and trace settings remain in `device_config.txt`.
 
+## DShot ESC host values
+
+The DShot ESC and its schedule fault model read these flight-specific values
+from `device_config.txt`:
+
+| Key | Meaning |
+| --- | --- |
+| `DEVICE_CONFIG_ESC_MOTOR_POLES` | Positive even motor pole count from 2 through 64 for every motor of every DShot ESC instance. It overrides each instance's `athrill,motor-poles`; without either value, the default is 14. An invalid host value is a construction error. |
+| `DEVICE_CONFIG_DSHOT_ESC_FILE` | Optional path for a one-line trace of every DShot frame. |
+| `DEVICE_CONFIG_ESC_MOTOR_STOP` | Schedule fault-model stops in `motor@time-ms[+...]` form. It overrides the model's `athrill,motor-stop` pairs. |
+
 ## Shared-memory Hakoniwa link
 
 These keys apply to `libhako_sensor_device`:

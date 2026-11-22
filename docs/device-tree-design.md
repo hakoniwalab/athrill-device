@@ -654,8 +654,14 @@ in `pwms` order. It watches every PWM period of each channel (ABI 1.20
 ESC does: the bit rate, the 0/1 high times, 16 bits before idle, and the
 CRC. It gives each motor's throttle (0..47 none, 48..2047 as 0..1) to its
 `value-source` sink. With no valid frame for `athrill,signal-timeout-us`
-(default 100000), a running motor stops. The host value
-`DEVICE_CONFIG_DSHOT_ESC_FILE` traces every frame.
+(default 100000), a running motor stops. When the value source offers shaft
+RPM, the ESC converts it to eRPM with the flight-wide host value
+`DEVICE_CONFIG_ESC_MOTOR_POLES` for every motor of every DShot ESC instance,
+or, when that value is absent, the instance's `athrill,motor-poles` property,
+or 14 by default. The host value must be a positive even integer from 2
+through 64; an invalid value stops construction with a diagnostic that names
+the key and constraint. The host value `DEVICE_CONFIG_DSHOT_ESC_FILE` traces
+every frame.
 
 An ESC model takes its fault-injection entry point from a `fault-model`
 phandle (ABI 1.20, `AthrillDeviceEscFaultOps`). The loader orders the named
