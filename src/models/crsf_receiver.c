@@ -341,6 +341,7 @@ static sint32 tick(void *instance, uint64 now, AthrillDeviceTickResult *result)
 	uint64 period = clock_of_us(r, r->period_us);
 
 	result->can_skip = TRUE;
+	result->contract = ATHRILL_DEVICE_TICK_DEADLINE;	/* nothing happens before the reported event */
 	if (!scenario_started(r->scenario, time_us(r, now))) {
 		/* silent until the first row */
 		result->next_event_interval = clock_of_us(r, scenario_first_us(r->scenario)) - now;

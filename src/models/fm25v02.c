@@ -221,6 +221,7 @@ static sint32 tick(void *instance, uint64 now,
 	(void)now;
 	result->next_event_interval = ATHRILL_DEVICE_NO_EVENT;
 	result->can_skip = TRUE;
+	result->contract = ATHRILL_DEVICE_TICK_NONE;	/* ABI 1.19: this tick never does anything */
 	return 0;
 }
 
