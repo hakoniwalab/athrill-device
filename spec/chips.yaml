@@ -630,8 +630,8 @@
     compat 0, sequence, system id, component id, 24-bit message id, payload with trailing zero bytes left out except
     the first, CRC-16/MCRF4XX over the bytes after 0xFD and the message's CRC_EXTRA). HEARTBEAT (0, CRC_EXTRA 50) is a
     ground station (MAV_TYPE_GCS, MAV_AUTOPILOT_INVALID, base mode 0, MAV_STATE_ACTIVE, version 3).
-    SET_POSITION_TARGET_LOCAL_NED (84, CRC_EXTRA 143) carries time_boot_ms, x, y, z and yaw with type mask 0x0DF8
-    (velocity, acceleration and yaw rate ignored) in MAV_FRAME_LOCAL_NED. COMMAND_LONG (76, CRC_EXTRA 152) carries
+    SET_POSITION_TARGET_LOCAL_NED (84, CRC_EXTRA 143) carries time_boot_ms, x, y, z and yaw with type mask 0x09F8
+    (velocity, acceleration and yaw rate ignored; position and yaw used) in MAV_FRAME_LOCAL_NED. COMMAND_LONG (76, CRC_EXTRA 152) carries
     param1..7, the command and confirmation 0. The sequence number increases by one per frame and wraps at 256.
   source:
     devicetree: athrill,mavlink-scenario as the child of a UART
@@ -673,7 +673,7 @@
       99.999, 100, 120, 150, 200 ms, then every 50 ms to 1.1 s, and a byte from the flight controller.
     expect: Silent with the next event at 100 ms; a heartbeat then a setpoint at 100 ms (time_boot_ms 100) and the next
       event 50 ms on; nothing at 120 ms; the arm command then a setpoint with z -1.5 at 150 ms; DO_SET_MODE (1, 6, 0)
-      then a setpoint with x 2, y 1, yaw 0.5 at 200 ms; 18 setpoints, one heartbeat (1.1 s) and no command from 250 ms
+      then a setpoint with x 2, y 1, yaw 0.5 at 200 ms (type mask 0x09F8, the yaw-ignore bit 1024 clear); 18 setpoints, one heartbeat (1.1 s) and no command from 250 ms
       to 1.1 s, the last with x 2; the byte gets no answer.
   - id: ADV-CHIP-MAVLINK-002.T2
     stimulus: After setpoints every 50 ms to 14.95 s, one tick at 15.13 s.

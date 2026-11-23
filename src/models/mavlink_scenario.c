@@ -52,8 +52,8 @@
 #define MAV_CMD_DO_SET_MODE	176U
 #define MAV_CMD_COMPONENT_ARM_DISARM	400U
 #define MAV_MODE_FLAG_CUSTOM_MODE_ENABLED	1U
-/* ignore vx vy vz (8 16 32), afx afy afz (64 128 256) and yaw rate (2048) */
-#define TYPE_MASK_POSITION_YAW	0x0DF8U
+/* ignore vx vy vz (8 16 32), afx afy afz (64 128 256) and yaw rate (2048); position and yaw (1024 clear) used */
+#define TYPE_MASK_POSITION_YAW	0x09F8U
 
 #define DEFAULT_SETPOINT_US	50000U
 #define DEFAULT_HEARTBEAT_US	1000000U
