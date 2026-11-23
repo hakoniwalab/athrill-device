@@ -171,6 +171,11 @@ struct AthrillDeviceRuntime {
 #ifdef ATHRILL_DEVICE_TICK_SKIP
 	/* the host value ATHRILL_DEVICE_TICK_SKIP_HOST_VALUE was 1: the contracts are used */
 	std_bool tick_skip;
+	/* tick_order without the NONE nodes (they are not ticked again until a reset); rebuilt when a node
+	 * becomes NONE or at a reset */
+	uint32 *tick_active;
+	uint32 tick_active_count;
+	std_bool tick_active_valid;
 #endif
 };
 
@@ -3284,6 +3289,9 @@ sint32 athrill_device_reset(AthrillDeviceRuntime *runtime)
 		node->tick_requested = FALSE;
 #endif
 	}
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	runtime->tick_active_valid = FALSE;
+#endif
 	return 0;
 }
 
@@ -3326,6 +3334,7 @@ static sint32 tick_one(NodeRecord *node, uint64 now,
 	if ((one.contract == ATHRILL_DEVICE_TICK_NONE) && one.can_skip
 	    && (one.next_event_interval == ATHRILL_DEVICE_NO_EVENT)) {
 		node->tick_contract = ATHRILL_DEVICE_TICK_NONE;
+		node->runtime->tick_active_valid = FALSE;
 	} else if ((one.contract == ATHRILL_DEVICE_TICK_DEADLINE) && one.can_skip) {
 		node->tick_contract = ATHRILL_DEVICE_TICK_DEADLINE;
 		if ((one.next_event_interval == ATHRILL_DEVICE_NO_EVENT)
@@ -3347,6 +3356,29 @@ static sint32 tick_one(NodeRecord *node, uint64 now,
 	return 0;
 }
 
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+static void tick_active_build(AthrillDeviceRuntime *runtime)
+{
+	uint32 i;
+
+	if (runtime->tick_active == NULL) {
+		runtime->tick_active = calloc(runtime->tick_order_count + 1U, sizeof(uint32));
+		if (runtime->tick_active == NULL) {
+			return;
+		}
+	}
+	runtime->tick_active_count = 0U;
+	for (i = 0U; i < runtime->tick_order_count; i++) {
+		const NodeRecord *node = &runtime->nodes[runtime->tick_order[i]];
+
+		if (node->created && (node->model->tick != NULL) && (node->tick_contract != ATHRILL_DEVICE_TICK_NONE)) {
+			runtime->tick_active[runtime->tick_active_count++] = runtime->tick_order[i];
+		}
+	}
+	runtime->tick_active_valid = TRUE;
+}
+#endif
+
 sint32 athrill_device_tick(AthrillDeviceRuntime *runtime, uint64 now,
                            AthrillDeviceTickResult *result)
 {
@@ -3356,6 +3388,22 @@ sint32 athrill_device_tick(AthrillDeviceRuntime *runtime, uint64 now,
 	}
 	result->next_event_interval = ATHRILL_DEVICE_NO_EVENT;
 	result->can_skip = TRUE;
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	if (runtime->tick_skip) {
+		if (!runtime->tick_active_valid) {
+			tick_active_build(runtime);
+		}
+		if (runtime->tick_active_valid) {
+			/* the same order without the NONE nodes, which tick_one() would pass over */
+			for (i = 0U; i < runtime->tick_active_count; i++) {
+				if (tick_one(&runtime->nodes[runtime->tick_active[i]], now, result) != 0) {
+					return -1;
+				}
+			}
+			return 0;
+		}
+	}
+#endif
 	for (i = 0U; i < runtime->tick_order_count; i++) {
 		NodeRecord *node = &runtime->nodes[runtime->tick_order[i]];
 		if (tick_one(node, now, result) != 0) {
@@ -3406,6 +3454,9 @@ void athrill_device_destroy(AthrillDeviceRuntime *runtime)
 	free(runtime->gpio_subscribers);
 	free(runtime->order);
 	free(runtime->tick_order);
+#ifdef ATHRILL_DEVICE_TICK_SKIP
+	free(runtime->tick_active);
+#endif
 	free(runtime->nodes);
 	free(runtime->dtb);
 	free(runtime);
