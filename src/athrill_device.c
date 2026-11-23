@@ -483,6 +483,7 @@ static const char *const ms5611_compatibles[] = { "meas,ms5611" };
 static const char *const icp201xx_compatibles[] = { "invensense,icp201xx" };
 static const char *const ublox_m8_compatibles[] = { "u-blox,m8" };
 static const char *const crsf_receiver_compatibles[] = { "athrill,crsf-receiver" };
+static const char *const mavlink_scenario_compatibles[] = { "athrill,mavlink-scenario" };
 static const char *const sdcard_compatibles[] = { "zephyr,sdmmc-disk" };
 static const char *const pwm_actuator_compatibles[] = { "athrill,pwm-actuator-map" };
 static const char *const bench_sensor_compatibles[] = { "athrill,bench-sensor-source" };
@@ -534,6 +535,7 @@ static const AthrillDeviceModelRegistration builtin_models[] = {
 	{ icp201xx_compatibles, 1U, &athrill_device_icp201xx_model },
 	{ ublox_m8_compatibles, 1U, &athrill_device_ublox_m8_model },
 	{ crsf_receiver_compatibles, 1U, &athrill_device_crsf_receiver_model },
+	{ mavlink_scenario_compatibles, 1U, &athrill_device_mavlink_scenario_model },
 	{ sdcard_compatibles, 1U, &athrill_device_sdcard_model },
 	{ pwm_actuator_compatibles, 1U, &athrill_device_pwm_actuator_model },
 	{ bench_sensor_compatibles, 1U, &athrill_device_bench_sensor_model },

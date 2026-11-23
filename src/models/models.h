@@ -15,6 +15,17 @@ extern const AthrillDeviceModelOps athrill_device_ist8310_model;
 extern const AthrillDeviceModelOps athrill_device_bmm150_model;
 extern const AthrillDeviceModelOps athrill_device_ublox_m8_model;
 extern const AthrillDeviceModelOps athrill_device_crsf_receiver_model;
+extern const AthrillDeviceModelOps athrill_device_mavlink_scenario_model;
+/* MAVLink helpers (mavlink_scenario.c), exposed for tests */
+uint16 athrill_mavlink_crc(uint16 crc, uint8 data);
+uint32 athrill_mavlink_frame(uint8 sequence, uint8 system_id, uint8 component_id, uint32 message_id,
+	uint8 crc_extra, const uint8 *payload, uint32 length, uint8 *frame);
+uint32 athrill_mavlink_heartbeat(uint8 *payload);
+uint32 athrill_mavlink_position_target(uint32 time_boot_ms, float32 x, float32 y, float32 z, float32 yaw,
+	uint8 target_system, uint8 target_component, uint8 *payload);
+uint32 athrill_mavlink_command_long(uint16 command, const float32 param[7], uint8 target_system,
+	uint8 target_component, uint8 *payload);
+uint64 athrill_mavlink_scenario_frames(void *instance, uint32 kind);
 /* CRSF helpers (crsf_receiver.c), exposed for tests */
 uint8 athrill_crsf_crc8(uint8 crc, uint8 data);
 uint32 athrill_crsf_value(double us);
