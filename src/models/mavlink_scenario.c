@@ -472,6 +472,7 @@ static sint32 tick(void *instance, uint64 now, AthrillDeviceTickResult *result)
 	uint64 heartbeat_period = clock_of_us(m, m->heartbeat_us);
 
 	result->can_skip = TRUE;
+	result->contract = ATHRILL_DEVICE_TICK_DEADLINE;	/* nothing happens before the reported event */
 	if (!scenario_started(m->scenario, time_us(m, now))) {
 		result->next_event_interval = clock_of_us(m, scenario_first_us(m->scenario)) - now;
 		return 0;
