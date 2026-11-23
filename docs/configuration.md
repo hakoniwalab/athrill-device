@@ -92,6 +92,29 @@ time_ms,x,y,z,yaw,arm,mode
 | `DEVICE_CONFIG_MAVLINK_SCENARIO_FILE` | Scenario file of every MAVLink scenario model; replaces `athrill,scenario-file`. Give an absolute path. |
 | `DEVICE_CONFIG_MAVLINK_SCENARIO_OFFSET_MS` | Milliseconds added to every row time; replaces `athrill,scenario-offset-ms`. |
 
+A board overlay for the Pixhawk 6X revision 6 (compile it as in
+docs/adding-a-board.md; it is not in `boards/`, because the model needs its
+scenario file to be constructed and the generated board tests have none):
+
+```dts
+#include "pixhawk6x-rev6-hakoniwa-dshot-sensors.dts"
+
+&uart7 {
+	gcs {
+		compatible = "athrill,mavlink-scenario";
+		athrill,scenario-file = "scenario/offboard.csv";
+	};
+};
+```
+
+`tools/ulog_offboard_scenario.py` writes a scenario from a PX4 ULog flown in
+Offboard: its `trajectory_setpoint` from the arming on, relative to the start
+position and turned so that the replay starts heading north, Offboard and arming
+before it and AUTO_LAND after it. PX4's own clock starts about 92 ms after the
+target clock (the boot before its timer), which shows when the ULog is compared
+with the scenario. Set `simulation.randomSeed` in the airframe for repeatable
+runs.
+
 ## Shared-memory Hakoniwa link
 
 These keys apply to `libhako_sensor_device`:
