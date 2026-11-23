@@ -12,6 +12,7 @@
  *   HAKO_SENSOR_DEVICE_ACTUATOR_CHANNEL  channel of hil_actuator (HakoHilActuatorControls)
  *   HAKO_AIRCRAFT_CONFIG_PATH            in-process build: airframe directory or drone_config JSON
  *   HAKO_AIRCRAFT_WORKER                 in-process build: 1 (default) or serial 0
+ *   HAKO_AIRCRAFT_WORKER_SPIN_USEC       in-process worker: spin [us] before sleeping (0 default)
  *   HAKO_SENSOR_DEVICE_TRACE_PATH        optional sensor, GPS and actuator trace (exact float bits)
  *   HAKO_SENSOR_DEVICE_TEST_PERIOD       without Hakoniwa: every N usec of simulated time, a
  *                                        sample of a vehicle at rest (GPS every 25th)
@@ -445,6 +446,9 @@ static void devinit(MpuAddressRegionType *region, AthrillExDevOperationType *ops
 	link.aircraft_worker = true;
 	if (ops->param.get_devcfg_value("HAKO_AIRCRAFT_WORKER", &value) == STD_E_OK) {
 		link.aircraft_worker = value != 0U;
+	}
+	if (ops->param.get_devcfg_value("HAKO_AIRCRAFT_WORKER_SPIN_USEC", &value) == STD_E_OK) {
+		link.worker_spin_usec = value;
 	}
 	if (!hako_sensor_link_initialize(&link)) {
 		printf("ERROR: hako_sensor_device: can not create aircraft from %s\n", text);

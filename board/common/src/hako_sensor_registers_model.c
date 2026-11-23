@@ -421,7 +421,9 @@ static sint32 registers_create(const AthrillDeviceCreateArgs *args, void **insta
 		else {
 			const char *worker = host_value(m, "HAKO_AIRCRAFT_WORKER");
 			const char *step = host_value(m, "HAKO_AIRCRAFT_PHYSICS_STEP_USEC");
+			const char *spin = host_value(m, "HAKO_AIRCRAFT_WORKER_SPIN_USEC");
 			link.aircraft_config_path = text;
+			link.worker_spin_usec = (spin == NULL) ? 0U : (uint32_t)strtoul(spin, NULL, 0);
 			link.aircraft_worker = (worker == NULL) || (strtoul(worker, NULL, 0) != 0U);
 			link.physics_step_usec = (step == NULL) ? 0U : strtoull(step, NULL, 0);
 			link.truth_log_path = host_value(m, "HAKO_SENSOR_DEVICE_TRUTH_LOG");

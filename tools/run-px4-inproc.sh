@@ -5,7 +5,7 @@ set -eu
 
 usage() {
     echo "usage: $0 EXAMPLE_DIR PX4_ELF ATHRILL3 INPROC_DEVICE HAKO_DRONE_ROOT AIRFRAME_CONFIG" >&2
-    echo "environment: ATHRILL_TICKS=-1 HAKO_AIRCRAFT_WORKER=1 HAKO_SENSOR_DEVICE_TRACE_PATH=<file>" >&2
+    echo "environment: ATHRILL_TICKS=-1 HAKO_AIRCRAFT_WORKER=1 HAKO_AIRCRAFT_WORKER_SPIN_USEC=0 HAKO_SENSOR_DEVICE_TRACE_PATH=<file>" >&2
     exit 2
 }
 
@@ -28,6 +28,7 @@ script_dir=$(cd "$(dirname "$0")" && pwd)
 device_tree=$(absolute "${DEVICE_CONFIG_DEVICE_TREE:-$script_dir/../boards/pixhawk4/pixhawk4-hakoniwa.dtb}")
 ticks=${ATHRILL_TICKS:--1}
 worker=${HAKO_AIRCRAFT_WORKER:-1}
+spin=${HAKO_AIRCRAFT_WORKER_SPIN_USEC:-0}
 trace=${HAKO_SENSOR_DEVICE_TRACE_PATH:-}
 
 case "$worker" in
@@ -64,6 +65,7 @@ awk -v fram="$example_dir/fram.bin" -v sdcard="$example_dir/sd.img" '
     $1 == "HAKO_SENSOR_DEVICE_ACTUATOR_CHANNEL" { next }
     $1 == "HAKO_AIRCRAFT_CONFIG_PATH" { next }
     $1 == "HAKO_AIRCRAFT_WORKER" { next }
+    $1 == "HAKO_AIRCRAFT_WORKER_SPIN_USEC" { next }
     $1 == "HAKO_SENSOR_DEVICE_TRACE_PATH" { next }
     $1 == "DEVICE_CONFIG_DEVICE_TREE" { next }
     $1 == "DEVICE_CONFIG_DEVICE_PLUGIN_0" { next }
@@ -74,6 +76,7 @@ printf 'DEVICE_CONFIG_DEVICE_TREE %s\n' "$device_tree" >>"$config_tmp"
 printf 'DEVICE_CONFIG_DEVICE_PLUGIN_0 hakoniwa%%2Csensor-device=%s\n' "$device" >>"$config_tmp"
 printf 'HAKO_AIRCRAFT_CONFIG_PATH %s\n' "$airframe" >>"$config_tmp"
 printf 'HAKO_AIRCRAFT_WORKER %s\n' "$worker" >>"$config_tmp"
+printf 'HAKO_AIRCRAFT_WORKER_SPIN_USEC %s\n' "$spin" >>"$config_tmp"
 if [ -n "$trace" ]; then
     trace=$(absolute "$trace")
     printf 'HAKO_SENSOR_DEVICE_TRACE_PATH %s\n' "$trace" >>"$config_tmp"

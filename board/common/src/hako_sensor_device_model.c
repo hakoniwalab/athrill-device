@@ -478,6 +478,7 @@ static sint32 create(const AthrillDeviceCreateArgs *args, void **instance)
 			link.aircraft_config_path = path;
 			link.aircraft_worker = host_u32(model,
 				"HAKO_AIRCRAFT_WORKER", 1U) != 0U;
+			link.worker_spin_usec = host_u32(model, "HAKO_AIRCRAFT_WORKER_SPIN_USEC", 0U);
 			{
 				const char *step = host_value(model, "HAKO_AIRCRAFT_PHYSICS_STEP_USEC");
 				link.physics_step_usec = (step == NULL) ? 0U : strtoull(step, NULL, 0);

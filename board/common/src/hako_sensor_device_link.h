@@ -19,6 +19,9 @@ typedef struct {
 	uint32_t gps_channel;
 	uint32_t actuator_channel;
 	bool aircraft_worker;
+	/* in process with the worker: how long [us] each side of the handoff spins before it sleeps
+	 * (HAKO_AIRCRAFT_WORKER_SPIN_USEC, 0: never); faster, but a host core stays busy */
+	uint32_t worker_spin_usec;
 	/* in process: the physics step [us] set over the airframe's own (0: the airframe's),
 	 * HAKO_AIRCRAFT_PHYSICS_STEP_USEC; it also replaces the MuJoCo model's timestep */
 	uint64_t physics_step_usec;

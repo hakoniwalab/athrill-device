@@ -188,6 +188,7 @@ struct InProcessLink {
 	std::atomic<bool> spin_pending{false};
 	std::atomic<bool> spin_ready{false};
 	std::atomic<bool> spin_stop{false};
+	uint32_t spin_usec{0};	/* 0: sleep at once */
 	/* the rotors as the aircraft left them with the sample being prepared,
 	 * and with the sample the device read last (hako_sensor_link_read) */
 	std::vector<HakoMotorStatusSample> worker_motors;
@@ -820,11 +821,14 @@ std::vector<HakoMotorStatusSample> captureMotors(InProcessLink& state)
 	return motors;
 }
 
-/* spin until done() or about a millisecond has passed; the caller then waits on the condition as before */
+/* spin until done() or about usec have passed; the caller then waits on the condition as before */
 template <typename Done>
-static void spinBriefly(Done done)
+static void spinBriefly(uint32_t usec, Done done)
 {
-	const auto until = std::chrono::steady_clock::now() + std::chrono::microseconds(1000);
+	if (usec == 0U) {
+		return;
+	}
+	const auto until = std::chrono::steady_clock::now() + std::chrono::microseconds(usec);
 	for (uint32_t i = 0U;; i++) {
 		if (done()) {
 			return;
@@ -846,7 +850,7 @@ void runAircraftWorker(InProcessLink *state)
 	for (;;) {
 		if (!state->worker_stop && !state->worker_pending) {
 			lock.unlock();
-			spinBriefly([state] {
+			spinBriefly(state->spin_usec, [state] {
 				return state->spin_pending.load(std::memory_order_acquire)
 					|| state->spin_stop.load(std::memory_order_acquire);
 			});
@@ -881,7 +885,7 @@ bool readWorkerSample(
 	InProcessLink& state, uint64_t last_time_usec,
 	HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps)
 {
-	spinBriefly([&state] {
+	spinBriefly(state.spin_usec, [&state] {
 		return state.spin_ready.load(std::memory_order_acquire) || state.spin_stop.load(std::memory_order_acquire);
 	});
 	std::unique_lock<std::mutex> lock(state.worker_mutex);
@@ -940,6 +944,7 @@ extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
 	try {
 		auto state = std::make_unique<InProcessLink>();
 		state->worker_enabled = config->aircraft_worker;
+		state->spin_usec = config->worker_spin_usec;
 		if (!loadAircraftConfig(*state, config->aircraft_config_path)) {
 			return false;
 		}
