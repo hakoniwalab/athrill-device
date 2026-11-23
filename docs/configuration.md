@@ -69,6 +69,29 @@ locks onto CRSF and not onto another protocol while it scans.
 | `DEVICE_CONFIG_RC_SCENARIO_FILE` | Scenario file of every CRSF receiver; replaces `athrill,scenario-file`. Give an absolute path: the simulator's working directory is not the run directory. |
 | `DEVICE_CONFIG_RC_SCENARIO_OFFSET_MS` | Milliseconds added to every row time (a number, fractions allowed); replaces `athrill,scenario-offset-ms`. |
 
+`athrill,mavlink-scenario` (ADV-CHIP-MAVLINK-001..003) is a MAVLink ground
+station on a UART: put it as the child of the UART the flight controller uses
+for MAVLink (TELEM1, UART7 on fmu-v6x) instead of the TCP link. From the
+scenario's first row it sends a HEARTBEAT every second and a
+SET_POSITION_TARGET_LOCAL_NED every 50 ms with the channels `x`, `y`, `z`
+(metres, local NED) and `yaw` (radians), and a COMMAND_LONG when the optional
+channel `arm` (MAV_CMD_COMPONENT_ARM_DISARM) or `mode` / `submode` (PX4 main and
+sub mode, MAV_CMD_DO_SET_MODE) changes. PX4 accepts the switch to Offboard only
+while setpoints stream, so start the setpoint rows before the row that sets
+`mode` to 6.
+
+```text
+time_ms,x,y,z,yaw,arm,mode
+20000,0,0,0,0,0,0
+25000,0,0,0,0,1,0
+26000,0,0,-1.5,0,1,6
+```
+
+| Key | Meaning |
+| --- | --- |
+| `DEVICE_CONFIG_MAVLINK_SCENARIO_FILE` | Scenario file of every MAVLink scenario model; replaces `athrill,scenario-file`. Give an absolute path. |
+| `DEVICE_CONFIG_MAVLINK_SCENARIO_OFFSET_MS` | Milliseconds added to every row time; replaces `athrill,scenario-offset-ms`. |
+
 ## Shared-memory Hakoniwa link
 
 These keys apply to `libhako_sensor_device`:
