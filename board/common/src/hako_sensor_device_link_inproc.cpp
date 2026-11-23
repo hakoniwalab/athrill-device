@@ -21,6 +21,8 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <atomic>
+#include <chrono>
 #include <mutex>
 #include <optional>
 #include <stdexcept>
@@ -181,6 +183,12 @@ struct InProcessLink {
 	bool worker_sample_ready{false};
 	bool worker_stop{false};
 	bool worker_failed{false};
+	/* the same states for spinning without the mutex (set after them, under it): a waiter spins a
+	 * little before it sleeps, since waking a sleeping thread costs more than a physics step */
+	std::atomic<bool> spin_pending{false};
+	std::atomic<bool> spin_ready{false};
+	std::atomic<bool> spin_stop{false};
+	uint32_t spin_usec{0};	/* 0: sleep at once */
 	/* the rotors as the aircraft left them with the sample being prepared,
 	 * and with the sample the device read last (hako_sensor_link_read) */
 	std::vector<HakoMotorStatusSample> worker_motors;
@@ -813,10 +821,41 @@ std::vector<HakoMotorStatusSample> captureMotors(InProcessLink& state)
 	return motors;
 }
 
+/* spin until done() or about usec have passed; the caller then waits on the condition as before */
+template <typename Done>
+static void spinBriefly(uint32_t usec, Done done)
+{
+	if (usec == 0U) {
+		return;
+	}
+	const auto until = std::chrono::steady_clock::now() + std::chrono::microseconds(usec);
+	for (uint32_t i = 0U;; i++) {
+		if (done()) {
+			return;
+		}
+#if defined(__aarch64__)
+		__asm__ __volatile__("yield");
+#elif defined(__x86_64__) || defined(__i386__)
+		__builtin_ia32_pause();
+#endif
+		if (((i & 63U) == 63U) && (std::chrono::steady_clock::now() >= until)) {
+			return;
+		}
+	}
+}
+
 void runAircraftWorker(InProcessLink *state)
 {
 	std::unique_lock<std::mutex> lock(state->worker_mutex);
 	for (;;) {
+		if (!state->worker_stop && !state->worker_pending) {
+			lock.unlock();
+			spinBriefly(state->spin_usec, [state] {
+				return state->spin_pending.load(std::memory_order_acquire)
+					|| state->spin_stop.load(std::memory_order_acquire);
+			});
+			lock.lock();
+		}
 		state->worker_condition.wait(lock, [state] {
 			return state->worker_stop || state->worker_pending;
 		});
@@ -836,6 +875,8 @@ void runAircraftWorker(InProcessLink *state)
 		state->worker_pending = false;
 		state->worker_sample_ready = success;
 		state->worker_failed = !success;
+		state->spin_pending.store(false, std::memory_order_release);
+		state->spin_ready.store(true, std::memory_order_release);
 		state->worker_condition.notify_all();
 	}
 }
@@ -844,6 +885,9 @@ bool readWorkerSample(
 	InProcessLink& state, uint64_t last_time_usec,
 	HakoSensorSample *sensor, HakoGpsSample *gps, bool *has_gps)
 {
+	spinBriefly(state.spin_usec, [&state] {
+		return state.spin_ready.load(std::memory_order_acquire) || state.spin_stop.load(std::memory_order_acquire);
+	});
 	std::unique_lock<std::mutex> lock(state.worker_mutex);
 	state.worker_condition.wait(lock, [&state] {
 		return state.worker_stop || state.worker_failed || state.worker_sample_ready;
@@ -872,6 +916,7 @@ bool readWorkerSample(
 	state.read_pose = state.worker_pose;
 	state.has_pose = true;
 	state.worker_sample_ready = false;
+	state.spin_ready.store(false, std::memory_order_release);
 	return true;
 }
 
@@ -883,6 +928,7 @@ void stopAircraftWorker(InProcessLink& state)
 	{
 		std::lock_guard<std::mutex> lock(state.worker_mutex);
 		state.worker_stop = true;
+		state.spin_stop.store(true, std::memory_order_release);
 		state.worker_condition.notify_all();
 	}
 	state.worker_thread.join();
@@ -898,6 +944,7 @@ extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
 	try {
 		auto state = std::make_unique<InProcessLink>();
 		state->worker_enabled = config->aircraft_worker;
+		state->spin_usec = config->worker_spin_usec;
 		if (!loadAircraftConfig(*state, config->aircraft_config_path)) {
 			return false;
 		}
@@ -974,6 +1021,7 @@ extern "C" bool hako_sensor_link_initialize(const HakoSensorLinkConfig *config)
 		if (state->worker_enabled) {
 			/* The worker also prepares the initial sample, before any actuator. */
 			state->worker_pending = true;
+			state->spin_pending.store(true, std::memory_order_release);
 			InProcessLink *worker_state = state.get();
 			state->worker_thread = std::thread([worker_state] {
 				runAircraftWorker(worker_state);
@@ -1052,6 +1100,7 @@ extern "C" bool hako_sensor_link_write_actuator(const HakoActuatorSample *actuat
 		link->has_actuator = true;
 		link->worker_after_usec = actuator->time_usec;
 		link->worker_pending = true;
+		link->spin_pending.store(true, std::memory_order_release);
 		link->worker_condition.notify_one();
 		return true;
 	}

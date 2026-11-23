@@ -97,6 +97,8 @@ int main(int argc, char **argv)
         config.aircraft_config_path = argv[1];
         const char *worker = std::getenv("HAKO_AIRCRAFT_WORKER");
         config.aircraft_worker = worker == nullptr || std::strcmp(worker, "0") != 0;
+        const char *spin = std::getenv("HAKO_AIRCRAFT_WORKER_SPIN_USEC");
+        config.worker_spin_usec = spin == nullptr ? 0U : static_cast<uint32_t>(std::strtoul(spin, nullptr, 10));
     }
     if (!hako_sensor_link_initialize(&config)) {
         return 1;

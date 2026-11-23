@@ -142,6 +142,7 @@ channel keys are not used by this build.
 | --- | --- |
 | `HAKO_AIRCRAFT_CONFIG_PATH` | Hakoniwa Drone airframe directory or `drone_config_0.json`; required to start the in-process link. |
 | `HAKO_AIRCRAFT_WORKER` | `1` (default) steps the aircraft concurrently; `0` uses serial stepping for comparisons. |
+| `HAKO_AIRCRAFT_WORKER_SPIN_USEC` | With the worker: how long [us] each side of the handoff spins before it sleeps. `0` (default) sleeps at once; `1000` makes a PX4 X500 run about 8% faster in wall time, with the same results, but keeps one host core busy. |
 | `HAKO_SENSOR_DEVICE_TRACE_PATH` | Optional exact-bit sensor/GPS/actuator trace. |
 
 ## Dependency-free board checks

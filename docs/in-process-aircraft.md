@@ -104,7 +104,8 @@ licence: free for non-commercial use, see the `hakoniwa-drone-core` release.
   interval. The device's clock callback schedules its next read for that boundary instead of fetching it eagerly.
 - The worker publishes the completed sensor/GPS snapshot under a mutex and signals a condition variable. At the
   boundary, `hako_sensor_link_read` returns immediately if it is ready or waits on that condition variable. There is
-  no polling and no control delay.
+  no polling and no control delay. With `HAKO_AIRCRAFT_WORKER_SPIN_USEC` both sides first spin on an atomic copy of
+  their condition for that long, since waking a sleeping thread costs more than a physics step.
 - Only the worker calls the aircraft service while a step is pending. The device reads the snapshot after the worker
   has relinquished it and queues the next actuator only after consuming it, so one thread owns the aircraft at a
   time.
@@ -143,6 +144,7 @@ The device configuration of the in-process library takes:
 | --- | --- |
 | `HAKO_AIRCRAFT_CONFIG_PATH` | the airframe directory or `drone_config_0.json` of the Hakoniwa Drone, e.g. `x500-athrill-px4` |
 | `HAKO_AIRCRAFT_WORKER` | `1` (default) steps ahead on the aircraft worker; `0` uses the serial comparison path |
+| `HAKO_AIRCRAFT_WORKER_SPIN_USEC` | with the worker: spin up to this many us before waiting on the condition variable (`0`, default: wait at once); faster handoffs for one busy host core, the same samples |
 
 The channel and asset lines of the Hakoniwa link are not used. The airframe configuration gives the sensor period,
 the sensor models and the random seed (`simulation.randomSeed`), as for the aircraft service.
