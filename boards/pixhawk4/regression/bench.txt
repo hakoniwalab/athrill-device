@@ -28,6 +28,15 @@
 # drops the first character, as it would on the board. Every bench check
 # passes; the PX4 SIH flight checks pass; the ArduPilot bench and full bench
 # and the 6C armed reference are unchanged.
+# Re-recorded 2026-11-27 (instructions, console.norm) for athrill-target-stm32
+# v0.5.0, which moves its athrill-device pin from ab3c22e to 23f5005: between
+# them the IMU FIFO keeps each frame's own values across ODR/filter changes
+# (#161), the IMU and magnetometer models share one mount-rotation parser
+# (#162) and the tick contracts (#180) came in (which one moves the samples was
+# not bisected). The console differs only in the last digits of sensor values
+# and filter statistics (same 270 lines, same line shapes); F-RAM, SD card and
+# the tick order are unchanged; run1 = run2; every bench check passes; the PX4
+# SIH flight checks (examples/px4-sih/verify) pass and equal the published run.
 firmware_sha256 f8a78a13f3a545305cce45eeef677e4d436325ee6a6065b1753c387283f3d05e
 # Re-recorded 2026-11-14 (instructions, F-RAM, SD card, console.norm): CAN1
 # and CAN2 acknowledge initialization (MSR INAK/SLAK follow MCR INRQ/SLEEP,
@@ -42,10 +51,10 @@ firmware_sha256 f8a78a13f3a545305cce45eeef677e4d436325ee6a6065b1753c387283f3d05e
 # SPI1, as on the real Pixhawk 4), so PX4 runs two IMUs and the bench types
 # "bmi055 -A status" and "bmi055 -G status". Every bench check passes and
 # run1 = run2; the ICM-20689 still runs at 800 Hz.
-instructions 2962151127
+instructions 2957603820
 sha256 fram.bin 4aafa389df1bb92bf608283593194ddc98d4f6edeef4e82101c4ec704b9a1e16
 sha256 sd.img f5c31e0faf753b20fc0b402de4d64c4376dc2d62145e98da65288e20a0ac3302
-sha256 console.norm 4ed97cabe0a7e7c24691f1518dc112940245257dca9402afb6a3c0ff5f2a29dc
+sha256 console.norm ac1a3105d3cc467c5f2505600fddd80ca008152bd0cf63882757199e67137e44
 # tick: the order the devices are ticked in (target TARGET_TICK lines, with
 # "devicetree" replaced by athrill-device's DEVICE_TICK lines); recorded
 # 2026-11-08 with athrill-target-stm32 0050bb4 + the tick-order log.
